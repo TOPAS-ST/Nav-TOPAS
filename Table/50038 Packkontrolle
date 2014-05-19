@@ -1,0 +1,678 @@
+Documentation()
+
+OnInsert()
+
+OnModify()
+
+OnDelete()
+
+OnRename()
+
+Lieferschein Nr. - OnValidate()
+
+Lieferschein Nr. - OnLookup()
+
+Lieferschein Zeilennr. - OnValidate()
+
+Lieferschein Zeilennr. - OnLookup()
+
+Artikel Nr. - OnValidate()
+
+Artikel Nr. - OnLookup()
+
+Lagerortcode - OnValidate()
+
+Lagerortcode - OnLookup()
+
+Menge - OnValidate()
+
+Menge - OnLookup()
+
+Verpackungsmenge - OnValidate()
+
+Verpackungsmenge - OnLookup()
+
+Prüf Artikel Nr. - OnValidate()
+IF "Prüf Artikel Nr."<>'' THEN
+  BEGIN
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+Prüf Artikel Nr. - OnLookup()
+
+VPE - OnValidate()
+IF VPE<>0 THEN
+  BEGIN
+    IF VPE<>Verpackungsmenge THEN
+      MESSAGE('Hinweis: Die Verpackungsmenge des Artikel ist '+'%1'+'!',Verpackungsmenge);
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+VPE - OnLookup()
+
+Anzahl Stange - OnValidate()
+IF "Anzahl Stange"<>0 THEN
+  BEGIN
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+Anzahl Stange - OnLookup()
+
+Anzahl Lose - OnValidate()
+IF "Anzahl Lose"<>0 THEN
+  BEGIN
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+Anzahl Lose - OnLookup()
+
+Paket Verfolgungsnr. - OnValidate()
+IF 'Paket Verfolgungsnr.'<>'' THEN
+  BEGIN
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+Paket Verfolgungsnr. - OnLookup()
+
+Bearbeiter - OnValidate()
+
+Bearbeiter - OnLookup()
+
+OK - OnValidate()
+
+OK - OnLookup()
+
+Archivierungsgrund - OnValidate()
+
+Archivierungsgrund - OnLookup()
+
+Datum - OnValidate()
+
+Datum - OnLookup()
+
+Fehlerindex - OnValidate()
+
+Fehlerindex - OnLookup()
+
+Fehlertext - OnValidate()
+
+Fehlertext - OnLookup()
+
+Packung - OnValidate()
+IF OK='' THEN
+  BEGIN
+    OK:='In Bearbeitung';
+    Bearbeiter:=USERID;
+    MODIFY;
+  END;
+
+Packung - OnLookup()
+
+Bemerkung1 - OnValidate()
+IF 'Bemerkung1' <>'' THEN
+  BEGIN
+    IF OK='' THEN
+      BEGIN
+        OK:='In Bearbeitung';
+        Bearbeiter:=USERID;
+        MODIFY;
+      END;
+  END;
+
+Bemerkung1 - OnLookup()
+
+Versandart - OnValidate()
+IF OK='' THEN
+  BEGIN
+    OK:='In Bearbeitung';
+    Bearbeiter:=USERID;
+    MODIFY;
+  END;
+
+Versandart - OnLookup()
+
+Debitorenbuchungsgruppe - OnValidate()
+
+Debitorenbuchungsgruppe - OnLookup()
+
+Label_Daten_start(lieferscheinnr : Code[20];zeilennr : Integer)
+//TOPAS ST 09.10.2012 neue Funktion
+IF lieferscheinnr = '' THEN
+  BEGIN
+    Packkontrolle.RESET;
+    Packkontrolle.FINDFIRST;
+      REPEAT
+        Label_Daten_füllen(Packkontrolle."Lieferschein Nr.",Packkontrolle."Lieferschein Zeilennr.");
+      UNTIL Packkontrolle.NEXT = 0;
+  END
+ELSE
+  BEGIN
+    Label_Daten_füllen(lieferscheinnr,zeilennr);
+  END;
+
+Label_Daten_füllen(lieferscheinnr : Code[20];zeilennr : Integer)
+//**************************************************************************************************
+//           09.08.2011-ST Zusatzfunktion zum füllen spezifischer Kunden Label Daten
+//**************************************************************************************************
+
+neue_daten_gefunden := FALSE;
+neue_daten_eingespielt := FALSE;
+achtung_bleihaltig := FALSE;
+ls_achtung_bleihaltig := '';
+ls_nr := '';
+letzte_artikelnr := '';
+letzte_charge := '';
+letzte_artposten := 0;
+letzte_zeilennr := 0;
+letzte_zeilenmenge := 0;
+letzte_chargenmenge := 0;
+
+AP.RESET;
+AP.SETFILTER("Entry Type",'%1',AP."Entry Type" :: Sale);
+AP.SETFILTER("Document Type",'%1',AP."Document Type" :: "Sales Shipment");
+//neu
+AP.SETFILTER("Document No.",'%1',lieferscheinnr);
+IF zeilennr <> 0 THEN
+  AP.SETFILTER("Document Line No.",'%1',zeilennr);
+//**************************************************************************************************
+//   Im Moment nur Siemens Erlangen 91056, ff. sind auch feste Werte nur für Siemens realisiert
+//         Bitte bei mehreren Debitoren darauf achten und Programm entsprechend anpassen
+//**************************************************************************************************
+//alt
+//AP.SETFILTER("Source No.",'%1|%2','718740','715250');
+//AP.SETFILTER("Item No.",'%1|%2|%3','TG110-E050N5RL-TR-S','TG110-SMN5N5RL-TR','TGM-380NA-TR');
+//AP.SETFILTER("Posting Date",'>=%1',WORKDATE-7); //Es wird eine Woche vorgehalten
+IF AP.FINDFIRST THEN
+  BEGIN
+    lfd_nr := 1;
+
+    REPEAT
+      Debitor.GET(AP."Source No.");
+      Artikel.GET(AP."Item No.");
+      IF (((AP."Source No." = '718740') OR (AP."Source No." = '715250')) AND ((AP."Item No." = 'TG110-E050N5RL-TR-S')
+      OR (AP."Item No." = 'TG110-SMN5N5RL-TR') OR (AP."Item No." = 'TGM-380NA-TR') OR (AP."Item No." = 'TG110-E050N5LF-TR')))
+      OR (Debitor."MAT Label Spezifikation" = TRUE) THEN
+      //neu vorübergehend bis Wolfson Probleme beseitigt sind mit dem Datum und MS-Level eingespielt sind
+      //AND (Artikel."Manufacturer Code" <>'68')) THEN
+        BEGIN
+
+      Label.RESET;
+//    Label.SETFILTER("Lfd.-Nr.",'%1',AP."Document No." + FORMAT(AP."Document Line No.") + FORMAT(AP."Entry No.") + FORMAT(lfd_nr));
+      Label.SETFILTER("Item Ledger Entry No.",'%1',AP."Entry No.");
+      IF NOT Label.FINDFIRST THEN
+        BEGIN
+          neue_daten_gefunden := TRUE;
+
+          //Artikel.GET(AP."Item No.");
+          IF Artikel.Verpackungsmenge = 0 THEN
+            ERROR(Text100,Artikel."No.");
+
+          IF ls_nr <> AP."Document No." THEN
+            BEGIN
+              lfd_nr := 101;
+              paket_id := 1;
+              rest_splittmenge := 0;
+            END;
+
+          //**************************************************************************************************
+          //                            Berechnung, wie oft gesplittet werden muss
+          //**************************************************************************************************
+
+          LSZ.RESET;
+          LSZ.SETFILTER(LSZ."Document No.",'%1',AP."Document No.");
+          LSZ.SETFILTER(LSZ."Line No.",'%1',AP."Document Line No.");
+          LSZ.FINDFIRST;
+
+          //neu
+          kleinste_umverpackung := 0;
+          CASE LSZ.Verpackungstyp OF
+            LSZ.Verpackungstyp :: " " :
+              BEGIN
+                IF (AP."Item No." = 'TG110-E050N5RL-TR-S') OR (AP."Item No." = 'TG110-SMN5N5RL-TR') OR
+                   (AP."Item No." = 'TGM-380NA-TR') OR (AP."Item No." = 'TG110-E050N5LF-TR') THEN
+                     kleinste_umverpackung := Artikel.Verpackungsmenge
+                 ELSE
+                   kleinste_umverpackung := LSZ.Quantity;
+              END;
+            LSZ.Verpackungstyp :: Rolle: kleinste_umverpackung := Artikel.Verpackungsmenge;
+            LSZ.Verpackungstyp :: Stange,LSZ.Verpackungstyp :: DP: kleinste_umverpackung := LSZ.Umverpackungsmenge;
+          END;
+
+          IF (AP.Quantity * (-1)) MOD kleinste_umverpackung = 0 THEN
+            BEGIN
+              splitte := AP.Quantity * (-1) / kleinste_umverpackung;
+            END
+          ELSE
+            BEGIN
+              IF LSZ.Quantity MOD kleinste_umverpackung <> 0 THEN
+                BEGIN
+                  splitte := ROUND(AP.Quantity * (-1) / kleinste_umverpackung,1,'>');
+                  rest_splittmenge := (AP.Quantity * (-1)) - (ROUND(AP.Quantity * (-1) / kleinste_umverpackung,1,'<')
+                                      * (kleinste_umverpackung));
+                END
+              ELSE
+                BEGIN
+                  splitte := 1;
+                END;
+            END;
+
+          FOR i:= 1 TO splitte DO
+            BEGIN
+              Label.INIT;
+                Label."Lfd.-Nr." := AP."Document No." + FORMAT(AP."Document Line No.") + FORMAT(AP."Entry No.") + FORMAT(lfd_nr);
+
+                //**************************************************************************************************
+                //                                       Wichtige Belegdaten
+                //**************************************************************************************************
+
+                Label."Belegnr." := AP."Document No.";
+                Label."Belegzeilennr." := AP."Document Line No.";
+                Label.Art := Label.Art :: Lieferung;
+                Label."Item Ledger Entry No." := AP."Entry No.";
+
+                //**************************************************************************************************
+                //                                         Label Version - 12S
+                //**************************************************************************************************
+
+                Label."Label Version" := '0002';
+
+                //**************************************************************************************************
+                //                                       Debitor Artikelnr. - P
+                //**************************************************************************************************
+
+                IF AP."Cross-Reference No." <> '' THEN
+                  Label."Customer Part Number" := AP."Cross-Reference No."
+                ELSE
+                  BEGIN
+                    Referenzen.RESET;
+                    Referenzen.SETFILTER(Referenzen."Cross-Reference Type No.",'%1',AP."Source No.");
+                    Referenzen.SETFILTER("Item No.",'%1',AP."Item No.");
+                    IF Referenzen.FINDFIRST THEN
+                      Label."Customer Part Number" := Referenzen."Cross-Reference No.";
+                  END;
+
+                //**************************************************************************************************
+                //                                Bauteilbezeichnung des Herstellers - 1P
+                //**************************************************************************************************
+
+                Label."Manufacturer Part Number" := AP."Item No.";
+                Label."Ordering Code" := AP."Item No.";
+
+                //**************************************************************************************************
+                //                                       Artikelbeschreibung
+                //**************************************************************************************************
+
+                Label."Part Description" := Artikel.Description;
+
+                //**************************************************************************************************
+                //                                       Bleifrei oder nicht -30P
+                //**************************************************************************************************
+
+                IF Artikel."Lead Free" = TRUE THEN
+                  Label.RoHS := 'Y'
+                ELSE
+                  BEGIN
+                    Label.RoHS := 'N';
+                    achtung_bleihaltig := TRUE;
+                    ls_achtung_bleihaltig := AP."Document No.";
+                  END;
+
+                //**************************************************************************************************
+                //                          Herstellernr. oder Herstellername beim Kunden
+                //                  200001506 ist die Herstellernr. für HALO von Siemens 718740,
+                //                      für weitere Firmen entsprechende Abfragen einbauen
+                //                                  Manufacturer Number - 12V
+                //                                  Revision Level / Index - 2P
+                //                                  Additional Part Information - 20P
+                //**************************************************************************************************
+
+                IF (AP."Source No." = '718740') OR (AP."Source No." = '715250') THEN
+                  Label."Manufacturer Number" := '200001506';
+
+                //Label."Revision Level" := ;
+                //Label."Additional Part Information" := ;
+
+                //**************************************************************************************************
+                //     MS-Level kann als Eingabefeld im Wasp Labeler, da es dieses Feld nicht im Artikelstamm
+                //                       gibt bzw. man gibt es fest vor, für HALO immer 1 - Z
+                //**************************************************************************************************
+
+                //IC Plus
+                IF Artikel."Manufacturer Code" = '30' THEN
+                  Label."MS-Level" := '3';
+                //Wolfson
+                IF Artikel."Manufacturer Code" = '68' THEN
+                  Label."MS-Level" := Artikel."MS-Level";
+                //Halo
+                IF Artikel."Manufacturer Code" = '78' THEN
+                  Label."MS-Level" := '1';
+
+                //**************************************************************************************************
+                //                                      Ort der Herstellung - 10V
+                //**************************************************************************************************
+
+                IF Artikel."Manufacturer Code" = '78' THEN
+                  Label."Manufacturer Location" := 'CHN-HONGKONG'
+                ELSE
+                  Label."Manufacturer Location" := AP.Ursprungsland;
+
+                //**************************************************************************************************
+                //                                 Herstellungs- und Ablaufdatum
+                //                                   Date of Manufacturing - 6D
+                //                                   Expiration Date - 14D
+                //**************************************************************************************************
+
+                DD := '';
+                MM := '';
+                MM_int := 0;
+                YYYY := '';
+                YYYY_int := 0;
+                ablaufdatum := 0D;
+                chargendatum := 0D;
+
+                // Wolfson specific manufacturing code convention is: YMTTMMM
+                //Y = Year - Last digit of year, M = Month - Jan = 1...Sept = 9, Oct = A, Nov = B, Dec = C
+                // TT = Lot Trace Code. AA to ZZ, starts with AA, MMM = Unique code of Wafer Fab, Die Version, Assembly Site
+
+                IF ((STRLEN(AP."Lot No.") = 7) OR (STRLEN(AP."Lot No.") = 15)) AND (STRLEN(AP."Lot No.") >
+                STRLEN(DELCHR(AP."Lot No.",'=','ABCDEFGHIJKLMNOPQRSTUVWXYZ'))) THEN
+                  BEGIN
+                    CASE COPYSTR(AP."Lot No.",2,1) OF
+                      'A': MM_int := 10;
+                      'B': MM_int := 11;
+                      'C': MM_int := 12;
+                      '1'..'9': EVALUATE(MM_int,COPYSTR(AP."Lot No.",2,1));
+                      END;
+                    YYYY_int :=  DATE2DMY(TODAY,3);
+                    EVALUATE(YYYY_int,COPYSTR(FORMAT(DATE2DMY(TODAY,3)),1,3)+ COPYSTR(AP."Lot No.",1,1));
+                    IF COPYSTR(AP."Lot No.",1,1) > COPYSTR(FORMAT(DATE2DMY(TODAY,3)),4,1) THEN
+                      YYYY_int -= 10;
+                    chargendatum := DMY2DATE(1,MM_int,YYYY_int);
+                    chargendatum := CALCDATE('<WD1>',chargendatum);
+                  END;
+
+                // Übliches Datum anstelle von Datecode z.B. Ricoh
+                IF (STRLEN(AP."Lot No.") = 8) AND (STRLEN(DELCHR(AP."Lot No.",'=','.')) = 6) THEN
+                  EVALUATE(chargendatum,AP."Lot No.");
+
+                // Normale Date Code Betrachtung
+
+                // 2 Datecodes in einem, die in der Regel durch ein '/' getrennt sind, Verwendung des 1. Datecodes
+                IF (STRLEN(AP."Lot No.") > 4)
+                AND (STRLEN(AP."Lot No.") = (STRLEN(DELCHR(AP."Lot No.",'=','ABCDEFGHIJKLMNOPQRSTUVWXYZ'))))
+                AND (STRLEN(AP."Lot No.") <> (STRLEN(DELCHR(AP."Lot No.",'=','/'))))
+                AND (STRPOS(AP."Lot No.",'/') > 4) THEN
+                  EVALUATE(chargendatum,'M' + COPYSTR(AP."Lot No.",3,2) + COPYSTR(AP."Lot No.",1,2));
+
+                // Für fehlerhaften Eingaben mit dem M + vierstelligen Datecode(z.B Datecode mit Ablaufdatum verwechselt)
+                IF (STRLEN(AP."Lot No.") = 5) AND (STRLEN(DELCHR(COPYSTR(AP."Lot No.",1,1),
+                '=','ABCDEFGHIJKLMNOPQRSTUVWXYZ')) = 0) THEN
+                  EVALUATE(chargendatum,'M' + COPYSTR(AP."Lot No.",4,2) + COPYSTR(AP."Lot No.",2,2));
+
+                // Üblicher, 4 stelliger Datecode
+                IF STRLEN(AP."Lot No.") = 4 THEN
+                  EVALUATE(chargendatum,'M'+COPYSTR(AP."Lot No.",3,2) + COPYSTR(AP."Lot No.",1,2));
+
+                // Umsetzung der Variablen in das geforderte Date of Manufacturing
+                IF chargendatum <> 0D THEN
+                  BEGIN
+                    DD := COPYSTR(FORMAT(chargendatum),1,2);
+                    MM := COPYSTR(FORMAT(chargendatum),4,2);
+                    YYYY := '20' + COPYSTR(FORMAT(chargendatum),7,2);
+                    Label."Date of Manufacturing" := YYYY + MM + DD;
+
+                // Umsetzung des Ablaufdatums
+                    IF Label."Date of Manufacturing" <> '' THEN
+                      BEGIN
+                        ablaufdatum := CALCDATE('2J',chargendatum);
+                        DD := COPYSTR(FORMAT(ablaufdatum),1,2);
+                        MM := COPYSTR(FORMAT(ablaufdatum),4,2);
+                        YYYY := '20' + COPYSTR(FORMAT(ablaufdatum),7,2);
+                        Label."Expiration Date" := YYYY + MM + DD;
+                      END;
+                  END
+                ELSE
+                  MESSAGE(Text110,AP."Lot No.",AP."Document No.");
+
+                //**************************************************************************************************
+                //                                         Lieferscheinnr. - 16K
+                //**************************************************************************************************
+
+                Label."Shipping Note Number" := AP."Document No.";
+
+                //**************************************************************************************************
+                //                       Kundendaten z.B. Externe Belegnr., Unsere Kundennr. - V
+                //**************************************************************************************************
+
+                LSH.RESET;
+                LSH.SETFILTER("No.",'%1',AP."Document No.");
+                IF LSH.FINDFIRST THEN
+                  BEGIN
+                    Label."Purchase Order Number" := LSH."External Document No.";
+                  END;
+
+                Label."Supplier Name" := 'TOPAS electronic GmbH';
+                Debitor.GET(AP."Source No.");
+                Label."Supplier-ID" := Debitor."Our Account No.";
+
+                //**************************************************************************************************
+                //  Package ID muss mit 'S' beginnen und genau 13 Stellen lang sein
+                //  Nach dem S folgt die LS-Nr. ohne das 'LS' + Zeilennr. (6 stellig), wenn Zeilennr. 5 stellig
+                //  schreibe eine 0 davor + am Ende folgt eine fortlaufende Nr.
+                //  Sollte die fortlaufende Nr. 2 stellig werden, schneide von der 6 stelligen Zeilennr. die letzte
+                //  Zahl weg, in der Regel ist dies eine 0
+                //  Package-ID - 3S
+                //**************************************************************************************************
+
+                package_string[1] := DELCHR(AP."Document No.",'<','LS');
+                package_string[2] := FORMAT(AP."Document Line No.");
+                package_string[3] := FORMAT(paket_id);
+                IF STRLEN(package_string[2]) = 5 THEN
+                  package_string[2] := '0' + package_string[2];
+                IF STRLEN(package_string[3]) > 1 THEN
+                  BEGIN
+                    package_string[2] := COPYSTR(package_string[2],1,STRLEN(package_string[2])-STRLEN(package_string[3])+1);
+                  END;
+                Label."Package-ID" := 'S' + package_string[1] + package_string[2] + package_string[3];
+
+                IF STRLEN(Label."Package-ID") <> 13 THEN
+                  MESSAGE('Fehler in der Berechnung der Package-ID für Lieferung %1, Zeile %2, Datecode %3.\'+
+                          'Fehlercode: Länge Package-ID <> 13\\Package-ID: %4',AP."Document No.",AP."Document Line No.",
+                          AP."Lot No.",Label."Package-ID");
+
+                //**************************************************************************************************
+                //                     Stk.zahl + 'NAR000', für Barcode und Andruck Feld Menge - Q
+                //**************************************************************************************************
+
+                IF rest_splittmenge = 0 THEN
+                  BEGIN
+                    Label.Quantity := FORMAT((AP.Quantity * (-1))/splitte) + 'NAR000';
+                    Label."Quantity Label" := FORMAT((AP.Quantity * (-1))/splitte);
+                  END
+                ELSE
+                  BEGIN
+                    IF i <> splitte THEN
+                      BEGIN
+                        Label.Quantity := FORMAT((((AP.Quantity * (-1))-rest_splittmenge))/(splitte-1)) + 'NAR000';
+                        Label."Quantity Label" := FORMAT((((AP.Quantity * (-1))-rest_splittmenge))/(splitte-1));
+                      END
+                    ELSE
+                      BEGIN
+                        Label.Quantity := FORMAT(rest_splittmenge) + 'NAR000';
+                        Label."Quantity Label" := FORMAT(rest_splittmenge);
+                      END;
+                  END;
+
+                //**************************************************************************************************
+                //                 Wenn eine Charge aus 2 DC's besteht dann 2 , ansonsten 1, max.2
+                //                                       Batch-Counter - 20T
+                //                                       Batch-No. #1 - 1T
+                //                                       Batch-No. #2 - 2T
+                //**************************************************************************************************
+
+                IF STRPOS(AP."Lot No.",'/') = 0 THEN
+                  BEGIN
+                    Label."Batch-Counter" := 1;
+                    Label."Batch-No.#1" := AP."Lot No." + '1';
+                    Label."Batch-No.#2" := '';
+                  END
+                ELSE
+                  BEGIN
+                    //**************************************************************************************************
+                    //In Batch-No.#2 muss vor der 2 immer ein Leerzeichen stehen oder das Feld generell in alphanumerisch
+                    //wandeln (z.B. ein . oder # vor Lot. No.), damit das Label Programm den Datamatrix Code richtig darstellen kann
+                    //Batch-No.#1 muss immer numerisch sein, ansonsten wenn Batch-No.#2 leer ist, kann der Datamatrix Code auch
+                    //nicht mehr richtig gelesen werden
+                    //**************************************************************************************************
+
+                    Label."Batch-Counter" := 2;
+                    Label."Batch-No.#1" := COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1) + '1';
+                    IF STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 4 THEN
+                      Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1) + ' 2'
+                    ELSE
+                      BEGIN
+                        // 2 Zeichen vor und nach dem Trennstrich werden zu einem Datecode zusammengebaut bzw. aufbereitet
+                        IF  (STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 2)
+                        AND (STRLEN(COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1)) = 4) THEN
+                          Label."Batch-No.#2" := COPYSTR(AP."Lot No.",1,2) + COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1) +' 2'
+                        ELSE
+                          BEGIN
+                            // Wolfson Format
+                            IF  (STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 7)
+                            AND (STRLEN(COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1)) = 7) THEN
+                              Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1) +' 2';
+                          END;
+                      END;
+                  END;
+
+                //**************************************************************************************************
+                //                                     Datecode bzw. Chargennr.
+                //**************************************************************************************************
+
+                Label."Lot. No." := AP."Lot No.";
+
+                ls_nr := AP."Document No.";
+                lfd_nr += 1;
+                paket_id += 1;
+                neue_daten_eingespielt := TRUE;
+                letzte_artikelnr := AP."Item No.";
+                letzte_charge := AP."Lot No.";
+                letzte_artposten := AP."Entry No.";
+                letzte_zeilennr := AP."Document Line No.";
+                letzte_zeilenmenge := LSZ.Quantity;
+                letzte_chargenmenge := AP.Quantity * (-1);
+              Label.INSERT;
+            END;
+        END;
+      END;
+    UNTIL AP.NEXT = 0;
+
+    Label_Daten_Log(ls_nr,letzte_artikelnr,letzte_zeilennr,letzte_charge,letzte_artposten,letzte_zeilenmenge,letzte_chargenmenge,
+    splitte,rest_splittmenge,neue_daten_gefunden,neue_daten_eingespielt,achtung_bleihaltig,ls_achtung_bleihaltig);
+  END;
+
+Label_Daten_Log(ls_nr : Code[20];l_artikelnr : Code[20];l_zeilennr : Integer;l_charge : Code[20];l_artposten : Integer;l_zeilenmenge : 
+IF l_artikelnr <> '' THEN
+  Artikel.GET(l_artikelnr);
+IF n_daten_gefunden AND n_daten_eingespielt THEN
+  MESSAGE('Überprüfung beendet und Label Daten erfolgreich übertragen.\\' +
+          'Letzte Artikelnr. %1\' +
+          'Letzte Chargennr. %2 (Artikelposten %3)\' +
+          'Lieferscheinnr.: %4\' +
+          'Lieferschein Zeilennr.: %5\' +
+          'Menge Zeile: %6\' +
+          'Menge letzte Charge: %7\'+
+          'VPE: %8\' +
+          'Charge insgesamt gesplittet: %9\' +
+          'Charge Restmenge ungleich Verpackungsmenge: %10'
+          , l_artikelnr, l_charge, l_artposten, ls_nr, l_zeilennr, l_zeilenmenge
+          , l_chargenmenge, Artikel.Verpackungsmenge, splitte, r_splittmenge);
+
+IF achtung_bleihaltig = TRUE THEN
+  MESSAGE('Achtung, der Lieferschein %1 enthält bleihaltige Ware, bitte benutzen Sie das Label ohne RoHS Logo.',
+  ls_achtung_bleihaltig);
+
+HolePackDaten(Auftragsnr : Code[20])
+//02.01.2012-ST In Funktion übergeben und von Codeunit 81 u. 82 ausgeführt antatt auf der Form Verkaufsauftrag
+//Neueste Lieferscheine zum Auftrag in die Packkontrolle holen, bei denen die Paketnr. noch leer ist
+
+VKliefkopf.RESET;
+VKliefkopf.SETFILTER(VKliefkopf."Order No.",Auftragsnr);
+VKliefkopf.SETFILTER(VKliefkopf."Package Tracking No.",'=%1','');
+IF VKliefkopf.FINDLAST THEN
+  BEGIN
+    Vkliefzeile.RESET;
+    Vkliefzeile.SETFILTER(Vkliefzeile."Order No.",VKliefkopf."Order No.");
+    Vkliefzeile.SETFILTER(Type,'%1',Vkliefzeile.Type::Item);
+    Vkliefzeile.SETFILTER(Quantity,'>%1',0);
+    IF Vkliefzeile.FINDFIRST THEN
+       BEGIN
+         REPEAT
+           Artikel.GET(Vkliefzeile."No.");
+           IF ((Artikel."Manufacturer Code" = '52') OR (Artikel."Manufacturer Code" = '53') 
+           OR (Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '96')
+           OR (Artikel."Manufacturer Code" = '99'))
+           OR ((Artikel."Manufacturer Code" = '59') AND ((Artikel.Serviceklassifizierung = 'SOFTWARE')
+           OR (Artikel.Serviceklassifizierung = 'LIZENZEN'))) THEN
+             BEGIN
+             END
+           ELSE
+             BEGIN
+               Packkontrolle.RESET;
+               Packkontrolle.SETFILTER("Lieferschein Nr.",'%1',Vkliefzeile."Document No.");
+               Packkontrolle.SETFILTER("Lieferschein Zeilennr.",'%1',Vkliefzeile."Line No.");
+               IF NOT Packkontrolle.FINDFIRST THEN
+                 BEGIN
+                   Packkontrolle.INIT;
+                   Packkontrolle."Lieferschein Nr." :=Vkliefzeile."Document No.";
+                   Packkontrolle."Lieferschein Zeilennr." :=Vkliefzeile."Line No.";
+                   Packkontrolle.Menge :=Vkliefzeile.Quantity;
+                   Packkontrolle.Lagerortcode :=Vkliefzeile."Location Code";
+                   Packkontrolle."Artikel Nr." :=Vkliefzeile."Artikelnr. 2";
+                   Artikel.RESET;
+                   Artikel.SETFILTER("No. 2",'%1',Packkontrolle."Artikel Nr.");
+                   IF Artikel.FINDFIRST THEN
+                     Packkontrolle.Verpackungsmenge:=Artikel.Verpackungsmenge;
+                   Packkontrolle.Debitorenbuchungsgruppe := VKliefkopf."Customer Posting Group";
+                   Packkontrolle.INSERT;
+                 END;
+             END;
+         UNTIL Vkliefzeile.NEXT=0;
+       END;
+  END;
+
+// Vorhandene Archivsätze aus Packkontrolle entfernen
+Packkontrolle.RESET;
+IF Packkontrolle.FINDFIRST THEN
+  REPEAT
+    Pack_Archiv.RESET;
+    Pack_Archiv.SETFILTER("Lieferschein Nr.",'%1',Packkontrolle."Lieferschein Nr.");
+     Pack_Archiv.SETFILTER("Lieferschein Zeilennr.",'%1',Packkontrolle."Lieferschein Zeilennr.");
+    IF Pack_Archiv.FINDFIRST THEN
+      Packkontrolle.DELETE;
+  UNTIL Packkontrolle.NEXT=0;
