@@ -50,7 +50,7 @@ IF excel_datensätze > 0 THEN
       IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
         ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
 
-      cell_services := FindRow('Service','A:A');
+      cell_services := FindRow('Service',Spalte_PL_PGroup,Spalte_PL_PGroup,'Cells(1, 1)');
 
       Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
       IF Artikelname <> '' THEN
@@ -60,7 +60,7 @@ IF excel_datensätze > 0 THEN
       klassifizierung := Quelle_Sheet.Range(Spalte_Quelle_Klass+Quelle_j).Value;
       artgruppe := Quelle_Sheet.Range(Spalte_Quelle_Artgruppe+Quelle_j).Value;
 
-      cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+      cell_part := FindRow(Artikelname,Spalte_PL_MSRP,Spalte_PL_MSRP,'Cells(1, 1)');
       cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
       IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL') THEN
         excel_msrp := PL_Sheet.Range(cell_part).Value;
@@ -156,6 +156,7 @@ IF excel_datensätze > 0 THEN
               Artikel.Verpackungsmenge := 1;
               Artikel.Mindestbestellmenge := 1;
               Artikel.Serviceklassifizierung := klassifizierung;
+              Artikel."Allow Invoice Disc." := FALSE;
 
               Artikel."Update letzte Preisliste" := TRUE;
               Artikel.MODIFY(TRUE);
@@ -197,10 +198,13 @@ IF excel_datensätze > 0 THEN
                 Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.8'
               ELSE
                 Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
-              Quelle_Sheet.Range('H'+Quelle_j).Value := dc;
-              Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
-              Quelle_Sheet.Range('I'+Quelle_j).Value := excel_msrp;
-              Quelle_Sheet.Range('I'+Quelle_j).NumberFormat := 0.00;
+              Quelle_Sheet.Range('H'+Quelle_j).Value := FORMAT(dc);
+              //Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
+              Quelle_Sheet.Range('I'+Quelle_j).Value := FORMAT(excel_msrp);
+              //Quelle_Sheet.Range('I'+Quelle_j).NumberFormat := 0.00;
+              Quelle_Sheet.Range('K'+Quelle_j).Value := 'A: ' + FORMAT(row_part);
+              Quelle_Sheet.Range('L'+Quelle_j).Value := 'S: ' + FORMAT(row_services);
+
 
               //*********************************************************************************************
               //                                    VK-Preise EURO updaten
@@ -210,12 +214,12 @@ IF excel_datensätze > 0 THEN
               PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
               PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
 
-              cell_services := FindRow('Service','A:A');
+              cell_services := FindRow('Service','A','A','Cells(1, 1)');
 
               IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                 ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
 
-              cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+              cell_part := FindRow(Artikelname,Spalte_PL_MSRP,Spalte_PL_MSRP,'Cells(1, 1)');
               cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
               excel_msrp := 0;
               IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL') THEN
@@ -239,13 +243,13 @@ IF excel_datensätze > 0 THEN
                       verkaufspreis."Unit Price" := excel_msrp;
                       verkaufspreis.INSERT(TRUE);
 
-                      Quelle_Sheet.Range('J'+Quelle_j).Value := excel_msrp;
-                      Quelle_Sheet.Range('J'+Quelle_j).NumberFormat := 0.00;
+                      Quelle_Sheet.Range('J'+Quelle_j).Value := FORMAT(excel_msrp);
+                      //Quelle_Sheet.Range('J'+Quelle_j).NumberFormat := 0.00;
 
                     END;
                 END;
 
-              //PL_Book.Close;
+              PL_Book.Close;
 
             END
           ELSE
@@ -289,14 +293,24 @@ Dataport - OnPostDataport()
 
 //Quelle_Excel.Visible(TRUE);
 
-FindRow(What : Code[40];Spalte : Code[10]) : Text[30]
-WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
+FindRow(What : Code[40];Spalte : Code[10];Spalte_neu : Code[20];after : Code[40]) : Text[30]
+WITH PL_Sheet.Range(Spalte+':'+Spalte_neu) DO
   BEGIN
     Range1 :=
-    (PL_Sheet.Cells.Find(
+    (PL_Sheet.Columns.Find(
       What));
-
-    EXIT(Range1.Address);
+    Cell := Range1.Address;
+    //Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
+    IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'A'))
+    OR (STRPOS(Cell,Spalte) = 0) AND (Spalte = 'F') THEN
+      BEGIN
+        REPEAT
+          Range1 := PL_Sheet.Rows.FindNext(Range1);
+          Cell := Range1.Address;
+          i += 1;
+        UNTIL (STRPOS(Cell,Spalte) = 2) OR (i = 100);
+      END;
+    EXIT(Cell);
 END;
 
 Trim_ShortDescr(string : Text[250];max_length : Integer) : Text[30]
