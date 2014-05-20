@@ -1,0 +1,384 @@
+Documentation()
+
+Dataport - OnInitDataport()
+
+Dataport - OnPreDataport()
+// Excel Datei Definitionen ******************************************************************
+// *******************************************************************************************
+
+CLEAR(Quelle_Excel);
+CLEAR(Quelle_Sheet);
+CLEAR(Quelle_Book);
+
+// Definiert die zu importierende Datei
+IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+Quelle_Book := Quelle_Excel.Workbooks._Open(CurrDataport.FILENAME,0,FALSE);
+Quelle_Sheet := Quelle_Book.Worksheets.Item(1);
+//Quelle_Sheet := Quelle_Book.ActiveSheet;
+
+
+Quelle_j:='1';
+
+excel_datensätze := 0;
+
+//********************************************************************************************
+//                         Eigentliches Einspielen der Artikel
+//********************************************************************************************
+
+excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
+
+IF excel_datensätze > 0 THEN
+  BEGIN
+    // Definiert die Preislisten Datei
+    CREATE(PL_Excel);
+
+    excel_msrp := 0;
+    dc := 0;
+    ek_system_währung := 'USD';
+
+    Quelle_j := '1';
+    excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
+
+    REPEAT
+
+      dc := 0;
+      excel_msrp := 0;
+
+
+      PL_Book := PL_Excel.Workbooks._Open(PL_USD_Pfad,0,TRUE);
+      PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
+      IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
+        ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
+
+      cell_services := FindRow('Service','A:A');
+
+      Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
+      IF Artikelname <> '' THEN
+        PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value) <> '' THEN
+        startdatum := Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value;
+      klassifizierung := Quelle_Sheet.Range(Spalte_Quelle_Klass+Quelle_j).Value;
+      artgruppe := Quelle_Sheet.Range(Spalte_Quelle_Artgruppe+Quelle_j).Value;
+
+      cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+      cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
+      IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL') THEN
+        excel_msrp := PL_Sheet.Range(cell_part).Value;
+
+      //Hier noch Abfrage Zelle Artikel größer Zelle Service
+      row_part := TOPAS_API.ConvertStrToNum(cell_part);
+      row_services := TOPAS_API.ConvertStrToNum(cell_services);
+      IF row_services < row_part THEN
+        BEGIN
+          dc := excel_msrp * 0.8;
+          services_artikel := TRUE;
+        END
+      ELSE
+        BEGIN
+          dc := excel_msrp * 0.6;
+          services_artikel := FALSE;
+        END;
+
+      short_descr := PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value;
+      long_descr := PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value;
+
+      IF (Artikelname = '') OR (STRLEN(Artikelname) > 40) THEN
+        BEGIN
+        END
+      ELSE
+        BEGIN
+          Artikel.RESET;
+          Artikel.SETFILTER("No. 2",'%1',Artikelname);
+          IF NOT Artikel.FINDFIRST THEN
+            BEGIN
+
+              //*********************************************************************************************
+              //                                    EK-Preise updaten
+              //*********************************************************************************************
+
+              art_20 := art_verw.ACS_anlegen_40(Artikelname,dc,ek_system_währung,Kred,startdatum);
+
+              Artikel.RESET;
+              Artikel.SETFILTER(Artikel."No.",'%1',art_20);
+              IF Artikel.FINDFIRST THEN;
+
+              IF services_artikel = TRUE THEN
+                BEGIN
+                  Artikel.Preisinfo := 'MSRP -20%';
+                  Artikel."Item Tracking Code" := 'KEINE';
+                  Artikel.Serviceklassifizierung := 'SOFTWARE';
+                  Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
+                END
+              ELSE
+                BEGIN
+                  Artikel.Preisinfo := 'MSRP -40%';
+                  IF (klassifizierung = 'KEINE') OR (klassifizierung = 'SOFTWARE') THEN
+                    BEGIN
+                      Artikel."Item Tracking Code" := 'KEINE';
+                      Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
+                    END
+                  ELSE
+                    BEGIN
+                      Artikel."Item Tracking Code" := 'SERIENNR';
+                      Artikel."Lead Free" := TRUE;
+                    END;
+
+                END;
+
+              //Beschreibung und Textbaustein füllen
+              IF STRLEN(short_descr) < 30 THEN
+                BEGIN
+                  Artikel.Description := short_descr;
+                END
+              ELSE
+                BEGIN
+
+                  Artikel.Description := Trim_ShortDescr(short_descr,30);
+                  Artikel."Description 2" := Trim_ShortDescr(COPYSTR(short_descr,STRLEN(Artikel.Description)+1),30);
+
+                END;
+
+              IF STRLEN(long_descr) > 1 THEN
+                BEGIN
+                  Artikel."Automatic Ext. Texts" := TRUE;
+                  LongDescrToExtendedText(Artikel."No.",long_descr,50);
+                END;
+
+              Artikel."Handlingskosten %":=5;
+              Artikel.VALIDATE("Handlingskosten %");
+              Artikel.UStG_13b_frei := TRUE;
+              Artikel."Country/Region of Origin Code" := 'IL';
+              Artikel."Country/Region Purchased Code" := 'IL';
+              Artikel."Manufacturer Code" := '59';
+              Artikel."Search Description" := 'ACS';
+              Artikel.Herstellerkurzname := 'ACS';
+              Artikel.Quotesystem := 'BROKEN COST';
+              Artikel.Verpackungsmenge := 1;
+              Artikel.Mindestbestellmenge := 1;
+              Artikel.Serviceklassifizierung := klassifizierung;
+
+              Artikel."Update letzte Preisliste" := TRUE;
+              Artikel.MODIFY(TRUE);
+
+              //*********************************************************************************************
+              //                                    VK-Preise updaten
+              //*********************************************************************************************
+
+              IF excel_msrp <> 0 THEN
+                BEGIN
+                  verkaufspreis.RESET;
+                  verkaufspreis.SETFILTER("Sales Type",'%1',verkaufspreis."Sales Type" :: "All Customers");
+                  verkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                  verkaufspreis.SETFILTER("Currency Code",'%1',ek_system_währung);
+                  verkaufspreis.SETFILTER("Starting Date",'%1',startdatum);
+                  IF NOT verkaufspreis.FINDFIRST THEN
+                    BEGIN
+                      verkaufspreis.INIT;
+                      verkaufspreis."Sales Type" := verkaufspreis."Sales Type" :: "All Customers";
+                      verkaufspreis."Item No.":= Artikel."No.";
+                      verkaufspreis."Starting Date" := startdatum;
+                      verkaufspreis."Currency Code" := ek_system_währung;
+                      verkaufspreis."Unit of Measure Code" := 'STÜCK';
+                      verkaufspreis."Unit Price" := excel_msrp;
+                      verkaufspreis.INSERT(TRUE);
+                    END;
+                END;
+
+              IF (STRPOS(Artikel.Bezeichnung2_lang,'Nicht in der Preisliste') <> 0)
+              OR (STRPOS(Artikel.Bezeichnung2_lang,'Stand Preisliste') <> 0)
+              OR (Artikel.Bezeichnung2_lang = '') THEN
+                BEGIN
+                  Artikel.Bezeichnung2_lang := 'Stand Preisliste: ' + PL_Version_Systeme;
+                  Artikel.MODIFY(TRUE);
+                END;
+
+              Quelle_Sheet.Range('F'+Quelle_j).Value := 'OK';
+              IF services_artikel = TRUE THEN
+                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.8'
+              ELSE
+                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
+              Quelle_Sheet.Range('H'+Quelle_j).Value := dc;
+              Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
+              Quelle_Sheet.Range('I'+Quelle_j).Value := excel_msrp;
+              Quelle_Sheet.Range('I'+Quelle_j).NumberFormat := 0.00;
+
+              //*********************************************************************************************
+              //                                    VK-Preise EURO updaten
+              //*********************************************************************************************
+
+              //PL_Book.Close;
+              PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
+              PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
+
+              cell_services := FindRow('Service','A:A');
+
+              IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
+                ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
+
+              cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+              cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
+              excel_msrp := 0;
+              IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL') THEN
+                excel_msrp := PL_Sheet.Range(cell_part).Value;
+
+              IF excel_msrp <> 0 THEN
+                BEGIN
+                  verkaufspreis.RESET;
+                  verkaufspreis.SETFILTER("Sales Type",'%1',verkaufspreis."Sales Type" :: "All Customers");
+                  verkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                  verkaufspreis.SETFILTER("Currency Code",'%1','');
+                  verkaufspreis.SETFILTER("Starting Date",'%1',startdatum);
+                  IF NOT verkaufspreis.FINDFIRST THEN
+                    BEGIN
+                      verkaufspreis.INIT;
+                      verkaufspreis."Sales Type" := verkaufspreis."Sales Type" :: "All Customers";
+                      verkaufspreis."Item No.":= Artikel."No.";
+                      verkaufspreis."Starting Date" := startdatum;
+                      verkaufspreis."Currency Code" := '';
+                      verkaufspreis."Unit of Measure Code" := 'STÜCK';
+                      verkaufspreis."Unit Price" := excel_msrp;
+                      verkaufspreis.INSERT(TRUE);
+
+                      Quelle_Sheet.Range('J'+Quelle_j).Value := excel_msrp;
+                      Quelle_Sheet.Range('J'+Quelle_j).NumberFormat := 0.00;
+
+                    END;
+                END;
+
+              //PL_Book.Close;
+
+            END
+          ELSE
+            Quelle_Sheet.Range('F'+Quelle_j).Value := 'BEREITS ANGELEGT';
+
+        END;
+
+      //*********************************************************************************************
+      // Abbruchbedingung
+      // Wenn in der Quelldatei 1 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+      IF Artikelname = '' THEN                                       // erkennt das Ende der Excel Datei
+         BEGIN
+           leere_zeilen := leere_zeilen+1;
+         END
+         ELSE
+         BEGIN
+           leere_zeilen :=0;
+         END;
+
+       Quelle_j:=INCSTR(Quelle_j);                                                 // nächste Zeile Importdatei
+
+     UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = 1);  // Nach 1 Zeilen ohne Artikel ist Schluss
+
+     PL_Book.Close;
+
+  END;
+
+Quelle_Book.Save;
+Quelle_Book.Close;
+
+//CLEAR(Quelle_Sheet);
+//CLEAR(Quelle_Book);
+//CLEAR(Quelle_Excel);
+
+//REPEAT
+//UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+
+Dataport - OnPostDataport()
+//MESSAGE('Import der CHAMP Artikel abgeschlossen.'+ '\' + 'Neue bzw. geänderte Datensätze: %1\\'+
+//        'Excel Datensätze: %2\Obsolete Bezeichnungen: %3',geänderte_einträge,excel_datensätze,obsolete_einträge);
+
+//Quelle_Excel.Visible(TRUE);
+
+FindRow(What : Code[40];Spalte : Code[10]) : Text[30]
+WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
+  BEGIN
+    Range1 :=
+    (PL_Sheet.Cells.Find(
+      What));
+
+    EXIT(Range1.Address);
+END;
+
+Trim_ShortDescr(string : Text[250];max_length : Integer) : Text[30]
+cr := 32;
+temp_string := string;
+IF COPYSTR(temp_string,1,1) = FORMAT(cr) THEN
+  temp_string := COPYSTR(temp_string,2);
+IF STRLEN(temp_string) > max_length THEN
+  BEGIN
+    leer_pos := max_length;
+    temp_string := COPYSTR(temp_string,1,leer_pos);
+    IF COPYSTR(temp_string,leer_pos,1) <> FORMAT(cr) THEN
+      REPEAT
+        leer_pos -= 1;
+        //temp_char := COPYSTR(temp_string,leer_pos,1);
+      UNTIL (leer_pos = 1) OR (COPYSTR(temp_string,leer_pos,1) = FORMAT(cr));
+    temp_string := COPYSTR(temp_string,1,leer_pos-1);
+  END;
+EXIT(temp_string);
+
+Trim_LongDescr(string : Text[250];max_length : Integer) : Text[50]
+cr := 32;
+temp_string := string;
+IF COPYSTR(temp_string,1,1) = FORMAT(cr) THEN
+  temp_string := COPYSTR(temp_string,2);
+IF STRLEN(temp_string) > max_length THEN
+  BEGIN
+    leer_pos := max_length;
+    temp_string := COPYSTR(temp_string,1,leer_pos);
+    IF COPYSTR(temp_string,leer_pos,1) <> FORMAT(cr) THEN
+      REPEAT
+        leer_pos -= 1;
+        //temp_char := COPYSTR(temp_string,leer_pos,1);
+      UNTIL (leer_pos = 1) OR (COPYSTR(temp_string,leer_pos,1) = FORMAT(cr));
+    temp_string := COPYSTR(temp_string,1,leer_pos);
+  END;
+EXIT(temp_string);
+
+LongDescrToExtendedText(artikelnr : Code[20];string : Text[1024];length : Integer)
+WITH ExtendHead DO
+  BEGIN
+    INIT;
+    "Table Name" := "Table Name" :: Item;
+    "No." := artikelnr;
+    INSERT(TRUE);
+    "All Language Codes" := TRUE;
+    "Purchase Quote" := FALSE;
+    "Purchase Invoice" := FALSE;
+    "Purchase Order" := FALSE;
+    "Purchase Credit Memo" := FALSE;
+    "Purchase Blanket Order" := FALSE;
+    "Prepmt. Purchase Invoice" := FALSE;
+    "Prepmt. Purchase Credit Memo" := FALSE;
+    "Service Order" := FALSE;
+    "Service Quote" := FALSE;
+    "Service Invoice" := FALSE;
+    "Service Credit Memo" := FALSE;
+    "Purchase Return Order" := FALSE;
+    "Delivery Reminder" := FALSE;
+    MODIFY(TRUE);
+
+    rest_string := string;
+    // Tab, LF und CR aus Text löschen
+    cr := 13;
+    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
+    cr := 10;
+    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
+    cr := 9;
+    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
+
+    line := 10000;
+    REPEAT
+      temp_string := Trim_LongDescr(rest_string,length);
+      rest_string := COPYSTR(rest_string,STRLEN(temp_string)+1);
+      ExtendLine.INIT;
+      ExtendLine."Table Name" := "Table Name";
+      ExtendLine."No." := "No.";
+      ExtendLine."Language Code" := "Language Code";
+      ExtendLine."Text No." := "Text No.";
+      ExtendLine.Text := temp_string;
+      ExtendLine."Line No." := line;
+      ExtendLine.INSERT;
+      line += 10000;
+    UNTIL STRLEN(rest_string) <= 1;
+  END;
