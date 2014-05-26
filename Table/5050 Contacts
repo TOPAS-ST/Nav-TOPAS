@@ -1,0 +1,1884 @@
+Documentation()
+TOPAS-080304: - Neue Felder 50030..50031
+              - TOPAS Felder in Synchronisierung
+
+OnInsert()
+RMSetup.GET;
+
+IF "No." = '' THEN BEGIN
+  RMSetup.TESTFIELD("Contact Nos.");
+  NoSeriesMgt.InitSeries(RMSetup."Contact Nos.",xRec."No. Series",0D,"No.","No. Series");
+END;
+
+IF NOT SkipDefaults THEN BEGIN
+  IF "Salesperson Code" = '' THEN
+    "Salesperson Code" := RMSetup."Default Salesperson Code";
+  IF "Territory Code" = '' THEN
+    "Territory Code" := RMSetup."Default Territory Code";
+  IF "Country/Region Code" = '' THEN
+    "Country/Region Code" := RMSetup."Default Country/Region Code";
+  IF "Language Code" = '' THEN
+    "Language Code" := RMSetup."Default Language Code";
+  IF "Correspondence Type" = "Correspondence Type"::" " THEN
+    "Correspondence Type" := RMSetup."Default Correspondence Type";
+  IF "Salutation Code" = '' THEN
+    IF Type = Type::Company THEN
+      "Salutation Code" := RMSetup."Def. Company Salutation Code"
+    ELSE
+      "Salutation Code" := RMSetup."Default Person Salutation Code";
+END;
+
+TypeChange;
+
+
+"Last Date Modified" := TODAY;
+"Last Time Modified" := TIME;
+
+OnModify()
+OnModify(xRec);
+
+OnDelete()
+//TOPAS 28.10.08-ST Bei Beteilungen kann der Ansprechpartner nicht gelöscht werden
+IF Type=Type::Person THEN
+  BEGIN
+    counter := 0;
+
+    Ansprechpartner.RESET;
+    Ansprechpartner.SETFILTER(Ansprechpartner."Kontaktnr.",'%1',"No.");
+    IF Ansprechpartner.FINDFIRST THEN 
+      REPEAT
+        counter += 1;
+      UNTIL Ansprechpartner.NEXT=0;
+
+    Ansprech_RMA.RESET;
+    Ansprech_RMA.SETFILTER(Ansprech_RMA.Art,'%1|%2',Ansprech_RMA.Art::"Ansprechpartner Kunde",
+    Ansprech_RMA.Art::"Ansprechpartner Hersteller");
+    Ansprech_RMA.SETFILTER(Ansprech_RMA."Nr.",'%1',"No.");
+    IF Ansprech_RMA.FINDFIRST THEN
+      REPEAT
+        counter += 1;
+      UNTIL Ansprech_RMA.NEXT = 0;
+
+    Dokuversand.RESET;
+    Dokuversand.SETFILTER("Kontaktnr.",'%1',"No.");
+    IF Dokuversand.FINDFIRST THEN
+      REPEAT
+        counter += 1;
+      UNTIL Dokuversand.NEXT = 0;
+
+    IF counter > 0 THEN
+      BEGIN
+        IF CONFIRM(Text100,FALSE,counter) THEN
+          BEGIN
+            xcontact.SETFILTER(xcontact."No.",'%1',"No.");
+            IF xcontact.FINDFIRST THEN
+              REPORT.RUN(50169,TRUE,FALSE,xcontact);
+          END;
+          ERROR(Text101);
+      END;
+
+  END;
+
+//TOPAS 24.04.09-ST Bei akt. oder arch. Verkaufsbelegen kann der Kontakt nicht gelöscht werden
+IF Type=Type::Company THEN
+  BEGIN
+    Beziehung.RESET;
+    Beziehung.SETFILTER(Beziehung."Contact No.",'%1',"No.");
+    Beziehung.SETFILTER("Business Relation Code",'DEB');
+    IF Beziehung.FINDFIRST THEN
+      BEGIN
+        SalesLine.RESET;
+        SalesLine.SETFILTER(SalesLine."Sell-to Customer No.",'%1',Beziehung."No.");
+        SalesLine.SETFILTER(SalesLine.Type,'%1',SalesLine.Type::Item);
+        ArchSalesLine.RESET;
+        ArchSalesLine.SETFILTER(ArchSalesLine."Sell-to Customer No.",'%1',Beziehung."No.");
+        ArchSalesLine.SETFILTER(ArchSalesLine.Type,'%1',ArchSalesLine.Type::Item);
+        IF SalesLine.FINDFIRST OR ArchSalesLine.FINDFIRST THEN
+          ERROR(Text105);
+      END;
+  END;
+
+//TOPAS Ende
+
+Todo.SETCURRENTKEY("Contact Company No.","Contact No.",Closed,Date);
+Todo.SETRANGE("Contact Company No.","Company No.");
+Todo.SETRANGE("Contact No.","No.");
+Todo.SETRANGE(Closed,FALSE);
+IF Todo.FIND('-') THEN
+  ERROR(Text000,TABLECAPTION,"No.");
+
+SegLine.SETCURRENTKEY("Contact No.");
+SegLine.SETRANGE("Contact No.","No.");
+IF SegLine.FIND('-') THEN
+  ERROR(Text001,TABLECAPTION,"No.");
+
+Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+Opp.SETRANGE("Contact Company No.","Company No.");
+Opp.SETRANGE("Contact No.","No.");
+Opp.SETRANGE(Status,Opp.Status::"Not Started",Opp.Status::"In Progress");
+IF Opp.FIND('-') THEN
+  ERROR(Text002,TABLECAPTION,"No.");
+
+CASE Type OF
+  Type::Company: BEGIN
+    //TOPAS 22.04.09-ST
+
+    Endkunden.RESET;
+    Endkunden.SETFILTER(Endkunden."Endkundennr.",'%1',"No.");
+    IF Endkunden.FINDFIRST THEN
+      Endkunden.DELETEALL;
+
+    Kontaktmemo.RESET;
+    Kontaktmemo.SETFILTER(Kontaktmemo."Mandantennr.",'%1',"No.");
+    IF Kontaktmemo.FINDFIRST THEN
+      Kontaktmemo.DELETEALL(TRUE);
+
+    //Hiermit werden alle Beteilungen in Projekten, Systemverträgen, Projektmemos gelöscht
+    Ansprech_Projekt.RESET;
+    Ansprech_Projekt.SETFILTER(Ansprech_Projekt."Kontakt Mandantennr.",'%1',"No.");
+    IF Ansprech_Projekt.FINDFIRST THEN
+      Ansprech_Projekt.DELETEALL;
+
+    RMA.RESET;
+    RMA.SETFILTER(RMA."Kontakt Mandantennr.",'%1',"No.");
+    IF RMA.FINDFIRST THEN
+      RMA.DELETEALL;
+
+    Dokuversand.RESET;
+    Dokuversand.SETFILTER("Mandantennr.",'%1',"No.");
+    IF Dokuversand.FINDFIRST THEN
+      Dokuversand.DELETEALL;
+
+    //TOPAS Ende
+
+    ContBusRel.SETRANGE("Contact No.","No.");
+    ContBusRel.DELETEALL;
+    ContIndustGrp.SETRANGE("Contact No.","No.");
+    ContIndustGrp.DELETEALL;
+    ContactWebSource.SETRANGE("Contact No.","No.");
+    ContactWebSource.DELETEALL;
+    DuplMgt.RemoveContIndex(Rec,FALSE);
+    InteractLogEntry.SETCURRENTKEY("Contact Company No.");
+    InteractLogEntry.SETRANGE("Contact Company No.", "No.");
+    IF InteractLogEntry.FIND('-') THEN
+      REPEAT
+        CampaignTargetGrMgt.DeleteContfromTargetGr(InteractLogEntry);
+        CLEAR(InteractLogEntry."Contact Company No.");
+        CLEAR(InteractLogEntry."Contact No.");
+        InteractLogEntry.MODIFY;
+      UNTIL InteractLogEntry.NEXT = 0;
+
+    Cont.RESET;
+    Cont.SETCURRENTKEY("Company No.");
+    Cont.SETRANGE("Company No.","No.");
+    Cont.SETRANGE(Type,Type::Person);
+    IF Cont.FIND('-') THEN
+      REPEAT
+        RecRef.GETTABLE(Cont);
+        Cont.DELETE(TRUE);
+        ChangeLogMgt.LogDeletion(RecRef);
+      UNTIL Cont.NEXT = 0;
+
+    Opp.RESET;
+    Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Opp.SETRANGE("Contact Company No.","Company No.");
+    Opp.SETRANGE("Contact No.","No.");
+    IF Opp.FIND('-') THEN
+      REPEAT
+        CLEAR(Opp."Contact No.");
+        CLEAR(Opp."Contact Company No.");
+        Opp.MODIFY;
+      UNTIL Opp.NEXT = 0;
+
+    Todo.RESET;
+    Todo.SETCURRENTKEY("Contact Company No.");
+    Todo.SETRANGE("Contact Company No.","Company No.");
+    IF Todo.FIND('-') THEN
+      REPEAT
+        CLEAR(Todo."Contact No.");
+        CLEAR(Todo."Contact Company No.");
+        Todo.MODIFY;
+      UNTIL Todo.NEXT = 0;
+    SearchWordDetail.RESET;
+    SearchWordDetail.SETCURRENTKEY("No.","Sub No.","Table Name");
+    SearchWordDetail.SETRANGE("No.","No.");
+    SearchWordDetail.SETFILTER(
+      "Table Name",'%1|%2|%3',
+      SearchWordDetail."Table Name"::"Interaction Log Entry",
+      SearchWordDetail."Table Name"::"To-do",
+      SearchWordDetail."Table Name"::Opportunity);
+    IF SearchWordDetail.FIND('-') THEN BEGIN
+      REPEAT
+        SearchWordDetail.RENAME(
+          SearchWordDetail."Search Word Entry No.",
+          '',
+          SearchWordDetail."Sub No.",
+          SearchWordDetail."Table Name",
+          SearchWordDetail."Field No.",
+          SearchWordDetail."Word Position");
+      UNTIL SearchWordDetail.NEXT = 0;
+    END;
+  END;
+
+  Type::Person: BEGIN
+    ContJobResp.SETRANGE("Contact No.", "No.");
+    ContJobResp.DELETEALL;
+
+    InteractLogEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+    InteractLogEntry.SETRANGE("Contact Company No.","Company No.");
+    InteractLogEntry.SETRANGE("Contact No.","No.");
+    InteractLogEntry.MODIFYALL("Contact No.","Company No.");
+
+    Opp.RESET;
+    Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Opp.SETRANGE("Contact Company No.","Company No.");
+    Opp.SETRANGE("Contact No.","No.");
+    Opp.MODIFYALL("Contact No.","Company No.");
+
+    Todo.RESET;
+    Todo.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Todo.SETRANGE("Contact Company No.","Company No.");
+    Todo.SETRANGE("Contact No.","No.");
+    Todo.MODIFYALL("Contact No.","Company No.");
+    SearchWordDetail.RESET;
+    SearchWordDetail.SETCURRENTKEY("No.","Sub No.","Table Name");
+    SearchWordDetail.SETRANGE("No.","No.");
+    SearchWordDetail.SETFILTER(
+      "Table Name",'%1|%2|%3',
+      SearchWordDetail."Table Name"::"Interaction Log Entry",
+      SearchWordDetail."Table Name"::"To-do",
+      SearchWordDetail."Table Name"::Opportunity);
+    IF SearchWordDetail.FIND('-') THEN BEGIN
+      REPEAT
+        SearchWordDetail.RENAME(
+          SearchWordDetail."Search Word Entry No.",
+          "Company No.",
+          SearchWordDetail."Sub No.",
+          SearchWordDetail."Table Name",
+          SearchWordDetail."Field No.",
+          SearchWordDetail."Word Position");
+      UNTIL SearchWordDetail.NEXT = 0;
+    END;
+  END;
+END;
+
+ContMailingGrp.SETRANGE("Contact No.","No.");
+ContMailingGrp.DELETEALL;
+
+ContProfileAnswer.SETRANGE("Contact No.","No.");
+ContProfileAnswer.DELETEALL;
+
+RMCommentLine.SETRANGE("Table Name",RMCommentLine."Table Name"::Contact);
+RMCommentLine.SETRANGE("No.","No.");
+RMCommentLine.SETRANGE("Sub No.",0);
+IF RMCommentLine.FIND('-') THEN
+  REPEAT
+    SearchManagement.DeleteCommentDetails(
+      RMCommentLine."No.",
+      RMCommentLine."Line No.");
+  UNTIL RMCommentLine.NEXT = 0;
+RMCommentLine.DELETEALL;
+
+ContAltAddr.SETRANGE("Contact No.","No.");
+ContAltAddr.DELETEALL;
+
+ContAltAddrDateRange.SETRANGE("Contact No.","No.");
+ContAltAddrDateRange.DELETEALL;
+SearchManagement.DeleteContactDetails("No.");
+
+OnRename()
+VALIDATE("Lookup Contact No.");
+
+
+SearchWordDetail.RESET;
+SearchWordDetail.SETRANGE("No.",xRec."No.");
+IF SearchWordDetail.FINDSET(TRUE,TRUE) THEN
+  REPEAT
+    SearchWordDetail2 := SearchWordDetail;
+    SearchWordDetail2.RENAME(
+      SearchWordDetail."Search Word Entry No.",
+      "No.",
+      SearchWordDetail."Sub No.",
+      SearchWordDetail."Table Name",
+      SearchWordDetail."Field No.",
+      SearchWordDetail."Word Position");
+  UNTIL SearchWordDetail.NEXT = 0;
+
+No. - OnValidate()
+IF "No." <> xRec."No." THEN BEGIN
+  RMSetup.GET;
+  NoSeriesMgt.TestManual(RMSetup."Contact Nos.");
+  "No. Series" := '';
+END;
+
+No. - OnLookup()
+
+Name - OnValidate()
+IF NOT (CurrFieldNo IN [FIELDNO("First Name"),FIELDNO("Middle Name"),FIELDNO(Surname)]) THEN
+  NameBreakdown;
+UpdateSearchName;
+
+IF Type = Type::Company THEN
+  "Company Name" := Name;
+
+//TOPAS 30.03.09-ST Aktualisierung der Endkunden Tabelle + akt. Belege
+IF (xRec.Name <> Name) AND (Type = Type::Company) THEN
+  BEGIN
+    Endkunde.RESET;
+    Endkunde.SETFILTER(Endkunde."Endkundennr.",'%1',"No.");
+    IF Endkunde.FINDFIRST THEN
+      REPEAT
+        Endkunde.Endkundenname := Name;
+        Endkunde.MODIFY;
+      UNTIL Endkunde.NEXT = 0;
+
+    Vkz.RESET;
+    Vkz.SETFILTER(Vkz.Type,'%1',Vkz.Type::Item);
+    Vkz.SETFILTER(Vkz."Endkundennr.",'%1',"No.");
+    IF Vkz.FINDFIRST THEN
+      REPEAT
+        Vkz.Endkunde := Name;
+        Vkz.MODIFY;
+      UNTIL Vkz.NEXT = 0;
+  END;
+//TOPAS Ende
+
+
+IF Type = Type::Person THEN BEGIN
+  ContBusRel.RESET;
+  ContBusRel.SETCURRENTKEY("Link to Table","Contact No.");
+  ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+  ContBusRel.SETRANGE("Contact No.","Company No.");
+  IF ContBusRel.FIND('-') THEN
+    IF Cust.GET(ContBusRel."No.") THEN
+      IF Cust."Primary Contact No." = "No." THEN BEGIN
+        Cust.Contact := Name;
+        Cust.MODIFY;
+      END;
+
+  ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Vendor);
+  IF ContBusRel.FIND('-') THEN
+    IF Vend.GET(ContBusRel."No.") THEN
+      IF Vend."Primary Contact No." = "No." THEN BEGIN
+        Vend.Contact := Name;
+        Vend.MODIFY;
+      END;
+END;
+
+Name - OnLookup()
+
+Search Name - OnValidate()
+
+Search Name - OnLookup()
+
+Name 2 - OnValidate()
+
+Name 2 - OnLookup()
+
+Address - OnValidate()
+
+Address - OnLookup()
+
+Address 2 - OnValidate()
+
+Address 2 - OnLookup()
+
+City - OnValidate()
+PostCode.ValidateCity(City,"Post Code");
+
+City - OnLookup()
+PostCode.LookUpCity(City,"Post Code",TRUE);
+
+Phone No. - OnValidate()
+
+Phone No. - OnLookup()
+
+Telex No. - OnValidate()
+
+Telex No. - OnLookup()
+
+Territory Code - OnValidate()
+//TOPAS 22.08.2013-ST Update des Gebietscodes in den dazugehörigen Projekten mit Hauptbeteiligung
+
+Branchen.RESET;
+ProjAnsprech.RESET;
+Projekte.RESET;
+counter := 0;
+IF ("Territory Code" <> xRec."Territory Code") AND ("Territory Code" <> '' ) AND (Type=Type::Company) THEN
+  BEGIN
+    ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+    ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+    IF ProjAnsprech.FINDFIRST THEN 
+      BEGIN
+        REPEAT
+          Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+          IF Projekte.FINDFIRST THEN BEGIN
+            Projekte.Gebietscode:= "Territory Code";
+            Projekte.MODIFY;
+            counter:=counter+1;
+          END;
+        UNTIL ProjAnsprech.NEXT = 0;
+        IF counter = 1 THEN MESSAGE('Es wurde 1 Projekt aktualisiert.');
+        IF counter > 1 THEN MESSAGE('Es wurden %1 Projekte aktualisiert.',counter);
+      END;
+  END;
+
+//TOPAS Ende
+
+Territory Code - OnLookup()
+
+Currency Code - OnValidate()
+
+Currency Code - OnLookup()
+
+Language Code - OnValidate()
+
+Language Code - OnLookup()
+
+Salesperson Code - OnValidate()
+//TOPAS 10.09.08-ST Update des Verkäufers in den dazugehörigen Projekten mit Hauptbeteiligung, bei Bestückern kommt nur ein Hinweis
+
+Branchen.RESET;
+ProjAnsprech.RESET;
+Projekte.RESET;
+counter := 0;
+IF ("Salesperson Code" <> xRec."Salesperson Code") AND ("Salesperson Code" <> '') AND (Type=Type::Company) THEN 
+  BEGIN
+    IF "Salesperson Code" <> 'MULTI' THEN 
+      BEGIN
+        ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+        ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        IF ProjAnsprech.FINDFIRST THEN 
+          BEGIN
+            REPEAT
+              Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+              IF Projekte.FINDFIRST THEN 
+                BEGIN
+                  Projekte."Salesperson Code":= "Salesperson Code";
+                  Projekte.MODIFY;
+                  counter:=counter+1;
+                END;
+            UNTIL ProjAnsprech.NEXT = 0;
+            IF counter = 1 THEN MESSAGE('Es wurde 1 Projekt aktualisiert.');
+            IF counter > 1 THEN MESSAGE('Es wurden %1 Projekte aktualisiert.',counter);
+          END;
+      END
+    ELSE
+      BEGIN
+        ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+        ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        IF ProjAnsprech.FINDFIRST THEN 
+          BEGIN
+            Branchen.SETFILTER(Branchen."Contact No.","No.");
+            Branchen.SETFILTER(Branchen."Industry Group Code",'BESTÜCKER');
+            IF Branchen.FINDFIRST THEN
+              MESSAGE(Text106,UPPERCASE(FIELDCAPTION("Salesperson Code")))
+            ELSE
+              MESSAGE(Text107,UPPERCASE(FIELDCAPTION("Salesperson Code")));
+          END;
+      END;
+  END;
+
+//TOPAS Ende
+
+Salesperson Code - OnLookup()
+
+Country/Region Code - OnValidate()
+
+Country/Region Code - OnLookup()
+
+Comment - OnValidate()
+
+Comment - OnLookup()
+
+Last Date Modified - OnValidate()
+
+Last Date Modified - OnLookup()
+
+Fax No. - OnValidate()
+
+Fax No. - OnLookup()
+
+Telex Answer Back - OnValidate()
+
+Telex Answer Back - OnLookup()
+
+VAT Registration No. - OnValidate()
+VATRegNoFormat.Test("VAT Registration No.","Country/Region Code","No.",DATABASE::Contact);
+
+VAT Registration No. - OnLookup()
+
+Picture - OnValidate()
+
+Picture - OnLookup()
+
+Post Code - OnValidate()
+PostCode.ValidatePostCode(City,"Post Code");
+
+Post Code - OnLookup()
+PostCode.LookUpPostCode(City,"Post Code",TRUE);
+
+County - OnValidate()
+
+County - OnLookup()
+
+E-Mail - OnValidate()
+//***************************************************************************************************
+//                           TOPAS 16.05.2010-ST EMail Syntax Prüfung
+//- mindestens 6 Zeichen lang
+//- @ muss einmal darin enthalten sein
+//- keine Sonderzeichen , im local part sind erlaubt: !"#$%&'*+-/0123456789=?@ABCDEFGHIJKLMNOPQRSTUV
+//  WXYZ^_`abcdefghijklmnopqrstuvwxyz{|}~
+//- hinter dem @ muss mindestens ein "." vorkommen
+//- nach dem letzten "." folgen mindestens 2 Zeichen
+//
+//***************************************************************************************************
+IF "E-Mail" <> '' THEN
+  BEGIN
+    IF STRPOS("E-Mail",'@') = 0 THEN
+      ERROR('Im Feld %1 muss das @ Symbol einmal vorhanden sein.',FIELDCAPTION("E-Mail"));
+
+    IF ((STRLEN("E-Mail")) - (STRLEN(DELCHR("E-Mail",'=','@'))) > 1  ) THEN
+      ERROR('Im Feld %1 darf das @ Symbol nur einmal vorkommen.',FIELDCAPTION("E-Mail"));
+
+    IF COPYSTR("E-Mail",1,1) = '@' THEN
+      ERROR('Im Feld %1 muss vor dem @ Symbol mindestens ein Zeichen stehen.',FIELDCAPTION("E-Mail"));
+
+    IF STRLEN("E-Mail") > STRLEN(DELCHR("E-Mail",'=',' ÖÄÜöäü,;ß\()[]´:<>°§')) THEN
+      ERROR('Im Feld %1 sind Leerzeichen, Sonderzeichen und Umlaute nicht erlaubt.',FIELDCAPTION("E-Mail"));
+
+    IF STRLEN("E-Mail") < 6 THEN
+      ERROR('Im Feld %1 beträgt die Mindestlänge 6 Zeichen.',FIELDCAPTION("E-Mail"));
+
+    IF STRPOS(COPYSTR("E-Mail",STRPOS("E-Mail",'@'),STRLEN("E-Mail")),'.') = 0 THEN
+      ERROR('Im Feld %1 muss nach dem @ mindestens ein "." (Punkt) vorkommen.',FIELDCAPTION("E-Mail"));
+
+    IF STRPOS(COPYSTR("E-Mail",STRPOS("E-Mail",'@'),STRLEN("E-Mail")),'.') = 2 THEN
+      ERROR('Im Feld %1 muss zwischen @ und dem 1. "." (Punkt) mindestens ein weiteres Zeichen folgen.',FIELDCAPTION("E-Mail"));
+
+    SearchText := COPYSTR("E-Mail",STRPOS("E-Mail",'@'));
+    FOR k := 1 TO (STRLEN((COPYSTR("E-Mail",STRPOS("E-Mail",'@')))) -
+                  (STRLEN(DELCHR((COPYSTR("E-Mail",STRPOS("E-Mail",'@'))),'=','.')))) DO
+      BEGIN
+        SearchText := COPYSTR(SearchText,STRPOS(SearchText,'.')+1);
+      END;
+    IF (STRLEN(SearchText) < 2) THEN
+      ERROR('Im Feld %1 muss die Endung "%2" nach dem letzten "." (Punkt) mindestens 2 Zeichen lang sein.'
+            ,FIELDCAPTION("E-Mail"),SearchText);
+  END;
+
+//***************************************************************************************************
+//                                        TOPAS Ende
+//***************************************************************************************************
+
+IF ("Search E-Mail" = UPPERCASE(xRec."E-Mail")) OR ("Search E-Mail" = '') THEN
+  "Search E-Mail" := "E-Mail";
+
+IF "E-Mail" <> xRec."E-Mail" THEN
+  "E-Mail 2" := "E-Mail";
+
+E-Mail - OnLookup()
+
+Home Page - OnValidate()
+
+Home Page - OnLookup()
+
+No. Series - OnValidate()
+
+No. Series - OnLookup()
+
+Type - OnValidate()
+IF CurrFieldNo <> 0 THEN BEGIN
+  TypeChange;
+  MODIFY;
+END;
+
+Type - OnLookup()
+
+Company No. - OnValidate()
+IF "Company No." = xRec."Company No." THEN
+  EXIT;
+
+TESTFIELD(Type,Type::Person);
+
+
+SegLine.SETCURRENTKEY("Contact No.");
+SegLine.SETRANGE("Contact No.","No.");
+IF SegLine.FIND('-') THEN
+  ERROR(Text012,FIELDCAPTION("Company No."));
+
+IF Cont.GET("Company No.") THEN
+  InheritCompanyToPersonData(Cont,xRec."Company No." = '')
+ELSE
+  CLEAR("Company Name");
+
+IF Cont.GET("No.") THEN BEGIN
+
+  IF xRec."Company No." <> '' THEN BEGIN
+    Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Opp.SETRANGE("Contact Company No.",xRec."Company No.");
+    Opp.SETRANGE("Contact No.","No.");
+    Opp.MODIFYALL("Contact No.",xRec."Company No.");
+    OppEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+    OppEntry.SETRANGE("Contact Company No.",xRec."Company No.");
+    OppEntry.SETRANGE("Contact No.","No.");
+    OppEntry.MODIFYALL("Contact No.",xRec."Company No.");
+    Todo.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Todo.SETRANGE("Contact Company No.",xRec."Company No.");
+    Todo.SETRANGE("Contact No.","No.");
+    Todo.MODIFYALL("Contact No.",xRec."Company No.");
+    InteractLogEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+    InteractLogEntry.SETRANGE("Contact Company No.",xRec."Company No.");
+    InteractLogEntry.SETRANGE("Contact No.","No.");
+    InteractLogEntry.MODIFYALL("Contact No.",xRec."Company No.");
+    ContBusRel.RESET;
+    ContBusRel.SETCURRENTKEY("Link to Table","No.");
+    ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+    ContBusRel.SETRANGE("Contact No.",xRec."Company No.");
+    SalesHeader.SETCURRENTKEY("Sell-to Customer No.","External Document No.");
+    SalesHeader.SETRANGE("Sell-to Contact No.","No.");
+    IF ContBusRel.FIND('-') THEN
+      SalesHeader.SETRANGE("Sell-to Customer No.",ContBusRel."No.")
+    ELSE
+      SalesHeader.SETRANGE("Sell-to Customer No.",'');
+    IF SalesHeader.FIND('-') THEN
+      REPEAT
+        SalesHeader."Sell-to Contact No." := xRec."Company No.";
+        IF SalesHeader."Sell-to Contact No." = SalesHeader."Bill-to Contact No." THEN
+          SalesHeader."Bill-to Contact No." := xRec."Company No.";
+        SalesHeader.MODIFY;
+      UNTIL SalesHeader.NEXT = 0;
+    SalesHeader.RESET;
+    SalesHeader.SETCURRENTKEY("Bill-to Contact No.");
+    SalesHeader.SETRANGE("Bill-to Contact No.","No.");
+    SalesHeader.MODIFYALL("Bill-to Contact No.",xRec."Company No.");
+  END ELSE BEGIN
+    Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Opp.SETRANGE("Contact Company No.",'');
+    Opp.SETRANGE("Contact No.","No.");
+    Opp.MODIFYALL("Contact Company No.","Company No.");
+    OppEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+    OppEntry.SETRANGE("Contact Company No.",'');
+    OppEntry.SETRANGE("Contact No.","No.");
+    OppEntry.MODIFYALL("Contact Company No.","Company No.");
+    Todo.SETCURRENTKEY("Contact Company No.","Contact No.");
+    Todo.SETRANGE("Contact Company No.",'');
+    Todo.SETRANGE("Contact No.","No.");
+    Todo.MODIFYALL("Contact Company No.","Company No.");
+    InteractLogEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+    InteractLogEntry.SETRANGE("Contact Company No.",'');
+    InteractLogEntry.SETRANGE("Contact No.","No.");
+    InteractLogEntry.MODIFYALL("Contact Company No.","Company No.");
+  END;
+  IF CurrFieldNo <> 0 THEN
+    MODIFY;
+END;
+
+Company No. - OnLookup()
+
+Company Name - OnValidate()
+
+Company Name - OnLookup()
+
+Lookup Contact No. - OnValidate()
+IF Type = Type::Company THEN
+  "Lookup Contact No." := ''
+ELSE
+  "Lookup Contact No." := "No.";
+
+Lookup Contact No. - OnLookup()
+
+First Name - OnValidate()
+VALIDATE(Name,CalculatedName);
+
+First Name - OnLookup()
+
+Middle Name - OnValidate()
+VALIDATE(Name,CalculatedName);
+
+Middle Name - OnLookup()
+
+Surname - OnValidate()
+VALIDATE(Name,CalculatedName);
+
+Surname - OnLookup()
+
+Job Title - OnValidate()
+
+Job Title - OnLookup()
+
+Initials - OnValidate()
+
+Initials - OnLookup()
+
+Extension No. - OnValidate()
+
+Extension No. - OnLookup()
+
+Mobile Phone No. - OnValidate()
+
+Mobile Phone No. - OnLookup()
+
+Pager - OnValidate()
+
+Pager - OnLookup()
+
+Organizational Level Code - OnValidate()
+
+Organizational Level Code - OnLookup()
+
+Exclude from Segment - OnValidate()
+
+Exclude from Segment - OnLookup()
+
+Date Filter - OnValidate()
+
+Date Filter - OnLookup()
+
+Next To-do Date - OnValidate()
+
+Next To-do Date - OnLookup()
+
+Last Date Attempted - OnValidate()
+
+Last Date Attempted - OnLookup()
+
+Date of Last Interaction - OnValidate()
+
+Date of Last Interaction - OnLookup()
+
+No. of Job Responsibilities - OnValidate()
+
+No. of Job Responsibilities - OnLookup()
+
+No. of Industry Groups - OnValidate()
+
+No. of Industry Groups - OnLookup()
+
+No. of Business Relations - OnValidate()
+
+No. of Business Relations - OnLookup()
+
+No. of Mailing Groups - OnValidate()
+
+No. of Mailing Groups - OnLookup()
+
+External ID - OnValidate()
+
+External ID - OnLookup()
+
+No. of Interactions - OnValidate()
+
+No. of Interactions - OnLookup()
+
+Cost (LCY) - OnValidate()
+
+Cost (LCY) - OnLookup()
+
+Duration (Min.) - OnValidate()
+
+Duration (Min.) - OnLookup()
+
+No. of Opportunities - OnValidate()
+
+No. of Opportunities - OnLookup()
+
+Estimated Value (LCY) - OnValidate()
+
+Estimated Value (LCY) - OnLookup()
+
+Calcd. Current Value (LCY) - OnValidate()
+
+Calcd. Current Value (LCY) - OnLookup()
+
+Opportunity Entry Exists - OnValidate()
+
+Opportunity Entry Exists - OnLookup()
+
+To-do Entry Exists - OnValidate()
+
+To-do Entry Exists - OnLookup()
+
+Salesperson Filter - OnValidate()
+
+Salesperson Filter - OnLookup()
+
+Campaign Filter - OnValidate()
+
+Campaign Filter - OnLookup()
+
+Action Taken Filter - OnValidate()
+
+Action Taken Filter - OnLookup()
+
+Sales Cycle Filter - OnValidate()
+
+Sales Cycle Filter - OnLookup()
+
+Sales Cycle Stage Filter - OnValidate()
+
+Sales Cycle Stage Filter - OnLookup()
+
+Probability % Filter - OnValidate()
+
+Probability % Filter - OnLookup()
+
+Completed % Filter - OnValidate()
+
+Completed % Filter - OnLookup()
+
+Estimated Value Filter - OnValidate()
+
+Estimated Value Filter - OnLookup()
+
+Calcd. Current Value Filter - OnValidate()
+
+Calcd. Current Value Filter - OnLookup()
+
+Chances of Success % Filter - OnValidate()
+
+Chances of Success % Filter - OnLookup()
+
+To-do Status Filter - OnValidate()
+
+To-do Status Filter - OnLookup()
+
+To-do Closed Filter - OnValidate()
+
+To-do Closed Filter - OnLookup()
+
+Priority Filter - OnValidate()
+
+Priority Filter - OnLookup()
+
+Team Filter - OnValidate()
+
+Team Filter - OnLookup()
+
+Close Opportunity Filter - OnValidate()
+
+Close Opportunity Filter - OnLookup()
+
+Correspondence Type - OnValidate()
+
+Correspondence Type - OnLookup()
+
+Salutation Code - OnValidate()
+
+Salutation Code - OnLookup()
+
+Search E-Mail - OnValidate()
+
+Search E-Mail - OnLookup()
+
+Last Time Modified - OnValidate()
+
+Last Time Modified - OnLookup()
+
+E-Mail 2 - OnValidate()
+
+E-Mail 2 - OnLookup()
+
+Betreuer Innendienst - OnValidate()
+//TOPAS 10.09.08-ST Update des Betreuers in den dazugehörigen Projekten mit Hauptbeteiligung, bei Bestückern kommt nur ein Hinweis
+
+Branchen.RESET;
+ProjAnsprech.RESET;
+Projekte.RESET;
+counter := 0;
+IF ("Betreuer Innendienst" <> xRec."Betreuer Innendienst") AND ("Betreuer Innendienst" <> '' ) AND (Type=Type::Company) THEN 
+  BEGIN
+    IF "Betreuer Innendienst" <> 'MULTI' THEN 
+      BEGIN
+         ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+         ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+         ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+         IF ProjAnsprech.FINDFIRST THEN 
+           BEGIN
+             REPEAT
+               Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+               IF Projekte.FINDFIRST THEN 
+                 BEGIN
+                   Projekte."Betreuer Innendienst":= "Betreuer Innendienst";
+                   Projekte.MODIFY;
+                   counter:=counter+1;
+                 END;
+             UNTIL ProjAnsprech.NEXT = 0;
+             IF counter = 1 THEN MESSAGE('Es wurde 1 Projekt aktualisiert.');
+             IF counter > 1 THEN MESSAGE('Es wurden %1 Projekte aktualisiert.',counter);
+           END;
+      END
+    ELSE
+      BEGIN
+        ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+        ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        IF ProjAnsprech.FINDFIRST THEN 
+          BEGIN
+            Branchen.SETFILTER(Branchen."Contact No.","No.");
+            Branchen.SETFILTER(Branchen."Industry Group Code",'BESTÜCKER');
+            IF Branchen.FINDFIRST THEN 
+              MESSAGE(Text106,UPPERCASE(FIELDCAPTION("Betreuer Innendienst")))
+            ELSE
+              MESSAGE(Text107,UPPERCASE(FIELDCAPTION("Betreuer Innendienst")));
+          END;
+      END;
+  END;
+
+//TOPAS Ende
+
+Betreuer Innendienst - OnLookup()
+
+Teams - OnValidate()
+//TOPAS 10.09.08-ST Update des Teamcodes in den dazugehörigen Projekten mit Hauptbeteiligung, bei Bestückern kommt nur ein Hinweis
+
+Branchen.RESET;
+ProjAnsprech.RESET;
+Projekte.RESET;
+counter := 0;
+IF (Teams <> xRec.Teams) AND (Type=Type::Company) THEN 
+  BEGIN
+    ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
+    ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+    IF ProjAnsprech.FINDFIRST THEN 
+      BEGIN
+        REPEAT
+          Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+          IF Projekte.FINDFIRST THEN BEGIN
+            Projekte.Teams:= Teams;
+            Projekte.MODIFY;
+            counter:=counter+1;
+          END;
+        UNTIL ProjAnsprech.NEXT = 0;
+        IF counter = 1 THEN MESSAGE('Es wurde 1 Projekt aktualisiert.');
+        IF counter > 1 THEN MESSAGE('Es wurden %1 Projekte aktualisiert.',counter);
+      END;
+  END;
+
+//TOPAS Ende
+
+Teams - OnLookup()
+
+Abteilung - OnValidate()
+
+Abteilung - OnLookup()
+
+Anzahl Projekte - OnValidate()
+
+Anzahl Projekte - OnLookup()
+
+Anzahl Kundenmemos - OnValidate()
+
+Anzahl Kundenmemos - OnLookup()
+
+Zusatzangaben - OnValidate()
+
+Zusatzangaben - OnLookup()
+
+Ansprech_id - OnValidate()
+
+Ansprech_id - OnLookup()
+
+akadem Grad - OnValidate()
+
+akadem Grad - OnLookup()
+
+Unternehmen verlassen - OnValidate()
+IF Type = Type :: Company THEN ERROR('%1 kann nur bei einer Person gesetzt werden.',FIELDCAPTION("Unternehmen verlassen"));
+
+IF "Unternehmen verlassen" = TRUE THEN
+  "UN verlassen am" := WORKDATE
+ELSE
+  "UN verlassen am" := 0D;
+
+Unternehmen verlassen - OnLookup()
+
+UN verlassen am - OnValidate()
+
+UN verlassen am - OnLookup()
+
+Gesperrt - OnValidate()
+IF Type = Type :: Person THEN ERROR('%1 kann nur bei einem Mandanten gesetzt werden.',FIELDCAPTION(Gesperrt));
+
+Gesperrt - OnLookup()
+
+Mailingvormerkung - OnValidate()
+
+Mailingvormerkung - OnLookup()
+
+AC_Solutionpartner - OnValidate()
+
+AC_Solutionpartner - OnLookup()
+
+Mobiligence_key - OnValidate()
+
+Mobiligence_key - OnLookup()
+
+OnModify(xRec : Record Contact)
+"Last Date Modified" := TODAY;
+"Last Time Modified" := TIME;
+IF Name <> xRec.Name THEN
+  SearchManagement.ParseField(
+    "No.","No.",Name,SearchWordDetail."Table Name"::Contact,FIELDNO(Name));
+
+IF  "Company Name" <> xRec."Company Name" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Company Name",SearchWordDetail."Table Name"::Contact,FIELDNO("Company Name"));
+
+IF  "Search Name" <> xRec."Search Name" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Search Name",SearchWordDetail."Table Name"::Contact,FIELDNO("Search Name"));
+
+IF  "Name 2" <> xRec."Name 2" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Name 2",SearchWordDetail."Table Name"::Contact,FIELDNO("Name 2"));
+
+IF  Address <> xRec.Address THEN
+  SearchManagement.ParseField(
+    "No.","No.",Address,SearchWordDetail."Table Name"::Contact,FIELDNO(Address));
+
+IF  "Address 2" <> xRec."Address 2" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Address 2",SearchWordDetail."Table Name"::Contact,FIELDNO("Address 2"));
+
+IF  City <> xRec.City THEN
+  SearchManagement.ParseField(
+    "No.","No.",City,SearchWordDetail."Table Name"::Contact,FIELDNO(City));
+
+IF  "Phone No." <> xRec."Phone No." THEN
+  SearchManagement.ParseField(
+    "No.","No.","Phone No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Phone No."));
+
+IF  "Telex No." <> xRec."Telex No." THEN
+  SearchManagement.ParseField(
+    "No.","No.","Telex No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Telex No."));
+
+IF  "Fax No." <> xRec."Fax No." THEN
+  SearchManagement.ParseField(
+    "No.","No.","Fax No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Fax No."));
+
+IF  Pager <> xRec.Pager THEN
+  SearchManagement.ParseField(
+    "No.","No.",Pager,SearchWordDetail."Table Name"::Contact,FIELDNO(Pager));
+
+IF  "Telex Answer Back" <> xRec."Telex Answer Back" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Telex Answer Back",SearchWordDetail."Table Name"::Contact,FIELDNO("Telex Answer Back"));
+
+IF  "VAT Registration No." <> xRec."VAT Registration No." THEN
+  SearchManagement.ParseField(
+    "No.","No.","VAT Registration No.",SearchWordDetail."Table Name"::Contact,FIELDNO("VAT Registration No."));
+
+IF  "Post Code" <> xRec."Post Code" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Post Code",SearchWordDetail."Table Name"::Contact,FIELDNO("Post Code"));
+
+IF  County <> xRec.County THEN
+  SearchManagement.ParseField(
+    "No.","No.",County,SearchWordDetail."Table Name"::Contact,FIELDNO(County));
+
+IF  "E-Mail" <> xRec."E-Mail" THEN
+  SearchManagement.ParseField(
+    "No.","No.","E-Mail",SearchWordDetail."Table Name"::Contact,FIELDNO("E-Mail"));
+
+IF  "Home Page" <> xRec."Home Page" THEN
+  SearchManagement.ParseField(
+    "No.","No.","Home Page",SearchWordDetail."Table Name"::Contact,FIELDNO("Home Page"));
+
+IF  "Mobile Phone No." <> xRec."Mobile Phone No." THEN
+  SearchManagement.ParseField(
+    "No.","No.","Mobile Phone No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Mobile Phone No."));
+
+IF Type = Type::Company THEN BEGIN
+  IF (Name <> xRec.Name) OR
+     ("Search Name" <> xRec."Search Name") OR
+     ("Name 2" <> xRec."Name 2") OR
+     (Address <> xRec.Address) OR
+     ("Address 2" <> xRec."Address 2") OR
+     (City <> xRec.City) OR
+     ("Phone No." <> xRec."Phone No.") OR
+     ("Telex No." <> xRec."Telex No.") OR
+     ("Territory Code" <> xRec."Territory Code") OR
+     // TOPAS begin *****************************************************************
+     ("Betreuer Innendienst" <> xRec."Betreuer Innendienst") OR
+     (Teams <> xRec.Teams) OR
+     (AC_Solutionpartner <> xRec.AC_Solutionpartner) OR
+     // TOPAS ende ******************************************************************
+     ("Currency Code" <> xRec."Currency Code") OR
+     ("Language Code" <> xRec."Language Code") OR
+     ("Salesperson Code" <> xRec."Salesperson Code") OR
+     ("Country/Region Code" <> xRec."Country/Region Code") OR
+     ("Fax No." <> xRec."Fax No.") OR
+     ("Telex Answer Back" <> xRec."Telex Answer Back") OR
+     ("VAT Registration No." <> xRec."VAT Registration No.") OR
+     ("Post Code" <> xRec."Post Code") OR
+     (County <> xRec.County) OR
+     ("E-Mail" <> xRec."E-Mail") OR
+     ("Home Page" <> xRec."Home Page")
+  THEN
+    UpdateCustVendBank.RUN(Rec);
+
+  RMSetup.GET;
+  Cont.RESET;
+  Cont.SETCURRENTKEY("Company No.");
+  Cont.SETRANGE("Company No.","No.");
+  Cont.SETRANGE(Type,Type::Person);
+  IF Cont.FIND('-') THEN
+    REPEAT
+      ContChanged := FALSE;
+      OldCont := Cont;
+      IF Name <> xRec.Name THEN BEGIN
+        Cont."Company Name" := Name;
+        ContChanged := TRUE;
+      END;
+      IF RMSetup."Inherit Salesperson Code" AND
+         (xRec."Salesperson Code" <> "Salesperson Code") AND
+         (xRec."Salesperson Code" = Cont."Salesperson Code")
+      THEN BEGIN
+        Cont."Salesperson Code" := "Salesperson Code";
+        ContChanged := TRUE;
+      END;
+      
+      // TOPAS begin ********************************************************************
+      IF RMSetup."Betreuer Innendienst übernehme" AND
+         (xRec."Betreuer Innendienst" <> "Betreuer Innendienst") AND
+         (xRec."Betreuer Innendienst" = Cont."Betreuer Innendienst")
+      THEN BEGIN
+        Cont."Betreuer Innendienst" := "Betreuer Innendienst";
+        ContChanged := TRUE;
+      END;
+      IF RMSetup."Teams übernehmen" AND
+         (xRec.Teams <> Teams) AND
+         (xRec.Teams = Cont.Teams)
+      THEN BEGIN
+        Cont.Teams := Teams;
+        ContChanged := TRUE;
+      END;
+
+      
+      // TOPAS ende ************************************************************************
+
+
+      IF RMSetup."Inherit Territory Code" AND
+         (xRec."Territory Code" <> "Territory Code") AND
+         (xRec."Territory Code" = Cont."Territory Code")
+      THEN BEGIN
+        Cont."Territory Code" := "Territory Code";
+        ContChanged := TRUE;
+      END;
+      IF RMSetup."Inherit Country/Region Code" AND
+         (xRec."Country/Region Code" <> "Country/Region Code") AND
+         (xRec."Country/Region Code" = Cont."Country/Region Code")
+      THEN BEGIN
+        Cont."Country/Region Code" := "Country/Region Code";
+        ContChanged := TRUE;
+      END;
+      IF RMSetup."Inherit Language Code" AND
+         (xRec."Language Code" <> "Language Code") AND
+         (xRec."Language Code" = Cont."Language Code")
+      THEN BEGIN
+        Cont."Language Code" := "Language Code";
+        ContChanged := TRUE;
+      END;
+      IF RMSetup."Inherit Address Details" THEN BEGIN
+        IF xRec.IdenticalAddress(Cont) THEN BEGIN
+          IF xRec.Address <> Address THEN BEGIN
+            Cont.Address := Address;
+            ContChanged := TRUE;
+          END;
+          IF xRec."Address 2" <> "Address 2" THEN BEGIN
+            Cont."Address 2" := "Address 2";
+            ContChanged := TRUE;
+          END;
+          IF xRec."Post Code" <> "Post Code" THEN BEGIN
+            Cont."Post Code" := "Post Code";
+            ContChanged := TRUE;
+          END;
+          IF xRec.City <> City THEN BEGIN
+            Cont.City := City;
+            ContChanged := TRUE;
+          END;
+        END;
+      END;
+      IF RMSetup."Inherit Communication Details" THEN BEGIN
+        IF (xRec."Phone No." <> "Phone No.") AND (xRec."Phone No." = Cont."Phone No.") THEN BEGIN
+          Cont."Phone No." := "Phone No.";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Telex No." <> "Telex No.") AND (xRec."Telex No." = Cont."Telex No.") THEN BEGIN
+          Cont."Telex No." := "Telex No.";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Fax No." <> "Fax No.") AND (xRec."Fax No." = Cont."Fax No.") THEN BEGIN
+          Cont."Fax No." := "Fax No.";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Telex Answer Back" <> "Telex Answer Back") AND (xRec."Telex Answer Back" = Cont."Telex Answer Back") THEN BEGIN
+          Cont."Telex Answer Back" := "Telex Answer Back";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."E-Mail" <> "E-Mail") AND (xRec."E-Mail" = Cont."E-Mail") THEN BEGIN
+          Cont.VALIDATE("E-Mail","E-Mail");
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Home Page" <> "Home Page") AND (xRec."Home Page" = Cont."Home Page") THEN BEGIN
+          Cont."Home Page" := "Home Page";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Extension No." <> "Extension No.") AND (xRec."Extension No." = Cont."Extension No.") THEN BEGIN
+          Cont."Extension No." := "Extension No.";
+          ContChanged := TRUE;
+        END;
+        IF (xRec."Mobile Phone No." <> "Mobile Phone No.") AND (xRec."Mobile Phone No." = Cont."Mobile Phone No.") THEN BEGIN
+          Cont."Mobile Phone No." := "Mobile Phone No.";
+          ContChanged := TRUE;
+        END;
+        IF (xRec.Pager <> Pager) AND (xRec.Pager = Cont.Pager) THEN BEGIN
+          Cont.Pager := Pager;
+          ContChanged := TRUE;
+        END;
+      END;
+      IF ContChanged THEN BEGIN
+        Cont.OnModify(OldCont);
+        Cont.MODIFY;
+        xRecRef.GETTABLE(OldCont);
+        RecRef.GETTABLE(Cont);
+        ChangeLogMgt.LogModification(RecRef,xRecRef);
+      END;
+    UNTIL Cont.NEXT = 0;
+
+  IF (Name <> xRec.Name) OR
+     ("Name 2" <> xRec."Name 2") OR
+     (Address <> xRec.Address) OR
+     ("Address 2" <> xRec."Address 2") OR
+     (City <> xRec.City) OR
+     ("Post Code" <> xRec."Post Code") OR
+     ("VAT Registration No." <> xRec."VAT Registration No.") OR
+     ("Phone No." <> xRec."Phone No.")
+  THEN
+    CheckDupl;
+END;
+
+TypeChange()
+RMSetup.GET;
+
+InteractLogEntry.LOCKTABLE;
+Todo.LOCKTABLE;
+Opp.LOCKTABLE;
+Cont.LOCKTABLE;
+InteractLogEntry.SETCURRENTKEY("Contact Company No.","Contact No.");
+InteractLogEntry.SETRANGE("Contact Company No.","Company No.");
+InteractLogEntry.SETRANGE("Contact No.","No.");
+IF InteractLogEntry.FIND('-') THEN
+  ERROR(Text003,FIELDCAPTION(Type));
+Todo.SETCURRENTKEY("Contact Company No.","Contact No.");
+Todo.SETRANGE("Contact Company No.","Company No.");
+Todo.SETRANGE("Contact No.","No.");
+IF Todo.FIND('-') THEN
+  ERROR(Text005,FIELDCAPTION(Type));
+Opp.SETCURRENTKEY("Contact Company No.","Contact No.");
+Opp.SETRANGE("Contact Company No.","Company No.");
+Opp.SETRANGE("Contact No.","No.");
+IF Opp.FIND('-') THEN
+  ERROR(Text006,FIELDCAPTION(Type));
+
+CASE Type OF
+  Type::Company:
+    BEGIN
+      TESTFIELD("Organizational Level Code",'');
+      TESTFIELD("No. of Job Responsibilities",0);
+      "First Name" := '';
+      "Middle Name" := '';
+      Surname := '';
+      "Job Title" := '';
+      "Company No." := "No.";
+      "Company Name" := Name;
+      SearchManagement.ParseField(
+        "No.","No.","Company Name",
+        SearchWordDetail."Table Name"::Contact,
+        FIELDNO("Company Name"));
+      "Salutation Code" := RMSetup."Def. Company Salutation Code";
+    END;
+  Type::Person:
+    BEGIN
+      CampaignTargetGrMgt.DeleteContfromTargetGr(InteractLogEntry);
+      Cont.RESET;
+      Cont.SETCURRENTKEY("Company No.");
+      Cont.SETRANGE("Company No.","No.");
+      Cont.SETRANGE(Type,Type::Person);
+      IF Cont.FIND('-') THEN
+        ERROR(Text007,FIELDCAPTION(Type));
+      TESTFIELD("No. of Business Relations",0);
+      TESTFIELD("No. of Industry Groups",0);
+      TESTFIELD("Currency Code",'');
+      TESTFIELD("VAT Registration No.",'');
+      IF "Company No." = "No." THEN BEGIN
+        "Company No." := '';
+        "Company Name" := '';
+        SearchManagement.DeletePrevDetails(
+          "No.","No.",
+          SearchWordDetail."Table Name"::Contact,
+          FIELDNO("Company Name"));
+        "Salutation Code" := RMSetup."Default Person Salutation Code";
+        NameBreakdown;
+      END;
+    END;
+END;
+VALIDATE("Lookup Contact No.");
+
+IF Cont.GET("No.") THEN BEGIN
+  IF Type = Type::Company THEN
+    CheckDupl
+  ELSE
+    DuplMgt.RemoveContIndex(Rec,FALSE);
+END;
+
+AssistEdit(OldCont : Record Contact) : Boolean
+WITH Cont DO BEGIN
+  Cont := Rec;
+  RMSetup.GET;
+  RMSetup.TESTFIELD("Contact Nos.");
+  IF NoSeriesMgt.SelectSeries(RMSetup."Contact Nos.",OldCont."No. Series","No. Series") THEN BEGIN
+    RMSetup.GET;
+    RMSetup.TESTFIELD("Contact Nos.");
+    NoSeriesMgt.SetSeries("No.");
+    Rec := Cont;
+    EXIT(TRUE);
+  END;
+END;
+
+CreateCustomer(CustomerTemplate : Code[10])
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Customers");
+
+ContBusRel.RESET;
+ContBusRel.SETRANGE("Contact No.","No.");
+ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+IF ContBusRel.FIND('-') THEN
+  ERROR(
+    Text019,
+    TABLECAPTION,"No.",ContBusRel.TABLECAPTION,ContBusRel."Link to Table",ContBusRel."No.")
+ELSE
+  IF CustomerTemplate <> '' THEN
+    CustTemplate.GET(CustomerTemplate);
+
+CLEAR(Cust);
+Cust.SetInsertFromContact(TRUE);
+Cust.INSERT(TRUE);
+Cust.SetInsertFromContact(FALSE);
+
+IF Type = Type::Company THEN
+  ContComp := Rec
+ELSE
+  ContComp.GET("Company No.");
+
+ContBusRel."Contact No." := ContComp."No.";
+ContBusRel."Business Relation Code" := RMSetup."Bus. Rel. Code for Customers";
+ContBusRel."Link to Table" := ContBusRel."Link to Table"::Customer;
+ContBusRel."No." := Cust."No.";
+ContBusRel.INSERT(TRUE);
+
+UpdateCustVendBank.UpdateCustomer(ContComp,ContBusRel);
+
+Cust.GET(ContBusRel."No.");
+Cust.VALIDATE(Name,"Company Name");
+Cust.MODIFY;
+
+IF CustTemplate.Code <> '' THEN BEGIN
+  Cust."Territory Code" := "Territory Code";
+  Cust."Currency Code" := ContComp."Currency Code";
+  Cust."Country/Region Code" := "Country/Region Code";
+  Cust."Customer Posting Group" := CustTemplate."Customer Posting Group";
+  Cust."Customer Price Group" := CustTemplate."Customer Price Group";
+  Cust."Invoice Disc. Code" := CustTemplate."Invoice Disc. Code";
+  Cust."Customer Disc. Group" := CustTemplate."Customer Disc. Group";
+  Cust."Allow Line Disc." := CustTemplate."Allow Line Disc.";
+  Cust."Gen. Bus. Posting Group" := CustTemplate."Gen. Bus. Posting Group";
+  Cust."VAT Bus. Posting Group" := CustTemplate."VAT Bus. Posting Group";
+  Cust."Payment Terms Code" := CustTemplate."Payment Terms Code";
+  Cust."Payment Method Code" := CustTemplate."Payment Method Code";
+  Cust."Shipment Method Code" := CustTemplate."Shipment Method Code";
+  Cust.MODIFY;
+
+  DefaultDim.SETRANGE("Table ID",DATABASE::"Customer Template");
+  DefaultDim.SETRANGE("No.",CustTemplate.Code);
+  IF DefaultDim.FIND('-') THEN
+    REPEAT
+      CLEAR(DefaultDim2);
+      DefaultDim2.INIT;
+      DefaultDim2.VALIDATE("Table ID",DATABASE::Customer);
+      DefaultDim2."No." := Cust."No.";
+      DefaultDim2.VALIDATE("Dimension Code",DefaultDim."Dimension Code");
+      DefaultDim2.VALIDATE("Dimension Value Code",DefaultDim."Dimension Value Code");
+      DefaultDim2."Value Posting" := DefaultDim."Value Posting";
+      DefaultDim2.INSERT(TRUE);
+    UNTIL DefaultDim.NEXT = 0;
+END;
+
+UpdateQuotes(Cust."No.");
+CampaignMgt.ConverttoCustomer(Rec,Cust);
+MESSAGE(Text009,Cust.TABLECAPTION,Cust."No.");
+
+CreateVendor()
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Vendors");
+
+CLEAR(Vend);
+Vend.SetInsertFromContact(TRUE);
+Vend.INSERT(TRUE);
+Vend.SetInsertFromContact(FALSE);
+
+IF Type = Type::Company THEN
+  ContComp := Rec
+ELSE
+  ContComp.GET("Company No.");
+
+ContBusRel."Contact No." := ContComp."No.";
+ContBusRel."Business Relation Code" := RMSetup."Bus. Rel. Code for Vendors";
+ContBusRel."Link to Table" := ContBusRel."Link to Table"::Vendor;
+ContBusRel."No." := Vend."No.";
+ContBusRel.INSERT(TRUE);
+
+UpdateCustVendBank.UpdateVendor(ContComp,ContBusRel);
+
+MESSAGE(Text009,Vend.TABLECAPTION,Vend."No.");
+
+CreateBankAccount()
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Bank Accs.");
+
+CLEAR(BankAcc);
+BankAcc.SetInsertFromContact(TRUE);
+BankAcc.INSERT(TRUE);
+BankAcc.SetInsertFromContact(FALSE);
+
+IF Type = Type::Company THEN
+  ContComp := Rec
+ELSE
+  ContComp.GET("Company No.");
+
+ContBusRel."Contact No." := ContComp."No.";
+ContBusRel."Business Relation Code" := RMSetup."Bus. Rel. Code for Bank Accs.";
+ContBusRel."Link to Table" := ContBusRel."Link to Table"::"Bank Account";
+ContBusRel."No." := BankAcc."No.";
+ContBusRel.INSERT(TRUE);
+
+UpdateCustVendBank.UpdateBankAccount(ContComp,ContBusRel);
+
+MESSAGE(Text009,BankAcc.TABLECAPTION,BankAcc."No.");
+
+CreateCustomerLink()
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Customers");
+CreateLink(
+  FORM::"Customer Link",
+  RMSetup."Bus. Rel. Code for Customers",
+  ContBusRel."Link to Table"::Customer);
+
+ContBusRel.SETCURRENTKEY("Link to Table","No.");
+ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+ContBusRel.SETRANGE("Contact No.","Company No.");
+IF ContBusRel.FIND('-') THEN
+  IF Cust.GET(ContBusRel."No.") THEN
+    UpdateQuotes(Cust."No.");
+
+CreateVendorLink()
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Vendors");
+CreateLink(
+  FORM::"Vendor Link",
+  RMSetup."Bus. Rel. Code for Vendors",
+  ContBusRel."Link to Table"::Vendor);
+
+CreateBankAccountLink()
+TESTFIELD("Company No.");
+RMSetup.GET;
+RMSetup.TESTFIELD("Bus. Rel. Code for Bank Accs.");
+CreateLink(
+  FORM::"Bank Account Link",
+  RMSetup."Bus. Rel. Code for Bank Accs.",
+  ContBusRel."Link to Table"::"Bank Account");
+
+CreateLink(CreateForm : Integer;BusRelCode : Code[10];Table : 'Customer,Vendor,Bank Account')
+TempContBusRel."Contact No." := "Company No.";
+TempContBusRel."Business Relation Code" := BusRelCode;
+TempContBusRel."Link to Table" := Table;
+TempContBusRel.INSERT;
+FORM.RUNMODAL(CreateForm,TempContBusRel);
+TempContBusRel.DELETEALL;
+
+CreateInteraction()
+SegmentLine.CreateInteractionFromContact(Rec);
+
+ShowCustVendBank()
+FormSelected := TRUE;
+
+ContBusRel.RESET;
+ContBusRel.SETRANGE("Contact No.","Company No.");
+ContBusRel.SETFILTER("No.",'<>''''');
+
+CASE ContBusRel.COUNT OF
+  0: ERROR(Text010,TABLECAPTION,"No.");
+  1: ContBusRel.FIND('-');
+  ELSE
+    FormSelected := FORM.RUNMODAL(FORM::"Contact Business Relations",ContBusRel) = ACTION::LookupOK;
+END;
+
+IF FormSelected THEN BEGIN
+  CASE ContBusRel."Link to Table" OF
+    ContBusRel."Link to Table"::Customer: BEGIN
+      Cust.GET(ContBusRel."No.");
+      FORM.RUN(FORM::"Customer Card",Cust);
+    END;
+    ContBusRel."Link to Table"::Vendor: BEGIN
+      Vend.GET(ContBusRel."No.");
+      FORM.RUN(FORM::"Vendor Card",Vend);
+    END;
+    ContBusRel."Link to Table"::"Bank Account": BEGIN
+      BankAcc.GET(ContBusRel."No.");
+      FORM.RUN(FORM::"Bank Account Card",BankAcc);
+    END;
+  END;
+END;
+
+NameBreakdown()
+IF Type = Type::Company THEN
+  EXIT;
+
+TempName := Name;
+WHILE STRPOS(TempName,' ') > 0 DO BEGIN
+  IF STRPOS(TempName,' ') > 1 THEN BEGIN
+    i := i + 1;
+    NamePart[i] := COPYSTR(TempName,1,STRPOS(TempName,' ') - 1);
+  END;
+  TempName := COPYSTR(TempName,STRPOS(TempName,' ') + 1);
+END;
+i := i + 1;
+NamePart[i] := TempName;
+NoOfParts := i;
+
+"First Name" := '';
+"Middle Name" := '';
+Surname := '';
+FOR i := 1 TO NoOfParts DO BEGIN
+  IF (i = NoOfParts) AND (NoOfParts > 1) THEN BEGIN
+    IF STRLEN(NamePart[i]) > MAXSTRLEN(Surname) THEN
+      ERROR(Text032,FIELDCAPTION(Surname),STRLEN(NamePart[i]) - MAXSTRLEN(Surname));
+    Surname := NamePart[i]
+  END ELSE
+    IF (i = NoOfParts - 1) AND (NoOfParts > 2) THEN BEGIN
+      IF STRLEN(NamePart[i]) > MAXSTRLEN("Middle Name") THEN
+        ERROR(Text032,FIELDCAPTION("Middle Name"),STRLEN(NamePart[i]) - MAXSTRLEN("Middle Name"));
+      "Middle Name" := NamePart[i]
+    END ELSE BEGIN
+      FirstName250 := DELCHR("First Name" + ' ' + NamePart[i],'<',' ');
+      IF STRLEN(FirstName250) > MAXSTRLEN("First Name") THEN
+        ERROR(Text032,FIELDCAPTION("First Name"),STRLEN(FirstName250) - MAXSTRLEN("First Name"));
+      "First Name" := FirstName250;
+    END;
+END;
+
+SetSkipDefault(Defaults : Boolean)
+SkipDefaults := NOT Defaults;
+
+IdenticalAddress(VAR Cont : Record Contact) : Boolean
+EXIT(
+  (Address = Cont.Address) AND
+  ("Address 2" = Cont."Address 2") AND
+  ("Post Code" = Cont."Post Code") AND
+  (City = Cont.City))
+
+ActiveAltAddress(ActiveDate : Date) : Code[10]
+ContAltAddrDateRange.SETCURRENTKEY("Contact No.","Starting Date");
+ContAltAddrDateRange.SETRANGE("Contact No.","No.");
+ContAltAddrDateRange.SETRANGE("Starting Date",0D,ActiveDate);
+ContAltAddrDateRange.SETFILTER("Ending Date",'>=%1|%2',ActiveDate,0D);
+IF ContAltAddrDateRange.FIND('+') THEN
+  EXIT(ContAltAddrDateRange."Contact Alt. Address Code")
+ELSE
+  EXIT('');
+
+CalculatedName() NewName : Text[250]
+IF "First Name" <> '' THEN
+  NewName250 := "First Name";
+IF "Middle Name" <> '' THEN
+  NewName250 := NewName250 + ' ' + "Middle Name";
+IF Surname <> '' THEN
+  NewName250 := NewName250 + ' ' + Surname;
+
+NewName250 := DELCHR(NewName250,'<',' ');
+
+IF STRLEN(NewName250) > MAXSTRLEN(Name) THEN
+  ERROR(Text029,STRLEN(NewName250) - MAXSTRLEN(Name));
+
+NewName := NewName250;
+
+UpdateSearchName()
+IF ("Search Name" = UPPERCASE(xRec.Name)) OR ("Search Name" = '') THEN
+  "Search Name" := Name;
+
+AddText(Text : Text[249]) : Text[250]
+IF Text <> '' THEN
+  EXIT(Text + ' ');
+
+CheckDupl()
+IF RMSetup."Maintain Dupl. Search Strings" THEN
+  DuplMgt.MakeContIndex(Rec);
+IF GUIALLOWED THEN
+  IF DuplMgt.DuplicateExist(Rec) THEN BEGIN
+    MODIFY;
+    COMMIT;
+    DuplMgt.LaunchDuplicateForm(Rec);
+  END;
+
+FindCustomerTemplate() FindCustTemplate : Code[10]
+CustTemplate.RESET;
+CustTemplate.SETRANGE("Territory Code","Territory Code");
+CustTemplate.SETRANGE("Country/Region Code","Country/Region Code");
+IF ContCompany.GET("Company No.") THEN
+  CustTemplate.SETRANGE("Currency Code",ContCompany."Currency Code");
+
+IF CustTemplate.COUNT = 1 THEN BEGIN
+  CustTemplate.FIND('-');
+  EXIT(CustTemplate.Code);
+END;
+
+ChooseCustomerTemplate() ChooseCustTemplate : Code[10]
+ContBusRel.RESET;
+ContBusRel.SETRANGE("Contact No.","No.");
+ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+IF ContBusRel.FIND('-') THEN
+  ERROR(
+    Text019,
+    TABLECAPTION,"No.",ContBusRel.TABLECAPTION,ContBusRel."Link to Table",ContBusRel."No.")
+ELSE
+  IF CONFIRM(Text020,TRUE,"No.",Name) THEN
+    IF FORM.RUNMODAL(0,CustTemplate) = ACTION::LookupOK THEN
+      EXIT(CustTemplate.Code)
+    ELSE
+      ERROR(Text022);
+
+UpdateQuotes(CustomerNo : Code[20])
+Cont.SETCURRENTKEY("Company No.");
+Cont.SETRANGE("Company No.","Company No.");
+
+IF Cont.FIND('-') THEN
+  REPEAT
+    SalesHeader.RESET;
+    SalesHeader.SETCURRENTKEY("Document Type","Sell-to Contact No.");
+    SalesHeader.SETRANGE("Document Type",SalesHeader."Document Type"::Quote);
+    SalesHeader.SETRANGE("Sell-to Contact No.",Cont."No.");
+    IF SalesHeader.FIND('-') THEN
+      REPEAT
+        SalesHeader."Sell-to Customer No." := CustomerNo;
+        SalesHeader."Sell-to Customer Template Code" := '';
+        SalesHeader.MODIFY;
+        SalesLine.SETRANGE("Document Type",SalesHeader."Document Type");
+        SalesLine.SETRANGE("Document No.",SalesHeader."No.");
+        IF SalesLine.FIND('-') THEN
+          SalesLine.MODIFYALL("Sell-to Customer No.",SalesHeader."Sell-to Customer No.");
+      UNTIL SalesHeader.NEXT = 0;
+
+    SalesHeader.RESET;
+    SalesHeader.SETCURRENTKEY("Bill-to Contact No.");
+    SalesHeader.SETRANGE("Document Type",SalesHeader."Document Type"::Quote);
+    SalesHeader.SETRANGE("Bill-to Contact No.",Cont."No.");
+    IF SalesHeader.FIND('-') THEN
+      REPEAT
+        SalesHeader."Bill-to Customer No." := CustomerNo;
+        SalesHeader."Bill-to Customer Template Code" := '';
+        SalesHeader.MODIFY;
+        SalesLine.SETRANGE("Document Type",SalesHeader."Document Type");
+        SalesLine.SETRANGE("Document No.",SalesHeader."No.");
+        IF SalesLine.FIND('-') THEN
+          SalesLine.MODIFYALL("Bill-to Customer No.",SalesHeader."Bill-to Customer No.");
+      UNTIL SalesHeader.NEXT = 0;
+  UNTIL Cont.NEXT = 0;
+
+GetSalutation(SalutationType : 'Formal,Informal';LanguageCode : Code[10]) : Text[260]
+IF NOT SalutationFormula.GET("Salutation Code",LanguageCode,SalutationType) THEN
+  ERROR(Text021,LanguageCode,"No.");
+SalutationFormula.TESTFIELD(Salutation);
+
+CASE SalutationFormula."Name 1" OF
+  SalutationFormula."Name 1"::"Job Title":
+    NamePart[1] := "Job Title";
+  SalutationFormula."Name 1"::"First Name":
+    NamePart[1] := "First Name";
+  SalutationFormula."Name 1"::"Middle Name":
+    NamePart[1] := "Middle Name";
+  SalutationFormula."Name 1"::Surname:
+    NamePart[1] := Surname;
+  SalutationFormula."Name 1"::Initials:
+    NamePart[1] := Initials;
+  SalutationFormula."Name 1"::"Company Name":
+    NamePart[1] := "Company Name";
+END;
+
+CASE SalutationFormula."Name 2" OF
+  SalutationFormula."Name 2"::"Job Title":
+    NamePart[2] := "Job Title";
+  SalutationFormula."Name 2"::"First Name":
+    NamePart[2] := "First Name";
+  SalutationFormula."Name 2"::"Middle Name":
+    NamePart[2] := "Middle Name";
+  SalutationFormula."Name 2"::Surname:
+    NamePart[2] := Surname;
+  SalutationFormula."Name 2"::Initials:
+    NamePart[2] := Initials;
+  SalutationFormula."Name 2"::"Company Name":
+    NamePart[2] := "Company Name";
+END;
+
+CASE SalutationFormula."Name 3" OF
+  SalutationFormula."Name 3"::"Job Title":
+    NamePart[3] := "Job Title";
+  SalutationFormula."Name 3"::"First Name":
+    NamePart[3] := "First Name";
+  SalutationFormula."Name 3"::"Middle Name":
+    NamePart[3] := "Middle Name";
+  SalutationFormula."Name 3"::Surname:
+    NamePart[3] := Surname;
+  SalutationFormula."Name 3"::Initials:
+    NamePart[3] := Initials;
+  SalutationFormula."Name 3"::"Company Name":
+    NamePart[3] := "Company Name";
+END;
+
+CASE SalutationFormula."Name 4" OF
+  SalutationFormula."Name 4"::"Job Title":
+    NamePart[4] := "Job Title";
+  SalutationFormula."Name 4"::"First Name":
+    NamePart[4] := "First Name";
+  SalutationFormula."Name 4"::"Middle Name":
+    NamePart[4] := "Middle Name";
+  SalutationFormula."Name 4"::Surname:
+    NamePart[4] := Surname;
+  SalutationFormula."Name 4"::Initials:
+    NamePart[4] := Initials;
+  SalutationFormula."Name 4"::"Company Name":
+    NamePart[4] := "Company Name";
+END;
+
+CASE SalutationFormula."Name 5" OF
+  SalutationFormula."Name 5"::"Job Title":
+    NamePart[5] := "Job Title";
+  SalutationFormula."Name 5"::"First Name":
+    NamePart[5] := "First Name";
+  SalutationFormula."Name 5"::"Middle Name":
+    NamePart[5] := "Middle Name";
+  SalutationFormula."Name 5"::Surname:
+    NamePart[5] := Surname;
+  SalutationFormula."Name 5"::Initials:
+    NamePart[5] := Initials;
+  SalutationFormula."Name 5"::"Company Name":
+    NamePart[5] := "Company Name";
+END;
+
+FOR i := 1 TO 5 DO
+  IF NamePart[i] = '' THEN BEGIN
+    SubStr := '%' + FORMAT(i) + ' ';
+    IF STRPOS(SalutationFormula.Salutation,SubStr) > 0 THEN
+      SalutationFormula.Salutation :=
+        DELSTR(SalutationFormula.Salutation,STRPOS(SalutationFormula.Salutation,SubStr),3);
+  END;
+
+EXIT(STRSUBSTNO(SalutationFormula.Salutation,NamePart[1],NamePart[2],NamePart[3],NamePart[4],NamePart[5]))
+
+InheritCompanyToPersonData(Cont : Record Contact;KeepPersonalData : Boolean)
+"Company Name" := Cont.Name;
+
+SearchManagement.ParseField(
+  "No.","No.","Company Name",SearchWordDetail."Table Name"::Contact,FIELDNO("Company Name"));
+
+RMSetup.GET;
+IF RMSetup."Inherit Salesperson Code" THEN
+  "Salesperson Code" := Cont."Salesperson Code";
+IF RMSetup."Inherit Territory Code" THEN
+  "Territory Code" := Cont."Territory Code";
+IF RMSetup."Inherit Country/Region Code" THEN
+  "Country/Region Code" := Cont."Country/Region Code";
+IF RMSetup."Inherit Language Code" THEN
+  "Language Code" := Cont."Language Code";
+IF RMSetup."Inherit Address Details" AND
+  ((NOT KeepPersonalData) OR
+   (Cont.Address + Cont."Address 2" + Cont.County + Cont."Post Code" + Cont.City <> ''))
+THEN BEGIN
+  Address := Cont.Address;
+  "Address 2" := Cont."Address 2";
+  "Post Code" := Cont."Post Code";
+  City := Cont.City;
+  County := Cont.County;
+  SearchManagement.ParseField(
+    "No.","No.",Address,SearchWordDetail."Table Name"::Contact,FIELDNO(Address));
+  SearchManagement.ParseField(
+    "No.","No.","Address 2",SearchWordDetail."Table Name"::Contact,FIELDNO("Address 2"));
+  SearchManagement.ParseField(
+    "No.","No.","Post Code",SearchWordDetail."Table Name"::Contact,FIELDNO("Post Code"));
+  SearchManagement.ParseField(
+    "No.","No.",City,SearchWordDetail."Table Name"::Contact,FIELDNO(City));
+  SearchManagement.ParseField(
+    "No.","No.",County,SearchWordDetail."Table Name"::Contact,FIELDNO(County));
+END;
+
+IF RMSetup."Inherit Communication Details" THEN BEGIN
+  IF (Cont."Phone No." <> '') OR NOT KeepPersonalData THEN
+    "Phone No." := Cont."Phone No.";
+  IF (Cont."Telex No." <> '') OR NOT KeepPersonalData THEN
+    "Telex No." := Cont."Telex No.";
+  IF (Cont."Fax No." <> '') OR NOT KeepPersonalData THEN
+    "Fax No." := Cont."Fax No.";
+  IF (Cont."Telex Answer Back" <> '') OR NOT KeepPersonalData THEN
+    "Telex Answer Back" := Cont."Telex Answer Back";
+  IF (Cont."E-Mail" <> '') OR NOT KeepPersonalData THEN
+    VALIDATE("E-Mail",Cont."E-Mail");
+  IF (Cont."Home Page" <> '') OR NOT KeepPersonalData THEN
+    "Home Page" := Cont."Home Page";
+  IF (Cont."Extension No." <> '') OR NOT KeepPersonalData THEN
+    "Extension No." := Cont."Extension No.";
+  IF (Cont."Mobile Phone No." <> '') OR NOT KeepPersonalData THEN
+    "Mobile Phone No." := Cont."Mobile Phone No.";
+  IF (Cont.Pager <> '') OR NOT KeepPersonalData THEN
+    Pager := Cont.Pager;
+  IF (Cont."Correspondence Type" <> "Correspondence Type"::" ") OR NOT KeepPersonalData THEN
+    "Correspondence Type" := Cont."Correspondence Type";
+  SearchManagement.ParseField(
+    "No.","No.","Phone No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Phone No."));
+  SearchManagement.ParseField(
+    "No.","No.","Telex No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Telex No."));
+  SearchManagement.ParseField(
+    "No.","No.","Fax No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Fax No."));
+  SearchManagement.ParseField(
+    "No.","No.","Telex Answer Back",SearchWordDetail."Table Name"::Contact,FIELDNO("Telex Answer Back"));
+  SearchManagement.ParseField(
+    "No.","No.","E-Mail",SearchWordDetail."Table Name"::Contact,FIELDNO("E-Mail"));
+  SearchManagement.ParseField(
+    "No.","No.","Home Page",SearchWordDetail."Table Name"::Contact,FIELDNO("Home Page"));
+  SearchManagement.ParseField(
+    "No.","No.","Mobile Phone No.",SearchWordDetail."Table Name"::Contact,FIELDNO("Mobile Phone No."));
+  SearchManagement.ParseField(
+    "No.","No.",Pager,SearchWordDetail."Table Name"::Contact,FIELDNO(Pager));
+END;
+
+//TOPAS
+
+IF RMSetup."Betreuer Innendienst übernehme" THEN
+  "Betreuer Innendienst" := Cont."Betreuer Innendienst";
+IF RMSetup."Teams übernehmen" THEN
+  Teams := Cont.Teams;
+
+SetHideValidationDialog(NewHideValidationDialog : Boolean) : Boolean
+HideValidationDialog := NewHideValidationDialog;
+
+DisplayMap()
+IF MapPoint.FIND('-') THEN
+  MapMgt.MakeSelection(DATABASE::Contact,GETPOSITION);
