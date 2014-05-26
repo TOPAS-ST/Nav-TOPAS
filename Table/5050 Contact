@@ -84,7 +84,7 @@ IF Type=Type::Company THEN
   BEGIN
     Beziehung.RESET;
     Beziehung.SETFILTER(Beziehung."Contact No.",'%1',"No.");
-    Beziehung.SETFILTER("Business Relation Code",'DEB');
+    Beziehung.SETFILTER("Business Relation Code",'%1','DEB');
     IF Beziehung.FINDFIRST THEN
       BEGIN
         SalesLine.RESET;
@@ -404,15 +404,15 @@ Branchen.RESET;
 ProjAnsprech.RESET;
 Projekte.RESET;
 counter := 0;
-IF ("Territory Code" <> xRec."Territory Code") AND ("Territory Code" <> '' ) AND (Type=Type::Company) THEN
+IF ("No." <> '') AND ("Territory Code" <> xRec."Territory Code") AND ("Territory Code" <> '' ) AND (Type=Type::Company) THEN
   BEGIN
     ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
     ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
     IF ProjAnsprech.FINDFIRST THEN 
       BEGIN
         REPEAT
-          Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+          Projekte.SETFILTER(Projekte."No.",'%1',ProjAnsprech."Kampagnennr.");
           IF Projekte.FINDFIRST THEN BEGIN
             Projekte.Gebietscode:= "Territory Code";
             Projekte.MODIFY;
@@ -443,17 +443,17 @@ Branchen.RESET;
 ProjAnsprech.RESET;
 Projekte.RESET;
 counter := 0;
-IF ("Salesperson Code" <> xRec."Salesperson Code") AND ("Salesperson Code" <> '') AND (Type=Type::Company) THEN 
+IF ("No." <> '') AND ("Salesperson Code" <> xRec."Salesperson Code") AND ("Salesperson Code" <> '') AND (Type=Type::Company) THEN
   BEGIN
     IF "Salesperson Code" <> 'MULTI' THEN 
       BEGIN
         ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
         ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
         IF ProjAnsprech.FINDFIRST THEN 
           BEGIN
             REPEAT
-              Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+              Projekte.SETFILTER(Projekte."No.",'%1',ProjAnsprech."Kampagnennr.");
               IF Projekte.FINDFIRST THEN 
                 BEGIN
                   Projekte."Salesperson Code":= "Salesperson Code";
@@ -469,11 +469,11 @@ IF ("Salesperson Code" <> xRec."Salesperson Code") AND ("Salesperson Code" <> ''
       BEGIN
         ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
         ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
         IF ProjAnsprech.FINDFIRST THEN 
           BEGIN
-            Branchen.SETFILTER(Branchen."Contact No.","No.");
-            Branchen.SETFILTER(Branchen."Industry Group Code",'BESTÜCKER');
+            Branchen.SETFILTER(Branchen."Contact No.",'%1',"No.");
+            Branchen.SETFILTER(Branchen."Industry Group Code",'%1','BESTÜCKER');
             IF Branchen.FINDFIRST THEN
               MESSAGE(Text106,UPPERCASE(FIELDCAPTION("Salesperson Code")))
             ELSE
@@ -889,17 +889,18 @@ Branchen.RESET;
 ProjAnsprech.RESET;
 Projekte.RESET;
 counter := 0;
-IF ("Betreuer Innendienst" <> xRec."Betreuer Innendienst") AND ("Betreuer Innendienst" <> '' ) AND (Type=Type::Company) THEN 
+IF ("No." <> '') AND ("Betreuer Innendienst" <> xRec."Betreuer Innendienst")
+AND ("Betreuer Innendienst" <> '' ) AND (Type=Type::Company) THEN
   BEGIN
     IF "Betreuer Innendienst" <> 'MULTI' THEN 
       BEGIN
          ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
          ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-         ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+         ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
          IF ProjAnsprech.FINDFIRST THEN 
            BEGIN
              REPEAT
-               Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+               Projekte.SETFILTER(Projekte."No.",'%1',ProjAnsprech."Kampagnennr.");
                IF Projekte.FINDFIRST THEN 
                  BEGIN
                    Projekte."Betreuer Innendienst":= "Betreuer Innendienst";
@@ -915,11 +916,11 @@ IF ("Betreuer Innendienst" <> xRec."Betreuer Innendienst") AND ("Betreuer Innend
       BEGIN
         ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
         ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
         IF ProjAnsprech.FINDFIRST THEN 
           BEGIN
-            Branchen.SETFILTER(Branchen."Contact No.","No.");
-            Branchen.SETFILTER(Branchen."Industry Group Code",'BESTÜCKER');
+            Branchen.SETFILTER(Branchen."Contact No.",'%1',"No.");
+            Branchen.SETFILTER(Branchen."Industry Group Code",'%1','BESTÜCKER');
             IF Branchen.FINDFIRST THEN 
               MESSAGE(Text106,UPPERCASE(FIELDCAPTION("Betreuer Innendienst")))
             ELSE
@@ -939,15 +940,15 @@ Branchen.RESET;
 ProjAnsprech.RESET;
 Projekte.RESET;
 counter := 0;
-IF (Teams <> xRec.Teams) AND (Type=Type::Company) THEN 
+IF ("No." <> '') AND (Teams <> xRec.Teams) AND (Type=Type::Company) THEN
   BEGIN
     ProjAnsprech.SETFILTER(ProjAnsprech.Typ,'%1',ProjAnsprech.Typ::Company);
     ProjAnsprech.SETFILTER(ProjAnsprech.Führungsrolle,'%1',TRUE);
-    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.","No.");
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"No.");
     IF ProjAnsprech.FINDFIRST THEN 
       BEGIN
         REPEAT
-          Projekte.SETFILTER(Projekte."No.",ProjAnsprech."Kampagnennr.");
+          Projekte.SETFILTER(Projekte."No.",'%1',ProjAnsprech."Kampagnennr.");
           IF Projekte.FINDFIRST THEN BEGIN
             Projekte.Teams:= Teams;
             Projekte.MODIFY;
