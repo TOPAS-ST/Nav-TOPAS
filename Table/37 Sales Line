@@ -53,6 +53,37 @@ IF "Promised Delivery Date" <> xRec."Promised Delivery Date" THEN
     "Planned Delivery Date":= "Promised Delivery Date";
     VALIDATE("Planned Delivery Date");
   END;
+
+//TOPAS 2014-05-28 ST
+IF "No." <> xRec."No." THEN
+  BEGIN
+    ArchVerkaufszeile.RESET;
+    ArchVerkaufszeile.SETFILTER("Document No.",'%1',"Document No.");
+    ArchVerkaufszeile.SETFILTER("Line No.",'%1',"Line No.");
+    IF NOT ArchVerkaufszeile.FINDFIRST THEN
+      BEGIN
+
+        //TOPAS 07.09.2011-ST überprüft verbundene Kalkulationen und löscht diese ggf.
+        ChampKalk.RESET;
+        ChampKalk.SETFILTER("Nr.",'%1',"Document No.");
+        ChampKalk.SETFILTER("Zeilennr.",'%1',"Line No.");
+        IF ChampKalk.FINDFIRST THEN
+          BEGIN
+            IF ("Quantity Shipped" = 0)  THEN
+              BEGIN
+                ChampKalk.DELETEALL(TRUE);
+                MESSAGE(Text111);
+              END;
+          END;
+
+        //TOPAS 22.12.2011-ST Position wird auf Vorhandensein in einer Kalkulation hin überprüft
+        ChampKalk.RESET;
+        ChampKalk.SETFILTER("Belegnr.",'%1',"Document No.");
+        ChampKalk.SETFILTER("Belegzeilennr.",'%1',"Line No.");
+        IF (ChampKalk.FINDFIRST) AND (Type = Type :: Item) THEN
+          MESSAGE(Text112,ChampKalk."Zeilennr.");
+      END;
+  END;
 //TOPAS Ende
 
 OnDelete()
