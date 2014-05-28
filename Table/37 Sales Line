@@ -1,0 +1,4946 @@
+
+Documentation()
+TOPAS-080207: - Neue Felder 50000..50010
+              - Programmierung in Quantity-OnValidate
+
+TOPAS         - No.-OnValidate() - Überprüfung, ob Artikelverfolgungscode im Artikel hinterlegt ist
+TOPAS ST 150408: - No.-OnValidate() - Artikelnr. 2 wird automatisch gefüllt, wenn Nr. ausgewählt wird
+TOPAS ST 250408: - No.-OnValidate() - Herstellercode wird automatisch gefüllt, wenn Nr. ausgewählt wird
+TOPAS ST 070508: - VK-Preis OnValdidate() Anpassung - nun wird auch der DB% aktualisiert, wenn der VK-Preis gelöscht wird
+TOPAS ST 010311: - SUP Modul implementiert, neue Felder: SUP Belegzeilennr. & SUP Belegnr.
+TOPAS ST 070911: - Champ Modul ersetzt bisherige SUP Modul, neue Löschroutinen unter No. OnValidate() + OnDelete()
+
+OnInsert()
+TestStatusOpen;
+IF Quantity <> 0 THEN
+  ReserveSalesLine.VerifyQuantity(Rec,xRec);
+DocDim.LOCKTABLE;
+LOCKTABLE;
+SalesHeader."No." := '';
+
+DimMgt.InsertDocDim(
+  DATABASE::"Sales Line","Document Type","Document No.","Line No.",
+  "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+
+OnModify()
+// TOPAS ***************************************************************************
+IF ("Profit %" < 10) AND (Type = Type::Item) AND ("Unit Price" <> 0) AND (xRec."Profit %" <> "Profit %")
+AND ("Location Code" = 'ZENT') THEN MESSAGE('Warnung !!\Die aktuelle Marge von %1 Prozent\'+
+'unterschreitet den Wert von 10 Prozent ',ROUND("Profit %"));
+// TOPAS ende *******************************************************************
+
+IF ("Document Type" = "Document Type"::"Blanket Order") AND
+   ((Type <> xRec.Type) OR ("No." <> xRec."No."))
+THEN BEGIN
+  SalesLine2.RESET;
+  SalesLine2.SETCURRENTKEY("Document Type","Blanket Order No.","Blanket Order Line No.");
+  SalesLine2.SETRANGE("Blanket Order No.","Document No.");
+  SalesLine2.SETRANGE("Blanket Order Line No.","Line No.");
+  IF SalesLine2.FINDSET THEN
+    REPEAT
+      SalesLine2.TESTFIELD(Type,Type);
+      SalesLine2.TESTFIELD("No.","No.");
+    UNTIL SalesLine2.NEXT = 0;
+END;
+
+IF ((Quantity <> 0) OR (xRec.Quantity <> 0)) AND ItemExists(xRec."No.") THEN
+  ReserveSalesLine.VerifyChange(Rec,xRec);
+
+
+// TOPAS 18.08.2008
+IF "Promised Delivery Date" <> xRec."Promised Delivery Date" THEN
+  BEGIN
+    "Planned Delivery Date":= "Promised Delivery Date";
+    VALIDATE("Planned Delivery Date");
+  END;
+//TOPAS Ende
+
+OnDelete()
+TestStatusOpen;
+IF NOT StatusCheckSuspended AND (SalesHeader.Status = SalesHeader.Status::Released) AND
+   (Type IN [Type::"G/L Account",Type::"Charge (Item)",Type::Resource])
+THEN
+  VALIDATE(Quantity,0);
+DocDim.LOCKTABLE;
+
+IF (Quantity <> 0) AND ItemExists("No.") THEN BEGIN
+  ReserveSalesLine.DeleteLine(Rec);
+  CALCFIELDS("Reserved Qty. (Base)");
+  TESTFIELD("Reserved Qty. (Base)",0);
+  IF "Shipment No." = '' THEN
+    TESTFIELD("Qty. Shipped Not Invoiced",0);
+  IF "Return Receipt No." = '' THEN
+    TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+  WhseValidateSourceLine.SalesLineDelete(Rec);
+END;
+
+TESTFIELD("Prepmt. Amt. Inv.",0);
+
+CheckAssocPurchOrder('');
+NonstockItemMgt.DelNonStockSales(Rec);
+
+IF "Document Type" = "Document Type"::"Blanket Order" THEN BEGIN
+  SalesLine2.RESET;
+  SalesLine2.SETCURRENTKEY("Document Type","Blanket Order No.","Blanket Order Line No.");
+  SalesLine2.SETRANGE("Blanket Order No.","Document No.");
+  SalesLine2.SETRANGE("Blanket Order Line No.","Line No.");
+  IF SalesLine2.FINDFIRST THEN
+    SalesLine2.TESTFIELD("Blanket Order Line No.",0);
+END;
+
+IF Type = Type::Item THEN
+  DeleteItemChargeAssgnt("Document Type","Document No.","Line No.");
+
+IF Type = Type::"Charge (Item)" THEN
+  DeleteChargeChargeAssgnt("Document Type","Document No.","Line No.");
+
+CapableToPromise.RemoveReqLines("Document No.","Line No.",0,FALSE);
+
+SalesLine2.RESET;
+SalesLine2.SETRANGE("Document Type","Document Type");
+SalesLine2.SETRANGE("Document No.","Document No.");
+SalesLine2.SETRANGE("Attached to Line No.","Line No.");
+SalesLine2.DELETEALL(TRUE);
+DimMgt.DeleteDocDim(DATABASE::"Sales Line","Document Type","Document No.","Line No.");
+IF "Job Contract Entry No." <> 0 THEN
+  JobCreateInvoice.DeleteSalesLine(Rec);
+
+
+//TOPAS
+ArchVerkaufszeile.RESET;
+ArchVerkaufszeile.SETFILTER("Document No.",'%1',"Document No.");
+ArchVerkaufszeile.SETFILTER("Line No.",'%1',"Line No.");
+IF NOT ArchVerkaufszeile.FINDFIRST THEN
+  BEGIN
+
+    //TOPAS 07.09.2011-ST überprüft verbundene Kalkulationen und löscht diese ggf.
+    ChampKalk.RESET;
+    ChampKalk.SETFILTER("Nr.",'%1',"Document No.");
+    ChampKalk.SETFILTER("Zeilennr.",'%1',"Line No.");
+    IF ChampKalk.FINDFIRST THEN
+      BEGIN
+        IF ("Quantity Shipped" = 0)  THEN
+          BEGIN
+            ChampKalk.DELETEALL(TRUE);
+            MESSAGE(Text111);
+          END;
+      END;
+
+    //TOPAS 22.12.2011-ST Position wird auf Vorhandensein in einer Kalkulation hin überprüft
+    ChampKalk.RESET;
+    ChampKalk.SETFILTER("Belegnr.",'%1',"Document No.");
+    ChampKalk.SETFILTER("Belegzeilennr.",'%1',"Line No.");
+    IF (ChampKalk.FINDFIRST) AND (Type = Type :: Item) THEN
+      MESSAGE(Text112,ChampKalk."Zeilennr.");
+  END;
+//TOPAS Ende
+
+OnRename()
+ERROR(Text001,TABLECAPTION);
+
+Document Type - OnValidate()
+
+Document Type - OnLookup()
+
+Sell-to Customer No. - OnValidate()
+
+Sell-to Customer No. - OnLookup()
+
+Document No. - OnValidate()
+
+Document No. - OnLookup()
+
+Line No. - OnValidate()
+
+Line No. - OnLookup()
+
+Type - OnValidate()
+TestJobPlanningLine;
+TestStatusOpen;
+GetSalesHeader;
+
+TESTFIELD("Qty. Shipped Not Invoiced",0);
+TESTFIELD("Quantity Shipped",0);
+TESTFIELD("Shipment No.",'');
+
+TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+TESTFIELD("Return Qty. Received",0);
+TESTFIELD("Return Receipt No.",'');
+
+TESTFIELD("Prepmt. Amt. Inv.",0);
+
+CheckAssocPurchOrder(FIELDCAPTION(Type));
+
+IF Type <> xRec.Type THEN BEGIN
+  IF Quantity <> 0 THEN BEGIN
+    CALCFIELDS("Reserved Qty. (Base)");
+    TESTFIELD("Reserved Qty. (Base)",0);
+    ReserveSalesLine.VerifyChange(Rec,xRec);
+    WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+  END;
+  IF xRec.Type IN [Type::Item,Type::"Fixed Asset"] THEN BEGIN
+    IF Quantity <> 0 THEN
+      SalesHeader.TESTFIELD(Status,SalesHeader.Status::Open);
+    DeleteItemChargeAssgnt("Document Type","Document No.","Line No.");
+  END;
+  IF xRec.Type = Type::"Charge (Item)" THEN
+    DeleteChargeChargeAssgnt("Document Type","Document No.","Line No.");
+END;
+AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+TempSalesLine := Rec;
+DimMgt.DeleteDocDim(DATABASE::"Sales Line","Document Type","Document No.","Line No.");
+INIT;
+Type := TempSalesLine.Type;
+"System-Created Entry" := TempSalesLine."System-Created Entry";
+
+IF Type = Type::Item THEN
+  "Allow Item Charge Assignment" := TRUE
+ELSE
+  "Allow Item Charge Assignment" := FALSE;
+
+Type - OnLookup()
+
+No. - OnValidate()
+TestJobPlanningLine;
+TestStatusOpen;
+CheckItemAvailable(FIELDNO("No."));
+
+IF (xRec."No." <> "No.") AND (Quantity <> 0) THEN BEGIN
+  CALCFIELDS("Reserved Qty. (Base)");
+  TESTFIELD("Reserved Qty. (Base)",0);
+  IF Type = Type::Item THEN
+    WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+END;
+TESTFIELD("Qty. Shipped Not Invoiced",0);
+TESTFIELD("Quantity Shipped",0);
+TESTFIELD("Shipment No.",'');
+
+TESTFIELD("Prepmt. Amt. Inv.",0);
+
+TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+TESTFIELD("Return Qty. Received",0);
+TESTFIELD("Return Receipt No.",'');
+
+CheckAssocPurchOrder(FIELDCAPTION("No."));
+AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+TempSalesLine := Rec;
+INIT;
+Type := TempSalesLine.Type;
+"No." := TempSalesLine."No.";
+IF "No." = '' THEN
+  EXIT;
+IF Type <> Type::" " THEN
+  Quantity := TempSalesLine.Quantity;
+
+"System-Created Entry" := TempSalesLine."System-Created Entry";
+GetSalesHeader;
+IF SalesHeader."Document Type" = SalesHeader."Document Type"::Quote THEN BEGIN
+  IF (SalesHeader."Sell-to Customer No." = '') AND
+     (SalesHeader."Sell-to Customer Template Code" = '')
+  THEN
+    ERROR(
+      Text031,
+      SalesHeader.FIELDCAPTION("Sell-to Customer No."),
+      SalesHeader.FIELDCAPTION("Sell-to Customer Template Code"));
+  IF (SalesHeader."Bill-to Customer No." = '') AND
+     (SalesHeader."Bill-to Customer Template Code" = '')
+  THEN
+    ERROR(
+      Text031,
+      SalesHeader.FIELDCAPTION("Bill-to Customer No."),
+      SalesHeader.FIELDCAPTION("Bill-to Customer Template Code"));
+END ELSE
+  SalesHeader.TESTFIELD("Sell-to Customer No.");
+
+"Sell-to Customer No." := SalesHeader."Sell-to Customer No.";
+"Currency Code" := SalesHeader."Currency Code";
+"Location Code" := SalesHeader."Location Code";
+"Customer Price Group" := SalesHeader."Customer Price Group";
+"Customer Disc. Group" := SalesHeader."Customer Disc. Group";
+"Allow Line Disc." := SalesHeader."Allow Line Disc.";
+"Transaction Type" := SalesHeader."Transaction Type";
+"Transport Method" := SalesHeader."Transport Method";
+"Bill-to Customer No." := SalesHeader."Bill-to Customer No.";
+"Gen. Bus. Posting Group" := SalesHeader."Gen. Bus. Posting Group";
+"VAT Bus. Posting Group" := SalesHeader."VAT Bus. Posting Group";
+"Exit Point" := SalesHeader."Exit Point";
+Area := SalesHeader.Area;
+"Transaction Specification" := SalesHeader."Transaction Specification";
+"Tax Area Code" := SalesHeader."Tax Area Code";
+"Tax Liable" := SalesHeader."Tax Liable";
+IF NOT "System-Created Entry" AND ("Document Type" = "Document Type"::Order) THEN
+  "Prepayment %" := SalesHeader."Prepayment %";
+"Prepayment Tax Area Code" := SalesHeader."Tax Area Code";
+"Prepayment Tax Liable" := SalesHeader."Tax Liable";
+"Responsibility Center" := SalesHeader."Responsibility Center";
+
+"Shipping Agent Code" := SalesHeader."Shipping Agent Code";
+"Shipping Agent Service Code" := SalesHeader."Shipping Agent Service Code";
+"Outbound Whse. Handling Time" := SalesHeader."Outbound Whse. Handling Time";
+"Shipping Time" := SalesHeader."Shipping Time";
+CALCFIELDS("Substitution Available");
+
+"Promised Delivery Date" := SalesHeader."Promised Delivery Date";
+"Requested Delivery Date" := SalesHeader."Requested Delivery Date";
+"Shipment Date" :=
+  CalendarMgmt.CalcDateBOC(
+    '',
+    SalesHeader."Shipment Date",
+    CalChange."Source Type"::Location,
+    "Location Code",
+    '',
+    CalChange."Source Type"::"Shipping Agent",
+    "Shipping Agent Code",
+    "Shipping Agent Service Code",
+    FALSE);
+UpdateDates;
+
+CASE Type OF
+  Type::" ":
+    BEGIN
+      StdTxt.GET("No.");
+      Description := StdTxt.Description;
+      "Allow Item Charge Assignment" := FALSE;
+    END;
+  Type::"G/L Account":
+    BEGIN
+      GLAcc.GET("No.");
+      GLAcc.CheckGLAcc;
+      IF NOT "System-Created Entry" THEN
+        GLAcc.TESTFIELD("Direct Posting",TRUE);
+      Description := GLAcc.Name;
+      "Gen. Prod. Posting Group" := GLAcc."Gen. Prod. Posting Group";
+      "VAT Prod. Posting Group" := GLAcc."VAT Prod. Posting Group";
+      "Tax Group Code" := GLAcc."Tax Group Code";
+      "Allow Invoice Disc." := FALSE;
+      "Allow Item Charge Assignment" := FALSE;
+    END;
+  Type::Item:
+    BEGIN
+      GetItem;
+      Item.TESTFIELD(Blocked,FALSE);
+      Item.TESTFIELD("Inventory Posting Group");
+      Item.TESTFIELD("Gen. Prod. Posting Group");
+
+     //TOPAS ST 15.04.08
+      Art.GET("No.");
+      "Artikelnr. 2":=Art."No. 2";
+     // ST 25.04.08
+      "Manufacturer Code":=Art."Manufacturer Code";
+     //TOPAS Ende
+
+     //TOPAS 14.07.08-ST
+     IF Type=Type::Item THEN
+       "Kampagnennr.":=SalesHeader."Campaign No.";
+
+     //TOPAS 11.05.09-ST
+     IF Art."ECCN-Nr." = '3A001' THEN
+       MESSAGE(Text100);
+
+     //TOPAS 23.09.10-ST Übernahme des AC_Solutionpartners aus dem Debitor bei Aufträgen
+     IF ("Document Type" = "Document Type" :: Order) AND (Item."Manufacturer Code" = '59')
+     AND (Customer.GET(SalesHeader."Sell-to Customer No.")) THEN
+       AC_Solutionpartner := Customer.AC_Solutionpartner;
+
+     //TOPAS
+      IF (Art."Item Tracking Code" <> 'DATECODE') AND (Art."Item Tracking Code" <> 'KEINE') AND
+         (Art."Item Tracking Code" <> 'SERIENNR') THEN
+         BEGIN
+            ERROR('Bei Artikel %1 wurde kein\Artikelverfolgungscode ausgewählt !!',Art."No.");
+         END;
+
+     //TOPAS 07.09.2011-ST Vorhandene Champ Kalkulation + Auswahl Seriennummern werden gelöscht
+     IF (xRec."No." <> "No.") THEN
+       BEGIN
+         //Position wird als Champ Artikel betrachet
+         ChampKalk.RESET;
+         ChampKalk.SETFILTER("Nr.",'%1',"Document No.");
+         ChampKalk.SETFILTER("Zeilennr.",'%1',"Line No.");
+         IF ChampKalk.FINDFIRST THEN
+           BEGIN
+             ChampKalk.DELETEALL(TRUE);
+             MESSAGE(Text111);
+           END;
+       END;
+
+     //26.10.2011-ST Prüft OmniVision Artikel und NDA Vorhandensein beim Kunden
+     IF "Document Type" = "Document Type" :: Order THEN
+       SalesHeader.PrüfeOVTNDA("Document No.","Document Type");
+
+     // TOPAS ende
+
+      "Posting Group" := Item."Inventory Posting Group";
+      Description := Item.Description;
+      "Description 2" := Item."Description 2";
+      GetUnitCost;
+      "Allow Invoice Disc." := Item."Allow Invoice Disc.";
+      "Units per Parcel" := Item."Units per Parcel";
+      "Gen. Prod. Posting Group" := Item."Gen. Prod. Posting Group";
+      "VAT Prod. Posting Group" := Item."VAT Prod. Posting Group";
+      "Tax Group Code" := Item."Tax Group Code";
+      "Item Category Code" := Item."Item Category Code";
+      "Product Group Code" := Item."Product Group Code";
+      Nonstock := Item."Created From Nonstock Item";
+      "Profit %" := Item."Profit %";
+      "Allow Item Charge Assignment" := TRUE;
+      PrepaymentMgt.SetSalesPrepaymentPct(Rec,SalesHeader."Posting Date");
+
+      IF SalesHeader."Language Code" <> '' THEN
+        GetItemTranslation;
+
+      IF Item.Reserve = Item.Reserve::Optional THEN
+        Reserve := SalesHeader.Reserve
+      ELSE
+        Reserve := Item.Reserve;
+
+      "Unit of Measure Code" := Item."Sales Unit of Measure";
+
+      //TOPAS+
+      "Handlingskosten %" := Item."Handlingskosten %";
+
+      IF T_Vendor.GET(Item."Vendor No.") THEN
+        VALIDATE(Einkaufswährungscode,T_Vendor."Currency Code");
+      //TOPAS Ende
+    END;
+  Type::Resource:
+    BEGIN
+      Res.GET("No.");
+      Res.TESTFIELD(Blocked,FALSE);
+      Res.TESTFIELD("Gen. Prod. Posting Group");
+      Description := Res.Name;
+      "Description 2" := Res."Name 2";
+      "Unit of Measure Code" := Res."Base Unit of Measure";
+      "Unit Cost (LCY)" := Res."Unit Cost";
+      "Gen. Prod. Posting Group" := Res."Gen. Prod. Posting Group";
+      "VAT Prod. Posting Group" := Res."VAT Prod. Posting Group";
+      "Tax Group Code" := Res."Tax Group Code";
+      "Allow Item Charge Assignment" := FALSE;
+      FindResUnitCost;
+    END;
+  Type::"Fixed Asset":
+    BEGIN
+      FA.GET("No.");
+      FA.TESTFIELD(Inactive,FALSE);
+      FA.TESTFIELD(Blocked,FALSE);
+      GetFAPostingGroup;
+      Description := FA.Description;
+      "Description 2" := FA."Description 2";
+      "Allow Invoice Disc." := FALSE;
+      "Allow Item Charge Assignment" := FALSE;
+    END;
+  Type::"Charge (Item)":
+    BEGIN
+      ItemCharge.GET("No.");
+      Description := ItemCharge.Description;
+      "Gen. Prod. Posting Group" := ItemCharge."Gen. Prod. Posting Group";
+      "VAT Prod. Posting Group" := ItemCharge."VAT Prod. Posting Group";
+      "Tax Group Code" := ItemCharge."Tax Group Code";
+      "Allow Invoice Disc." := FALSE;
+      "Allow Item Charge Assignment" := FALSE;
+    END;
+END;
+
+VALIDATE("Prepayment %");
+
+IF Type <> Type::" " THEN BEGIN
+  IF Type <> Type::"Fixed Asset" THEN
+    VALIDATE("VAT Prod. Posting Group");
+  VALIDATE("Unit of Measure Code");
+  IF Quantity <> 0 THEN BEGIN
+    InitOutstanding;
+    IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+      InitQtyToReceive
+    ELSE
+      InitQtyToShip;
+    UpdateWithWarehouseShip;
+  END;
+  UpdateUnitPrice(FIELDNO("No."));
+END;
+
+IF "No." <> xRec."No." THEN BEGIN
+  IF Type = Type::Item THEN
+    IF (Quantity <> 0) AND ItemExists(xRec."No.") THEN BEGIN
+      ReserveSalesLine.VerifyChange(Rec,xRec);
+      WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+    END;
+  DeleteItemChargeAssgnt("Document Type","Document No.","Line No.");
+  IF Type = Type::"Charge (Item)" THEN
+    DeleteChargeChargeAssgnt("Document Type","Document No.","Line No.");
+END;
+
+CreateDim(
+  DimMgt.TypeToTableID3(Type),"No.",
+  DATABASE::Job,"Job No.",
+  DATABASE::"Responsibility Center","Responsibility Center");
+GetItemCrossRef(FIELDNO("No."));
+
+//TOPAS 19.07.2010-ST Kostenstelle und -träger bei Abweichungen aus Artikelstamm holen
+//IF Item."Global Dimension 1 Code" <> "Shortcut Dimension 1 Code" THEN
+//  VALIDATE("Shortcut Dimension 1 Code",Item."Global Dimension 1 Code");
+//IF Item."Global Dimension 2 Code" <> "Shortcut Dimension 2 Code" THEN
+//  VALIDATE("Shortcut Dimension 2 Code",Item."Global Dimension 2 Code");
+//TOPAS Ende
+
+GetDefaultBin;
+
+SalesHeader.GET("Document Type","Document No.");
+IF SalesHeader."Send IC Document" THEN
+  CASE Type OF
+    Type::" ",Type::"Charge (Item)":
+      BEGIN
+        "IC Partner Ref. Type" := Type;
+        "IC Partner Reference" := "No.";
+      END;
+    Type::"G/L Account":
+      BEGIN
+        "IC Partner Ref. Type" := Type;
+        "IC Partner Reference" := GLAcc."Default IC Partner G/L Acc. No";
+      END;
+
+    Type::Item:
+      BEGIN
+        ICPartner.GET(SalesHeader."Sell-to IC Partner Code");
+        CASE ICPartner."Outbound Sales Item No. Type" OF
+          ICPartner."Outbound Sales Item No. Type"::"Common Item No.":
+            VALIDATE("IC Partner Ref. Type","IC Partner Ref. Type"::"Common Item No.");
+          ICPartner."Outbound Sales Item No. Type"::"Internal No.":
+            BEGIN
+              "IC Partner Ref. Type" := "IC Partner Ref. Type"::Item;
+              "IC Partner Reference" := "No.";
+            END;
+          ICPartner."Outbound Sales Item No. Type"::"Cross Reference":
+            BEGIN
+              VALIDATE("IC Partner Ref. Type","IC Partner Ref. Type"::"Cross Reference");
+              ItemCrossReference.SETRANGE("Cross-Reference Type",
+                ItemCrossReference."Cross-Reference Type"::Customer);
+              ItemCrossReference.SETRANGE("Cross-Reference Type No.",
+                "Sell-to Customer No.");
+              ItemCrossReference.SETRANGE("Item No.","No.");
+              IF ItemCrossReference.FINDFIRST THEN
+                "IC Partner Reference" := ItemCrossReference."Cross-Reference No.";
+            END;
+        END;
+      END;
+    Type::"Fixed Asset":
+      BEGIN
+        "IC Partner Ref. Type" := "IC Partner Ref. Type"::" ";
+        "IC Partner Reference" := '';
+      END;
+    Type::Resource:
+      BEGIN
+        Resource.GET("No.");
+        "IC Partner Ref. Type" := "IC Partner Ref. Type"::"G/L Account";
+        "IC Partner Reference" := Resource."IC Partner Purch. G/L Acc. No.";
+      END;
+  END;
+
+No. - OnLookup()
+
+Location Code - OnValidate()
+TestJobPlanningLine;
+TestStatusOpen;
+CheckAssocPurchOrder(FIELDCAPTION("Location Code"));
+
+IF xRec."Location Code" <> "Location Code" THEN BEGIN
+  TESTFIELD("Reserved Quantity",0);
+  TESTFIELD("Qty. Shipped Not Invoiced",0);
+  TESTFIELD("Shipment No.",'');
+  TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+  TESTFIELD("Return Receipt No.",'');
+END;
+
+GetSalesHeader;
+"Shipment Date" :=
+  CalendarMgmt.CalcDateBOC(
+    '',
+    SalesHeader."Shipment Date",
+    CalChange."Source Type"::Location,
+    "Location Code",
+    '',
+    CalChange."Source Type"::"Shipping Agent",
+    "Shipping Agent Code",
+    "Shipping Agent Service Code",
+    FALSE);
+
+IF Reserve <> Reserve::Always THEN
+  CheckItemAvailable(FIELDNO("Location Code"));
+
+IF NOT "Drop Shipment" THEN BEGIN
+  IF "Location Code" = '' THEN BEGIN
+    IF InvtSetup.GET THEN
+      "Outbound Whse. Handling Time" := InvtSetup."Outbound Whse. Handling Time";
+  END ELSE
+    IF Location.GET("Location Code") THEN
+      "Outbound Whse. Handling Time" := Location."Outbound Whse. Handling Time";
+END ELSE
+  EVALUATE("Outbound Whse. Handling Time",'<0D>');
+
+UpdateDates;
+
+IF "Location Code" <> xRec."Location Code" THEN BEGIN
+  InitItemAppl(TRUE);
+  "Bin Code" := '';
+  GetDefaultBin;
+  IF Quantity <> 0 THEN BEGIN
+    IF NOT "Drop Shipment" THEN
+      UpdateWithWarehouseShip;
+    ReserveSalesLine.VerifyChange(Rec,xRec);
+    WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+  END;
+END;
+
+IF Type = Type::Item THEN
+  GetUnitCost;
+
+Location Code - OnLookup()
+
+Posting Group - OnValidate()
+
+Posting Group - OnLookup()
+
+Shipment Date - OnValidate()
+TestStatusOpen;
+IF CurrFieldNo <> 0 THEN
+  AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+
+IF "Shipment Date" <> 0D THEN BEGIN
+  IF Reserve <> Reserve::Always THEN
+    IF CurrFieldNo IN [
+                       FIELDNO("Planned Shipment Date"),
+                       FIELDNO("Planned Delivery Date"),
+                       FIELDNO("Shipment Date"),
+                       FIELDNO("Shipping Time"),
+                       FIELDNO("Outbound Whse. Handling Time"),
+                       FIELDNO("Requested Delivery Date")]
+    THEN
+      CheckItemAvailable(FIELDNO("Shipment Date"));
+
+  IF ("Shipment Date" < WORKDATE) AND (Type <> Type::" ") THEN
+    IF NOT (HideValidationDialog OR HasBeenShown) THEN BEGIN
+      MESSAGE(
+        Text014,
+        FIELDCAPTION("Shipment Date"),"Shipment Date",WORKDATE);
+      HasBeenShown := TRUE;
+    END;
+END;
+
+IF (xRec."Shipment Date" <> "Shipment Date") AND
+   (Quantity <> 0) AND
+   (Reserve <> Reserve::Never) AND
+   NOT StatusCheckSuspended
+THEN
+  CheckDateConflict.SalesLineCheck(Rec,CurrFieldNo <> 0);
+
+IF "Shipment Date" <> 0D THEN BEGIN
+  IF NOT PlannedShipmentDateCalculated THEN
+    "Planned Shipment Date" :=
+      CalendarMgmt.CalcDateBOC(
+        FORMAT(
+          "Outbound Whse. Handling Time"),
+        "Shipment Date",
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        CalChange."Source Type"::Location,
+        "Location Code",
+        '',
+        TRUE);
+  IF NOT PlannedDeliveryDateCalculated THEN
+    "Planned Delivery Date" :=
+      CalendarMgmt.CalcDateBOC(
+        FORMAT("Shipping Time"),
+        "Planned Shipment Date",
+        CalChange."Source Type"::Customer,
+        "Sell-to Customer No.",
+        '',
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        TRUE);
+END;
+
+Shipment Date - OnLookup()
+
+Description - OnValidate()
+TestStatusOpen;
+
+Description - OnLookup()
+
+Description 2 - OnValidate()
+
+Description 2 - OnLookup()
+
+Unit of Measure - OnValidate()
+
+Unit of Measure - OnLookup()
+
+Quantity - OnValidate()
+TestStatusOpen;
+
+//TOPAS 090608 ST Menge auf volle VPE's prüfen
+  IF Rec.Type=Rec.Type::Item THEN BEGIN
+    GetItem;
+    IF Item.Verpackungsmenge <> 0 THEN BEGIN
+      IF (Quantity MOD Item.Verpackungsmenge) <> 0 THEN BEGIN
+
+        IF CONFIRM ('Da die Verpackungsmenge des Artikels %1 %2 beträgt, wird die Menge' +
+                  ' von %3 auf %4 erhöht. Wollen Sie den Vorgang fortsetzen ?', FALSE,
+                  Item."No.", Item.Verpackungsmenge, Quantity,
+                  (((Quantity DIV Item.Verpackungsmenge) + 1) * Item.Verpackungsmenge)) THEN
+           Quantity := (((Quantity DIV Item.Verpackungsmenge) + 1) * Item.Verpackungsmenge);
+        END;
+    END;
+   IF "Manufacturer Code"='44' THEN MESSAGE('Achtung !!  Wichtig !!    Omnivision Modul Artikel wurde ausgewählt =>' +
+   ' Liegt "OK" von OMNIVISION vor?');
+
+  END;
+
+//TOPAS 060709-ST
+PrüfeRahmenAuftrag;
+
+//TOPAS Ende
+
+CheckAssocPurchOrder(FIELDCAPTION(Quantity));
+
+// TOPAS
+IF "Quotenr." <> '' THEN
+BEGIN
+  IF Quotes2.GET ("Quotenr.") THEN
+//    IF Quotes2.Quotesystem = Quotes2.Quotesystem::"1" THEN
+    IF Quotes2.Quotesystem = 'SHIP&DEBIT' THEN // TB 01.04.2008
+    BEGIN
+      IF Quotes2."Quotenr. Hersteller" = '' THEN
+        Quotes2.TESTFIELD (Genehmigungstext);
+      Quotes2.CALCFIELDS ("Restmenge in Auftrag", "Menge in VK-Rechnung");
+      IF xRec."Document No." = '' THEN
+        BEGIN
+          RestMengeAuftrag := 0;
+          Verkaufszeile.RESET;
+          Verkaufszeile.SETFILTER(Verkaufszeile."Document Type",'%1',Verkaufszeile."Document Type"::Order);
+          Verkaufszeile.SETFILTER(Verkaufszeile.Type,'%1',Verkaufszeile.Type::Item);
+          Verkaufszeile.SETFILTER(Verkaufszeile."No.","No.");
+          Verkaufszeile.SETFILTER(Verkaufszeile."Quotenr.","Quotenr.");
+          IF Verkaufszeile.FINDFIRST THEN
+          BEGIN
+            REPEAT
+              IF (Verkaufszeile."Document No." = "Document No.") AND (Verkaufszeile."Line No." = "Line No.") THEN
+                BEGIN
+                END
+              ELSE
+                BEGIN
+                  RestMengeAuftrag := RestMengeAuftrag + Verkaufszeile."Outstanding Quantity";
+                END;
+            UNTIL Verkaufszeile.NEXT = 0;
+          END;
+          IF (Quotes2.Quotemenge-(Quotes2."Menge in VK-Rechnung"+RestMengeAuftrag)) < Quantity THEN
+          ERROR ('Für Quote %1 wird die Quotemenge %2 in der Auftragszeile %3, DC-Preis (MW) %4 überschritten!',
+                  Quotes2."Quotenr.",Quotes2.Quotemenge,"Line No.","DC-Preis (MW)");
+        END
+      ELSE
+      IF (Quotes2.Quotemenge-(Quotes2."Menge in VK-Rechnung"+Quotes2."Restmenge in Auftrag")+xRec.Quantity) < Quantity THEN
+        ERROR ('Für Quote %1 wird die Quotemenge %2 in der Auftragszeile %3, DC-Preis (MW) %4 überschritten!',
+               Quotes2."Quotenr.",Quotes2.Quotemenge,"Line No.","DC-Preis (MW)");
+  END;
+END;
+// TOPAS Ende
+
+"Quantity (Base)" := CalcBaseQty(Quantity);
+
+// TOPAS-CTM TR
+IF ((Type = Type::Item) AND ("DC-Preis (EKW)" = 0)) THEN
+BEGIN
+  CLEAR(EKStaffel);
+  EKStaffel.SETRANGE(EKStaffel."Item No.", "No.");
+  EKStaffel.SETRANGE("Currency Code",Einkaufswährungscode);
+  EKStaffel.SETFILTER("Minimum Quantity",'<=%1', "Quantity (Base)");
+  IF EKStaffel.FINDLAST THEN
+  BEGIN
+    VALIDATE("DC-Preis (EKW)",EKStaffel."Direct Unit Cost");
+    GetItem;
+    VALIDATE("Unit Cost (LCY)",ROUND(EKStaffel."Direct Unit Cost"/Einkaufswährungsfaktor)*(1+(Item."Indirect Cost %"/100)));
+    "Unit Cost (LCY)":=ROUND("Unit Cost (LCY)",0.00001);
+  END;
+END;
+{
+  VKStaffel.SETRANGE (VKStaffel."Artikelnr.", "Nr.");
+  VKStaffel.SETFILTER ("Menge ab", '<=%1', "Menge (Basis)");
+  IF "VK-Preis (EKW)" = 0 THEN BEGIN
+    IF NOT VKStaffel.FIND ('+') THEN
+      VALIDATE ("VK-Preis (EKW)", 0)
+    ELSE
+      VALIDATE ("VK-Preis (EKW)", VKStaffel."VK-Preis (EKW)");
+  END;
+END;
+}
+// TOPAS Ende
+
+
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+  IF (Quantity * "Return Qty. Received" < 0) OR
+     ((ABS(Quantity) < ABS("Return Qty. Received")) AND ("Return Receipt No." = '')) THEN
+    FIELDERROR(Quantity,STRSUBSTNO(Text003,FIELDCAPTION("Return Qty. Received")));
+  IF ("Quantity (Base)" * "Return Qty. Received (Base)" < 0) OR
+     ((ABS("Quantity (Base)") < ABS("Return Qty. Received (Base)")) AND ("Return Receipt No." = ''))
+  THEN
+    FIELDERROR("Quantity (Base)",STRSUBSTNO(Text003,FIELDCAPTION("Return Qty. Received (Base)")));
+END ELSE BEGIN
+  IF (Quantity * "Quantity Shipped" < 0) OR
+     ((ABS(Quantity) < ABS("Quantity Shipped")) AND ("Shipment No." = ''))
+  THEN
+    FIELDERROR(Quantity,STRSUBSTNO(Text003,FIELDCAPTION("Quantity Shipped")));
+  IF ("Quantity (Base)" * "Qty. Shipped (Base)" < 0) OR
+     ((ABS("Quantity (Base)") < ABS("Qty. Shipped (Base)")) AND ("Shipment No." = ''))
+  THEN
+    FIELDERROR("Quantity (Base)",STRSUBSTNO(Text003,FIELDCAPTION("Qty. Shipped (Base)")));
+END;
+
+IF (Type = Type::"Charge (Item)") AND (CurrFieldNo <> 0) THEN BEGIN
+  IF (Quantity * "Qty. Assigned" < 0) OR (ABS(Quantity) < ABS("Qty. Assigned")) THEN
+    FIELDERROR(Quantity,STRSUBSTNO(Text003,FIELDCAPTION("Qty. Assigned")));
+  UpdateItemChargeAssgnt;
+END;
+
+AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+IF (xRec.Quantity <> Quantity) OR (xRec."Quantity (Base)" <> "Quantity (Base)") THEN BEGIN
+  InitOutstanding;
+  IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+    InitQtyToReceive
+  ELSE
+    InitQtyToShip;
+END;
+IF Reserve <> Reserve::Always THEN
+  CheckItemAvailable(FIELDNO(Quantity));
+IF (Quantity * xRec.Quantity < 0) OR (Quantity = 0) THEN
+  InitItemAppl(FALSE);
+
+IF Type = Type::Item THEN BEGIN
+  UpdateUnitPrice(FIELDNO(Quantity));
+  IF (xRec.Quantity <> Quantity) OR (xRec."Quantity (Base)" <> "Quantity (Base)") THEN BEGIN
+    ReserveSalesLine.VerifyQuantity(Rec,xRec);
+    IF NOT "Drop Shipment" THEN
+      UpdateWithWarehouseShip;
+    WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+    IF ("Quantity (Base)" * xRec."Quantity (Base)" <= 0) AND ("No." <> '') THEN BEGIN
+      GetItem;
+      IF (Item."Costing Method" = Item."Costing Method"::Standard) AND NOT IsShipment THEN
+        GetUnitCost;
+    END;
+  END;
+  IF (Quantity = "Quantity Invoiced") AND (CurrFieldNo <> 0) THEN
+    CheckItemChargeAssgnt;
+  CheckApplFromItemLedgEntry(ItemLedgEntry);
+END ELSE
+  VALIDATE("Line Discount %");
+
+IF (xRec.Quantity <> Quantity) AND (Quantity = 0) AND
+   ((Amount <> 0) OR ("Amount Including VAT" <> 0) OR ("VAT Base Amount" <> 0))
+THEN BEGIN
+  Amount := 0;
+  "Amount Including VAT" := 0;
+  "VAT Base Amount" := 0;
+END;
+
+Quantity - OnLookup()
+
+Outstanding Quantity - OnValidate()
+
+Outstanding Quantity - OnLookup()
+
+Qty. to Invoice - OnValidate()
+IF "Qty. to Invoice" = MaxQtyToInvoice THEN
+  InitQtyToInvoice
+ELSE
+  "Qty. to Invoice (Base)" := CalcBaseQty("Qty. to Invoice");
+IF ("Qty. to Invoice" * Quantity < 0) OR
+   (ABS("Qty. to Invoice") > ABS(MaxQtyToInvoice))
+THEN
+  ERROR(
+    Text005,
+    MaxQtyToInvoice);
+IF ("Qty. to Invoice (Base)" * "Quantity (Base)" < 0) OR
+   (ABS("Qty. to Invoice (Base)") > ABS(MaxQtyToInvoiceBase))
+THEN
+  ERROR(
+    Text006,
+    MaxQtyToInvoiceBase);
+"VAT Difference" := 0;
+CalcInvDiscToInvoice;
+CalcPrepaymentToDeduct;
+
+Qty. to Invoice - OnLookup()
+
+Qty. to Ship - OnValidate()
+IF (CurrFieldNo <> 0) AND
+   (Type = Type::Item) AND
+   ("Qty. to Ship" <> 0) AND
+   (NOT "Drop Shipment")
+THEN
+  CheckWarehouse;
+
+IF "Qty. to Ship" = "Outstanding Quantity" THEN
+  InitQtyToShip
+ELSE BEGIN
+  "Qty. to Ship (Base)" := CalcBaseQty("Qty. to Ship");
+  CheckServItemCreation;
+  InitQtyToInvoice;
+END;
+IF ("Qty. to Ship" * Quantity < 0) OR
+   (ABS("Qty. to Ship") > ABS("Outstanding Quantity")) OR
+   (Quantity * "Outstanding Quantity" < 0)
+THEN
+  ERROR(
+    Text007,
+    "Outstanding Quantity");
+IF ("Qty. to Ship (Base)" * "Quantity (Base)" < 0) OR
+   (ABS("Qty. to Ship (Base)") > ABS("Outstanding Qty. (Base)")) OR
+   ("Quantity (Base)" * "Outstanding Qty. (Base)" < 0)
+THEN
+  ERROR(
+    Text008,
+    "Outstanding Qty. (Base)");
+
+IF (CurrFieldNo <> 0) AND (Type = Type::Item) AND ("Qty. to Ship" < 0) THEN
+  CheckApplFromItemLedgEntry(ItemLedgEntry);
+
+Qty. to Ship - OnLookup()
+
+Unit Price - OnValidate()
+TestStatusOpen;
+VALIDATE("Line Discount %");
+
+//Topas
+GetSalesHeader;
+IF SalesHeader."Currency Code" = '' THEN
+  "VK-Preis (MW)" := "Unit Price"
+ELSE
+  "VK-Preis (MW)" := ROUND (CurrExchRate.ExchangeAmtFCYToLCY(WORKDATE,SalesHeader."Currency Code",
+    "Unit Price",SalesHeader."Currency Factor"),Currency."Unit-Amount Rounding Precision");
+
+IF SalesHeader."Currency Code" = Einkaufswährungscode THEN
+  "VK-Preis (EKW)" := "Unit Price"
+ELSE BEGIN
+  IF Einkaufswährungscode = '' THEN
+    "VK-Preis (EKW)" := "VK-Preis (MW)"
+  ELSE BEGIN
+    Currency3.GET (Einkaufswährungscode);
+    Currency3.TESTFIELD("Unit-Amount Rounding Precision");
+    "VK-Preis (EKW)" := ROUND (CurrExchRate.ExchangeAmtLCYToFCY(WORKDATE,Einkaufswährungscode,
+      "VK-Preis (MW)",Einkaufswährungsfaktor), Currency3."Unit-Amount Rounding Precision");
+  END;
+END;
+IF (Type = Type::Item) AND
+   ("Unit Price" <> xRec."Unit Price") THEN
+//TOPAS Auskommentiert ST 07.05.08
+//   AND ("Unit Price" <> 0)  THEN
+  AktualisiereKalkulation;
+//Topas
+
+Unit Price - OnLookup()
+
+Unit Cost (LCY) - OnValidate()
+IF "Unit Cost (LCY)" <> xRec."Unit Cost (LCY)" THEN
+  CheckAssocPurchOrder(FIELDCAPTION("Unit Cost (LCY)"));
+
+IF (CurrFieldNo = FIELDNO("Unit Cost (LCY)")) AND
+   (Type = Type::Item) AND ("No." <> '') AND ("Quantity (Base)" <> 0)
+THEN BEGIN
+  GetItem;
+  IF (Item."Costing Method" = Item."Costing Method"::Standard) AND NOT IsShipment THEN BEGIN
+    IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+      ERROR(
+        Text037,
+        FIELDCAPTION("Unit Cost (LCY)"),Item.FIELDCAPTION("Costing Method"),
+        Item."Costing Method",FIELDCAPTION(Quantity));
+    ERROR(
+      Text038,
+      FIELDCAPTION("Unit Cost (LCY)"),Item.FIELDCAPTION("Costing Method"),
+      Item."Costing Method",FIELDCAPTION(Quantity));
+  END;
+END;
+
+GetSalesHeader;
+IF SalesHeader."Currency Code" <> '' THEN BEGIN
+  Currency.TESTFIELD("Unit-Amount Rounding Precision");
+  "Unit Cost" :=
+    ROUND(
+      CurrExchRate.ExchangeAmtLCYToFCY(
+        GetDate,SalesHeader."Currency Code",
+        "Unit Cost (LCY)",SalesHeader."Currency Factor"),
+      Currency."Unit-Amount Rounding Precision");
+END ELSE
+  "Unit Cost" := "Unit Cost (LCY)";
+
+Unit Cost (LCY) - OnLookup()
+
+VAT % - OnValidate()
+
+VAT % - OnLookup()
+
+Line Discount % - OnValidate()
+TestStatusOpen;
+"Line Discount Amount" :=
+  ROUND(
+    ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") *
+    "Line Discount %" / 100,Currency."Amount Rounding Precision");
+"Inv. Discount Amount" := 0;
+"Inv. Disc. Amount to Invoice" := 0;
+UpdateAmounts;
+
+Line Discount % - OnLookup()
+
+Line Discount Amount - OnValidate()
+TestStatusOpen;
+TESTFIELD(Quantity);
+IF ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") <> 0 THEN
+  "Line Discount %" :=
+    ROUND(
+      "Line Discount Amount" / ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") * 100,
+      0.00001)
+ELSE
+  "Line Discount %" := 0;
+"Inv. Discount Amount" := 0;
+"Inv. Disc. Amount to Invoice" := 0;
+UpdateAmounts;
+
+Line Discount Amount - OnLookup()
+
+Amount - OnValidate()
+Amount := ROUND(Amount,Currency."Amount Rounding Precision");
+CASE "VAT Calculation Type" OF
+  "VAT Calculation Type"::"Normal VAT",
+  "VAT Calculation Type"::"Reverse Charge VAT":
+    BEGIN
+      "VAT Base Amount" :=
+        ROUND(Amount * (1 - SalesHeader."VAT Base Discount %" / 100),Currency."Amount Rounding Precision");
+      "Amount Including VAT" :=
+        ROUND(Amount + "VAT Base Amount" * "VAT %" / 100,Currency."Amount Rounding Precision");
+    END;
+  "VAT Calculation Type"::"Full VAT":
+    IF Amount <> 0 THEN
+      FIELDERROR(Amount,
+        STRSUBSTNO(
+          Text009,FIELDCAPTION("VAT Calculation Type"),
+          "VAT Calculation Type"));
+  "VAT Calculation Type"::"Sales Tax":
+    BEGIN
+      SalesHeader.TESTFIELD("VAT Base Discount %",0);
+      "VAT Base Amount" := ROUND(Amount,Currency."Amount Rounding Precision");
+      "Amount Including VAT" :=
+        Amount +
+        SalesTaxCalculate.CalculateTax(
+          "Tax Area Code","Tax Group Code","Tax Liable",SalesHeader."Posting Date",
+          "VAT Base Amount","Quantity (Base)",SalesHeader."Currency Factor");
+      IF "VAT Base Amount" <> 0 THEN
+        "VAT %" :=
+          ROUND(100 * ("Amount Including VAT" - "VAT Base Amount") / "VAT Base Amount",0.00001)
+      ELSE
+        "VAT %" := 0;
+      "Amount Including VAT" := ROUND("Amount Including VAT",Currency."Amount Rounding Precision");
+    END;
+END;
+
+InitOutstandingAmount;
+IF Type = Type::"Charge (Item)" THEN
+  UpdateItemChargeAssgnt;
+
+Amount - OnLookup()
+
+Amount Including VAT - OnValidate()
+"Amount Including VAT" := ROUND("Amount Including VAT",Currency."Amount Rounding Precision");
+CASE "VAT Calculation Type" OF
+  "VAT Calculation Type"::"Normal VAT",
+  "VAT Calculation Type"::"Reverse Charge VAT":
+    BEGIN
+      Amount :=
+        ROUND(
+          "Amount Including VAT" /
+          (1 + (1 - SalesHeader."VAT Base Discount %" / 100) * "VAT %" / 100),
+          Currency."Amount Rounding Precision");
+      "VAT Base Amount" :=
+        ROUND(Amount * (1 - SalesHeader."VAT Base Discount %" / 100),Currency."Amount Rounding Precision");
+    END;
+  "VAT Calculation Type"::"Full VAT":
+    BEGIN
+      Amount := 0;
+      "VAT Base Amount" := 0;
+    END;
+  "VAT Calculation Type"::"Sales Tax":
+    BEGIN
+      SalesHeader.TESTFIELD("VAT Base Discount %",0);
+      Amount :=
+        SalesTaxCalculate.ReverseCalculateTax(
+          "Tax Area Code","Tax Group Code","Tax Liable",SalesHeader."Posting Date",
+          "Amount Including VAT","Quantity (Base)",SalesHeader."Currency Factor");
+      IF Amount <> 0 THEN
+        "VAT %" :=
+          ROUND(100 * ("Amount Including VAT" - Amount) / Amount,0.00001)
+      ELSE
+        "VAT %" := 0;
+      Amount := ROUND(Amount,Currency."Amount Rounding Precision");
+      "VAT Base Amount" := Amount;
+    END;
+END;
+
+InitOutstandingAmount;
+
+Amount Including VAT - OnLookup()
+
+Allow Invoice Disc. - OnValidate()
+TestStatusOpen;
+IF ("Allow Invoice Disc." <> xRec."Allow Invoice Disc.") AND
+   (NOT "Allow Invoice Disc.")
+THEN BEGIN
+  "Inv. Discount Amount" := 0;
+  "Inv. Disc. Amount to Invoice" := 0;
+  UpdateAmounts;
+END;
+
+Allow Invoice Disc. - OnLookup()
+
+Gross Weight - OnValidate()
+
+Gross Weight - OnLookup()
+
+Net Weight - OnValidate()
+
+Net Weight - OnLookup()
+
+Units per Parcel - OnValidate()
+
+Units per Parcel - OnLookup()
+
+Unit Volume - OnValidate()
+
+Unit Volume - OnLookup()
+
+Appl.-to Item Entry - OnValidate()
+IF "Appl.-to Item Entry" <> 0 THEN BEGIN
+  AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+
+  TESTFIELD(Type,Type::Item);
+  TESTFIELD(Quantity);
+  IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+    IF Quantity > 0 THEN
+      FIELDERROR(Quantity,Text030);
+  END ELSE BEGIN
+    IF Quantity < 0 THEN
+      FIELDERROR(Quantity,Text029);
+  END;
+  ItemLedgEntry.GET("Appl.-to Item Entry");
+  ItemLedgEntry.TESTFIELD(Positive,TRUE);
+  // ItemLedgEntry.TESTFIELD(Open,TRUE);
+  VALIDATE("Unit Cost (LCY)",CalcUnitCost(ItemLedgEntry));
+
+  "Location Code" := ItemLedgEntry."Location Code";
+  IF NOT ItemLedgEntry.Open THEN MESSAGE(Text042,"Appl.-to Item Entry");
+END;
+
+Appl.-to Item Entry - OnLookup()
+SelectItemEntry(FIELDNO("Appl.-to Item Entry"));
+
+Shortcut Dimension 1 Code - OnValidate()
+ValidateShortcutDimCode(1,"Shortcut Dimension 1 Code");
+
+Shortcut Dimension 1 Code - OnLookup()
+
+Shortcut Dimension 2 Code - OnValidate()
+ValidateShortcutDimCode(2,"Shortcut Dimension 2 Code");
+
+Shortcut Dimension 2 Code - OnLookup()
+
+Customer Price Group - OnValidate()
+IF Type = Type::Item THEN
+  UpdateUnitPrice(FIELDNO("Customer Price Group"));
+
+Customer Price Group - OnLookup()
+
+Job No. - OnValidate()
+
+Job No. - OnLookup()
+
+Work Type Code - OnValidate()
+IF Type = Type::Resource THEN BEGIN
+  TestStatusOpen;
+  IF WorkType.GET("Work Type Code") THEN
+    VALIDATE("Unit of Measure Code",WorkType."Unit of Measure Code");
+  UpdateUnitPrice(FIELDNO("Work Type Code"));
+  VALIDATE("Unit Price");
+  FindResUnitCost;
+END;
+
+Work Type Code - OnLookup()
+
+Outstanding Amount - OnValidate()
+GetSalesHeader;
+Currency2.InitRoundingPrecision;
+IF SalesHeader."Currency Code" <> '' THEN
+  "Outstanding Amount (LCY)" :=
+    ROUND(
+      CurrExchRate.ExchangeAmtFCYToLCY(
+        GetDate,"Currency Code",
+        "Outstanding Amount",SalesHeader."Currency Factor"),
+      Currency2."Amount Rounding Precision")
+ELSE
+  "Outstanding Amount (LCY)" :=
+    ROUND("Outstanding Amount",Currency2."Amount Rounding Precision");
+
+Outstanding Amount - OnLookup()
+
+Qty. Shipped Not Invoiced - OnValidate()
+
+Qty. Shipped Not Invoiced - OnLookup()
+
+Shipped Not Invoiced - OnValidate()
+GetSalesHeader;
+Currency2.InitRoundingPrecision;
+IF SalesHeader."Currency Code" <> '' THEN
+  "Shipped Not Invoiced (LCY)" :=
+    ROUND(
+      CurrExchRate.ExchangeAmtFCYToLCY(
+        GetDate,"Currency Code",
+        "Shipped Not Invoiced",SalesHeader."Currency Factor"),
+      Currency2."Amount Rounding Precision")
+ELSE
+  "Shipped Not Invoiced (LCY)" :=
+    ROUND("Shipped Not Invoiced",Currency2."Amount Rounding Precision");
+
+Shipped Not Invoiced - OnLookup()
+
+Quantity Shipped - OnValidate()
+
+Quantity Shipped - OnLookup()
+
+Quantity Invoiced - OnValidate()
+
+Quantity Invoiced - OnLookup()
+
+Shipment No. - OnValidate()
+
+Shipment No. - OnLookup()
+
+Shipment Line No. - OnValidate()
+
+Shipment Line No. - OnLookup()
+
+Profit % - OnValidate()
+
+Profit % - OnLookup()
+
+Bill-to Customer No. - OnValidate()
+
+Bill-to Customer No. - OnLookup()
+
+Inv. Discount Amount - OnValidate()
+TESTFIELD(Quantity);
+CalcInvDiscToInvoice;
+UpdateAmounts;
+
+Inv. Discount Amount - OnLookup()
+
+Purchase Order No. - OnValidate()
+IF (xRec."Purchase Order No." <> "Purchase Order No.") AND (Quantity <> 0) THEN BEGIN
+  ReserveSalesLine.VerifyChange(Rec,xRec);
+  WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+END;
+
+Purchase Order No. - OnLookup()
+
+Purch. Order Line No. - OnValidate()
+IF (xRec."Purch. Order Line No." <> "Purch. Order Line No.") AND (Quantity <> 0) THEN BEGIN
+  ReserveSalesLine.VerifyChange(Rec,xRec);
+  WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+END;
+
+Purch. Order Line No. - OnLookup()
+
+Drop Shipment - OnValidate()
+TESTFIELD("Document Type","Document Type"::Order);
+TESTFIELD(Type,Type::Item);
+TESTFIELD("Quantity Shipped",0);
+TESTFIELD("Job No.",'');
+
+IF "Drop Shipment" THEN
+  TESTFIELD("Special Order",FALSE);
+
+CheckAssocPurchOrder(FIELDCAPTION("Drop Shipment"));
+
+IF "Drop Shipment" THEN
+  "Bin Code" := '';
+
+IF Reserve <> Reserve::Always THEN
+  CheckItemAvailable(FIELDNO("Drop Shipment"));
+
+AddOnIntegrMgt.CheckReceiptOrderStatus(Rec);
+IF (xRec."Drop Shipment" <> "Drop Shipment") AND (Quantity <> 0) THEN BEGIN
+  IF NOT "Drop Shipment" THEN
+    UpdateWithWarehouseShip
+  ELSE
+    InitQtyToShip;
+  WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+  ReserveSalesLine.VerifyChange(Rec,xRec);
+END;
+
+Drop Shipment - OnLookup()
+
+Gen. Bus. Posting Group - OnValidate()
+IF xRec."Gen. Bus. Posting Group" <> "Gen. Bus. Posting Group" THEN
+  IF GenBusPostingGrp.ValidateVatBusPostingGroup(GenBusPostingGrp,"Gen. Bus. Posting Group") THEN
+    VALIDATE("VAT Bus. Posting Group",GenBusPostingGrp."Def. VAT Bus. Posting Group");
+
+Gen. Bus. Posting Group - OnLookup()
+
+Gen. Prod. Posting Group - OnValidate()
+TESTFIELD("Job Contract Entry No.",0);
+TestStatusOpen;
+IF xRec."Gen. Prod. Posting Group" <> "Gen. Prod. Posting Group" THEN
+  IF GenProdPostingGrp.ValidateVatProdPostingGroup(GenProdPostingGrp,"Gen. Prod. Posting Group") THEN
+    VALIDATE("VAT Prod. Posting Group",GenProdPostingGrp."Def. VAT Prod. Posting Group");
+
+Gen. Prod. Posting Group - OnLookup()
+
+VAT Calculation Type - OnValidate()
+
+VAT Calculation Type - OnLookup()
+
+Transaction Type - OnValidate()
+
+Transaction Type - OnLookup()
+
+Transport Method - OnValidate()
+
+Transport Method - OnLookup()
+
+Attached to Line No. - OnValidate()
+
+Attached to Line No. - OnLookup()
+
+Exit Point - OnValidate()
+
+Exit Point - OnLookup()
+
+Area - OnValidate()
+
+Area - OnLookup()
+
+Transaction Specification - OnValidate()
+
+Transaction Specification - OnLookup()
+
+Tax Area Code - OnValidate()
+UpdateAmounts;
+
+Tax Area Code - OnLookup()
+
+Tax Liable - OnValidate()
+UpdateAmounts;
+
+Tax Liable - OnLookup()
+
+Tax Group Code - OnValidate()
+TestStatusOpen;
+UpdateAmounts;
+
+Tax Group Code - OnLookup()
+
+VAT Bus. Posting Group - OnValidate()
+VALIDATE("VAT Prod. Posting Group");
+
+VAT Bus. Posting Group - OnLookup()
+
+VAT Prod. Posting Group - OnValidate()
+TestStatusOpen;
+VATPostingSetup.GET("VAT Bus. Posting Group","VAT Prod. Posting Group");
+"VAT Difference" := 0;
+"VAT %" := VATPostingSetup."VAT %";
+"VAT Calculation Type" := VATPostingSetup."VAT Calculation Type";
+"VAT Identifier" := VATPostingSetup."VAT Identifier";
+CASE "VAT Calculation Type" OF
+  "VAT Calculation Type"::"Reverse Charge VAT",
+  "VAT Calculation Type"::"Sales Tax":
+    "VAT %" := 0;
+  "VAT Calculation Type"::"Full VAT":
+    BEGIN
+      TESTFIELD(Type,Type::"G/L Account");
+      VATPostingSetup.TESTFIELD("Sales VAT Account");
+      TESTFIELD("No.",VATPostingSetup."Sales VAT Account");
+    END;
+END;
+IF SalesHeader."Prices Including VAT" AND (Type IN [Type::Item,Type::Resource]) THEN
+  "Unit Price" :=
+    ROUND(
+      "Unit Price" * (100 + "VAT %") / (100 + xRec."VAT %"),
+      Currency."Unit-Amount Rounding Precision");
+UpdateAmounts;
+
+VAT Prod. Posting Group - OnLookup()
+
+Currency Code - OnValidate()
+
+Currency Code - OnLookup()
+
+Outstanding Amount (LCY) - OnValidate()
+
+Outstanding Amount (LCY) - OnLookup()
+
+Shipped Not Invoiced (LCY) - OnValidate()
+
+Shipped Not Invoiced (LCY) - OnLookup()
+
+Reserved Quantity - OnValidate()
+
+Reserved Quantity - OnLookup()
+
+Reserve - OnValidate()
+IF Reserve <> Reserve::Never THEN BEGIN
+  TESTFIELD(Type,Type::Item);
+  TESTFIELD("No.");
+END;
+CALCFIELDS("Reserved Qty. (Base)");
+IF (Reserve = Reserve::Never) AND ("Reserved Qty. (Base)" > 0) THEN
+  TESTFIELD("Reserved Qty. (Base)",0);
+
+IF xRec.Reserve = Reserve::Always THEN BEGIN
+  GetItem;
+  IF Item.Reserve = Item.Reserve::Always THEN
+    TESTFIELD(Reserve,Reserve::Always);
+END;
+
+Reserve - OnLookup()
+
+Blanket Order No. - OnValidate()
+IF "Blanket Order No." = '' THEN
+  "Blanket Order Line No." := 0
+ELSE
+  VALIDATE("Blanket Order Line No.");
+
+//TOPAS 060709-ST
+PrüfeRahmenAuftrag;
+
+Blanket Order No. - OnLookup()
+BlanketOrderLookup;
+
+Blanket Order Line No. - OnValidate()
+IF "Blanket Order Line No." <> 0 THEN BEGIN
+  SalesLine2.GET("Document Type"::"Blanket Order","Blanket Order No.","Blanket Order Line No.");
+  SalesLine2.TESTFIELD(Type,Type);
+  SalesLine2.TESTFIELD("No.","No.");
+  SalesLine2.TESTFIELD("Bill-to Customer No.","Bill-to Customer No.");
+  SalesLine2.TESTFIELD("Sell-to Customer No.","Sell-to Customer No.");
+END;
+
+//TOPAS 060709-ST
+PrüfeRahmenAuftrag;
+
+Blanket Order Line No. - OnLookup()
+BlanketOrderLookup;
+
+VAT Base Amount - OnValidate()
+
+VAT Base Amount - OnLookup()
+
+Unit Cost - OnValidate()
+
+Unit Cost - OnLookup()
+
+System-Created Entry - OnValidate()
+
+System-Created Entry - OnLookup()
+
+Line Amount - OnValidate()
+TESTFIELD(Type);
+TESTFIELD(Quantity);
+TESTFIELD("Unit Price");
+GetSalesHeader;
+"Line Amount" := ROUND("Line Amount",Currency."Amount Rounding Precision");
+VALIDATE(
+  "Line Discount Amount",ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") - "Line Amount");
+
+Line Amount - OnLookup()
+
+VAT Difference - OnValidate()
+
+VAT Difference - OnLookup()
+
+Inv. Disc. Amount to Invoice - OnValidate()
+
+Inv. Disc. Amount to Invoice - OnLookup()
+
+VAT Identifier - OnValidate()
+
+VAT Identifier - OnLookup()
+
+IC Partner Ref. Type - OnValidate()
+IF "IC Partner Code" <> '' THEN
+  "IC Partner Ref. Type" := "IC Partner Ref. Type"::"G/L Account";
+IF "IC Partner Ref. Type" <> xRec."IC Partner Ref. Type" THEN
+  "IC Partner Reference" := '';
+IF "IC Partner Ref. Type" = "IC Partner Ref. Type"::"Common Item No." THEN
+  BEGIN
+  IF Item."No." <> "No." THEN
+    Item.GET("No.");
+  "IC Partner Reference" := Item."Common Item No.";
+END;
+
+IC Partner Ref. Type - OnLookup()
+
+IC Partner Reference - OnValidate()
+
+IC Partner Reference - OnLookup()
+IF "No." <> '' THEN
+  CASE "IC Partner Ref. Type" OF
+    "IC Partner Ref. Type"::"G/L Account":
+      BEGIN
+        IF ICGLAccount.GET("IC Partner Reference") THEN;
+        IF FORM.RUNMODAL(FORM::"IC G/L Account List",ICGLAccount) = ACTION::LookupOK THEN
+          VALIDATE("IC Partner Reference",ICGLAccount."No.");
+      END;
+    "IC Partner Ref. Type"::Item:
+      BEGIN
+        IF Item.GET("IC Partner Reference") THEN;
+        IF FORM.RUNMODAL(FORM::"Item List",Item) = ACTION::LookupOK THEN
+          VALIDATE("IC Partner Reference",Item."No.");
+      END;
+    "IC Partner Ref. Type"::"Cross Reference":
+      BEGIN
+        ItemCrossReference.RESET;
+        ItemCrossReference.SETCURRENTKEY("Cross-Reference Type","Cross-Reference Type No.");
+        ItemCrossReference.SETFILTER(
+          "Cross-Reference Type",'%1|%2',
+          ItemCrossReference."Cross-Reference Type"::Customer,
+          ItemCrossReference."Cross-Reference Type"::" ");
+        ItemCrossReference.SETFILTER("Cross-Reference Type No.",'%1|%2',"Sell-to Customer No.",'');
+        IF FORM.RUNMODAL(FORM::"Cross Reference List",ItemCrossReference) = ACTION::LookupOK THEN
+          VALIDATE("IC Partner Reference",ItemCrossReference."Cross-Reference No.");
+      END;
+  END;
+
+Prepayment % - OnValidate()
+IF "Prepayment %" <> 0 THEN BEGIN
+  TESTFIELD("Document Type","Document Type"::Order);
+  TESTFIELD(Type);
+  TESTFIELD("No.");
+  GenPostingSetup.GET("Gen. Bus. Posting Group","Gen. Prod. Posting Group");
+  IF GenPostingSetup."Sales Prepayments Account" <> '' THEN BEGIN
+    GLAcc.GET(GenPostingSetup."Sales Prepayments Account");
+    VATPostingSetup.GET("VAT Bus. Posting Group",GLAcc."VAT Prod. Posting Group");
+  END ELSE
+    CLEAR(VATPostingSetup);
+  "Prepayment VAT %" := VATPostingSetup."VAT %";
+  "Prepmt. VAT Calc. Type" := VATPostingSetup."VAT Calculation Type";
+  "Prepayment VAT Identifier" := VATPostingSetup."VAT Identifier";
+  CASE "Prepmt. VAT Calc. Type" OF
+    "VAT Calculation Type"::"Reverse Charge VAT",
+    "VAT Calculation Type"::"Sales Tax":
+      "Prepayment VAT %" := 0;
+    "VAT Calculation Type"::"Full VAT":
+      FIELDERROR("Prepmt. VAT Calc. Type",STRSUBSTNO(Text041,"Prepmt. VAT Calc. Type"));
+  END;
+  "Prepayment Tax Group Code" := GLAcc."Tax Group Code";
+END;
+
+TestStatusOpen;
+
+IF Type <> Type::" " THEN
+  UpdateAmounts;
+
+Prepayment % - OnLookup()
+
+Prepmt. Line Amount - OnValidate()
+TestStatusOpen;
+TESTFIELD("Line Amount");
+IF "Prepmt. Line Amount" < "Prepmt. Amt. Inv." THEN
+  FIELDERROR("Prepmt. Line Amount",STRSUBSTNO(Text044,"Prepmt. Amt. Inv."));
+IF "Prepmt. Line Amount" > "Line Amount" THEN
+  FIELDERROR("Prepmt. Line Amount",STRSUBSTNO(Text043,"Line Amount"));
+VALIDATE("Prepayment %",ROUND("Prepmt. Line Amount" * 100 / "Line Amount",0.00001));
+
+Prepmt. Line Amount - OnLookup()
+
+Prepmt. Amt. Inv. - OnValidate()
+
+Prepmt. Amt. Inv. - OnLookup()
+
+Prepmt. Amt. Incl. VAT - OnValidate()
+
+Prepmt. Amt. Incl. VAT - OnLookup()
+
+Prepayment Amount - OnValidate()
+
+Prepayment Amount - OnLookup()
+
+Prepmt. VAT Base Amt. - OnValidate()
+
+Prepmt. VAT Base Amt. - OnLookup()
+
+Prepayment VAT % - OnValidate()
+
+Prepayment VAT % - OnLookup()
+
+Prepmt. VAT Calc. Type - OnValidate()
+
+Prepmt. VAT Calc. Type - OnLookup()
+
+Prepayment VAT Identifier - OnValidate()
+
+Prepayment VAT Identifier - OnLookup()
+
+Prepayment Tax Area Code - OnValidate()
+UpdateAmounts;
+
+Prepayment Tax Area Code - OnLookup()
+
+Prepayment Tax Liable - OnValidate()
+UpdateAmounts;
+
+Prepayment Tax Liable - OnLookup()
+
+Prepayment Tax Group Code - OnValidate()
+TestStatusOpen;
+UpdateAmounts;
+
+Prepayment Tax Group Code - OnLookup()
+
+Prepmt Amt to Deduct - OnValidate()
+IF "Prepmt Amt to Deduct" > "Prepmt. Amt. Inv." - "Prepmt Amt Deducted" THEN
+  FIELDERROR(
+    "Prepmt Amt to Deduct",
+    STRSUBSTNO(Text045,"Prepmt. Amt. Inv." - "Prepmt Amt Deducted"));
+
+Prepmt Amt to Deduct - OnLookup()
+
+Prepmt Amt Deducted - OnValidate()
+
+Prepmt Amt Deducted - OnLookup()
+
+Prepayment Line - OnValidate()
+
+Prepayment Line - OnLookup()
+
+Prepmt. Amount Inv. Incl. VAT - OnValidate()
+
+Prepmt. Amount Inv. Incl. VAT - OnLookup()
+
+IC Partner Code - OnValidate()
+IF "IC Partner Code" <> '' THEN BEGIN
+  TESTFIELD(Type,Type::"G/L Account");
+  GetSalesHeader;
+  SalesHeader.TESTFIELD("Sell-to IC Partner Code",'');
+  SalesHeader.TESTFIELD("Bill-to IC Partner Code",'');
+  VALIDATE("IC Partner Ref. Type","IC Partner Ref. Type"::"G/L Account");
+END;
+
+IC Partner Code - OnLookup()
+
+Job Task No. - OnValidate()
+
+Job Task No. - OnLookup()
+
+Job Contract Entry No. - OnValidate()
+JobPlanningLine.SETRANGE("Job Contract Entry No.","Job Contract Entry No.");
+JobPlanningLine.FIND('-');
+CreateDim(
+  DimMgt.TypeToTableID3(Type),"No.",
+  DATABASE::Job,JobPlanningLine."Job No.",
+  DATABASE::"Responsibility Center","Responsibility Center");
+
+Job Contract Entry No. - OnLookup()
+
+Variant Code - OnValidate()
+TESTFIELD("Job Contract Entry No.",0);
+IF "Variant Code" <> '' THEN
+  TESTFIELD(Type,Type::Item);
+TestStatusOpen;
+CheckAssocPurchOrder(FIELDCAPTION("Variant Code"));
+
+IF xRec."Variant Code" <> "Variant Code" THEN BEGIN
+  TESTFIELD("Qty. Shipped Not Invoiced",0);
+  TESTFIELD("Shipment No.",'');
+
+  TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+  TESTFIELD("Return Receipt No.",'');
+  InitItemAppl(FALSE);
+END;
+
+IF Reserve <> Reserve::Always THEN
+  CheckItemAvailable(FIELDNO("Variant Code"));
+
+IF Type = Type::Item THEN BEGIN
+  GetUnitCost;
+  UpdateUnitPrice(FIELDNO("Variant Code"));
+END;
+
+IF (xRec."Variant Code" <> "Variant Code") AND (Quantity <> 0) THEN BEGIN
+  ReserveSalesLine.VerifyChange(Rec,xRec);
+  WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+END;
+
+GetItemCrossRef(FIELDNO("Variant Code"));
+GetDefaultBin;
+
+Variant Code - OnLookup()
+
+Bin Code - OnValidate()
+IF "Bin Code" <> '' THEN
+  IF (("Document Type" IN ["Document Type"::Order,"Document Type"::Invoice]) AND (Quantity >= 0)) OR
+     (("Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]) AND (Quantity < 0))
+  THEN
+    WMSManagement.FindBinContent("Location Code","Bin Code","No.","Variant Code",'')
+  ELSE
+    WMSManagement.FindBin("Location Code","Bin Code",'');
+
+IF xRec."Bin Code" <> "Bin Code" THEN BEGIN
+  TESTFIELD("Qty. Shipped Not Invoiced",0);
+  TESTFIELD("Shipment No.",'');
+
+  TESTFIELD("Return Qty. Rcd. Not Invd.",0);
+  TESTFIELD("Return Receipt No.",'');
+END;
+
+IF "Drop Shipment" THEN
+  CheckAssocPurchOrder(FIELDCAPTION("Bin Code"));
+
+TESTFIELD("Location Code");
+
+IF (Type = Type::Item) AND ("Bin Code" <> '') THEN BEGIN
+  TESTFIELD("Drop Shipment",FALSE);
+  GetLocation("Location Code");
+  Location.TESTFIELD("Bin Mandatory");
+  CheckWarehouse;
+END;
+
+Bin Code - OnLookup()
+IF (("Document Type" IN ["Document Type"::Order,"Document Type"::Invoice]) AND (Quantity >= 0)) OR
+   (("Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]) AND (Quantity < 0))
+THEN
+  BinCode := WMSManagement.BinContentLookUp("Location Code","No.","Variant Code",'',"Bin Code")
+ELSE
+  BinCode := WMSManagement.BinLookUp("Location Code","No.","Variant Code",'');
+
+IF BinCode <> '' THEN
+  VALIDATE("Bin Code",BinCode);
+
+Qty. per Unit of Measure - OnValidate()
+
+Qty. per Unit of Measure - OnLookup()
+
+Planned - OnValidate()
+
+Planned - OnLookup()
+
+Unit of Measure Code - OnValidate()
+TESTFIELD("Job Contract Entry No.",0);
+TestStatusOpen;
+TESTFIELD("Quantity Shipped",0);
+TESTFIELD("Qty. Shipped (Base)",0);
+CheckAssocPurchOrder(FIELDCAPTION("Unit of Measure Code"));
+
+IF "Unit of Measure Code" = '' THEN
+  "Unit of Measure" := ''
+ELSE BEGIN
+  IF NOT UnitOfMeasure.GET("Unit of Measure Code") THEN
+    UnitOfMeasure.INIT;
+  "Unit of Measure" := UnitOfMeasure.Description;
+  GetSalesHeader;
+  IF SalesHeader."Language Code" <> '' THEN BEGIN
+    UnitOfMeasureTranslation.SETRANGE(Code,"Unit of Measure Code");
+    UnitOfMeasureTranslation.SETRANGE("Language Code",SalesHeader."Language Code");
+    IF UnitOfMeasureTranslation.FINDFIRST THEN
+      "Unit of Measure" := UnitOfMeasureTranslation.Description;
+  END;
+END;
+GetItemCrossRef(FIELDNO("Unit of Measure Code"));
+CASE Type OF
+  Type::Item:
+    BEGIN
+      GetItem;
+      GetUnitCost;
+      UpdateUnitPrice(FIELDNO("Unit of Measure Code"));
+      IF Reserve <> Reserve::Always THEN
+        CheckItemAvailable(FIELDNO("Unit of Measure Code"));
+      "Gross Weight" := Item."Gross Weight" * "Qty. per Unit of Measure";
+      "Net Weight" := Item."Net Weight" * "Qty. per Unit of Measure";
+      "Unit Volume" := Item."Unit Volume" * "Qty. per Unit of Measure";
+      "Units per Parcel" := ROUND(Item."Units per Parcel" / "Qty. per Unit of Measure",0.00001);
+      IF (xRec."Unit of Measure Code" <> "Unit of Measure Code") AND (Quantity <> 0) THEN
+        WhseValidateSourceLine.SalesLineVerifyChange(Rec,xRec);
+      IF "Qty. per Unit of Measure" > xRec."Qty. per Unit of Measure" THEN
+        InitItemAppl(FALSE);
+    END;
+  Type::Resource:
+    BEGIN
+      IF "Unit of Measure Code" = '' THEN BEGIN
+        GetResource;
+        "Unit of Measure Code" := Resource."Base Unit of Measure";
+      END;
+      ResUnitofMeasure.GET("No.","Unit of Measure Code");
+      "Qty. per Unit of Measure" := ResUnitofMeasure."Qty. per Unit of Measure";
+      UpdateUnitPrice(FIELDNO("Unit of Measure Code"));
+      FindResUnitCost;
+    END;
+  Type::"G/L Account",Type::"Fixed Asset",Type::"Charge (Item)",Type::" ":
+    "Qty. per Unit of Measure" := 1;
+END;
+VALIDATE(Quantity);
+
+Unit of Measure Code - OnLookup()
+
+Quantity (Base) - OnValidate()
+TESTFIELD("Job Contract Entry No.",0);
+TESTFIELD("Qty. per Unit of Measure",1);
+VALIDATE(Quantity,"Quantity (Base)");
+UpdateUnitPrice(FIELDNO("Quantity (Base)"));
+
+Quantity (Base) - OnLookup()
+
+Outstanding Qty. (Base) - OnValidate()
+
+Outstanding Qty. (Base) - OnLookup()
+
+Qty. to Invoice (Base) - OnValidate()
+TESTFIELD("Qty. per Unit of Measure",1);
+VALIDATE("Qty. to Invoice","Qty. to Invoice (Base)");
+
+Qty. to Invoice (Base) - OnLookup()
+
+Qty. to Ship (Base) - OnValidate()
+TESTFIELD("Qty. per Unit of Measure",1);
+VALIDATE("Qty. to Ship","Qty. to Ship (Base)");
+
+Qty. to Ship (Base) - OnLookup()
+
+Qty. Shipped Not Invd. (Base) - OnValidate()
+
+Qty. Shipped Not Invd. (Base) - OnLookup()
+
+Qty. Shipped (Base) - OnValidate()
+
+Qty. Shipped (Base) - OnLookup()
+
+Qty. Invoiced (Base) - OnValidate()
+
+Qty. Invoiced (Base) - OnLookup()
+
+Reserved Qty. (Base) - OnValidate()
+TESTFIELD("Qty. per Unit of Measure");
+CALCFIELDS("Reserved Quantity");
+Planned := "Reserved Quantity" = "Outstanding Quantity";
+
+Reserved Qty. (Base) - OnLookup()
+
+FA Posting Date - OnValidate()
+
+FA Posting Date - OnLookup()
+
+Depreciation Book Code - OnValidate()
+GetFAPostingGroup;
+
+Depreciation Book Code - OnLookup()
+
+Depr. until FA Posting Date - OnValidate()
+
+Depr. until FA Posting Date - OnLookup()
+
+Duplicate in Depreciation Book - OnValidate()
+"Use Duplication List" := FALSE;
+
+Duplicate in Depreciation Book - OnLookup()
+
+Use Duplication List - OnValidate()
+"Duplicate in Depreciation Book" := '';
+
+Use Duplication List - OnLookup()
+
+Responsibility Center - OnValidate()
+CreateDim(
+  DATABASE::"Responsibility Center","Responsibility Center",
+  DimMgt.TypeToTableID3(Type),"No.",
+  DATABASE::Job,"Job No.");
+
+Responsibility Center - OnLookup()
+
+Out-of-Stock Substitution - OnValidate()
+
+Out-of-Stock Substitution - OnLookup()
+
+Substitution Available - OnValidate()
+
+Substitution Available - OnLookup()
+
+Originally Ordered No. - OnValidate()
+
+Originally Ordered No. - OnLookup()
+
+Originally Ordered Var. Code - OnValidate()
+
+Originally Ordered Var. Code - OnLookup()
+
+Cross-Reference No. - OnValidate()
+GetSalesHeader;
+"Sell-to Customer No." := SalesHeader."Sell-to Customer No.";
+ReturnedCrossRef.INIT;
+IF "Cross-Reference No." <> '' THEN BEGIN
+  DistIntegration.ICRLookupSalesItem(Rec,ReturnedCrossRef);
+  IF "No." <> ReturnedCrossRef."Item No." THEN
+    VALIDATE("No.",ReturnedCrossRef."Item No.");
+  IF ReturnedCrossRef."Variant Code" <> '' THEN
+    VALIDATE("Variant Code",ReturnedCrossRef."Variant Code");
+
+  IF ReturnedCrossRef."Unit of Measure" <> '' THEN
+    VALIDATE("Unit of Measure Code",ReturnedCrossRef."Unit of Measure");
+END;
+
+"Unit of Measure (Cross Ref.)" := ReturnedCrossRef."Unit of Measure";
+"Cross-Reference Type" := ReturnedCrossRef."Cross-Reference Type";
+"Cross-Reference Type No." := ReturnedCrossRef."Cross-Reference Type No.";
+"Cross-Reference No." := ReturnedCrossRef."Cross-Reference No.";
+
+IF ReturnedCrossRef.Description <> '' THEN
+  Description := ReturnedCrossRef.Description;
+
+UpdateUnitPrice(FIELDNO("Cross-Reference No."));
+
+IF SalesHeader."Send IC Document" AND (SalesHeader."IC Direction" = SalesHeader."IC Direction"::Outgoing) THEN BEGIN
+  "IC Partner Ref. Type" := "IC Partner Ref. Type"::"Cross Reference";
+  "IC Partner Reference" := "Cross-Reference No.";
+END;
+
+Cross-Reference No. - OnLookup()
+CrossReferenceNoLookUp;
+
+Unit of Measure (Cross Ref.) - OnValidate()
+
+Unit of Measure (Cross Ref.) - OnLookup()
+
+Cross-Reference Type - OnValidate()
+
+Cross-Reference Type - OnLookup()
+
+Cross-Reference Type No. - OnValidate()
+
+Cross-Reference Type No. - OnLookup()
+
+Item Category Code - OnValidate()
+
+Item Category Code - OnLookup()
+
+Nonstock - OnValidate()
+
+Nonstock - OnLookup()
+
+Purchasing Code - OnValidate()
+TestStatusOpen;
+TESTFIELD(Type,Type::Item);
+CheckAssocPurchOrder(FIELDCAPTION(Type));
+
+IF PurchasingCode.GET("Purchasing Code") THEN BEGIN
+  "Drop Shipment" := PurchasingCode."Drop Shipment";
+  "Special Order" := PurchasingCode."Special Order";
+  IF "Drop Shipment" OR "Special Order" THEN BEGIN
+    Reserve := Reserve::Never;
+    VALIDATE(Quantity,Quantity);
+    IF "Drop Shipment" THEN BEGIN
+      EVALUATE("Outbound Whse. Handling Time",'<0D>');
+      EVALUATE("Shipping Time",'<0D>');
+      UpdateDates;
+      "Bin Code" := '';
+    END;
+  END;
+END ELSE BEGIN
+  "Drop Shipment" := FALSE;
+  "Special Order" := FALSE;
+
+  GetItem;
+  IF Item.Reserve = Item.Reserve::Optional THEN BEGIN
+    GetSalesHeader;
+    Reserve := SalesHeader.Reserve;
+  END ELSE
+    Reserve := Item.Reserve;
+END;
+
+IF ("Purchasing Code" <> xRec."Purchasing Code") AND
+   (NOT "Drop Shipment") AND
+   ("Drop Shipment" <> xRec."Drop Shipment")
+THEN BEGIN
+  IF "Location Code" = '' THEN BEGIN
+    IF InvtSetup.GET THEN
+      "Outbound Whse. Handling Time" := InvtSetup."Outbound Whse. Handling Time";
+  END ELSE
+    IF Location.GET("Location Code") THEN
+      "Outbound Whse. Handling Time" := Location."Outbound Whse. Handling Time";
+  IF ShippingAgentServices.GET("Shipping Agent Code","Shipping Agent Service Code") THEN
+    "Shipping Time" := ShippingAgentServices."Shipping Time"
+  ELSE BEGIN
+    GetSalesHeader;
+    "Shipping Time" := SalesHeader."Shipping Time";
+  END;
+  UpdateDates;
+END;
+
+Purchasing Code - OnLookup()
+
+Product Group Code - OnValidate()
+
+Product Group Code - OnLookup()
+
+Special Order - OnValidate()
+
+Special Order - OnLookup()
+
+Special Order Purchase No. - OnValidate()
+
+Special Order Purchase No. - OnLookup()
+
+Special Order Purch. Line No. - OnValidate()
+
+Special Order Purch. Line No. - OnLookup()
+
+Whse. Outstanding Qty. (Base) - OnValidate()
+
+Whse. Outstanding Qty. (Base) - OnLookup()
+
+Completely Shipped - OnValidate()
+
+Completely Shipped - OnLookup()
+
+Requested Delivery Date - OnValidate()
+TestStatusOpen;
+//TOPAS Auskommentiert 170608 ST ********************************************
+{IF ("Requested Delivery Date" <> xRec."Requested Delivery Date") AND
+   ("Promised Delivery Date" <> 0D)
+THEN
+  ERROR(
+    Text028,
+    FIELDCAPTION("Requested Delivery Date"),
+    FIELDCAPTION("Promised Delivery Date"));
+    }
+//TOPAS Ende ****************************************************************
+
+IF "Requested Delivery Date" <> 0D THEN
+  VALIDATE("Planned Delivery Date","Requested Delivery Date")
+ELSE BEGIN
+  GetSalesHeader;
+  VALIDATE("Shipment Date",SalesHeader."Shipment Date");
+END;
+
+//TOPAS 12.02.09-ST
+IF "Promised Delivery Date" <> 0D THEN
+  VALIDATE("Shipment Date","Promised Delivery Date");
+//TOPAS Ende
+
+Requested Delivery Date - OnLookup()
+
+Promised Delivery Date - OnValidate()
+TestStatusOpen;
+IF "Promised Delivery Date" <> 0D THEN
+  VALIDATE("Planned Delivery Date","Promised Delivery Date")
+ELSE
+  VALIDATE("Requested Delivery Date");
+
+Promised Delivery Date - OnLookup()
+
+Shipping Time - OnValidate()
+TestStatusOpen;
+UpdateDates;
+
+Shipping Time - OnLookup()
+
+Outbound Whse. Handling Time - OnValidate()
+TestStatusOpen;
+UpdateDates;
+
+Outbound Whse. Handling Time - OnLookup()
+
+Planned Delivery Date - OnValidate()
+TestStatusOpen;
+IF "Planned Delivery Date" <> 0D THEN BEGIN
+  PlannedDeliveryDateCalculated := TRUE;
+
+  IF FORMAT("Shipping Time") <> '' THEN
+    VALIDATE(
+      "Planned Shipment Date",
+      CalendarMgmt.CalcDateBOC2(
+        FORMAT("Shipping Time"),
+        "Planned Delivery Date",
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        CalChange."Source Type"::Location,
+        "Location Code",
+        '',
+        TRUE))
+  ELSE
+    VALIDATE(
+      "Planned Shipment Date",
+      CalendarMgmt.CalcDateBOC(
+        FORMAT(''),
+        "Planned Delivery Date",
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        CalChange."Source Type"::Location,
+        "Location Code",
+        '',
+        TRUE));
+
+  IF "Planned Shipment Date" > "Planned Delivery Date" THEN
+    "Planned Delivery Date" := "Planned Shipment Date";
+END;
+
+Planned Delivery Date - OnLookup()
+
+Planned Shipment Date - OnValidate()
+TestStatusOpen;
+IF "Planned Shipment Date" <> 0D THEN BEGIN
+  PlannedShipmentDateCalculated := TRUE;
+
+  IF FORMAT("Outbound Whse. Handling Time") <> '' THEN
+    VALIDATE(
+      "Shipment Date",
+      CalendarMgmt.CalcDateBOC2(
+        FORMAT("Outbound Whse. Handling Time"),
+        "Planned Shipment Date",
+        CalChange."Source Type"::Location,
+        "Location Code",
+        '',
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        FALSE))
+  ELSE
+    VALIDATE(
+      "Shipment Date",
+      CalendarMgmt.CalcDateBOC(
+        FORMAT(FORMAT('')),
+        "Planned Shipment Date",
+        CalChange."Source Type"::Location,
+        "Location Code",
+        '',
+        CalChange."Source Type"::"Shipping Agent",
+        "Shipping Agent Code",
+        "Shipping Agent Service Code",
+        FALSE));
+END;
+
+Planned Shipment Date - OnLookup()
+
+Shipping Agent Code - OnValidate()
+TestStatusOpen;
+IF "Shipping Agent Code" <> xRec."Shipping Agent Code" THEN
+  VALIDATE("Shipping Agent Service Code",'');
+
+Shipping Agent Code - OnLookup()
+
+Shipping Agent Service Code - OnValidate()
+TestStatusOpen;
+IF "Shipping Agent Service Code" <> xRec."Shipping Agent Service Code" THEN
+  EVALUATE("Shipping Time",'<>');
+
+IF "Drop Shipment" THEN BEGIN
+  EVALUATE("Shipping Time",'<0D>');
+  UpdateDates;
+END ELSE BEGIN
+  IF ShippingAgentServices.GET("Shipping Agent Code","Shipping Agent Service Code") THEN
+    "Shipping Time" := ShippingAgentServices."Shipping Time"
+  ELSE BEGIN
+    GetSalesHeader;
+    "Shipping Time" := SalesHeader."Shipping Time";
+  END;
+END;
+
+IF ShippingAgentServices."Shipping Time" <> xRec."Shipping Time" THEN
+  VALIDATE("Shipping Time","Shipping Time");
+
+Shipping Agent Service Code - OnLookup()
+
+Allow Item Charge Assignment - OnValidate()
+CheckItemChargeAssgnt;
+
+Allow Item Charge Assignment - OnLookup()
+
+Qty. to Assign - OnValidate()
+
+Qty. to Assign - OnLookup()
+
+Qty. Assigned - OnValidate()
+
+Qty. Assigned - OnLookup()
+
+Return Qty. to Receive - OnValidate()
+IF (CurrFieldNo <> 0) AND
+   (Type = Type::Item) AND
+   ("Return Qty. to Receive" <> 0) AND
+   (NOT "Drop Shipment")
+THEN
+  CheckWarehouse;
+
+IF "Return Qty. to Receive" = Quantity - "Return Qty. Received" THEN
+  InitQtyToReceive
+ELSE BEGIN
+  "Return Qty. to Receive (Base)" := CalcBaseQty("Return Qty. to Receive");
+  InitQtyToInvoice;
+END;
+IF ("Return Qty. to Receive" * Quantity < 0) OR
+   (ABS("Return Qty. to Receive") > ABS("Outstanding Quantity")) OR
+   (Quantity * "Outstanding Quantity" < 0)
+THEN
+  ERROR(
+    Text020,
+    "Outstanding Quantity");
+IF ("Return Qty. to Receive (Base)" * "Quantity (Base)" < 0) OR
+   (ABS("Return Qty. to Receive (Base)") > ABS("Outstanding Qty. (Base)")) OR
+   ("Quantity (Base)" * "Outstanding Qty. (Base)" < 0)
+THEN
+  ERROR(
+    Text021,
+    "Outstanding Qty. (Base)");
+
+IF (CurrFieldNo <> 0) AND (Type = Type::Item) AND ("Return Qty. to Receive" > 0) THEN
+  CheckApplFromItemLedgEntry(ItemLedgEntry);
+
+Return Qty. to Receive - OnLookup()
+
+Return Qty. to Receive (Base) - OnValidate()
+TESTFIELD("Qty. per Unit of Measure",1);
+VALIDATE("Return Qty. to Receive","Return Qty. to Receive (Base)");
+
+Return Qty. to Receive (Base) - OnLookup()
+
+Return Qty. Rcd. Not Invd. - OnValidate()
+
+Return Qty. Rcd. Not Invd. - OnLookup()
+
+Ret. Qty. Rcd. Not Invd.(Base) - OnValidate()
+
+Ret. Qty. Rcd. Not Invd.(Base) - OnLookup()
+
+Return Rcd. Not Invd. - OnValidate()
+GetSalesHeader;
+Currency2.InitRoundingPrecision;
+IF SalesHeader."Currency Code" <> '' THEN
+  "Return Rcd. Not Invd. (LCY)" :=
+    ROUND(
+      CurrExchRate.ExchangeAmtFCYToLCY(
+        GetDate,"Currency Code",
+        "Return Rcd. Not Invd.",SalesHeader."Currency Factor"),
+      Currency2."Amount Rounding Precision")
+ELSE
+  "Return Rcd. Not Invd. (LCY)" :=
+    ROUND("Return Rcd. Not Invd.",Currency2."Amount Rounding Precision");
+
+Return Rcd. Not Invd. - OnLookup()
+
+Return Rcd. Not Invd. (LCY) - OnValidate()
+
+Return Rcd. Not Invd. (LCY) - OnLookup()
+
+Return Qty. Received - OnValidate()
+
+Return Qty. Received - OnLookup()
+
+Return Qty. Received (Base) - OnValidate()
+
+Return Qty. Received (Base) - OnLookup()
+
+Appl.-from Item Entry - OnValidate()
+IF "Appl.-from Item Entry" <> 0 THEN BEGIN
+  CheckApplFromItemLedgEntry(ItemLedgEntry);
+  VALIDATE("Unit Cost (LCY)",CalcUnitCost(ItemLedgEntry));
+END;
+
+Appl.-from Item Entry - OnLookup()
+SelectItemEntry(FIELDNO("Appl.-from Item Entry"));
+
+BOM Item No. - OnValidate()
+
+BOM Item No. - OnLookup()
+
+Return Receipt No. - OnValidate()
+
+Return Receipt No. - OnLookup()
+
+Return Receipt Line No. - OnValidate()
+
+Return Receipt Line No. - OnLookup()
+
+Return Reason Code - OnValidate()
+IF "Return Reason Code" = '' THEN
+  UpdateUnitPrice(FIELDNO("Return Reason Code"));
+
+IF ReturnReason.GET("Return Reason Code") THEN BEGIN
+  IF ReturnReason."Default Location Code" <> '' THEN
+    VALIDATE("Location Code",ReturnReason."Default Location Code");
+  IF ReturnReason."Inventory Value Zero" THEN BEGIN
+    VALIDATE("Unit Cost (LCY)",0);
+    VALIDATE("Unit Price",0);
+  END ELSE
+    IF "Unit Price" = 0 THEN
+      UpdateUnitPrice(FIELDNO("Return Reason Code"));
+END;
+
+Return Reason Code - OnLookup()
+
+Allow Line Disc. - OnValidate()
+
+Allow Line Disc. - OnLookup()
+
+Customer Disc. Group - OnValidate()
+IF Type = Type::Item THEN
+  UpdateUnitPrice(FIELDNO("Customer Disc. Group"))
+
+Customer Disc. Group - OnLookup()
+
+Artikelnr. 2 - OnValidate()
+
+Artikelnr. 2 - OnLookup()
+
+Endkunde - OnValidate()
+//TOPAS 30.05.08 ST, Zusatz 15.07.08-ST
+IF Endkunde='' THEN
+  "Endkundennr.":=''
+ELSE
+BEGIN
+  IF Endkunde<>'' THEN BEGIN
+    Endkunden.RESET;
+    Endkunden.SETFILTER(Endkunden.Art,'%1',Endkunden.Art::Endkunde);
+    Endkunden.SETFILTER(Endkunden."Debitornr.","Sell-to Customer No.");
+    IF Endkunden.FINDFIRST THEN BEGIN
+      REPEAT
+        IF Endkunde=Endkunden.Endkundenname THEN
+        BEGIN
+          VALIDATE("Endkundennr.",Endkunden."Endkundennr.");
+          EXIT;
+        END;
+      UNTIL Endkunden.NEXT = 0;
+    END;
+  END;
+END;
+
+Endkunde - OnLookup()
+//TOPAS 190508 ST
+IF "Sell-to Customer No." = '' THEN
+  ERROR(Text102);
+Debitor.RESET;
+Debitor.SETFILTER(Debitor."No.",'%1',"Sell-to Customer No.");
+IF Debitor.FINDFIRST AND Debitor."Endkunde w/Bestücker"=FALSE THEN
+  ERROR(Text103)
+ELSE
+BEGIN
+  Endkunden.SETFILTER(Endkunden.Art,'%1',Endkunden.Art::Endkunde);
+  Endkunden.SETFILTER(Endkunden."Debitornr.","Sell-to Customer No.");
+  PosFilter:= ('Debitornr.=CONST('+"Sell-to Customer No."+'),'+
+               'Art=CONST(Endkunde),'+
+               'Endkundennr.=CONST('+"Endkundennr."+')');
+  Endkunden.SETPOSITION(PosFilter);
+  IF FORM.RUNMODAL(50003,Endkunden) = ACTION::LookupOK THEN
+  BEGIN
+    Endkunde := Endkunden.Endkundenname;
+    VALIDATE("Endkundennr.",Endkunden."Endkundennr.");
+  END;
+END;
+
+Manufacturer Code - OnValidate()
+
+Manufacturer Code - OnLookup()
+
+DC-Preis (MW) - OnValidate()
+
+DC-Preis (MW) - OnLookup()
+
+DC-Preis (Währung) - OnValidate()
+
+DC-Preis (Währung) - OnLookup()
+
+Handlingskosten % - OnValidate()
+
+Handlingskosten % - OnLookup()
+
+VK-Preis (EKW) - OnValidate()
+
+VK-Preis (EKW) - OnLookup()
+
+DC-Preis (EKW) - OnValidate()
+IF Type = Type::Item THEN
+BEGIN
+  GetSalesHeader;
+  GetItem;
+  {
+  IF (Einkaufswährungscode='') THEN
+  BEGIN
+    VALIDATE(Einkaufswährungscode,Item.Einkaufswährung);
+    MODIFY(TRUE);
+  END;
+  }
+  IF SalesHeader."Currency Code"='' THEN
+  BEGIN
+    IF Einkaufswährungscode='' THEN
+      "DC-Preis (Währung)":="DC-Preis (EKW)"
+    ELSE
+    BEGIN
+      Currency3.GET(Einkaufswährungscode);
+      Currency3.TESTFIELD("Unit-Amount Rounding Precision");
+      "DC-Preis (Währung)":=ROUND(CurrExchRate.ExchangeAmtFCYToLCY(WORKDATE,Einkaufswährungscode,
+                                  "DC-Preis (EKW)",Einkaufswährungsfaktor),Currency3."Unit-Amount Rounding Precision");
+    END;
+    "DC-Preis (MW)":="DC-Preis (Währung)";
+  END
+  ELSE
+  BEGIN
+    IF Einkaufswährungscode='' THEN
+      "DC-Preis (MW)":="DC-Preis (EKW)"
+    ELSE
+    BEGIN
+      Currency3.GET(Einkaufswährungscode);
+      Currency3.TESTFIELD("Unit-Amount Rounding Precision");
+      "DC-Preis (MW)":=ROUND(CurrExchRate.ExchangeAmtFCYToLCY(WORKDATE,Einkaufswährungscode,
+                             "DC-Preis (EKW)",Einkaufswährungsfaktor),Currency3."Unit-Amount Rounding Precision");
+    END;
+    "DC-Preis (Währung)":=ROUND(CurrExchRate.ExchangeAmtLCYToFCY(WORKDATE,SalesHeader."Currency Code",
+                                "DC-Preis (MW)",SalesHeader."Currency Factor"),Currency."Unit-Amount Rounding Precision");
+  END;
+
+ // VALIDATE ("Unit Cost (LCY)","DC-Preis (MW)"*("Handlingskosten %"/100+1)*(Item."Zollsatz %"/100+1));
+  VALIDATE ("Unit Cost (LCY)",("DC-Preis (EKW)"/Einkaufswährungsfaktor)*("Handlingskosten %"/100+1)*(Item."Zollsatz %"/100+1));
+  "Unit Cost (LCY)":=ROUND("Unit Cost (LCY)",0.00001);
+
+  CLEAR(EKStaffel);
+  EKStaffel.SETRANGE(EKStaffel."Item No.", "No.");
+  EKStaffel.SETRANGE("Currency Code",Einkaufswährungscode);
+  EKStaffel.SETFILTER("Minimum Quantity",'<=%1', "Quantity (Base)");
+  IF EKStaffel.FINDLAST THEN;
+
+  IF ("DC-Preis (EKW)"<EKStaffel."Direct Unit Cost") AND ("DC-Preis (EKW)"<>xRec."DC-Preis (EKW)") AND ("DC-Preis (EKW)"<>0) THEN
+  BEGIN
+    IF "Quotenr."='' THEN
+    BEGIN
+      Quotes.INIT;
+      Quotes.INSERT(TRUE);
+      Quotes.VALIDATE(Quotes.Herstellercode,Item."Manufacturer Code");
+      Quotes.VALIDATE(Quotes."Debitorennr.","Sell-to Customer No.");
+      Quotes.VALIDATE(Quotes."Artikelnr.","No.");
+      Quotes.Quotepreis:="DC-Preis (EKW)";
+      Quotes.Quotemenge:=Quantity;
+      Quotes.MODIFY;
+    END
+    ELSE
+      Quotes.GET ("Quotenr.");
+
+    IF "DC-Preis (EKW)"<>Quotes.Quotepreis THEN
+      MESSAGE('Der DC-Preis (EKW) in Höhe von %1\weicht vom Quotepreis %2 ab.',"DC-Preis (EKW)",Quotes.Quotepreis);
+    COMMIT;
+    IF FORM.RUNMODAL (FORM::Quotedaten, Quotes) = ACTION::LookupOK THEN
+    BEGIN
+      IF "Document Type" = "Document Type"::Order THEN
+      BEGIN
+        //IF Quotes.Quotesystem = Quotes.Quotesystem::"1" THEN
+      IF Quotes.Quotesystem = 'SHIP&DEBIT' THEN   //TB 01.04.2008
+        BEGIN
+          IF Quotes."Quotenr. Hersteller" = '' THEN
+            Quotes.TESTFIELD (Quotes.Genehmigungstext);
+          Quotes.CALCFIELDS (Quotes."Restmenge in Auftrag", Quotes."Menge in VK-Rechnung");
+          IF (Quotes."Menge in VK-Rechnung"+Quotes."Restmenge in Auftrag"+Quantity)>Quotes.Quotemenge THEN
+            ERROR('Für Quote %1 wird die Quotemenge %2 in der Auftragszeile %3 %4 überschritten.',
+                  Quotes."Quotenr.",Quotes.Quotemenge,"Document No.","Line No.");
+        END;
+      END;
+    END;
+    "Quotenr." := Quotes."Quotenr.";
+    "Quote Bonus" := Quotes."Quote Bonusabrechnung";
+  END;
+END;
+
+IF "Unit Price" <> 0 THEN
+  AktualisiereKalkulation;
+
+DC-Preis (EKW) - OnLookup()
+
+VK-Preis (MW) - OnValidate()
+
+VK-Preis (MW) - OnLookup()
+
+Kampagnennr. - OnValidate()
+//TOPAS 22.02.11-ST Änderung
+IF "Kampagnennr." <> '' THEN
+  BEGIN
+    Verkaufskopf.RESET;
+    Verkaufskopf.SETFILTER(Verkaufskopf."No.",'%1',"Document No.");
+    IF Verkaufskopf.FINDFIRST THEN 
+      BEGIN
+        ProjAnsprech.RESET;
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',Verkaufskopf."Sell-to Contact No.");
+        ProjAnsprech.SETFILTER(ProjAnsprech."Kampagnennr.",'%1',"Kampagnennr.");
+        ProjAnsprech.SETFILTER(ProjAnsprech.Projektstatus,'<>%1','BEENDET');
+        IF NOT ProjAnsprech.FINDFIRST THEN
+          ERROR('Kein %1 innerhalb des Filters gefunden.\\Filter: Projektstatus <> %2, '+
+          'Kontaktnr.: %3, Kampagnennr.: %4',ProjAnsprech.TABLECAPTION,ProjAnsprech.Projektstatus,
+          Verkaufskopf."Sell-to Contact No.","Kampagnennr.");
+      END;
+  END;
+
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1',Belege.Belegart :: Invoice);
+Belege.SETFILTER(Belege."Auftragsnr.",'%1',"Document No.");
+Belege.SETFILTER(Belege."Auftragszeilennr.",'%1',"Line No.");
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      Belege.Kampagne := "Kampagnennr.";
+      Belege.MODIFY;
+    UNTIL Belege.NEXT = 0;
+  END;
+
+//22.05.2012-ST Dazugehörige Aufgaben werden aktualisiert
+Aufgaben.RESET;
+Aufgaben.SETFILTER("Belegnr.",'%1',"Document No.");
+Aufgaben.SETFILTER("System To-do Type",'%1',Aufgaben."System To-do Type"::Organizer);
+//Aufgaben.SETFILTER(Closed,'%1',FALSE);
+IF Aufgaben.FINDFIRST THEN
+  BEGIN
+    REPEAT
+
+      IF Aufgaben."Campaign No." = '' THEN
+        BEGIN
+          Aufgaben."Campaign No." := "Kampagnennr.";
+          Aufgaben.MODIFY(TRUE);
+        END
+      ELSE
+        BEGIN
+          IF Aufgaben."Campaign No." <> "Kampagnennr." THEN
+            BEGIN
+              IF CONFIRM(Text150,TRUE,Aufgaben."No.",Aufgaben.Description,Aufgaben."Campaign No.") THEN
+                BEGIN
+                  Aufgaben."Campaign No." := "Kampagnennr.";
+                  Aufgaben.MODIFY(TRUE);
+                END;
+            END;
+        END;
+
+    UNTIL Aufgaben.NEXT = 0;
+  END;
+
+//TOPAS Ende
+
+Kampagnennr. - OnLookup()
+//TOPAS 15.10.08-ST - Neu, 22.02.11-ST Änderung
+ProjAnsprech.RESET;
+Verkaufskopf.RESET;
+
+Verkaufskopf.SETFILTER(Verkaufskopf."No.",'%1',"Document No.");
+IF Verkaufskopf.FINDFIRST THEN 
+  BEGIN
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',Verkaufskopf."Sell-to Contact No.");
+    ProjAnsprech.SETFILTER(ProjAnsprech."Kampagnennr.",'<>%1','');
+    ProjAnsprech.SETFILTER(ProjAnsprech.Projektstatus,'<>%1','BEENDET');
+    IF ProjAnsprech.FINDFIRST THEN 
+      BEGIN
+        PosFilter:= ('Kontakt Mandantennr.=CONST('+ProjAnsprech."Kontakt Mandantennr."+'),'+
+                     'Kontaktnr.=CONST('+ProjAnsprech."Kontaktnr."+'),'+
+                     'Kampagnennr.=CONST('+"Kampagnennr."+'),'+
+                     'Memonr.=CONST()');
+
+        ProjAnsprech.SETPOSITION(PosFilter);
+
+        IF FORM.RUNMODAL(50062,ProjAnsprech) = ACTION::LookupOK THEN
+          BEGIN
+            VALIDATE("Kampagnennr.",ProjAnsprech."Kampagnennr.");
+          END;
+      END
+    ELSE
+      ERROR('Es existieren keine aktiven Projekte.');
+END;
+
+//TOPAS Ende
+
+Quotenr. - OnValidate()
+//TOPAS 25.06.2010-ST
+IF Quantity = 0 THEN
+  ERROR('Das Feld Menge darf nicht leer sein.');
+
+//TOPAS ST
+IF ("Quantity Invoiced"=Quantity) THEN
+  ERROR('Sie können die Quotenr. nicht mehr ändern, da die Pos. bereits komplett gebucht wurde.');
+
+IF (Quotes2.GET("Quotenr.")) AND (Quotes2.Erledigtstatus = Quotes2.Erledigtstatus :: "Erledigt ") THEN
+  ERROR('Der Quote %1 ist bereits erledigt.',Quotes2."Quotenr.");
+
+IF (Rec."Quotenr."='') AND (xRec."Quotenr."<>'') THEN BEGIN
+  "DC-Preis (EKW)":=0;
+  VALIDATE(Quantity);
+  MESSAGE('Der DC-Preis (EKW) wurde auf %1 zurückgesetzt.',"DC-Preis (EKW)");
+END;
+
+IF Quotes2.GET("Quotenr.") THEN
+  VALIDATE("DC-Preis (EKW)",Quotes2.Quotepreis)
+ELSE
+  Quotes2.INIT;
+
+//IF Quotes2.Quotesystem=Quotes2.Quotesystem::"1" THEN
+IF Quotes2.Quotesystem='SHIP&DEBIT' THEN    //TB 01.04.2008
+BEGIN
+  IF Quotes2."Quotenr. Hersteller"='' THEN
+    Quotes2.TESTFIELD(Genehmigungstext);
+  Quotes2.CALCFIELDS("Restmenge in Auftrag","Menge in VK-Rechnung");
+  IF (Quotes2.Quotemenge-(Quotes2."Menge in VK-Rechnung"+Quotes2."Restmenge in Auftrag"))<Quantity THEN
+    ERROR('Für Quote %1 wird die Quotemenge %2 in der Auftragszeile %3 %4 überschritten.',
+           Quotes2."Quotenr.",Quotes2.Quotemenge,"Document No.","DC-Preis (MW)");
+
+END;
+
+Quotenr. - OnLookup()
+IF Type <> Type::Item THEN
+  EXIT;
+
+Quotes2.SETRANGE("Artikelnr.", "No.");
+Quotes2.SETRANGE(Herstellercode,"Manufacturer Code");
+//**********27.05.10-ST Setzt nun bei vorhandener Quotenr. den Cursor an die richtige Stelle auf der Quoteübersicht******
+IF "Quotenr." <> '' THEN
+  BEGIN
+    Quotes2.GET("Quotenr.");
+  END;
+IF FORM.RUNMODAL(FORM::"Quotedaten Übersicht",Quotes2) = ACTION::LookupOK THEN
+BEGIN
+  IF "Document Type"="Document Type"::Order THEN
+  BEGIN
+//    IF Quotes2.Quotesystem=Quotes2.Quotesystem::"1" THEN
+    IF Quotes2.Quotesystem='SHIP&DEBIT' THEN //TB 01.04.2008
+    BEGIN
+      IF Quotes2."Quotenr. Hersteller"='' THEN
+        Quotes2.TESTFIELD(Genehmigungstext);
+      Quotes2.CALCFIELDS("Restmenge in Auftrag","Menge in VK-Rechnung");
+      IF (Quotes2.Quotemenge-(Quotes2."Menge in VK-Rechnung"+Quotes2."Restmenge in Auftrag"))<Quantity THEN
+        ERROR('Für Quote %1 wird die Quotemenge %2 in der Auftragszeile %3 %4 überschritten.',
+               Quotes2."Quotenr.",Quotes2.Quotemenge,"Document No.", "DC-Preis (MW)");
+    END;
+END;
+
+//*********27.05.10-ST
+IF (Quotes2.Erledigtstatus = Quotes2.Erledigtstatus :: "Erledigt ") THEN
+  ERROR('Der Quote %1 ist bereits erledigt.',Quotes2."Quotenr.");
+
+VALIDATE("Quotenr.",Quotes2."Quotenr.");
+"Quote Bonus":=Quotes2."Quote Bonusabrechnung";
+VALIDATE("DC-Preis (EKW)",Quotes2.Quotepreis)
+END;
+
+Positionsnr. - OnValidate()
+
+Positionsnr. - OnLookup()
+
+Quote Bonus - OnValidate()
+
+Quote Bonus - OnLookup()
+
+LZ_Text - OnValidate()
+
+LZ_Text - OnLookup()
+
+Quote gültig bis - OnValidate()
+
+Quote gültig bis - OnLookup()
+
+Menge aus Rahmen im Auftrag - OnValidate()
+
+Menge aus Rahmen im Auftrag - OnLookup()
+
+offene Menge aus Rahmen im AU - OnValidate()
+
+offene Menge aus Rahmen im AU - OnLookup()
+
+Endkundennr. - OnValidate()
+//TOPAS 30.05.08-ST , Zusatz 15.07.08-ST , Zusatz 29.11.2010-ST Vergleich Betreuer- und Verkäufercode
+IF "Endkundennr."='' THEN
+  Endkunde:=''
+ELSE
+BEGIN
+  IF "Endkundennr."<>'' THEN 
+  BEGIN
+    Endkunden.RESET;
+    Endkunden.SETFILTER(Endkunden.Art,'%1',Endkunden.Art::Endkunde);
+    Endkunden.SETFILTER(Endkunden."Debitornr.","Sell-to Customer No.");
+    Endkunden.SETFILTER(Endkunden."Endkundennr.","Endkundennr.");
+    IF Endkunden.FINDFIRST THEN 
+    BEGIN
+        IF "Endkundennr."=Endkunden."Endkundennr." THEN
+        BEGIN
+          Endkunde:=Endkunden.Endkundenname;
+          //Bei Bestückern wird der Auftragskopf entsprechend des Endkunden im Verkäufer- und Betreuercode angepasst
+          Verkaufskopf.RESET;
+          Verkaufskopf.SETFILTER(Verkaufskopf."No.",'%1',"Document No.");
+          IF Verkaufskopf.FINDFIRST THEN 
+            BEGIN
+              Kontakt.RESET;
+              Kontakt.SETFILTER(Kontakt."No.",'%1',"Endkundennr.");
+              IF (Kontakt.FINDFIRST) AND ((Kontakt."Salesperson Code" <> Verkaufskopf."Salesperson Code") OR
+                 (Kontakt."Betreuer Innendienst" <> Verkaufskopf."Betreuer Innendienst") OR
+                 (Kontakt.Teams <> Verkaufskopf.Teams ) OR (Kontakt."Territory Code" <> Verkaufskopf."Territory Code"))
+                 AND ((Kontakt."Betreuer Innendienst" <> 'MULTI') OR (Kontakt."Salesperson Code" <> 'MULTI')) THEN
+                BEGIN
+                  Verkaufskopf.VALIDATE("Salesperson Code",Kontakt."Salesperson Code");
+                  Verkaufskopf.VALIDATE("Betreuer Innendienst",Kontakt."Betreuer Innendienst");
+                  Verkaufskopf.VALIDATE(Teams,Kontakt.Teams);
+                  Verkaufskopf.VALIDATE("Territory Code",Kontakt."Territory Code");
+                  Verkaufskopf.MODIFY(TRUE);
+                  Verkaufskopf.TESTFIELD("Salesperson Code");
+                  Verkaufskopf.TESTFIELD("Betreuer Innendienst");
+                  MESSAGE(Text105,Endkunde,Kontakt."Betreuer Innendienst",Kontakt."Salesperson Code",Kontakt.Teams,
+                                  Kontakt."Territory Code");
+                END;
+            END;
+          EXIT;
+        END;
+    END
+    ELSE
+      ERROR('Dies ist keine gültige Endkundennr. Im Feld Endkunde können Sie Freitext hinterlegen.');
+  END;
+END;
+
+Endkundennr. - OnLookup()
+//TOPAS 300508 ST
+IF "Sell-to Customer No." = '' THEN
+  ERROR(Text102);
+Debitor.RESET;
+Debitor.SETFILTER(Debitor."No.",'%1',"Sell-to Customer No.");
+IF Debitor.FINDFIRST AND Debitor."Endkunde w/Bestücker"=FALSE THEN
+  ERROR(Text103)
+ELSE
+BEGIN
+  Endkunden.RESET;
+  Endkunden.SETFILTER(Endkunden.Art,'%1',Endkunden.Art::Endkunde);
+  Endkunden.SETFILTER(Endkunden."Debitornr.","Sell-to Customer No.");
+  PosFilter:= ('Debitornr.=CONST('+"Sell-to Customer No."+'),'+
+               'Art=CONST(Endkunde),'+
+               'Endkundennr.=CONST('+"Endkundennr."+')');
+  Endkunden.SETPOSITION(PosFilter);
+  IF FORM.RUNMODAL(50003,Endkunden) = ACTION::LookupOK THEN
+  BEGIN
+    Endkunde:=Endkunden.Endkundenname;
+    VALIDATE("Endkundennr.",Endkunden."Endkundennr.");
+  END;
+END;
+
+SUP Belegzeilennr. - OnValidate()
+
+SUP Belegzeilennr. - OnLookup()
+
+SUP Belegnr. - OnValidate()
+IF Type <> Type :: Item THEN ERROR(Text114,Artikel.FIELDCAPTION("Software Upgrade Protection"));
+
+IF (Type = Type :: Item) AND (Artikel.GET("No.")) AND (Artikel."Software Upgrade Protection" = FALSE) THEN
+  ERROR(Text114,Artikel.FIELDCAPTION("Software Upgrade Protection"));
+
+SUP Belegnr. - OnLookup()
+
+Einkaufswährungscode - OnValidate()
+UpdateCurrencyFactor;
+
+//TOPAS 06.11.09 -ST Für VK=USD (Kopf) und EK=JPY (Zeile) Abfrage starten, ob Haken im Feld "Nicht rechnen" gesetzt werden soll
+IF "Document Type" = "Document Type" :: Order THEN
+  BEGIN
+    IF (Type = Type :: Item) AND (Einkaufswährungscode = 'JPY') THEN
+      BEGIN
+        Vkkopf.RESET;
+        Vkkopf.SETFILTER(Vkkopf."No.","Document No.");
+        IF Vkkopf.FINDFIRST THEN
+          BEGIN
+            IF (Vkkopf."Currency Code" = 'USD') AND (Vkkopf."Nicht rechnen" = FALSE) THEN
+              IF CONFIRM(Text104,TRUE,Vkkopf."No.") THEN
+                BEGIN
+                  Vkkopf."Nicht rechnen" := TRUE;
+                  Vkkopf.MODIFY;
+                END;
+          END;
+      END;
+  END;
+//TOPAS Ende
+
+Einkaufswährungscode - OnLookup()
+
+Einkaufswährungsfaktor - OnValidate()
+//TOPAS 120608 ST
+
+IF Einkaufswährungsfaktor<> xRec.Einkaufswährungsfaktor THEN BEGIN
+  //Änderung auf Werte in der Optionstabelle
+  OptTab.RESET;
+  OptTab.SETFILTER("Tabellen ID",'%1',37);
+  OptTab.SETFILTER("Feld ID",'%1',50101);
+  OptTab.SETFILTER(Code,'%1|%2','JPY','USD');
+  IF OptTab.FINDFIRST THEN
+    REPEAT
+      IF (Einkaufswährungscode='JPY') AND (Einkaufswährungsfaktor < OptTab.Werte) THEN
+        MESSAGE('Der Einkaufswährungskurs liegt außerhalb der Währungstoleranz für YEN!');
+      IF (Einkaufswährungscode='USD') AND (Einkaufswährungsfaktor > OptTab.Werte) THEN
+        MESSAGE('Der Einkaufswährungskurs liegt außerhalb der Währungstoleranz für USD!');
+    UNTIL OptTab.NEXT = 0;
+
+  IF Type<>Type::" " THEN BEGIN
+    VALIDATE("Unit Price");
+    VALIDATE("DC-Preis (EKW)");
+  END;
+END;
+
+//TOPAS Ende
+
+Einkaufswährungsfaktor - OnLookup()
+
+AC_Solutionpartner - OnValidate()
+
+AC_Solutionpartner - OnLookup()
+
+System Projektinfos - OnValidate()
+
+System Projektinfos - OnLookup()
+
+Verpackungstyp - OnValidate()
+
+Verpackungstyp - OnLookup()
+
+Umverpackungsmenge - OnValidate()
+IF Umverpackungsmenge <> "Qty. to Ship" THEN
+  ERROR(Text160,FIELDCAPTION(Umverpackungsmenge),FIELDCAPTION("Qty. to Ship"));
+
+Umverpackungsmenge - OnLookup()
+
+Customer Line Reference - OnValidate()
+
+Customer Line Reference - OnLookup()
+
+InitOutstanding()
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+  "Outstanding Quantity" := Quantity - "Return Qty. Received";
+  "Outstanding Qty. (Base)" := "Quantity (Base)" - "Return Qty. Received (Base)";
+  "Return Qty. Rcd. Not Invd." := "Return Qty. Received" - "Quantity Invoiced";
+  "Ret. Qty. Rcd. Not Invd.(Base)" := "Return Qty. Received (Base)" - "Qty. Invoiced (Base)";
+END ELSE BEGIN
+  "Outstanding Quantity" := Quantity - "Quantity Shipped";
+  "Outstanding Qty. (Base)" := "Quantity (Base)" - "Qty. Shipped (Base)";
+  "Qty. Shipped Not Invoiced" := "Quantity Shipped" - "Quantity Invoiced";
+  "Qty. Shipped Not Invd. (Base)" := "Qty. Shipped (Base)" - "Qty. Invoiced (Base)";
+END;
+CALCFIELDS("Reserved Quantity");
+Planned := "Reserved Quantity" = "Outstanding Quantity";
+"Completely Shipped" := (Quantity <> 0) AND ("Outstanding Quantity" = 0);
+InitOutstandingAmount;
+
+InitOutstandingAmount()
+IF Quantity = 0 THEN BEGIN
+  "Outstanding Amount" := 0;
+  "Outstanding Amount (LCY)" := 0;
+  "Shipped Not Invoiced" := 0;
+  "Shipped Not Invoiced (LCY)" := 0;
+  "Return Rcd. Not Invd." := 0;
+  "Return Rcd. Not Invd. (LCY)" := 0;
+END ELSE BEGIN
+  GetSalesHeader;
+  IF SalesHeader.Status = SalesHeader.Status::Released THEN
+    AmountInclVAT := "Amount Including VAT"
+  ELSE
+    IF SalesHeader."Prices Including VAT" THEN
+      AmountInclVAT := "Line Amount" - "Inv. Discount Amount"
+    ELSE
+      IF "VAT Calculation Type" = "VAT Calculation Type"::"Sales Tax" THEN
+        AmountInclVAT :=
+          "Line Amount" - "Inv. Discount Amount" +
+          ROUND(
+            SalesTaxCalculate.CalculateTax(
+              "Tax Area Code","Tax Group Code","Tax Liable",SalesHeader."Posting Date",
+              "Line Amount" - "Inv. Discount Amount","Quantity (Base)",SalesHeader."Currency Factor"),
+            Currency."Amount Rounding Precision")
+      ELSE
+        AmountInclVAT :=
+          ROUND(
+            ("Line Amount" - "Inv. Discount Amount") *
+            (1 + "VAT %" / 100 * (1 - SalesHeader."VAT Base Discount %" / 100)),
+            Currency."Amount Rounding Precision");
+  VALIDATE(
+    "Outstanding Amount",
+    ROUND(
+      AmountInclVAT * "Outstanding Quantity" / Quantity,
+      Currency."Amount Rounding Precision"));
+  IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+    VALIDATE(
+      "Return Rcd. Not Invd.",
+      ROUND(
+        AmountInclVAT * "Return Qty. Rcd. Not Invd." / Quantity,
+        Currency."Amount Rounding Precision"))
+  ELSE
+    VALIDATE(
+      "Shipped Not Invoiced",
+      ROUND(
+        AmountInclVAT * "Qty. Shipped Not Invoiced" / Quantity,
+        Currency."Amount Rounding Precision"));
+END;
+
+InitQtyToShip()
+"Qty. to Ship" := "Outstanding Quantity";
+"Qty. to Ship (Base)" := "Outstanding Qty. (Base)";
+
+CheckServItemCreation;
+
+InitQtyToInvoice;
+
+InitQtyToReceive()
+"Return Qty. to Receive" := "Outstanding Quantity";
+"Return Qty. to Receive (Base)" := "Outstanding Qty. (Base)";
+
+InitQtyToInvoice;
+
+InitQtyToInvoice()
+"Qty. to Invoice" := MaxQtyToInvoice;
+"Qty. to Invoice (Base)" := MaxQtyToInvoiceBase;
+"VAT Difference" := 0;
+CalcInvDiscToInvoice;
+CalcPrepaymentToDeduct;
+
+InitItemAppl(OnlyApplTo : Boolean)
+"Appl.-to Item Entry" := 0;
+IF NOT OnlyApplTo THEN
+  "Appl.-from Item Entry" := 0;
+
+MaxQtyToInvoice() : Decimal
+IF "Prepayment Line" THEN
+  EXIT(1);
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+  EXIT("Return Qty. Received" + "Return Qty. to Receive" - "Quantity Invoiced")
+ELSE
+  EXIT("Quantity Shipped" + "Qty. to Ship" - "Quantity Invoiced");
+
+MaxQtyToInvoiceBase() : Decimal
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+  EXIT("Return Qty. Received (Base)" + "Return Qty. to Receive (Base)" - "Qty. Invoiced (Base)")
+ELSE
+  EXIT("Qty. Shipped (Base)" + "Qty. to Ship (Base)" - "Qty. Invoiced (Base)");
+
+CalcBaseQty(Qty : Decimal) : Decimal
+TESTFIELD("Qty. per Unit of Measure");
+EXIT(ROUND(Qty * "Qty. per Unit of Measure",0.00001));
+
+SelectItemEntry(CurrentFieldNo : Integer)
+ItemLedgEntry.SETRANGE("Item No.","No.");
+IF "Location Code" <> '' THEN
+  ItemLedgEntry.SETRANGE("Location Code","Location Code");
+ItemLedgEntry.SETRANGE("Variant Code","Variant Code");
+
+IF CurrentFieldNo = FIELDNO("Appl.-to Item Entry") THEN BEGIN
+  ItemLedgEntry.SETCURRENTKEY("Item No.",Open);
+  ItemLedgEntry.SETRANGE(Positive,TRUE);
+  ItemLedgEntry.SETRANGE(Open,TRUE);
+END ELSE BEGIN
+  ItemLedgEntry.SETCURRENTKEY("Item No.",Positive);
+  ItemLedgEntry.SETRANGE(Positive,FALSE);
+  ItemLedgEntry.SETFILTER("Shipped Qty. Not Returned",'<0');
+END;
+IF FORM.RUNMODAL(FORM::"Item Ledger Entries",ItemLedgEntry) = ACTION::LookupOK THEN BEGIN
+  SalesLine3 := Rec;
+  IF CurrentFieldNo = FIELDNO("Appl.-to Item Entry") THEN
+    SalesLine3.VALIDATE("Appl.-to Item Entry",ItemLedgEntry."Entry No.")
+  ELSE
+    SalesLine3.VALIDATE("Appl.-from Item Entry",ItemLedgEntry."Entry No.");
+  IF Reserve <> Reserve::Always THEN
+    CheckItemAvailable(CurrentFieldNo);
+  Rec := SalesLine3;
+END;
+
+SetSalesHeader(NewSalesHeader : Record "Sales Header")
+SalesHeader := NewSalesHeader;
+
+IF SalesHeader."Currency Code" = '' THEN
+  Currency.InitRoundingPrecision
+ELSE BEGIN
+  SalesHeader.TESTFIELD("Currency Factor");
+  Currency.GET(SalesHeader."Currency Code");
+  Currency.TESTFIELD("Amount Rounding Precision");
+END;
+
+GetSalesHeader()
+TESTFIELD("Document No.");
+IF ("Document Type" <> SalesHeader."Document Type") OR ("Document No." <> SalesHeader."No.") THEN BEGIN
+  SalesHeader.GET("Document Type","Document No.");
+  IF SalesHeader."Currency Code" = '' THEN
+    Currency.InitRoundingPrecision
+  ELSE BEGIN
+    SalesHeader.TESTFIELD("Currency Factor");
+    Currency.GET(SalesHeader."Currency Code");
+    Currency.TESTFIELD("Amount Rounding Precision");
+  END;
+END;
+
+GetItem()
+TESTFIELD("No.");
+IF "No." <> Item."No." THEN
+  Item.GET("No.");
+
+GetResource()
+TESTFIELD("No.");
+IF "No." <> Resource."No." THEN
+  Resource.GET("No.");
+
+UpdateUnitPrice(CalledByFieldNo : Integer)
+IF (CalledByFieldNo <> CurrFieldNo) AND (CurrFieldNo <> 0) THEN
+  EXIT;
+
+GetSalesHeader;
+TESTFIELD("Qty. per Unit of Measure");
+
+CASE Type OF
+  Type::Item,Type::Resource:
+    BEGIN
+      //TOPAS 19.09.2011-ST Deaktivierung Übernahme VK-Preis aus Tabelle VK-Preise
+      //PriceCalcMgt.FindSalesLineLineDisc(SalesHeader,Rec);
+      //PriceCalcMgt.FindSalesLinePrice(SalesHeader,Rec,CalledByFieldNo);
+    END;
+  Type::"Charge (Item)":
+    UpdateItemChargeAssgnt;
+END;
+VALIDATE("Unit Price");
+
+FindResUnitCost()
+ResCost.INIT;
+ResCost.Code := "No.";
+ResCost."Work Type Code" := "Work Type Code";
+ResFindUnitCost.RUN(ResCost);
+VALIDATE("Unit Cost (LCY)",ResCost."Unit Cost" * "Qty. per Unit of Measure");
+
+UpdateAmounts()
+IF CurrFieldNo <> FIELDNO("Allow Invoice Disc.") THEN
+  TESTFIELD(Type);
+GetSalesHeader;
+
+IF "Line Amount" <> xRec."Line Amount" THEN
+  "VAT Difference" := 0;
+IF "Line Amount" <> ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") - "Line Discount Amount" THEN BEGIN
+  "Line Amount" := ROUND(Quantity * "Unit Price",Currency."Amount Rounding Precision") - "Line Discount Amount";
+  "VAT Difference" := 0;
+END;
+IF SalesHeader.Status = SalesHeader.Status::Released THEN
+  UpdateVATAmounts;
+IF "Prepayment %" <> 0 THEN BEGIN
+  IF Quantity < 0 THEN
+    FIELDERROR(Quantity,STRSUBSTNO(Text047,FIELDCAPTION("Prepayment %")));
+  IF "Unit Price" < 0 THEN
+    FIELDERROR("Unit Price",STRSUBSTNO(Text047,FIELDCAPTION("Prepayment %")));
+END;
+"Prepmt. Line Amount" := ROUND("Line Amount" * "Prepayment %" / 100,Currency."Amount Rounding Precision");
+IF "Prepmt. Line Amount" < "Prepmt. Amt. Inv." THEN
+  FIELDERROR("Prepmt. Line Amount",STRSUBSTNO(Text044,"Prepmt. Amt. Inv."));
+
+InitOutstandingAmount;
+IF (CurrFieldNo <> 0) AND
+   ("Document Type" <= "Document Type"::Invoice) AND
+   (("Outstanding Amount" + "Shipped Not Invoiced") > 0)
+THEN
+  CustCheckCreditLimit.SalesLineCheck(Rec);
+
+IF Type = Type::"Charge (Item)" THEN
+  UpdateItemChargeAssgnt;
+
+UpdateVATAmounts()
+SalesLine2.SETRANGE("Document Type","Document Type");
+SalesLine2.SETRANGE("Document No.","Document No.");
+SalesLine2.SETFILTER("Line No.",'<>%1',"Line No.");
+IF "Line Amount" = 0 THEN
+  IF xRec."Line Amount" >= 0 THEN
+    SalesLine2.SETFILTER(Amount,'>%1',0)
+  ELSE
+    SalesLine2.SETFILTER(Amount,'<%1',0)
+ELSE
+  IF "Line Amount" > 0 THEN
+    SalesLine2.SETFILTER(Amount,'>%1',0)
+  ELSE
+    SalesLine2.SETFILTER(Amount,'<%1',0);
+SalesLine2.SETRANGE("VAT Identifier","VAT Identifier");
+SalesLine2.SETRANGE("Tax Group Code","Tax Group Code");
+
+IF "Line Amount" = "Inv. Discount Amount" THEN BEGIN
+  Amount := 0;
+  "VAT Base Amount" := 0;
+  "Amount Including VAT" := 0;
+  IF "Line No." <> 0 THEN
+    IF MODIFY THEN
+      IF SalesLine2.FINDLAST THEN BEGIN
+        SalesLine2.UpdateAmounts;
+        SalesLine2.MODIFY;
+      END;
+END ELSE BEGIN
+  TotalLineAmount := 0;
+  TotalInvDiscAmount := 0;
+  TotalAmount := 0;
+  TotalAmountInclVAT := 0;
+  TotalQuantityBase := 0;
+  IF ("VAT Calculation Type" = "VAT Calculation Type"::"Sales Tax") OR
+     (("VAT Calculation Type" IN
+       ["VAT Calculation Type"::"Normal VAT","VAT Calculation Type"::"Reverse Charge VAT"]) AND ("VAT %" <> 0))
+  THEN BEGIN
+    IF SalesLine2.FINDSET THEN
+      REPEAT
+        TotalLineAmount := TotalLineAmount + SalesLine2."Line Amount";
+        TotalInvDiscAmount := TotalInvDiscAmount + SalesLine2."Inv. Discount Amount";
+        TotalAmount := TotalAmount + SalesLine2.Amount;
+        TotalAmountInclVAT := TotalAmountInclVAT + SalesLine2."Amount Including VAT";
+        TotalQuantityBase := TotalQuantityBase + SalesLine2."Quantity (Base)";
+      UNTIL SalesLine2.NEXT = 0;
+  END;
+
+  IF SalesHeader."Prices Including VAT" THEN
+    CASE "VAT Calculation Type" OF
+      "VAT Calculation Type"::"Normal VAT",
+      "VAT Calculation Type"::"Reverse Charge VAT":
+        BEGIN
+          Amount :=
+            ROUND(
+              (TotalLineAmount - TotalInvDiscAmount + "Line Amount" - "Inv. Discount Amount") / (1 + "VAT %" / 100),
+              Currency."Amount Rounding Precision") -
+            TotalAmount;
+          "VAT Base Amount" :=
+            ROUND(
+              Amount * (1 - SalesHeader."VAT Base Discount %" / 100),
+              Currency."Amount Rounding Precision");
+          "Amount Including VAT" :=
+            TotalLineAmount + "Line Amount" +
+            ROUND(
+              (TotalAmount + Amount) * (SalesHeader."VAT Base Discount %" / 100) * "VAT %" / 100,
+              Currency."Amount Rounding Precision",Currency.VATRoundingDirection) -
+            TotalAmountInclVAT;
+        END;
+      "VAT Calculation Type"::"Full VAT":
+        BEGIN
+          Amount := 0;
+          "VAT Base Amount" := 0;
+        END;
+      "VAT Calculation Type"::"Sales Tax":
+        BEGIN
+          SalesHeader.TESTFIELD("VAT Base Discount %",0);
+          Amount :=
+            SalesTaxCalculate.ReverseCalculateTax(
+              "Tax Area Code","Tax Group Code","Tax Liable",SalesHeader."Posting Date",
+              TotalAmountInclVAT + "Amount Including VAT",TotalQuantityBase + "Quantity (Base)",
+              SalesHeader."Currency Factor") -
+            TotalAmount;
+          IF Amount <> 0 THEN
+            "VAT %" :=
+              ROUND(100 * ("Amount Including VAT" - Amount) / Amount,0.00001)
+          ELSE
+            "VAT %" := 0;
+          Amount := ROUND(Amount,Currency."Amount Rounding Precision");
+          "VAT Base Amount" := Amount;
+        END;
+    END
+  ELSE
+    CASE "VAT Calculation Type" OF
+      "VAT Calculation Type"::"Normal VAT",
+      "VAT Calculation Type"::"Reverse Charge VAT":
+        BEGIN
+          Amount := ROUND("Line Amount" - "Inv. Discount Amount",Currency."Amount Rounding Precision");
+          "VAT Base Amount" :=
+            ROUND(Amount * (1 - SalesHeader."VAT Base Discount %" / 100),Currency."Amount Rounding Precision");
+          "Amount Including VAT" :=
+            TotalAmount + Amount +
+            ROUND(
+              (TotalAmount + Amount) * (1 - SalesHeader."VAT Base Discount %" / 100) * "VAT %" / 100,
+              Currency."Amount Rounding Precision",Currency.VATRoundingDirection) -
+            TotalAmountInclVAT;
+        END;
+      "VAT Calculation Type"::"Full VAT":
+        BEGIN
+          Amount := 0;
+          "VAT Base Amount" := 0;
+          "Amount Including VAT" := "Line Amount" - "Inv. Discount Amount";
+        END;
+      "VAT Calculation Type"::"Sales Tax":
+        BEGIN
+          Amount := ROUND("Line Amount" - "Inv. Discount Amount",Currency."Amount Rounding Precision");
+          "VAT Base Amount" := Amount;
+          "Amount Including VAT" :=
+            TotalAmount + Amount +
+            ROUND(
+              SalesTaxCalculate.CalculateTax(
+                "Tax Area Code","Tax Group Code","Tax Liable",SalesHeader."Posting Date",
+                (TotalAmount + Amount),(TotalQuantityBase + "Quantity (Base)"),
+                SalesHeader."Currency Factor"),Currency."Amount Rounding Precision") -
+            TotalAmountInclVAT;
+          IF "VAT Base Amount" <> 0 THEN
+            "VAT %" :=
+              ROUND(100 * ("Amount Including VAT" - "VAT Base Amount") / "VAT Base Amount",0.00001)
+          ELSE
+            "VAT %" := 0;
+        END;
+    END;
+END;
+
+CheckItemAvailable(CalledByFieldNo : Integer)
+IF "Shipment Date" = 0D THEN BEGIN
+  GetSalesHeader;
+  IF SalesHeader."Shipment Date" <> 0D THEN
+    VALIDATE("Shipment Date",SalesHeader."Shipment Date")
+  ELSE
+    VALIDATE("Shipment Date",WORKDATE);
+END;
+
+IF ((CalledByFieldNo = CurrFieldNo) OR (CalledByFieldNo = FIELDNO("Shipment Date"))) AND GUIALLOWED AND
+   ("Document Type" IN ["Document Type"::Order,"Document Type"::Invoice]) AND
+   (Type = Type::Item) AND ("No." <> '') AND
+   ("Outstanding Quantity" > 0) AND
+   ("Job Contract Entry No." = 0) AND
+   NOT (Nonstock OR "Special Order")
+THEN
+  ItemCheckAvail.SalesLineCheck(Rec);
+
+ShowReservation()
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+TESTFIELD(Reserve);
+CLEAR(Reservation);
+Reservation.SetSalesLine(Rec);
+Reservation.RUNMODAL;
+
+ShowReservationEntries(Modal : Boolean)
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+ReservEngineMgt.InitFilterAndSortingLookupFor(ReservEntry,TRUE);
+ReserveSalesLine.FilterReservFor(ReservEntry,Rec);
+IF Modal THEN
+  FORM.RUNMODAL(FORM::"Reservation Entries",ReservEntry)
+ELSE
+  FORM.RUN(FORM::"Reservation Entries",ReservEntry);
+
+AutoReserve()
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+
+IF ReserveSalesLine.ReservQuantity(Rec) <> 0 THEN BEGIN
+  ReservMgt.SetSalesLine(Rec);
+  TESTFIELD("Shipment Date");
+  ReservMgt.AutoReserve(FullAutoReservation,'',"Shipment Date",ReserveSalesLine.ReservQuantity(Rec));
+  FIND;
+  IF NOT FullAutoReservation THEN BEGIN
+    COMMIT;
+    IF CONFIRM(Text011,TRUE) THEN BEGIN
+      ShowReservation;
+      FIND;
+    END;
+  END;
+END;
+
+GetDate() : Date
+IF ("Document Type" IN ["Document Type"::"Blanket Order","Document Type"::Quote]) AND
+   (SalesHeader."Posting Date" = 0D)
+THEN
+  EXIT(WORKDATE);
+EXIT(SalesHeader."Posting Date");
+
+SignedXX(Value : Decimal) : Decimal
+CASE "Document Type" OF
+  "Document Type"::Quote,
+  "Document Type"::Order,
+  "Document Type"::Invoice,
+  "Document Type"::"Blanket Order":
+    EXIT(-Value);
+  "Document Type"::"Return Order",
+  "Document Type"::"Credit Memo":
+    EXIT(Value);
+END;
+
+ItemAvailability(AvailabilityType : 'Date,Variant,Location,Bin')
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+Item.RESET;
+Item.GET("No.");
+Item.SETRANGE("No.","No.");
+Item.SETRANGE("Date Filter",0D,"Shipment Date");
+
+CASE AvailabilityType OF
+  AvailabilityType::Date:
+    BEGIN
+      Item.SETRANGE("Variant Filter","Variant Code");
+      Item.SETRANGE("Location Filter","Location Code");
+      CLEAR(ItemAvailByDate);
+      ItemAvailByDate.LOOKUPMODE(TRUE);
+      ItemAvailByDate.SETRECORD(Item);
+      ItemAvailByDate.SETTABLEVIEW(Item);
+      IF ItemAvailByDate.RUNMODAL = ACTION::LookupOK THEN
+        IF "Shipment Date" <> ItemAvailByDate.GetLastDate THEN
+          IF CONFIRM(
+               Text012,TRUE,FIELDCAPTION("Shipment Date"),"Shipment Date",
+               ItemAvailByDate.GetLastDate)
+          THEN BEGIN
+            IF CurrFieldNo <> 0 THEN
+              xRec := Rec;
+            VALIDATE("Shipment Date",ItemAvailByDate.GetLastDate);
+          END;
+    END;
+  AvailabilityType::Variant:
+    BEGIN
+      Item.SETRANGE("Location Filter","Location Code");
+      CLEAR(ItemAvailByVar);
+      ItemAvailByVar.LOOKUPMODE(TRUE);
+      ItemAvailByVar.SETRECORD(Item);
+      ItemAvailByVar.SETTABLEVIEW(Item);
+      IF ItemAvailByVar.RUNMODAL = ACTION::LookupOK THEN
+        IF "Variant Code" <> ItemAvailByVar.GetLastVariant THEN
+          IF CONFIRM(
+               Text012,TRUE,FIELDCAPTION("Variant Code"),"Variant Code",
+               ItemAvailByVar.GetLastVariant)
+          THEN BEGIN
+            IF CurrFieldNo = 0 THEN
+              xRec := Rec;
+            VALIDATE("Variant Code",ItemAvailByVar.GetLastVariant);
+          END;
+    END;
+  AvailabilityType::Location:
+    BEGIN
+      Item.SETRANGE("Variant Filter","Variant Code");
+      CLEAR(ItemAvailByLoc);
+      ItemAvailByLoc.LOOKUPMODE(TRUE);
+      ItemAvailByLoc.SETRECORD(Item);
+      ItemAvailByLoc.SETTABLEVIEW(Item);
+      IF ItemAvailByLoc.RUNMODAL = ACTION::LookupOK THEN
+        IF "Location Code" <> ItemAvailByLoc.GetLastLocation THEN
+          IF CONFIRM(
+               Text012,TRUE,FIELDCAPTION("Location Code"),"Location Code",
+               ItemAvailByLoc.GetLastLocation)
+          THEN BEGIN
+            IF CurrFieldNo = 0 THEN
+              xRec := Rec;
+            VALIDATE("Location Code",ItemAvailByLoc.GetLastLocation);
+          END;
+    END;
+END;
+
+BlanketOrderLookup()
+SalesLine2.RESET;
+SalesLine2.SETCURRENTKEY("Document Type",Type,"No.");
+SalesLine2.SETRANGE("Document Type","Document Type"::"Blanket Order");
+SalesLine2.SETRANGE(Type,Type);
+SalesLine2.SETRANGE("No.","No.");
+SalesLine2.SETRANGE("Bill-to Customer No.","Bill-to Customer No.");
+SalesLine2.SETRANGE("Sell-to Customer No.","Sell-to Customer No.");
+IF FORM.RUNMODAL(FORM::"Sales Lines",SalesLine2) = ACTION::LookupOK THEN BEGIN
+  SalesLine2.TESTFIELD("Document Type","Document Type"::"Blanket Order");
+  "Blanket Order No." := SalesLine2."Document No.";
+  VALIDATE("Blanket Order Line No.",SalesLine2."Line No.");
+END;
+
+ShowDimensions()
+TESTFIELD("Document No.");
+TESTFIELD("Line No.");
+DocDim.SETRANGE("Table ID",DATABASE::"Sales Line");
+DocDim.SETRANGE("Document Type","Document Type");
+DocDim.SETRANGE("Document No.","Document No.");
+DocDim.SETRANGE("Line No.","Line No.");
+DocDimensions.SETTABLEVIEW(DocDim);
+DocDimensions.RUNMODAL;
+
+OpenItemTrackingLines()
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+TESTFIELD("Quantity (Base)");
+IF "Job Contract Entry No." <> 0 THEN
+  ERROR(Text048,TABLECAPTION,Job.TABLECAPTION);
+ReserveSalesLine.CallItemTracking(Rec);
+
+CreateDim(Type1 : Integer;No1 : Code[20];Type2 : Integer;No2 : Code[20];Type3 : Integer;No3 : Code[20])
+SourceCodeSetup.GET;
+TableID[1] := Type1;
+No[1] := No1;
+TableID[2] := Type2;
+No[2] := No2;
+TableID[3] := Type3;
+No[3] := No3;
+"Shortcut Dimension 1 Code" := '';
+"Shortcut Dimension 2 Code" := '';
+DimMgt.GetPreviousDocDefaultDim(
+  DATABASE::"Sales Header","Document Type","Document No.",0,
+  DATABASE::Customer,"Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+DimMgt.GetDefaultDim(
+  TableID,No,SourceCodeSetup.Sales,
+  "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+IF "Line No." <> 0 THEN
+  DimMgt.UpdateDocDefaultDim(
+    DATABASE::"Sales Line","Document Type","Document No.","Line No.",
+    "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+
+ValidateShortcutDimCode(FieldNumber : Integer;VAR ShortcutDimCode : Code[20])
+DimMgt.ValidateDimValueCode(FieldNumber,ShortcutDimCode);
+IF "Line No." <> 0 THEN BEGIN
+  DimMgt.SaveDocDim(
+    DATABASE::"Sales Line","Document Type","Document No.",
+    "Line No.",FieldNumber,ShortcutDimCode);
+  MODIFY;
+END ELSE
+  DimMgt.SaveTempDim(FieldNumber,ShortcutDimCode);
+
+LookupShortcutDimCode(FieldNumber : Integer;VAR ShortcutDimCode : Code[20])
+DimMgt.LookupDimValueCode(FieldNumber,ShortcutDimCode);
+IF "Line No." <> 0 THEN BEGIN
+  DimMgt.SaveDocDim(
+    DATABASE::"Sales Line","Document Type","Document No.",
+    "Line No.",FieldNumber,ShortcutDimCode);
+  MODIFY;
+END ELSE
+  DimMgt.SaveTempDim(FieldNumber,ShortcutDimCode);
+
+ShowShortcutDimCode(VAR ShortcutDimCode : ARRAY [8] OF Code[20])
+IF "Line No." <> 0 THEN
+  DimMgt.ShowDocDim(
+    DATABASE::"Sales Line","Document Type","Document No.",
+    "Line No.",ShortcutDimCode)
+ELSE
+  DimMgt.ShowTempDim(ShortcutDimCode);
+
+ShowItemSub()
+TestStatusOpen;
+ItemSubstitutionMgt.ItemSubstGet(Rec);
+IF TransferExtendedText.SalesCheckIfAnyExtText(Rec,TRUE) THEN
+  TransferExtendedText.InsertSalesExtText(Rec);
+
+ShowNonstock()
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.",'');
+IF FORM.RUNMODAL(FORM::"Nonstock Item List",NonstockItem) = ACTION::LookupOK THEN BEGIN
+  NonstockItem.TESTFIELD("Item Category Code");
+  ItemCategory.GET(NonstockItem."Item Category Code");
+  ItemCategory.TESTFIELD("Def. Gen. Prod. Posting Group");
+  ItemCategory.TESTFIELD("Def. Inventory Posting Group");
+
+  "No." := NonstockItem."Entry No.";
+  NonstockItemMgt.NonStockSales(Rec);
+  VALIDATE("No.","No.");
+  VALIDATE("Unit Price",NonstockItem."Unit Price");
+END;
+
+GetFAPostingGroup()
+IF (Type <> Type::"Fixed Asset") OR ("No." = '') THEN
+  EXIT;
+IF "Depreciation Book Code" = '' THEN BEGIN
+  FASetup.GET;
+  "Depreciation Book Code" := FASetup."Default Depr. Book";
+  IF NOT FADeprBook.GET("No.","Depreciation Book Code") THEN
+    "Depreciation Book Code" := '';
+  IF "Depreciation Book Code" = '' THEN
+    EXIT;
+END;
+FADeprBook.GET("No.","Depreciation Book Code");
+FADeprBook.TESTFIELD("FA Posting Group");
+FAPostingGr.GET(FADeprBook."FA Posting Group");
+FAPostingGr.TESTFIELD("Acq. Cost Acc. on Disposal");
+LocalGLAcc.GET(FAPostingGr."Acq. Cost Acc. on Disposal");
+LocalGLAcc.CheckGLAcc;
+LocalGLAcc.TESTFIELD("Gen. Prod. Posting Group");
+"Posting Group" := FADeprBook."FA Posting Group";
+"Gen. Prod. Posting Group" := LocalGLAcc."Gen. Prod. Posting Group";
+"Tax Group Code" := LocalGLAcc."Tax Group Code";
+VALIDATE("VAT Prod. Posting Group",LocalGLAcc."VAT Prod. Posting Group");
+
+GetFieldCaption(FieldNumber : Integer) : Text[100]
+Field.GET(DATABASE::"Sales Line",FieldNumber);
+EXIT(Field."Field Caption");
+
+GetCaptionClass(FieldNumber : Integer) : Text[80]
+IF NOT SalesHeader.GET("Document Type","Document No.") THEN BEGIN
+  SalesHeader."No." := '';
+  SalesHeader.INIT;
+END;
+IF SalesHeader."Prices Including VAT" THEN
+  SalesPricesIncVar := 1
+ELSE
+  SalesPricesIncVar := 0;
+CLEAR(SalesHeader);
+EXIT('2,' + FORMAT(SalesPricesIncVar) + ',' + GetFieldCaption(FieldNumber));
+
+GetSKU() : Boolean
+IF (SKU."Location Code" = "Location Code") AND
+   (SKU."Item No." = "No.") AND
+   (SKU."Variant Code" = "Variant Code")
+THEN
+  EXIT(TRUE);
+IF SKU.GET("Location Code","No.","Variant Code") THEN
+  EXIT(TRUE)
+ELSE
+  EXIT(FALSE);
+
+GetUnitCost()
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+GetItem;
+"Qty. per Unit of Measure" := UOMMgt.GetQtyPerUnitOfMeasure(Item,"Unit of Measure Code");
+//TOPAS 280608 ST
+{
+IF GetSKU THEN
+  VALIDATE("Unit Cost (LCY)",SKU."Unit Cost" * "Qty. per Unit of Measure")
+ELSE
+  VALIDATE("Unit Cost (LCY)",Item."Unit Cost" * "Qty. per Unit of Measure");
+}
+//TOPAS Ende
+
+CalcUnitCost(ItemLedgEntry : Record "Item Ledger Entry") : Decimal
+WITH ValueEntry DO BEGIN
+  SETCURRENTKEY("Item Ledger Entry No.");
+  SETRANGE("Item Ledger Entry No.",ItemLedgEntry."Entry No.");
+  CALCSUMS("Cost Amount (Actual)","Cost Amount (Expected)");
+  UnitCost :=
+    ("Cost Amount (Expected)" + "Cost Amount (Actual)") / ItemLedgEntry.Quantity;
+END;
+
+EXIT(ABS(UnitCost * "Qty. per Unit of Measure"));
+
+ShowItemChargeAssgnt()
+GET("Document Type","Document No.","Line No.");
+TESTFIELD(Type,Type::"Charge (Item)");
+TESTFIELD("No.");
+TESTFIELD(Quantity);
+
+ItemChargeAssgntSales.RESET;
+ItemChargeAssgntSales.SETRANGE("Document Type","Document Type");
+ItemChargeAssgntSales.SETRANGE("Document No.","Document No.");
+ItemChargeAssgntSales.SETRANGE("Document Line No.","Line No.");
+ItemChargeAssgntSales.SETRANGE("Item Charge No.","No.");
+IF NOT ItemChargeAssgntSales.FINDLAST THEN BEGIN
+  ItemChargeAssgntSales."Document Type" := "Document Type";
+  ItemChargeAssgntSales."Document No." := "Document No.";
+  ItemChargeAssgntSales."Document Line No." := "Line No.";
+  ItemChargeAssgntSales."Item Charge No." := "No.";
+  GetSalesHeader;
+  IF ("Inv. Discount Amount" = 0) AND
+     ("Line Discount Amount" = 0) AND
+     (NOT SalesHeader."Prices Including VAT")
+  THEN
+    ItemChargeAssgntSales."Unit Cost" := "Unit Price"
+  ELSE
+    IF SalesHeader."Prices Including VAT" THEN
+      ItemChargeAssgntSales."Unit Cost" :=
+        ROUND(
+          ("Line Amount" - "Inv. Discount Amount") / Quantity / (1 + "VAT %" / 100),
+          Currency."Unit-Amount Rounding Precision")
+    ELSE
+      ItemChargeAssgntSales."Unit Cost" :=
+        ROUND(
+          ("Line Amount" - "Inv. Discount Amount") / Quantity,
+          Currency."Unit-Amount Rounding Precision");
+END;
+
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+  AssignItemChargeSales.CreateDocChargeAssgn(ItemChargeAssgntSales,"Return Receipt No.")
+ELSE
+  AssignItemChargeSales.CreateDocChargeAssgn(ItemChargeAssgntSales,"Shipment No.");
+CLEAR(AssignItemChargeSales);
+COMMIT;
+
+ItemChargeAssgnts.Initialize(Rec,ItemChargeAssgntSales."Unit Cost");
+ItemChargeAssgnts.RUNMODAL;
+CALCFIELDS("Qty. to Assign");
+
+UpdateItemChargeAssgnt()
+CALCFIELDS("Qty. Assigned");
+TESTFIELD("Quantity Invoiced","Qty. Assigned");
+UnitPrice := "Unit Price";
+IF Quantity <> 0 THEN
+  UnitPrice := "Line Amount" / Quantity;
+ItemChargeAssgntSales.RESET;
+ItemChargeAssgntSales.SETRANGE("Document Type","Document Type");
+ItemChargeAssgntSales.SETRANGE("Document No.","Document No.");
+ItemChargeAssgntSales.SETRANGE("Document Line No.","Line No.");
+IF (CurrFieldNo <> 0) AND (Amount <> xRec.Amount) THEN BEGIN
+  ItemChargeAssgntSales.SETFILTER("Qty. Assigned",'<>0');
+  IF NOT ItemChargeAssgntSales.ISEMPTY THEN
+    ERROR(Text026,
+      FIELDCAPTION(Amount));
+  ItemChargeAssgntSales.SETRANGE("Qty. Assigned");
+END;
+
+IF ItemChargeAssgntSales.FINDSET THEN BEGIN
+  GetSalesHeader;
+  REPEAT
+    IF ("Inv. Discount Amount" = 0) AND (NOT SalesHeader."Prices Including VAT") THEN BEGIN
+      IF ItemChargeAssgntSales."Unit Cost" <> UnitPrice THEN BEGIN
+        ItemChargeAssgntSales."Unit Cost" := UnitPrice;
+        ItemChargeAssgntSales.VALIDATE("Qty. to Assign");
+        ItemChargeAssgntSales.MODIFY;
+      END;
+    END ELSE
+      IF SalesHeader."Prices Including VAT" THEN BEGIN
+        IF ItemChargeAssgntSales."Unit Cost" <> ROUND(
+             ("Line Amount" - "Inv. Discount Amount") / Quantity / (1 + "VAT %" / 100),
+             Currency."Unit-Amount Rounding Precision")
+        THEN BEGIN
+          ItemChargeAssgntSales."Unit Cost" := ROUND(
+              ("Line Amount" - "Inv. Discount Amount") / Quantity / (1 + "VAT %" / 100),
+              Currency."Unit-Amount Rounding Precision");
+          ItemChargeAssgntSales.VALIDATE("Qty. to Assign");
+          ItemChargeAssgntSales.MODIFY;
+        END;
+      END ELSE
+        IF ItemChargeAssgntSales."Unit Cost" <> ROUND(
+             ("Line Amount" - "Inv. Discount Amount") / Quantity,
+             Currency."Unit-Amount Rounding Precision")
+        THEN BEGIN
+          ItemChargeAssgntSales."Unit Cost" := ROUND(
+              ("Line Amount" - "Inv. Discount Amount") / Quantity,
+              Currency."Unit-Amount Rounding Precision");
+          ItemChargeAssgntSales.VALIDATE("Qty. to Assign");
+          ItemChargeAssgntSales.MODIFY;
+        END;
+  UNTIL ItemChargeAssgntSales.NEXT = 0;
+  CALCFIELDS("Qty. to Assign");
+END;
+
+DeleteItemChargeAssgnt(DocType : Option;DocNo : Code[20];DocLineNo : Integer)
+ItemChargeAssgntSales.SETCURRENTKEY(
+  "Applies-to Doc. Type","Applies-to Doc. No.","Applies-to Doc. Line No.");
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. Type",DocType);
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. No.",DocNo);
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. Line No.",DocLineNo);
+IF NOT ItemChargeAssgntSales.ISEMPTY THEN
+  ItemChargeAssgntSales.DELETEALL(TRUE);
+
+DeleteChargeChargeAssgnt(DocType : Option;DocNo : Code[20];DocLineNo : Integer)
+IF DocType <> "Document Type"::"Blanket Order" THEN
+  IF "Quantity Invoiced" <> 0 THEN BEGIN
+    CALCFIELDS("Qty. Assigned");
+    TESTFIELD("Qty. Assigned","Quantity Invoiced");
+  END;
+ItemChargeAssgntSales.RESET;
+ItemChargeAssgntSales.SETRANGE("Document Type",DocType);
+ItemChargeAssgntSales.SETRANGE("Document No.",DocNo);
+ItemChargeAssgntSales.SETRANGE("Document Line No.",DocLineNo);
+IF NOT ItemChargeAssgntSales.ISEMPTY THEN
+  ItemChargeAssgntSales.DELETEALL;
+
+CheckItemChargeAssgnt()
+ItemChargeAssgntSales.SETCURRENTKEY(
+  "Applies-to Doc. Type","Applies-to Doc. No.","Applies-to Doc. Line No.");
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. Type","Document Type");
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. No.","Document No.");
+ItemChargeAssgntSales.SETRANGE("Applies-to Doc. Line No.","Line No.");
+ItemChargeAssgntSales.SETRANGE("Document Type","Document Type");
+ItemChargeAssgntSales.SETRANGE("Document No.","Document No.");
+IF ItemChargeAssgntSales.FINDSET THEN BEGIN
+  TESTFIELD("Allow Item Charge Assignment");
+  REPEAT
+    ItemChargeAssgntSales.TESTFIELD("Qty. to Assign",0);
+  UNTIL ItemChargeAssgntSales.NEXT = 0;
+END;
+
+TestStatusOpen()
+IF StatusCheckSuspended THEN
+  EXIT;
+GetSalesHeader;
+IF Type IN [Type::Item,Type::"Fixed Asset"] THEN
+  SalesHeader.TESTFIELD(Status,SalesHeader.Status::Open);
+
+SuspendStatusCheck(Suspend : Boolean)
+StatusCheckSuspended := Suspend;
+
+UpdateVATOnLines(QtyType : 'General,Invoicing,Shipping';VAR SalesHeader : Record "Sales Header";VAR SalesLine : Record "Sales Line";VAR
+IF QtyType = QtyType::Shipping THEN
+  EXIT;
+IF SalesHeader."Currency Code" = '' THEN
+  Currency.InitRoundingPrecision
+ELSE
+  Currency.GET(SalesHeader."Currency Code");
+
+TempVATAmountLineRemainder.DELETEALL;
+
+WITH SalesLine DO BEGIN
+  SETRANGE("Document Type",SalesHeader."Document Type");
+  SETRANGE("Document No.",SalesHeader."No.");
+  SETFILTER(Type,'>0');
+  SETFILTER(Quantity,'<>0');
+  CASE QtyType OF
+    QtyType::Invoicing:
+      SETFILTER("Qty. to Invoice",'<>0');
+    QtyType::Shipping:
+      SETFILTER("Qty. to Ship",'<>0');
+  END;
+  LOCKTABLE;
+  IF FINDSET THEN
+    REPEAT
+      VATAmountLine.GET("VAT Identifier","VAT Calculation Type","Tax Group Code",FALSE,"Line Amount" >= 0);
+      IF VATAmountLine.Modified THEN BEGIN
+        xRecRef.GETTABLE(SalesLine);
+        IF NOT TempVATAmountLineRemainder.GET(
+             "VAT Identifier","VAT Calculation Type","Tax Group Code",FALSE,"Line Amount" >= 0)
+        THEN BEGIN
+          TempVATAmountLineRemainder := VATAmountLine;
+          TempVATAmountLineRemainder.INIT;
+          TempVATAmountLineRemainder.INSERT;
+        END;
+
+        IF QtyType = QtyType::General THEN
+          LineAmountToInvoice := "Line Amount"
+        ELSE
+          LineAmountToInvoice :=
+            ROUND("Line Amount" * "Qty. to Invoice" / Quantity,Currency."Amount Rounding Precision");
+
+        IF "Allow Invoice Disc." THEN BEGIN
+          IF VATAmountLine."Inv. Disc. Base Amount" = 0 THEN
+            InvDiscAmount := 0
+          ELSE BEGIN
+            TempVATAmountLineRemainder."Invoice Discount Amount" :=
+              TempVATAmountLineRemainder."Invoice Discount Amount" +
+              VATAmountLine."Invoice Discount Amount" * LineAmountToInvoice /
+              VATAmountLine."Inv. Disc. Base Amount";
+            InvDiscAmount :=
+              ROUND(
+                TempVATAmountLineRemainder."Invoice Discount Amount",Currency."Amount Rounding Precision");
+            TempVATAmountLineRemainder."Invoice Discount Amount" :=
+              TempVATAmountLineRemainder."Invoice Discount Amount" - InvDiscAmount;
+          END;
+          IF QtyType = QtyType::General THEN BEGIN
+            "Inv. Discount Amount" := InvDiscAmount;
+            CalcInvDiscToInvoice;
+          END ELSE
+            "Inv. Disc. Amount to Invoice" := InvDiscAmount;
+        END ELSE
+          InvDiscAmount := 0;
+
+        IF QtyType = QtyType::General THEN
+          IF SalesHeader."Prices Including VAT" THEN BEGIN
+            IF (VATAmountLine."Line Amount" - VATAmountLine."Invoice Discount Amount" = 0) OR
+               ("Line Amount" = 0)
+            THEN BEGIN
+              VATAmount := 0;
+              NewAmountIncludingVAT := 0;
+            END ELSE BEGIN
+              VATAmount :=
+                TempVATAmountLineRemainder."VAT Amount" +
+                VATAmountLine."VAT Amount" *
+                ("Line Amount" - "Inv. Discount Amount") /
+                (VATAmountLine."Line Amount" - VATAmountLine."Invoice Discount Amount");
+              NewAmountIncludingVAT :=
+                TempVATAmountLineRemainder."Amount Including VAT" +
+                VATAmountLine."Amount Including VAT" *
+                ("Line Amount" - "Inv. Discount Amount") /
+                (VATAmountLine."Line Amount" - VATAmountLine."Invoice Discount Amount");
+            END;
+            NewAmount :=
+              ROUND(NewAmountIncludingVAT,Currency."Amount Rounding Precision") -
+              ROUND(VATAmount,Currency."Amount Rounding Precision");
+            NewVATBaseAmount :=
+              ROUND(
+                NewAmount * (1 - SalesHeader."VAT Base Discount %" / 100),
+                Currency."Amount Rounding Precision");
+          END ELSE BEGIN
+            IF "VAT Calculation Type" = "VAT Calculation Type"::"Full VAT" THEN BEGIN
+              VATAmount := "Line Amount" - "Inv. Discount Amount";
+              NewAmount := 0;
+              NewVATBaseAmount := 0;
+            END ELSE BEGIN
+              NewAmount := "Line Amount" - "Inv. Discount Amount";
+              NewVATBaseAmount :=
+                ROUND(
+                  NewAmount * (1 - SalesHeader."VAT Base Discount %" / 100),
+                  Currency."Amount Rounding Precision");
+              IF VATAmountLine."VAT Base" = 0 THEN
+                VATAmount := 0
+              ELSE
+                VATAmount :=
+                  TempVATAmountLineRemainder."VAT Amount" +
+                  VATAmountLine."VAT Amount" * NewAmount / VATAmountLine."VAT Base";
+            END;
+            NewAmountIncludingVAT := NewAmount + ROUND(VATAmount,Currency."Amount Rounding Precision");
+          END
+        ELSE BEGIN
+          IF (VATAmountLine."Line Amount" - VATAmountLine."Invoice Discount Amount") = 0 THEN
+            VATDifference := 0
+          ELSE
+            VATDifference :=
+              TempVATAmountLineRemainder."VAT Difference" +
+              VATAmountLine."VAT Difference" * (LineAmountToInvoice - InvDiscAmount) /
+              (VATAmountLine."Line Amount" - VATAmountLine."Invoice Discount Amount");
+          IF LineAmountToInvoice = 0 THEN
+            "VAT Difference" := 0
+          ELSE
+            "VAT Difference" := ROUND(VATDifference,Currency."Amount Rounding Precision");
+        END;
+        IF (QtyType = QtyType::General) AND (SalesHeader.Status = SalesHeader.Status::Released) THEN BEGIN
+          Amount := NewAmount;
+          "Amount Including VAT" := ROUND(NewAmountIncludingVAT,Currency."Amount Rounding Precision");
+          "VAT Base Amount" := NewVATBaseAmount;
+        END;
+        InitOutstanding;
+        MODIFY;
+        RecRef.GETTABLE(SalesLine);
+        ChangeLogMgt.LogModification(RecRef,xRecRef);
+
+        TempVATAmountLineRemainder."Amount Including VAT" :=
+          NewAmountIncludingVAT - ROUND(NewAmountIncludingVAT,Currency."Amount Rounding Precision");
+        TempVATAmountLineRemainder."VAT Amount" := VATAmount - NewAmountIncludingVAT + NewAmount;
+        TempVATAmountLineRemainder."VAT Difference" := VATDifference - "VAT Difference";
+        TempVATAmountLineRemainder.MODIFY;
+      END;
+    UNTIL NEXT = 0;
+  SETRANGE(Type);
+  SETRANGE(Quantity);
+  SETRANGE("Qty. to Invoice");
+  SETRANGE("Qty. to Ship");
+END;
+
+CalcVATAmountLines(QtyType : 'General,Invoicing,Shipping';VAR SalesHeader : Record "Sales Header";VAR SalesLine : Record "Sales Line";V
+IF SalesHeader."Currency Code" = '' THEN
+  Currency.InitRoundingPrecision
+ELSE
+  Currency.GET(SalesHeader."Currency Code");
+
+VATAmountLine.DELETEALL;
+
+WITH SalesLine DO BEGIN
+  SETRANGE("Document Type",SalesHeader."Document Type");
+  SETRANGE("Document No.",SalesHeader."No.");
+  SETFILTER(Type,'>0');
+  SETFILTER(Quantity,'<>0');
+  SalesSetup.GET;
+  IF SalesSetup."Invoice Rounding" THEN BEGIN
+    SalesLine3.COPYFILTERS(SalesLine);
+    RoundingLineInserted := (SalesLine3.COUNT <> SalesLine.COUNT) AND NOT SalesLine."Prepayment Line";
+  END;
+  IF FINDSET THEN
+    REPEAT
+      IF "VAT Calculation Type" IN
+         ["VAT Calculation Type"::"Reverse Charge VAT","VAT Calculation Type"::"Sales Tax"]
+      THEN
+        "VAT %" := 0;
+      IF NOT VATAmountLine.GET(
+           "VAT Identifier","VAT Calculation Type","Tax Group Code",FALSE,"Line Amount" >= 0)
+      THEN BEGIN
+        VATAmountLine.INIT;
+        VATAmountLine."VAT Identifier" := "VAT Identifier";
+        VATAmountLine."VAT Calculation Type" := "VAT Calculation Type";
+        VATAmountLine."Tax Group Code" := "Tax Group Code";
+        VATAmountLine."VAT %" := "VAT %";
+        VATAmountLine.Modified := TRUE;
+        VATAmountLine.Positive := "Line Amount" >= 0;
+        VATAmountLine.INSERT;
+      END;
+      CASE QtyType OF
+        QtyType::General:
+          BEGIN
+            VATAmountLine.Quantity := VATAmountLine.Quantity + "Quantity (Base)";
+            VATAmountLine."Line Amount" := VATAmountLine."Line Amount" + "Line Amount";
+            IF "Allow Invoice Disc." THEN
+              VATAmountLine."Inv. Disc. Base Amount" :=
+                VATAmountLine."Inv. Disc. Base Amount" + "Line Amount";
+            VATAmountLine."Invoice Discount Amount" :=
+              VATAmountLine."Invoice Discount Amount" + "Inv. Discount Amount";
+            VATAmountLine."VAT Difference" := VATAmountLine."VAT Difference" + "VAT Difference";
+            IF "Prepayment Line" THEN
+              VATAmountLine."Includes Prepayment" := TRUE;
+            VATAmountLine.MODIFY;
+          END;
+        QtyType::Invoicing:
+          BEGIN
+            CASE TRUE OF
+              ("Document Type" IN ["Document Type"::Order,"Document Type"::Invoice]) AND
+              (NOT SalesHeader.Ship) AND SalesHeader.Invoice:
+                BEGIN
+                  IF "Shipment No." = '' THEN BEGIN
+                    QtyFactor := GetAbsMin("Qty. to Invoice","Qty. Shipped Not Invoiced") / Quantity;
+                    VATAmountLine.Quantity :=
+                      VATAmountLine.Quantity + GetAbsMin("Qty. to Invoice (Base)","Qty. Shipped Not Invd. (Base)");
+                  END ELSE BEGIN
+                    QtyFactor := "Qty. to Invoice" / Quantity;
+                    VATAmountLine.Quantity := VATAmountLine.Quantity + "Qty. to Invoice (Base)";
+                  END;
+                END;
+              ("Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]) AND
+              (NOT SalesHeader.Receive) AND SalesHeader.Invoice:
+                BEGIN
+                  QtyFactor := GetAbsMin("Qty. to Invoice","Return Qty. Rcd. Not Invd.") / Quantity;
+                  VATAmountLine.Quantity :=
+                    VATAmountLine.Quantity + GetAbsMin("Qty. to Invoice (Base)","Ret. Qty. Rcd. Not Invd.(Base)");
+                END;
+              ELSE
+                BEGIN
+                QtyFactor := "Qty. to Invoice" / Quantity;
+                VATAmountLine.Quantity := VATAmountLine.Quantity + "Qty. to Invoice (Base)";
+              END;
+            END;
+            VATAmountLine."Line Amount" :=
+              VATAmountLine."Line Amount" +
+              ROUND("Line Amount" * QtyFactor,Currency."Amount Rounding Precision");
+            IF "Allow Invoice Disc." THEN
+              VATAmountLine."Inv. Disc. Base Amount" :=
+                VATAmountLine."Inv. Disc. Base Amount" +
+                ROUND("Line Amount" * QtyFactor,Currency."Amount Rounding Precision");
+            VATAmountLine."Invoice Discount Amount" :=
+              VATAmountLine."Invoice Discount Amount" + "Inv. Disc. Amount to Invoice";
+            VATAmountLine."VAT Difference" := VATAmountLine."VAT Difference" + "VAT Difference";
+            IF "Prepayment Line" THEN
+              VATAmountLine."Includes Prepayment" := TRUE;
+            VATAmountLine.MODIFY;
+          END;
+        QtyType::Shipping:
+          BEGIN
+            IF "Document Type" IN
+               ["Document Type"::"Return Order","Document Type"::"Credit Memo"]
+            THEN BEGIN
+              QtyFactor := "Return Qty. to Receive" / Quantity;
+              VATAmountLine.Quantity := VATAmountLine.Quantity + "Return Qty. to Receive (Base)";
+            END ELSE BEGIN
+              QtyFactor := "Qty. to Ship" / Quantity;
+              VATAmountLine.Quantity := VATAmountLine.Quantity + "Qty. to Ship (Base)";
+            END;
+            VATAmountLine."Line Amount" :=
+              VATAmountLine."Line Amount" +
+              ROUND("Line Amount" * QtyFactor,Currency."Amount Rounding Precision");
+            IF "Allow Invoice Disc." THEN
+              VATAmountLine."Inv. Disc. Base Amount" :=
+                VATAmountLine."Inv. Disc. Base Amount" +
+                ROUND("Line Amount" * QtyFactor,Currency."Amount Rounding Precision");
+            VATAmountLine."Invoice Discount Amount" :=
+              VATAmountLine."Invoice Discount Amount" +
+              ROUND("Inv. Discount Amount" * QtyFactor,Currency."Amount Rounding Precision");
+            VATAmountLine."VAT Difference" := VATAmountLine."VAT Difference" + "VAT Difference";
+            IF "Prepayment Line" THEN
+              VATAmountLine."Includes Prepayment" := TRUE;
+            VATAmountLine.MODIFY;
+          END;
+      END;
+      IF RoundingLineInserted THEN
+        TotalVATAmount := TotalVATAmount + "Amount Including VAT" - Amount + "VAT Difference";
+    UNTIL NEXT = 0;
+  SETRANGE(Type);
+  SETRANGE(Quantity);
+END;
+
+WITH VATAmountLine DO
+  IF FINDSET THEN
+    REPEAT
+      IF (PrevVatAmountLine."VAT Identifier" <> "VAT Identifier") OR
+         (PrevVatAmountLine."VAT Calculation Type" <> "VAT Calculation Type") OR
+         (PrevVatAmountLine."Tax Group Code" <> "Tax Group Code") OR
+         (PrevVatAmountLine."Use Tax" <> "Use Tax")
+      THEN
+        PrevVatAmountLine.INIT;
+      IF SalesHeader."Prices Including VAT" THEN BEGIN
+        CASE "VAT Calculation Type" OF
+          "VAT Calculation Type"::"Normal VAT",
+          "VAT Calculation Type"::"Reverse Charge VAT":
+            BEGIN
+              "VAT Base" :=
+                ROUND(
+                  ("Line Amount" - "Invoice Discount Amount") / (1 + "VAT %" / 100),
+                  Currency."Amount Rounding Precision") - "VAT Difference";
+              "VAT Amount" :=
+                "VAT Difference" +
+                ROUND(
+                  PrevVatAmountLine."VAT Amount" +
+                  ("Line Amount" - "Invoice Discount Amount" - "VAT Base" - "VAT Difference") *
+                  (1 - SalesHeader."VAT Base Discount %" / 100),
+                  Currency."Amount Rounding Precision",Currency.VATRoundingDirection);
+              "Amount Including VAT" := "VAT Base" + "VAT Amount";
+              IF Positive THEN
+                PrevVatAmountLine.INIT
+              ELSE BEGIN
+                PrevVatAmountLine := VATAmountLine;
+                PrevVatAmountLine."VAT Amount" :=
+                  ("Line Amount" - "Invoice Discount Amount" - "VAT Base" - "VAT Difference") *
+                  (1 - SalesHeader."VAT Base Discount %" / 100);
+                PrevVatAmountLine."VAT Amount" :=
+                  PrevVatAmountLine."VAT Amount" -
+                  ROUND(PrevVatAmountLine."VAT Amount",Currency."Amount Rounding Precision",Currency.VATRoundingDirection);
+              END;
+            END;
+          "VAT Calculation Type"::"Full VAT":
+            BEGIN
+              "VAT Base" := 0;
+              "VAT Amount" := "VAT Difference" + "Line Amount" - "Invoice Discount Amount";
+              "Amount Including VAT" := "VAT Amount";
+            END;
+          "VAT Calculation Type"::"Sales Tax":
+            BEGIN
+              "Amount Including VAT" := "Line Amount" - "Invoice Discount Amount";
+              "VAT Base" :=
+                ROUND(
+                  SalesTaxCalculate.ReverseCalculateTax(
+                    SalesHeader."Tax Area Code","Tax Group Code",SalesHeader."Tax Liable",
+                    SalesHeader."Posting Date","Amount Including VAT",Quantity,SalesHeader."Currency Factor"),
+                  Currency."Amount Rounding Precision");
+              "VAT Amount" := "VAT Difference" + "Amount Including VAT" - "VAT Base";
+              IF "VAT Base" = 0 THEN
+                "VAT %" := 0
+              ELSE
+                "VAT %" := ROUND(100 * "VAT Amount" / "VAT Base",0.00001);
+            END;
+        END;
+      END ELSE BEGIN
+        CASE "VAT Calculation Type" OF
+          "VAT Calculation Type"::"Normal VAT",
+          "VAT Calculation Type"::"Reverse Charge VAT":
+            BEGIN
+              "VAT Base" := "Line Amount" - "Invoice Discount Amount";
+              "VAT Amount" :=
+                "VAT Difference" +
+                ROUND(
+                  PrevVatAmountLine."VAT Amount" +
+                  "VAT Base" * "VAT %" / 100 * (1 - SalesHeader."VAT Base Discount %" / 100),
+                  Currency."Amount Rounding Precision",Currency.VATRoundingDirection);
+              "Amount Including VAT" := "Line Amount" - "Invoice Discount Amount" + "VAT Amount";
+              IF Positive THEN
+                PrevVatAmountLine.INIT
+              ELSE BEGIN
+                PrevVatAmountLine := VATAmountLine;
+                PrevVatAmountLine."VAT Amount" :=
+                  "VAT Base" * "VAT %" / 100 * (1 - SalesHeader."VAT Base Discount %" / 100);
+                PrevVatAmountLine."VAT Amount" :=
+                  PrevVatAmountLine."VAT Amount" -
+                  ROUND(PrevVatAmountLine."VAT Amount",Currency."Amount Rounding Precision",Currency.VATRoundingDirection);
+              END;
+            END;
+          "VAT Calculation Type"::"Full VAT":
+            BEGIN
+              "VAT Base" := 0;
+              "VAT Amount" := "VAT Difference" + "Line Amount" - "Invoice Discount Amount";
+              "Amount Including VAT" := "VAT Amount";
+            END;
+          "VAT Calculation Type"::"Sales Tax":
+            BEGIN
+              "VAT Base" := "Line Amount" - "Invoice Discount Amount";
+              "VAT Amount" :=
+                SalesTaxCalculate.CalculateTax(
+                  SalesHeader."Tax Area Code","Tax Group Code",SalesHeader."Tax Liable",
+                  SalesHeader."Posting Date","VAT Base",Quantity,SalesHeader."Currency Factor");
+              IF "VAT Base" = 0 THEN
+                "VAT %" := 0
+              ELSE
+                "VAT %" := ROUND(100 * "VAT Amount" / "VAT Base",0.00001);
+              "VAT Amount" :=
+                "VAT Difference" +
+                ROUND("VAT Amount",Currency."Amount Rounding Precision",Currency.VATRoundingDirection);
+              "Amount Including VAT" := "VAT Base" + "VAT Amount";
+            END;
+        END;
+      END;
+      IF RoundingLineInserted THEN
+        TotalVATAmount := TotalVATAmount - "VAT Amount";
+      "Calculated VAT Amount" := "VAT Amount" - "VAT Difference";
+      MODIFY;
+    UNTIL NEXT = 0;
+
+IF RoundingLineInserted AND (TotalVATAmount <> 0) THEN
+  IF VATAmountLine.GET(SalesLine."VAT Identifier",SalesLine."VAT Calculation Type",
+       SalesLine."Tax Group Code",FALSE,SalesLine."Line Amount" >= 0)
+  THEN BEGIN
+    VATAmountLine."VAT Amount" := VATAmountLine."VAT Amount" + TotalVATAmount;
+    VATAmountLine."Amount Including VAT" := VATAmountLine."Amount Including VAT" + TotalVATAmount;
+    VATAmountLine."Calculated VAT Amount" := VATAmountLine."Calculated VAT Amount" + TotalVATAmount;
+    VATAmountLine.MODIFY;
+  END;
+
+CalcInvDiscToInvoice()
+GetSalesHeader;
+OldInvDiscAmtToInv := "Inv. Disc. Amount to Invoice";
+IF Quantity = 0 THEN
+  VALIDATE("Inv. Disc. Amount to Invoice",0)
+ELSE
+  VALIDATE(
+    "Inv. Disc. Amount to Invoice",
+    ROUND(
+      "Inv. Discount Amount" * "Qty. to Invoice" / Quantity,
+      Currency."Amount Rounding Precision"));
+
+IF OldInvDiscAmtToInv <> "Inv. Disc. Amount to Invoice" THEN BEGIN
+  IF SalesHeader.Status = SalesHeader.Status::Released THEN
+    "Amount Including VAT" := "Amount Including VAT" - "VAT Difference";
+  "VAT Difference" := 0;
+END;
+
+UpdateWithWarehouseShip()
+IF Type = Type::Item THEN
+  CASE TRUE OF
+    ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order]) AND (Quantity >= 0):
+      IF Location.RequireShipment("Location Code") THEN
+        VALIDATE("Qty. to Ship",0)
+      ELSE
+        VALIDATE("Qty. to Ship","Outstanding Quantity");
+    ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order]) AND (Quantity < 0):
+      IF Location.RequireReceive("Location Code") THEN
+        VALIDATE("Qty. to Ship",0)
+      ELSE
+        VALIDATE("Qty. to Ship","Outstanding Quantity");
+    ("Document Type" = "Document Type"::"Return Order") AND (Quantity >= 0):
+      IF Location.RequireReceive("Location Code") THEN
+        VALIDATE("Return Qty. to Receive",0)
+      ELSE
+        VALIDATE("Return Qty. to Receive","Outstanding Quantity");
+    ("Document Type" = "Document Type"::"Return Order") AND (Quantity < 0):
+      IF Location.RequireShipment("Location Code") THEN
+        VALIDATE("Return Qty. to Receive",0)
+      ELSE
+        VALIDATE("Return Qty. to Receive","Outstanding Quantity");
+  END;
+
+CheckWarehouse()
+GetLocation("Location Code");
+IF "Location Code" = '' THEN BEGIN
+  WhseSetup.GET;
+  Location2."Require Shipment" := WhseSetup."Require Shipment";
+  Location2."Require Pick" := WhseSetup."Require Pick";
+  Location2."Require Receive" := WhseSetup."Require Receive";
+  Location2."Require Put-away" := WhseSetup."Require Put-away";
+END ELSE
+  Location2 := Location;
+
+DialogText := Text035;
+IF ("Document Type" IN ["Document Type"::Order,"Document Type"::"Return Order"]) AND
+   Location2."Directed Put-away and Pick"
+THEN BEGIN
+  ShowDialog := ShowDialog::Error;
+  IF (("Document Type" = "Document Type"::Order) AND (Quantity >= 0)) OR
+     (("Document Type" = "Document Type"::"Return Order") AND (Quantity < 0))
+  THEN
+    DialogText :=
+      DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Shipment"))
+  ELSE
+    DialogText :=
+      DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Receive"));
+END ELSE BEGIN
+  IF (("Document Type" = "Document Type"::Order) AND (Quantity >= 0) AND
+      (Location2."Require Shipment" OR Location2."Require Pick")) OR
+     (("Document Type" = "Document Type"::"Return Order") AND (Quantity < 0) AND
+      (Location2."Require Shipment" OR Location2."Require Pick"))
+  THEN BEGIN
+    IF WhseValidateSourceLine.WhseLinesExist(
+         DATABASE::"Sales Line",
+         "Document Type",
+         "Document No.",
+         "Line No.",
+         0,
+         Quantity)
+    THEN
+      ShowDialog := ShowDialog::Error
+    ELSE
+      IF Location2."Require Shipment" THEN
+        ShowDialog := ShowDialog::Message;
+    IF Location2."Require Shipment" THEN
+      DialogText :=
+        DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Shipment"))
+    ELSE BEGIN
+      DialogText := Text036;
+      DialogText :=
+        DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Pick"));
+    END;
+  END;
+
+  IF (("Document Type" = "Document Type"::Order) AND (Quantity < 0) AND
+      (Location2."Require Receive" OR Location2."Require Put-away")) OR
+     (("Document Type" = "Document Type"::"Return Order") AND (Quantity >= 0) AND
+      (Location2."Require Receive" OR Location2."Require Put-away"))
+  THEN BEGIN
+    IF WhseValidateSourceLine.WhseLinesExist(
+         DATABASE::"Sales Line",
+         "Document Type",
+         "Document No.",
+         "Line No.",
+         0,
+         Quantity)
+    THEN
+      ShowDialog := ShowDialog::Error
+    ELSE
+      IF Location2."Require Receive" THEN
+        ShowDialog := ShowDialog::Message;
+    IF Location2."Require Receive" THEN
+      DialogText :=
+        DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Receive"))
+    ELSE BEGIN
+      DialogText := Text036;
+      DialogText :=
+        DialogText + Location2.GetRequirementText(Location2.FIELDNO("Require Put-away"));
+    END;
+  END;
+END;
+
+CASE ShowDialog OF
+  ShowDialog::Message:
+    MESSAGE(Text016 + Text017,DialogText,FIELDCAPTION("Line No."),"Line No.");
+  ShowDialog::Error:
+    ERROR(Text016,DialogText,FIELDCAPTION("Line No."),"Line No.");
+END;
+
+UpdateDates()
+IF CurrFieldNo = 0 THEN BEGIN
+  PlannedShipmentDateCalculated := FALSE;
+  PlannedDeliveryDateCalculated := FALSE;
+END;
+IF "Promised Delivery Date" <> 0D THEN
+  VALIDATE("Promised Delivery Date")
+ELSE
+  IF "Requested Delivery Date" <> 0D THEN
+    VALIDATE("Requested Delivery Date")
+  ELSE BEGIN
+    VALIDATE("Shipment Date");
+    VALIDATE("Planned Delivery Date");
+  END;
+
+GetItemTranslation()
+GetSalesHeader;
+IF ItemTranslation.GET("No.","Variant Code",SalesHeader."Language Code") THEN BEGIN
+  Description := ItemTranslation.Description;
+  "Description 2" := ItemTranslation."Description 2";
+END;
+
+GetLocation(LocationCode : Code[10])
+IF LocationCode = '' THEN
+  CLEAR(Location)
+ELSE
+  IF Location.Code <> LocationCode THEN
+    Location.GET(LocationCode);
+
+PriceExists() : Boolean
+IF "Document No." <> '' THEN BEGIN
+  GetSalesHeader;
+  EXIT(PriceCalcMgt.SalesLinePriceExists(SalesHeader,Rec,TRUE));
+END ELSE
+  EXIT(FALSE);
+
+LineDiscExists() : Boolean
+IF "Document No." <> '' THEN BEGIN
+  GetSalesHeader;
+  EXIT(PriceCalcMgt.SalesLineLineDiscExists(SalesHeader,Rec,TRUE));
+END ELSE
+  EXIT(FALSE);
+
+RowID1() : Text[250]
+EXIT(ItemTrackingMgt.ComposeRowID(DATABASE::"Sales Line","Document Type",
+    "Document No.",'',0,"Line No."));
+
+GetItemCrossRef(CalledByFieldNo : Integer)
+IF CalledByFieldNo <> 0 THEN
+  DistIntegration.EnterSalesItemCrossRef(Rec);
+
+GetDefaultBin()
+IF Type <> Type::Item THEN
+  EXIT;
+
+IF (Quantity * xRec.Quantity > 0) AND
+   ("No." = xRec."No.") AND
+   ("Location Code" = xRec."Location Code") AND
+   ("Variant Code" = xRec."Variant Code")
+THEN
+  EXIT;
+
+"Bin Code" := '';
+IF "Drop Shipment" THEN
+  EXIT;
+
+IF ("Location Code" <> '') AND ("No." <> '') THEN BEGIN
+  GetLocation("Location Code");
+  IF Location."Bin Mandatory" AND NOT Location."Directed Put-away and Pick" THEN
+    WMSManagement.GetDefaultBin("No.","Variant Code","Location Code","Bin Code");
+END;
+
+CheckAssocPurchOrder(TheFieldCaption : Text[250])
+IF TheFieldCaption = '' THEN BEGIN // If sales line is being deleted
+  IF "Purch. Order Line No." <> 0 THEN
+    ERROR(
+      Text000,
+      "Purchase Order No.",
+      "Purch. Order Line No.");
+  IF "Special Order Purch. Line No." <> 0 THEN
+    ERROR(
+      Text000,
+      "Special Order Purchase No.",
+      "Special Order Purch. Line No.");
+END;
+IF "Purch. Order Line No." <> 0 THEN
+  ERROR(
+    Text002,
+    TheFieldCaption,
+    "Purchase Order No.",
+    "Purch. Order Line No.");
+IF "Special Order Purch. Line No." <> 0 THEN
+  ERROR(
+    Text002,
+    TheFieldCaption,
+    "Special Order Purchase No.",
+    "Special Order Purch. Line No.");
+
+CrossReferenceNoLookUp()
+CASE Type OF
+  Type::Item:
+    BEGIN
+      GetSalesHeader;
+      ItemCrossReference.RESET;
+      ItemCrossReference.SETCURRENTKEY("Cross-Reference Type","Cross-Reference Type No.");
+      ItemCrossReference.SETFILTER(
+        "Cross-Reference Type",'%1|%2',
+        ItemCrossReference."Cross-Reference Type"::Customer,
+        ItemCrossReference."Cross-Reference Type"::" ");
+      ItemCrossReference.SETFILTER("Cross-Reference Type No.",'%1|%2',SalesHeader."Sell-to Customer No.",'');
+      //TOPAS-190608 ST, Filterung der Referenzen auf die Artikelnr.*********************************
+      ItemCrossReference.SETFILTER(ItemCrossReference."Item No.","No.");
+      //TOPAS Ende **********************************************************************************
+      IF FORM.RUNMODAL(FORM::"Cross Reference List",ItemCrossReference) = ACTION::LookupOK THEN BEGIN
+        VALIDATE("Cross-Reference No.",ItemCrossReference."Cross-Reference No.");
+        //TOPAS 19.09.2011-ST Deaktivierung Übernahme VK-Preis aus Tabelle VK-Preise
+        //PriceCalcMgt.FindSalesLineLineDisc(SalesHeader,Rec);
+        //PriceCalcMgt.FindSalesLinePrice(SalesHeader,Rec,FIELDNO("Cross-Reference No."));
+        //VALIDATE("Unit Price");
+      END;
+    END;
+  Type::"G/L Account",Type::Resource:
+    BEGIN
+      GetSalesHeader;
+      SalesHeader.TESTFIELD("Sell-to IC Partner Code");
+      IF FORM.RUNMODAL(FORM::"IC G/L Account List") = ACTION::LookupOK THEN
+        "Cross-Reference No." := ICGLAcc."No.";
+    END;
+END;
+
+CheckServItemCreation()
+IF CurrFieldNo = 0 THEN
+  EXIT;
+IF Type <> Type::Item THEN
+  EXIT;
+Item.GET("No.");
+IF Item."Service Item Group" = '' THEN
+  EXIT;
+IF ServItemGroup.GET(Item."Service Item Group") THEN
+  IF ServItemGroup."Create Service Item" THEN
+    IF "Qty. to Ship (Base)" <> ROUND("Qty. to Ship (Base)",1) THEN
+      ERROR(
+        Text034,
+        FIELDCAPTION("Qty. to Ship (Base)"),
+        ServItemGroup.FIELDCAPTION("Create Service Item"));
+
+ItemExists(ItemNo : Code[20]) : Boolean
+IF Type = Type::Item THEN
+  IF NOT Item2.GET(ItemNo) THEN
+    EXIT(FALSE);
+EXIT(TRUE);
+
+IsShipment() : Boolean
+EXIT(SignedXX("Quantity (Base)") < 0);
+
+GetAbsMin(QtyToHandle : Decimal;QtyHandled : Decimal) : Decimal
+IF ABS(QtyHandled) < ABS(QtyToHandle) THEN
+  EXIT(QtyHandled)
+ELSE
+  EXIT(QtyToHandle);
+
+SetHideValidationDialog(NewHideValidationDialog : Boolean)
+HideValidationDialog := NewHideValidationDialog;
+
+CheckApplFromItemLedgEntry(VAR ItemLedgEntry : Record "Item Ledger Entry")
+IF "Appl.-from Item Entry" = 0 THEN
+  EXIT;
+
+TESTFIELD(Type,Type::Item);
+TESTFIELD(Quantity);
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+  IF Quantity < 0 THEN
+    FIELDERROR(Quantity,Text029);
+END ELSE BEGIN
+  IF Quantity > 0 THEN
+    FIELDERROR(Quantity,Text030);
+END;
+
+ItemLedgEntry.GET("Appl.-from Item Entry");
+ItemLedgEntry.TESTFIELD(Positive,FALSE);
+ItemLedgEntry.TESTFIELD("Item No.","No.");
+ItemLedgEntry.TESTFIELD("Variant Code","Variant Code");
+IF (ItemLedgEntry."Lot No." <> '') OR (ItemLedgEntry."Serial No." <> '') THEN
+  ERROR(Text040,ItemTrackingLines.CAPTION,FIELDCAPTION("Appl.-from Item Entry"));
+
+CASE TRUE OF
+  CurrFieldNo = Rec.FIELDNO(Quantity):
+    QtyBase := "Quantity (Base)";
+  "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]:
+    QtyBase := "Return Qty. to Receive (Base)"
+  ELSE
+    QtyBase := "Qty. to Ship (Base)";
+END;
+
+IF ABS(QtyBase) > -ItemLedgEntry.Quantity THEN
+  ERROR(
+    Text046,
+    -ItemLedgEntry.Quantity,ItemLedgEntry.FIELDCAPTION("Document No."),
+    ItemLedgEntry."Document No.");
+
+IF ABS(QtyBase) > -ItemLedgEntry."Shipped Qty. Not Returned" THEN BEGIN
+  IF "Qty. per Unit of Measure" = 0 THEN BEGIN
+    QtyNotReturned := ItemLedgEntry."Shipped Qty. Not Returned";
+    QtyReturned := ItemLedgEntry.Quantity - ItemLedgEntry."Shipped Qty. Not Returned";
+  END ELSE BEGIN
+    QtyNotReturned :=
+      ROUND(ItemLedgEntry."Shipped Qty. Not Returned" / "Qty. per Unit of Measure",0.00001);
+    QtyReturned :=
+      ROUND(
+        (ItemLedgEntry.Quantity - ItemLedgEntry."Shipped Qty. Not Returned") /
+        "Qty. per Unit of Measure",0.00001);
+  END;
+  ERROR(
+    Text039,
+    -QtyReturned,ItemLedgEntry.FIELDCAPTION("Document No."),
+    ItemLedgEntry."Document No.",-QtyNotReturned);
+END;
+
+CalcPrepaymentToDeduct()
+IF Quantity <> 0 THEN BEGIN
+  GetSalesHeader;
+  "Prepmt Amt to Deduct" :=
+    ROUND(
+      "Prepmt. Amt. Inv." * "Qty. to Invoice" / Quantity,
+      Currency."Amount Rounding Precision");
+END ELSE
+  "Prepmt Amt to Deduct" := 0
+
+SetHasBeenShown()
+HasBeenShown := TRUE;
+
+TestJobPlanningLine()
+IF "Job Contract Entry No." = 0 THEN
+  EXIT;
+JobPostLine.TestSalesLine(Rec);
+
+BlockDynamicTracking(SetBlock : Boolean)
+TrackingBlocked := SetBlock;
+ReserveSalesLine.Block(SetBlock);
+
+UpdateCurrencyFactor()
+GetSalesHeader;
+IF Einkaufswährungscode <> '' THEN BEGIN
+  IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::"Blanket Order"]) AND
+     (SalesHeader."Posting Date" = 0D)
+  THEN
+    CurrencyDate := WORKDATE
+  ELSE
+    CurrencyDate := SalesHeader."Posting Date";
+  // TOPAS, CTM ????
+  Einkaufswährungsfaktor := CurrExchRate.ExchangeRate(CurrencyDate,Einkaufswährungscode);
+END ELSE
+  Einkaufswährungsfaktor := 1;
+
+**Topas**()
+
+AktualisiereKalkulation()
+// -008.4
+IF Type = Type::Item THEN
+BEGIN
+  GetItem;
+  LandedCostPreis := "DC-Preis (EKW)"  + "DC-Preis (EKW)"*"Handlingskosten %"/100 + "DC-Preis (EKW)"* Item."Zollsatz %"/100;
+  IF "VK-Preis (EKW)" = 0 THEN
+   "Profit %" := 0
+  ELSE
+    "Profit %" := (1 - LandedCostPreis / "VK-Preis (EKW)") * 100;
+  {
+  IF "Profit %" < Item."Mindestdeckungsbeitrag %" THEN
+    MESSAGE ('Mindestdeckungsbeitrag % %1 bei Artikel %2 ist mit %3 unterschritten.',
+      Artikel."Mindestdeckungsbeitrag %", Artikel."Nr.", "DB %");
+  }
+END;
+// +008.4
+
+PrüfeRahmenAuftrag()
+Rahmenrestmenge := 0;
+
+IF ("Blanket Order No." <> '') AND ("Blanket Order Line No." <> 0)  THEN
+  BEGIN
+    Vkz.RESET;
+    Vkz.SETFILTER(Vkz."Document Type",'%1',Vkz."Document Type"::Order);
+    Vkz.SETFILTER(Vkz.Type,'%1',Vkz.Type::Item);
+    Vkz.SETFILTER(Vkz."Location Code",'%1','ZENT');
+    Vkz.SETFILTER(Vkz."No.",'%1',"No.");
+    Vkz.SETFILTER(Vkz."Blanket Order No.",'%1',"Blanket Order No.");
+    Vkz.SETFILTER(Vkz."Blanket Order Line No.",'%1',"Blanket Order Line No.");
+    IF Vkz.FINDFIRST THEN
+      BEGIN
+        REPEAT
+          IF ("Document No." = Vkz."Document No.") AND ("Line No." = Vkz."Line No.") THEN
+            BEGIN
+            END
+          ELSE
+            Rahmenrestmenge := Rahmenrestmenge + Vkz."Outstanding Quantity";
+        UNTIL Vkz.NEXT = 0;
+        Rahmenrestmenge := Rahmenrestmenge + (Quantity - "Quantity Shipped");
+      END;
+
+    Rahmenauftrag.RESET;
+    Rahmenauftrag.SETFILTER(Rahmenauftrag."Document Type",'%1',Rahmenauftrag."Document Type"::"Blanket Order");
+    Rahmenauftrag.SETFILTER(Rahmenauftrag."Document No.","Blanket Order No.");
+    Rahmenauftrag.SETFILTER(Rahmenauftrag."Line No.",'%1',"Blanket Order Line No.");
+    Rahmenauftrag.SETFILTER(Rahmenauftrag."No.",'%1',"No.");
+    IF Rahmenauftrag.FINDFIRST THEN
+      BEGIN
+        Rahmenauftrag.CALCFIELDS(Rahmenauftrag."Menge aus Rahmen im Auftrag");
+        IF Rahmenauftrag."Outstanding Quantity" < Rahmenrestmenge THEN
+          MESSAGE(Text101,"Blanket Order No.","Blanket Order Line No.",Rahmenrestmenge - Rahmenauftrag."Outstanding Quantity");
+        IF Einkaufswährungsfaktor <> Rahmenauftrag.Einkaufswährungsfaktor THEN
+          VALIDATE(Einkaufswährungsfaktor,Rahmenauftrag.Einkaufswährungsfaktor);
+      END;
+  END;
+
+Gen_Service_DC("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Runden : Boolean;Währung : Code[20]) : Decimal
+//***************************************************************************************************
+//              TOPAS 26.07.2011-ST  Generiert den DC für den jeweiligen Champ Artikel
+//              TOPAS 10.01.2014-ST  Nun auch für ACTS
+//***************************************************************************************************
+
+IF Runden = TRUE THEN
+  rundgs_faktor := 1
+ELSE
+  rundgs_faktor := 0.01;
+
+Artikel.GET("SUP Artikelnr");
+IF (Artikel."Software Upgrade Protection" = TRUE) THEN
+  BEGIN
+
+    IF Artikel.Artikelgruppe = 'ACHAT' THEN
+      spezial_discount := 1 / 0.8 * 0.58 //für ACHAT > = 1 / * 0,8 (Zurückrechnung Champs DC auf 100% MSRP) *0,58  EK ACHAT
+    ELSE
+      spezial_discount := 1;
+
+    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
+    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+      ERROR(Text126);
+
+    Opt_laufzeit.RESET;
+    Opt_laufzeit.SETFILTER("Tabellen ID",'%1',50024);
+    Opt_laufzeit.SETFILTER("Feld ID",'%1',44);
+    Opt_laufzeit.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+    IF Opt_laufzeit.FINDFIRST THEN
+      EVALUATE(v_laufzeit,COPYSTR(Opt_laufzeit.Code,1,STRPOS(Opt_laufzeit.Code,'M')-1))
+    ELSE
+      ERROR(Text124,"SUP Artikelnr","Basis Artikelnr");
+
+    Champs.RESET;
+    Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACHAT') THEN
+      Champs.SETFILTER(Art,'%1',Champs.Art :: ACTS)
+    ELSE
+      Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
+      IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
+        "SUP Artikelnr" := 'ACTS-SUPP-24X7/SO#01';
+      IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
+        "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
+    Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
+    Champs.SETFILTER("Artikelnr.",'%1',"Basis Artikelnr");
+    Champs.SETFILTER(Währungscode,'%1',Währung);
+    IF Champs.FINDFIRST THEN
+      BEGIN
+
+        IF Champs."Update letzte Preisliste" = FALSE THEN
+          MESSAGE(Text120,"Basis Artikelnr",Champs.Preisliste,Champs."Letzte Aktualisierung");
+
+        v_service_laufzeit := Laufzeit DIV 12;
+        CASE v_service_laufzeit OF
+          1 : champs_discount := 1;
+          2 : champs_discount := 0.95; // -5%
+          3 : champs_discount := 0.88; // -12%
+          4 : champs_discount := 0.84; // -16%
+          5..100 : champs_discount := 0.8; // -20%
+        END;
+
+        IF (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')  THEN
+          EXIT((ROUND((((Champs.MSRP*0.72)*Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))*(champs_discount),rundgs_faktor))
+          *spezial_discount)
+        ELSE
+          IF (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS') THEN
+            EXIT((ROUND(((Champs.MSRP*0.8)*Champs."Laufzeit in Jahren")*(Laufzeit/v_laufzeit),rundgs_faktor))
+            *spezial_discount);
+
+      END
+    ELSE
+      BEGIN
+        IF ("SUP Artikelnr" = 'SW-UPGRADE-ACS-1Y') OR ("SUP Artikelnr" = 'EXTD-HW-WARR/YR')
+        OR ("SUP Artikelnr" = 'ENH-SUPP-PROG/YR') OR ("SUP Artikelnr" = 'ENH-SUPP-PROG/3 YR') THEN
+          BEGIN
+            Opt_prozent.RESET;
+            Opt_prozent.SETFILTER("Tabellen ID",'%1',50024);
+            Opt_prozent.SETFILTER("Feld ID",'%1',5);
+            Opt_prozent.SETFILTER("Nr.","SUP Artikelnr");
+            IF Opt_prozent.FINDFIRST THEN
+              BEGIN
+                Artikel.GET("Basis Artikelnr");
+                EkPreise.RESET;
+                EkPreise.SETFILTER("Item No.",'%1',"Basis Artikelnr");
+                EkPreise.SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                EkPreise.SETFILTER("Currency Code",'%1','');
+                IF EkPreise.FINDLAST THEN
+                  EXIT(ROUND((EkPreise."Direct Unit Cost" * Opt_prozent.Prozentsatz/100) * (Laufzeit/v_laufzeit),rundgs_faktor))
+              END;
+          END
+        ELSE
+          ERROR(Text125,"Basis Artikelnr","SUP Artikelnr");
+      END;
+  END;
+
+Gen_Service_VK("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Belegnr : Code[20];Zeilennr : Integer;Fremder
+//***************************************************************************************************
+//  TOPAS 26.07.2011-ST  Generiert einen VK-Preis für einen Champ Artikel, wenn sich die zugewiesene
+//             Position auf eine gültige Auftrags- oder Lieferscheinposition bezieht
+//***************************************************************************************************
+
+achat_marge := 1;
+achat_discount := 1;
+
+IF Runden THEN
+  rundgs_faktor := 1
+ELSE
+  rundgs_faktor := 0.01;
+
+
+Artikel.GET("SUP Artikelnr");
+IF (Artikel."Software Upgrade Protection" = TRUE) THEN
+  BEGIN
+
+    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
+    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+      ERROR(Text126);
+
+    IF Artikel.Artikelgruppe = 'ACTS' THEN
+      ACTS := TRUE
+    ELSE
+      ACTS := FALSE;
+
+    IF Artikel.Artikelgruppe = 'ACHAT' THEN
+      ACHAT := TRUE
+    ELSE
+      ACHAT := FALSE;
+
+
+    //***************************************************************************************************
+    //                Angabe der Positionsnr. bezieht sich auf eine Auftrags Position
+    //***************************************************************************************************
+
+    IF (Zeilennr = 0) AND (Belegnr = '') THEN
+      BEGIN
+        MESSAGE(Text121);
+        EXIT(0);
+      END;
+
+    IF Fremderworben = FALSE THEN
+      BEGIN
+        AktBelegZeile.RESET;
+        AktBelegZeile.SETFILTER("Document No.",'%1',Belegnr);
+        AktBelegZeile.SETFILTER("Line No.",'%1',Zeilennr);
+        AktBelegZeile.SETFILTER(Type,'%1',AktBelegZeile.Type :: Item);
+        IF AktBelegZeile.FINDFIRST THEN
+          BEGIN
+            Artikel.RESET;
+            Artikel.SETFILTER("No.",'%1',AktBelegZeile."No.");
+            IF Artikel.FINDFIRST THEN
+              BEGIN
+                BesterVkPreis := FindMSRP(AktBelegZeile."No.",WORKDATE,AktBelegZeile."Currency Code",
+                                          AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+                IF BesterVkPreis <> 0 THEN
+                  BEGIN
+                    Opt_laufzeit.RESET;
+                    Opt_laufzeit.SETFILTER("Tabellen ID",'%1',50024);
+                    Opt_laufzeit.SETFILTER("Feld ID",'%1',44);
+                    Opt_laufzeit.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                    IF Opt_laufzeit.FINDFIRST THEN
+                      BEGIN
+                        EVALUATE(v_laufzeit,COPYSTR(Opt_laufzeit.Code,1,STRPOS(Opt_laufzeit.Code,'M')-1));
+
+                        IF ACTS = FALSE THEN
+                          BEGIN
+                            IF ACHAT = FALSE THEN
+                              BEGIN
+                                //CHAMPS
+                                Opt_proz.RESET;
+                                Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                                Opt_proz.SETFILTER("Feld ID",'%1',5);
+                                Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                                IF Opt_proz.FINDFIRST THEN
+                                  BEGIN
+                                    v_prozentsatz := Opt_proz.Prozentsatz;
+                                    IF Basisgerät = TRUE THEN
+                                      basissatz := Opt_proz.Werte
+                                    ELSE
+                                      basissatz := 0;
+                                  END
+                                ELSE
+                                  ERROR(Text113,"SUP Artikelnr",AktBelegZeile."No.");
+                              END
+                            ELSE
+                              //ACHAT
+                              BEGIN
+                                achat_marge := (100 - Kalk_Prozentsatz) / 100;
+                                achat_discount := 0.58;
+                                v_prozentsatz := 100;
+                              END;
+                          END
+                        ELSE
+                          //ACTS
+                          BEGIN
+                            v_prozentsatz := 100 - Kalk_Prozentsatz
+                          END;
+
+                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
+                            ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+                      END
+                    ELSE
+                      ERROR(Text123,"SUP Artikelnr",AktBelegZeile."No.");
+                  END
+                ELSE
+                  ERROR(Text119,AktBelegZeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+              END;
+          END
+
+        //***************************************************************************************************
+        //         Angabe der Positionsnr. bezieht sich auf eine fakturierte Lieferschein Position
+        //***************************************************************************************************
+        ELSE
+          BEGIN
+            Vkliefzeile.RESET;
+            Vkliefzeile.SETFILTER("Document No.",'%1',Belegnr);
+            Vkliefzeile.SETFILTER("Line No.",'%1',Zeilennr);
+            Vkliefzeile.SETFILTER(Quantity,'>%1',0);
+            Vkliefzeile.SETFILTER(Type,'%1',Vkliefzeile.Type :: Item);
+            IF Vkliefzeile.FINDFIRST THEN
+              BEGIN
+                Artikel.RESET;
+                Artikel.SETFILTER("No.",'%1',Vkliefzeile."No.");
+                IF Artikel.FINDFIRST THEN
+                  BEGIN
+                    BesterVkPreis := FindMSRP(Vkliefzeile."No.",WORKDATE,Vkliefzeile."Currency Code",
+                                              Vkliefzeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+                    IF BesterVkPreis <> 0 THEN
+                      BEGIN
+                        Opt_laufzeit.RESET;
+                        Opt_laufzeit.SETFILTER("Tabellen ID",'%1',50024);
+                        Opt_laufzeit.SETFILTER("Feld ID",'%1',44);
+                        Opt_laufzeit.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                        IF Opt_laufzeit.FINDFIRST THEN
+                          BEGIN
+                            EVALUATE(v_laufzeit,COPYSTR(Opt_laufzeit.Code,1,STRPOS(Opt_laufzeit.Code,'M')-1));
+
+                            IF ACTS = FALSE THEN
+                              BEGIN
+                                IF ACHAT = FALSE THEN
+                                  BEGIN
+                                    //CHAMPS
+                                    Opt_proz.RESET;
+                                    Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                                    Opt_proz.SETFILTER("Feld ID",'%1',5);
+                                    Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                                    IF Opt_proz.FINDFIRST THEN
+                                      BEGIN
+                                        v_prozentsatz := Opt_proz.Prozentsatz;
+                                        IF Basisgerät = TRUE THEN
+                                          basissatz := Opt_proz.Werte
+                                        ELSE
+                                          basissatz := 0;
+                                      END
+                                    ELSE
+                                      ERROR(Text113,"SUP Artikelnr",Vkliefzeile."No.");
+                                  END
+                                ELSE
+                                  //ACHAT
+                                  BEGIN
+                                    achat_marge := (100 - Kalk_Prozentsatz) / 100;
+                                    achat_discount := 0.58;
+                                    v_prozentsatz := 100;
+                                  END;
+                              END
+                            ELSE
+                              //ACTS
+                              BEGIN
+                                v_prozentsatz := 100-Kalk_Prozentsatz;
+                              END;
+                            EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
+                                ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+                          END
+                        ELSE
+                          ERROR(Text123,"SUP Artikelnr",Vkliefzeile."No.");
+                      END
+                    ELSE
+                      ERROR(Text119,Vkliefzeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+                  END;
+              END;
+          END;
+      END
+    ELSE
+      BEGIN
+
+        //***************************************************************************************************
+        //                 Angabe bezieht sich auf eine anderweitig bezogene Position
+        //***************************************************************************************************
+
+        AktBelegZeile.RESET;
+        AktBelegZeile.SETFILTER("Document No.",'%1',Belegnr);
+        AktBelegZeile.SETFILTER("Line No.",'%1',Zeilennr);
+        AktBelegZeile.SETFILTER(Type,'%1',AktBelegZeile.Type :: Item);
+        IF AktBelegZeile.FINDFIRST THEN
+          BEGIN
+           Artikel.RESET;
+           Artikel.SETFILTER("No.",'%1',"Basis Artikelnr");
+           IF Artikel.FINDFIRST THEN
+             BEGIN
+               BesterVkPreis := FindMSRP("Basis Artikelnr",WORKDATE,AktBelegZeile."Currency Code",
+                                         AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+               IF BesterVkPreis <> 0 THEN
+                 BEGIN
+                   Opt_laufzeit.RESET;
+                   Opt_laufzeit.SETFILTER("Tabellen ID",'%1',50024);
+                   Opt_laufzeit.SETFILTER("Feld ID",'%1',44);
+                   Opt_laufzeit.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                   IF Opt_laufzeit.FINDFIRST THEN
+                     BEGIN
+                       EVALUATE(v_laufzeit,COPYSTR(Opt_laufzeit.Code,1,STRPOS(Opt_laufzeit.Code,'M')-1));
+
+                       IF ACTS = FALSE THEN
+                         BEGIN
+                           IF ACHAT = FALSE THEN
+                             BEGIN
+                               Opt_proz.RESET;
+                               Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                               Opt_proz.SETFILTER("Feld ID",'%1',5);
+                               Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                               IF Opt_proz.FINDFIRST THEN
+                                 BEGIN
+                                   v_prozentsatz := Opt_proz.Prozentsatz;
+                                   IF Basisgerät = TRUE THEN
+                                     basissatz := Opt_proz.Werte
+                                   ELSE
+                                     basissatz := 0;
+                                 END
+                               ELSE
+                                 ERROR(Text113,"SUP Artikelnr","Basis Artikelnr");
+                             END
+                           ELSE
+                             //ACHAT
+                             BEGIN
+                               achat_marge := (100 - Kalk_Prozentsatz) / 100;
+                               achat_discount := 0.58;
+                               v_prozentsatz := 100;
+                             END;
+                         END
+                       ELSE
+                         BEGIN
+                           v_prozentsatz := 100-Kalk_Prozentsatz;
+                         END;
+                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
+                            ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+                     END
+                   ELSE
+                     ERROR(Text123,"SUP Artikelnr","Basis Artikelnr");
+                 END
+               ELSE
+                 ERROR(Text119,"Basis Artikelnr",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+             END;
+          END;
+      END;
+
+  END;
+
+FindMSRP(Artikelnr : Code[20];Startdatum : Date;Wäh : Code[10];Stkcode : Code[10];SUP_Artikelnr : Code[20];ACTS : Boolean) : Decimal
+//***************************************************************************************************
+//        TOPAS 01.03.2011 ST Findet den aktuellen VK-Preis des Gerätes, sprich MSRP-Preis
+//        TOPAS 09.01.2014 ST Für ACTS den entsprechenden ACTS MSRP
+//***************************************************************************************************
+
+IF Artikelnr = '' THEN EXIT;
+
+Artikel.GET(SUP_Artikelnr);
+IF Artikel.Artikelgruppe = 'ACHAT' THEN
+  ACHAT := TRUE
+ELSE
+  ACHAT := FALSE;
+
+IF (ACTS = FALSE) AND (ACHAT = FALSE) THEN
+  BEGIN
+    WITH FindSalesPrice DO BEGIN
+      IF (Artikelnr = 'M1KB-CH') THEN
+        BEGIN
+          IF Artikelnr = 'M1KB-CH' THEN
+            SETRANGE("Item No.",'M1KB');  //vorher M1KB-MSBG1
+        END
+      ELSE
+        SETRANGE("Item No.",Artikelnr);
+      SETFILTER("Ending Date",'%1|>=%2',0D,Startdatum);
+      SETFILTER("Currency Code",'%1',Wäh);
+      IF Stkcode <> '' THEN
+        SETFILTER("Unit of Measure Code",'%1|%2',Stkcode,'');
+      SETRANGE("Starting Date",0D,Startdatum);
+      SETRANGE("Sales Type","Sales Type"::"All Customers");
+      SETRANGE("Sales Code");
+
+      IF FINDFIRST THEN
+        BEGIN
+          BestPrice := "Unit Price";
+          BestDate := "Starting Date";
+          REPEAT
+            //IF BestPrice > "Unit Price" THEN
+            //Nicht mehr der beste, sondern der aktuellste Preis gesucht
+            IF "Starting Date" > BestDate THEN
+              BEGIN
+                BestPrice := "Unit Price";
+                BestDate := "Starting Date";
+              END;
+          UNTIL NEXT = 0;
+        END;
+      EXIT(BestPrice);
+    END;
+  END;
+
+//***************************************************************************************************
+//                                         ACTS Berechnung
+//***************************************************************************************************
+
+IF (ACTS = TRUE) OR (ACHAT = TRUE) THEN
+  BEGIN
+    WITH FindMSRPPrice DO BEGIN
+      SETRANGE("Artikelnr.",Artikelnr);
+      IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
+        SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
+      IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
+        SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
+      SETRANGE("SUP Artikelnr.",SUP_Artikelnr);
+      SETRANGE(Währungscode,Wäh);
+      SETRANGE(Art,Art:: ACTS);
+      SETRANGE("Zuordnung obsolete",FALSE);
+
+      IF FINDFIRST THEN
+        BEGIN
+         IF "Update letzte Preisliste" = FALSE THEN
+           MESSAGE(Text120,FORMAT(Art),Artikelnr);
+           Artikel.GET(SUP_Artikelnr);
+           IF Artikel.Artikelgruppe = 'ACTS' THEN
+             EXIT(FindMSRPPrice.MSRP * FindMSRPPrice."Laufzeit in Jahren")
+           ELSE
+             IF Artikel.Artikelgruppe = 'ACHAT' THEN
+               EXIT(0.58 * ((FindMSRPPrice.MSRP * FindMSRPPrice."Laufzeit in Jahren")))
+             ELSE
+               ERROR(Text126);
+        END
+      ELSE
+        ERROR(Text127,Artikelnr);
+    END;
+  END;
+
+OpenCalculationTool()
+//***************************************************************************************************
+//        TOPAS 2011-03-01 ST Öffnet die Champ Kalkulation für den ausgewählten Champ Artikel
+//                  2013-10-21 ST Anpassung um Splicecom Lizenz Aufstellung
+//***************************************************************************************************
+
+TESTFIELD(Type,Type::Item);
+TESTFIELD("No.");
+TESTFIELD("Quantity (Base)");
+
+Artikel.GET("No.");
+IF (Artikel."Software Upgrade Protection" = TRUE) OR (Artikel."Manufacturer Code" = '82') THEN
+  BEGIN
+    IF Artikel."Manufacturer Code" = '82' THEN
+      BEGIN
+        OptCode.RESET;
+        OptCode.SETFILTER("Tabellen ID",'%1',50027);
+        OptCode.SETFILTER("Feld ID",'%1',5);
+        OptCode.SETFILTER(Code,'%1',"No.");
+        IF NOT OptCode.FINDFIRST THEN
+          ERROR(Text122,Artikel.FIELDCAPTION("Software Upgrade Protection"));
+      END;
+  END
+ELSE
+  ERROR(Text122,Artikel.FIELDCAPTION("Software Upgrade Protection"));
+
+CalcRelaDoc.RESET;
+IF Artikel."Manufacturer Code" = '82' THEN
+  CalcRelaDoc.SETFILTER(Art,'SPL-AU')
+ELSE
+  CalcRelaDoc.SETFILTER(Art,'SUP-AU');
+CalcRelaDoc.SETFILTER("Nr.",'%1',"Document No.");
+CalcRelaDoc.SETFILTER("Zeilennr.",'%1',"Line No.");
+IF CalcRelaDoc.FINDFIRST THEN;
+FORM.RUNMODAL(50023,CalcRelaDoc);
