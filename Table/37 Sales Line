@@ -1,4 +1,3 @@
-
 Documentation()
 TOPAS-080207: - Neue Felder 50000..50010
               - Programmierung in Quantity-OnValidate
@@ -63,7 +62,7 @@ IF "No." <> xRec."No." THEN
     IF NOT ArchVerkaufszeile.FINDFIRST THEN
       BEGIN
 
-        //TOPAS 07.09.2011-ST überprüft verbundene Kalkulationen und löscht diese ggf.
+        //überprüft verbundene Kalkulationen und löscht diese ggf.
         ChampKalk.RESET;
         ChampKalk.SETFILTER("Nr.",'%1',"Document No.");
         ChampKalk.SETFILTER("Zeilennr.",'%1',"Line No.");
@@ -76,7 +75,7 @@ IF "No." <> xRec."No." THEN
               END;
           END;
 
-        //TOPAS 22.12.2011-ST Position wird auf Vorhandensein in einer Kalkulation hin überprüft
+        //Position wird auf Vorhandensein in einer Kalkulation hin überprüft
         ChampKalk.RESET;
         ChampKalk.SETFILTER("Belegnr.",'%1',"Document No.");
         ChampKalk.SETFILTER("Belegzeilennr.",'%1',"Line No.");
@@ -1342,6 +1341,9 @@ Transport Method - OnValidate()
 Transport Method - OnLookup()
 
 Attached to Line No. - OnValidate()
+//TOPAS 2014-06-06 ST Verhindert den Zeiger auf sich selbst, sonst Client Absturz
+IF (Type = Type :: Item) AND (("Attached to Line No." = "Line No.") OR ("Line No." <> 0)) THEN
+  ERROR(Text106,FIELDCAPTION("Attached to Line No."),Type);
 
 Attached to Line No. - OnLookup()
 
