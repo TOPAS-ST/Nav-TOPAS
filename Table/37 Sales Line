@@ -1,3 +1,4 @@
+
 Documentation()
 TOPAS-080207: - Neue Felder 50000..50010
               - Programmierung in Quantity-OnValidate
@@ -4555,7 +4556,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
         v_service_laufzeit := Laufzeit DIV 12;
         CASE v_service_laufzeit OF
-          1 : champs_discount := 1;
+          0..1 : champs_discount := 1;
           2 : champs_discount := 0.95; // -5%
           3 : champs_discount := 0.88; // -12%
           4 : champs_discount := 0.84; // -16%
