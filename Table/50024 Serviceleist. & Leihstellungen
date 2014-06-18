@@ -1866,7 +1866,7 @@ IF Liefkopf.FINDLAST THEN
       UNTIL Liefzeile.NEXT = 0;
   END;
 
-CreateChampFromSalesHeader(VAR AUnr : Code[20];NichtDrucken : Boolean)
+CreateServiceFromSalesHeader(VAR AUnr : Code[20];NichtDrucken : Boolean)
 //***************************************************************************************************
 //            01.03.2011-ST  Das System holt sich nach Erstellung des Lieferscheins die
 //       entsprechenden Seriennr. aus den Artikelposten, wenn Wartung (CHAMPS) gebucht wurde
@@ -1992,12 +1992,12 @@ IF Vkliefkopf.FINDLAST THEN
                                        IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
                                          LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
 
-                                       LizenzTab."Service Artikelnr." := ChampArtikelnrErmitteln(HoleLiefZeile."No.",
-                                                                                               Vkliefzeile."No.");
-                                       LizenzTab."Service DC" := ChampPreiseNeuKalkulieren(HoleLiefZeile."No.",Vkliefzeile."No.",
-                                                                             CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
-                                       LizenzTab."Service MSRP" := ChampPreiseNeuKalkulieren(HoleLiefZeile."No.",Vkliefzeile."No.",
-                                                                             CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                       LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(HoleLiefZeile."No.",
+                                                                                                   Vkliefzeile."No.");
+                                       LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",Vkliefzeile."No.",
+                                                                 CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                       LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",
+                                       Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
                                        LizenzTab."Service Währungscode" := ek_Währung;
 
                                        //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -2029,7 +2029,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                                IF v_verlaengerung_start <> 0D THEN
                                                  BEGIN
-                                                   LizenzTab.Verlängerung := PrüfeChampsVerlängerung(LizenzTab."SUP Artikelnr.",
+                                                   LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                                    LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                                    LizenzTab."Seriennr.");
                                                    IF (LizenzTab.Verlängerung = FALSE) AND
@@ -2090,7 +2090,7 @@ IF Vkliefkopf.FINDLAST THEN
                                            MESSAGE(Text022,Vkliefzeile."No.",Vkliefzeile."Line No.");
                                          END;
 
-                                       LizenzTab."Gehört zu Lfd. Nr." := ChampZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
+                                       LizenzTab."Gehört zu Lfd. Nr." := ServiceZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
                                                                          LizenzTab."Wartungsvertragsnr.");
                                        LizenzTab.MODIFY;
                                        zudrucken := TRUE;
@@ -2172,11 +2172,13 @@ IF Vkliefkopf.FINDLAST THEN
                                 IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
                                   LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
 
-                                LizenzTab."Service Artikelnr." := ChampArtikelnrErmitteln(LizenzTab."Artikelnr.",Vkliefzeile."No.");
-                                LizenzTab."Service DC" := ChampPreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                                      CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
-                                LizenzTab."Service MSRP" := ChampPreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                                      CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(LizenzTab."Artikelnr.",
+                                Vkliefzeile."No.");
+
+                                LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
+                                                          CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
+                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
                                 //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -2208,7 +2210,7 @@ IF Vkliefkopf.FINDLAST THEN
                                         CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                         IF v_verlaengerung_start <> 0D THEN
                                           BEGIN
-                                            LizenzTab.Verlängerung := PrüfeChampsVerlängerung(LizenzTab."SUP Artikelnr.",
+                                            LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
                                             IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
@@ -2266,7 +2268,7 @@ IF Vkliefkopf.FINDLAST THEN
                                   BEGIN
                                     MESSAGE(Text022,Vkliefzeile."No.",Vkliefzeile."Line No.");
                                   END;
-                                LizenzTab."Gehört zu Lfd. Nr." := ChampZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
+                                LizenzTab."Gehört zu Lfd. Nr." := ServiceZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
                                                                   LizenzTab."Wartungsvertragsnr.");
                                 LizenzTab.MODIFY;
                                 zudrucken := TRUE;
@@ -2360,11 +2362,12 @@ IF Vkliefkopf.FINDLAST THEN
                                 IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
                                   LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
 
-                                LizenzTab."Service Artikelnr." := ChampArtikelnrErmitteln(LizenzTab."Artikelnr.",Vkliefzeile."No.");
-                                LizenzTab."Service DC" := ChampPreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                                      CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
-                                LizenzTab."Service MSRP" := ChampPreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                                      CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(LizenzTab."Artikelnr.",
+                                Vkliefzeile."No.");
+                                LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",
+                                                          Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
+                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
                                 //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -2397,7 +2400,7 @@ IF Vkliefkopf.FINDLAST THEN
                                         CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                         IF v_verlaengerung_start <> 0D THEN
                                           BEGIN
-                                            LizenzTab.Verlängerung := PrüfeChampsVerlängerung(LizenzTab."SUP Artikelnr.",
+                                            LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
                                             IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
@@ -2455,7 +2458,7 @@ IF Vkliefkopf.FINDLAST THEN
                                   BEGIN
                                     MESSAGE(Text022,Vkliefzeile."No.",Vkliefzeile."Line No.");
                                   END;
-                                LizenzTab."Gehört zu Lfd. Nr." := ChampZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
+                                LizenzTab."Gehört zu Lfd. Nr." := ServiceZugehörigkeitErmitteln(AUnr,LizenzTab."Lfd. Nr.",
                                                                   LizenzTab."Wartungsvertragsnr.");
                                 LizenzTab.MODIFY;
                                 zudrucken := TRUE;
@@ -2477,6 +2480,9 @@ IF Vkliefkopf.FINDLAST THEN
                          HoleTempLizenzTab.DELETEALL;
 
                     END;
+
+                  ZähleServiceVerlängerungen(LizenzTab."Wartungsvertragsnr.");
+
                UNTIL CHAMPZuordnungHolen.NEXT = 0;
            END;
       UNTIL Vkliefzeile.NEXT = 0;
@@ -2628,7 +2634,7 @@ ELSE
       EXIT(0D);
   END;
 
-PrüfeChampsVerlängerung("Service Artikelnr" : Code[20];Lieferscheinnr : Code[20];Lieferscheinzeilennr : Integer;Seriennr : Code[20]) : 
+PrüfeServiceVerlängerung("Service Artikelnr" : Code[20];Lieferscheinnr : Code[20];Lieferscheinzeilennr : Integer;Seriennr : Code[20]) :
 IF ("Service Artikelnr" = 'CHAMPS-RE_INSTATE#01') OR ("Service Artikelnr" = 'RE_INSTATEMENT_FEE') THEN EXIT(FALSE);
 
 Ermittle_Servicegruppe.RESET;
@@ -2668,6 +2674,40 @@ ELSE
 
 EXIT(FALSE);
 
+ZähleServiceVerlängerungen(wartungsnr : Code[20])
+IF wartungsnr = '' THEN
+  EXIT;
+
+Wartungsvertrag.RESET;
+Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
+Wartungsvertrag.SETFILTER(Status,'%1|%2|%3',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+                          Wartungsvertrag.Status :: ACHAT);
+IF Wartungsvertrag.FINDFIRST THEN
+  BEGIN
+    Wartungsvertrag.Verlängerungen := 0;
+    temp_service_artikelnr := '';
+    Servicepositionen.RESET;
+    Servicepositionen.SETRANGE(Art,Servicepositionen.Art :: Service);
+    Servicepositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+    //Servicepositionen.SETRANGE(Basisgerät,TRUE);
+    Servicepositionen.SETRANGE(Verlängerung,TRUE);
+    Servicepositionen.SETRANGE(Inaktiv,FALSE);
+    IF Servicepositionen.FINDFIRST THEN
+      BEGIN
+        REPEAT
+          IF Servicepositionen.Benutzername <> '' THEN
+            BEGIN
+              IF Servicepositionen."Ablaufdatum Serviceleistung" <> temp_ablaufdatum THEN
+                BEGIN
+                  Wartungsvertrag.Verlängerungen += 1;
+                  Wartungsvertrag.MODIFY;
+                END;
+            END;
+            temp_ablaufdatum := Servicepositionen."Ablaufdatum Serviceleistung";
+        UNTIL Servicepositionen.NEXT = 0;
+      END;
+  END;
+
 PrüfeWartungvorhanden("Service Artikelnr" : Code[20];Lieferscheinnr : Code[20];Lieferscheinzeilennr : Integer;Seriennr : Code[20];Debnr
 PrüfeLizenzTab.RESET;
 PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: Service);
@@ -2693,7 +2733,7 @@ IF DruckeWartung.FINDFIRST THEN
     REPORT.RUN(50177,FALSE,FALSE,DruckeWartung);
   END;
 
-OpenChampKalkulation(version : Integer)
+OpenServiceKalkulation(version : Integer)
 ChampRelaDoc.RESET;
 ChampRelaDoc.SETFILTER(Art,'SUP-AU');
 ChampRelaDoc.SETFILTER("Nr.",'%1',"Auftragsnr.");
@@ -2809,7 +2849,7 @@ IF Kalkulation.FINDFIRST THEN
       END;
   UNTIL Kalkulation.NEXT = 0;
 
-ChampZugehörigkeitErmitteln(Auftragsnr : Code[20];AktLfdNr : Code[20];Wartungsnr : Code[20]) : Code[20]
+ServiceZugehörigkeitErmitteln(Auftragsnr : Code[20];AktLfdNr : Code[20];Wartungsnr : Code[20]) : Code[20]
 IF Wartungsnr = '' THEN
   EXIT('');
 
@@ -2887,7 +2927,7 @@ ELSE
       EXIT('12M');
   END;
 
-ChampArtikelnrErmitteln(Artikelnr : Code[20];"SUP Artikelnr" : Code[20]) : Code[40]
+ServiceArtikelnrErmitteln(Artikelnr : Code[20];"SUP Artikelnr" : Code[20]) : Code[40]
 Artikel.GET("SUP Artikelnr");
 IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACHAT') THEN
   ACTS := TRUE
@@ -2935,7 +2975,7 @@ IF CopyRec.Reklamiert = FALSE THEN
     CopyRec.MODIFY(TRUE);
   END;
 
-ChampPreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Laufzeit : Code[20];Feld : Code[20];Runden : Boolean;Währung 
+ServicePreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Laufzeit : Code[20];Feld : Code[20];Runden : Boolean;Währun
 //06.12.2011-ST Für Übergang genutzt, bis eindeutig Champ Preise vor dem Buchen neu kalkuliert werden
 //10.01.2014-ST Nun auch für ACTS
 //27.01.2014-ST Nun auch für ACHAT
