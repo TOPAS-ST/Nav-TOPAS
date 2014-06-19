@@ -1,0 +1,1327 @@
+
+Documentation()
+
+Report - OnInitReport()
+
+Report - OnPreReport()
+//***************************************************************************************************
+//NEU - alles in einem Bericht -ST
+
+Belege_fuellen;
+Statistik_fuellen_beleg;
+//Statistik_fuellen_beleghist;
+
+//***************************************************************************************************
+//ALT - Berichte ersetzt durch neue Funktionen
+
+//REPORT.RUN(50091); // Belege fuellen
+//REPORT.RUN(50093); // Statistik fuellen aus belegen
+//REPORT.RUN(50094); // Statistik fuellen aus historischenbelegen
+
+Report - OnPostReport()
+//MESSAGE('Job erfolgreich ausgeführt.\\Offene Belege: %1\AN: %2\AU: %3\AUR: %4\Neue Rechnungen: %5\Neue Gutschriften: %6',
+//         belege_gesamt,an_gesamt,au_gesamt,aur_gesamt,rechnungen,gutschriften);
+
+MESSAGE('50090 OK');
+
+Report - OnCreateHyperlink(VAR URL : Text[1024])
+
+Report - OnHyperlink(URL : Text[1024])
+
+Belege_fuellen()
+//***************************************************************************************************
+//Angebote, Aufträge, Rahmen vor dem Reimport löschen
+//***************************************************************************************************
+
+belege_gesamt := 0;
+an_gesamt := 0;
+au_gesamt := 0;
+aur_gesamt := 0;
+rechnungen := 0;
+gutschriften := 0;
+sachkonten := 0;
+
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1 | %2 | %3',Belege.Belegart::Quote,Belege.Belegart::Order,Belege.Belegart::"Blanket Order");
+IF Belege.FINDFIRST() THEN Belege.DELETEALL();
+
+//***************************************************************************************************
+//AN-AU-AR_fuellen
+//***************************************************************************************************
+
+Verkaufskopf.RESET;
+Verkaufskopf.SETFILTER(Verkaufskopf."Document Type",
+                      '%1 | %2 | %3',Belege.Belegart::Quote,Belege.Belegart::Order,Belege.Belegart::"Blanket Order");
+Verkaufskopf.FINDFIRST;
+  REPEAT
+    Verkaufszeile.SETFILTER(Verkaufszeile."Document No.",'%1',Verkaufskopf."No.");
+    Verkaufszeile.SETFILTER(Verkaufszeile.Type,'%1',Verkaufszeile.Type::Item);
+    IF Verkaufszeile.FINDFIRST THEN
+      BEGIN
+        REPEAT
+           Belege.INIT;
+           Belege.Belegart := Verkaufszeile."Document Type";
+           Belege."Belegnr." := Verkaufszeile."Document No.";
+           Belege."Zeilennr." := Verkaufszeile."Line No.";
+           Belege."Debitornr." := Verkaufszeile."Sell-to Customer No.";
+           Belege.Herstellercode := Verkaufszeile."Manufacturer Code";
+           Belege."Artikelnr." := Verkaufszeile."Artikelnr. 2";
+           Belege.Lagerortcode := Verkaufszeile."Location Code";
+           Belege.Menge := Verkaufszeile.Quantity;
+           Belege.Restauftragsmenge := Verkaufszeile."Outstanding Quantity";
+           Belege."EK-Preis" := Verkaufszeile."DC-Preis (Währung)";
+           Belege."EK-Währung" := Verkaufszeile.Einkaufswährungscode;
+           Belege."EK-Kurs" := Verkaufszeile.Einkaufswährungsfaktor;
+           Belege."Einstandspreis MW" := Verkaufszeile."Unit Cost (LCY)";
+           IF Verkaufskopf.Währungsabgleich = TRUE THEN Belege.Währungsabgleich := 'WÄ' ELSE Belege.Währungsabgleich := '' ;
+           Belege."VK-Preis" := Verkaufszeile."Unit Price";
+           Belege."VK-Währung" := Verkaufskopf."Currency Code";
+           Belege."VK-Kurs" := Verkaufskopf."Currency Factor" ;
+           Belege.Betrag := Verkaufszeile.Amount;
+           Belege."DB %" := Verkaufszeile."Profit %";
+           Belege.Quote := Verkaufszeile."Quotenr.";
+           Belege.Kampagne := Verkaufskopf."Campaign No.";
+           Belege.Belegdatum := Verkaufskopf."Document Date";
+           Belege.Lieferdatum := Verkaufszeile."Planned Delivery Date";
+           Belege.Wunschtermin := Verkaufszeile."Requested Delivery Date";
+           Belege.Verkäufercode := Verkaufskopf."Salesperson Code";
+           Belege."Betreuer Innendienst" := Verkaufskopf."Betreuer Innendienst";
+           Belege.Teams := Verkaufskopf.Teams;
+           Belege.Gebiet := Verkaufskopf."Territory Code";
+           Belege.Referenz := Verkaufszeile."Cross-Reference No.";
+           Belege."Rahmenauftragsnr." := Verkaufszeile."Blanket Order No.";
+           Belege."Rahmenauftragszeilennr.":= Verkaufszeile."Blanket Order Line No.";
+           Belege.Kontakt :=Verkaufszeile."Endkundennr.";
+           Belege."Betrag MW ohne Mwst.":=Verkaufszeile."Quantity (Base)" * Verkaufszeile."VK-Preis (MW)";
+           Belege.Endkunde:=Verkaufszeile."Endkundennr.";
+           Belege."Endkontaktnr Pivot" := EndkontaktPivot_fuellen(Verkaufskopf."Sell-to Contact No.",Verkaufszeile."Endkundennr.",
+                                          Verkaufszeile.Endkunde);
+           Belege.INSERT;
+        UNTIL Verkaufszeile.NEXT = 0;
+      END;
+    belege_gesamt += 1;
+    IF Verkaufskopf."Document Type" = Verkaufskopf."Document Type" :: Quote THEN
+      an_gesamt += 1;
+    IF Verkaufskopf."Document Type" = Verkaufskopf."Document Type" :: Order THEN
+      au_gesamt += 1;
+    IF Verkaufskopf."Document Type" = Verkaufskopf."Document Type" :: "Blanket Order" THEN
+      aur_gesamt += 1;
+  UNTIL Verkaufskopf.NEXT = 0;
+
+//***************************************************************************************************
+//RE_fuellen
+//***************************************************************************************************
+
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1',Belege.Belegart::Invoice);
+IF Belege.FINDLAST THEN
+  BEGIN
+    letzte_belegnr:= Belege."Belegnr.";
+  END
+ELSE
+  BEGIN
+    letzte_belegnr:='RE';
+  END;
+Belege.RESET;
+
+Verkaufsrechnungskopf.RESET;
+Verkaufsrechnungskopf.SETFILTER(Verkaufsrechnungskopf."No.",'>%1',letzte_belegnr);
+IF Verkaufsrechnungskopf.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      Verkaufsrechnungszeile.RESET;
+      Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile."Document No.",'%1',Verkaufsrechnungskopf."No.");
+      Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile.Type,'%1',Verkaufsrechnungszeile.Type::Item);
+      IF Verkaufsrechnungszeile.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Belege.INIT;
+            Belege.Belegart := Belege.Belegart::Invoice;
+            Belege."Belegnr." := Verkaufsrechnungskopf."No.";
+            Belege."Zeilennr." := Verkaufsrechnungszeile."Line No.";
+            Belege."Debitornr." := Verkaufsrechnungszeile."Sell-to Customer No.";
+            Belege.Herstellercode := Verkaufsrechnungszeile."Manufacturer Code";
+            Belege."Artikelnr." := Verkaufsrechnungszeile."Artikelnr. 2";
+            Belege.Lagerortcode := Verkaufsrechnungszeile."Location Code";
+            Belege.Menge := Verkaufsrechnungszeile.Quantity;
+            //Belege.Restauftragsmenge := NA!!
+            Belege."EK-Preis" := Verkaufsrechnungszeile."DC-Preis (EKW)";
+            Belege."EK-Währung" := Verkaufsrechnungszeile.Einkaufswährungscode;
+            Belege."EK-Kurs" := Verkaufsrechnungszeile.Einkaufswährungsfaktor;
+            Belege."Einstandspreis MW" := Verkaufsrechnungszeile."Unit Cost (LCY)";
+          IF Verkaufsrechnungskopf.Währungsabgleich = TRUE THEN Belege.Währungsabgleich := 'WÄ' ELSE Belege.Währungsabgleich := '' ;
+            Belege."VK-Preis" := Verkaufsrechnungszeile."Unit Price";
+            Belege."VK-Währung" := Verkaufsrechnungskopf."Currency Code";
+          IF Verkaufsrechnungskopf."Currency Factor" <> 0 THEN Belege."VK-Kurs" :=Verkaufsrechnungskopf."Currency Factor"
+          ELSE Belege."VK-Kurs" := 1;
+            Belege.Betrag := Verkaufsrechnungszeile.Amount;
+          IF Verkaufsrechnungszeile."Unit Price" <> 0 THEN
+             BEGIN
+                 Belege."DB %" := (Verkaufsrechnungszeile."Unit Price"/Belege."VK-Kurs" -
+                 Verkaufsrechnungszeile."Unit Cost (LCY)") /(Verkaufsrechnungszeile."Unit Price"
+                 /Belege."VK-Kurs" ) *100;
+             END;
+            Belege.Quote := Verkaufsrechnungszeile."Quotenr.";
+            Belege.Kampagne := Verkaufsrechnungskopf."Campaign No.";
+            Belege.Belegdatum := Verkaufsrechnungskopf."Posting Date";
+            // Belege.Lieferdatum :=     NA!!
+            // Belege.Wunschtermin :=    NA!!
+            Belege.Verkäufercode := Verkaufsrechnungskopf."Salesperson Code";
+            Belege."Betreuer Innendienst" := Verkaufsrechnungskopf."Betreuer Innendienst";
+            Belege.Teams := Verkaufsrechnungskopf.Teams;
+            Belege.Gebiet := Verkaufsrechnungskopf."Territory Code";
+            Belege.Referenz := Verkaufsrechnungszeile."Cross-Reference No.";
+            Belege.Kontakt := Verkaufsrechnungszeile."Endkundennr.";
+            Belege."Rahmenauftragsnr.":= Verkaufsrechnungszeile."Blanket Order No.";
+            Belege."Rahmenauftragszeilennr.":= Verkaufsrechnungszeile."Blanket Order Line No.";
+            Belege."Auftragsnr.":=Verkaufsrechnungszeile."Order No.";
+            Belege."Auftragszeilennr.":=Verkaufsrechnungszeile."Order Line No.";
+            Belege."Betrag MW ohne Mwst.":=Verkaufsrechnungszeile."Quantity (Base)" * Verkaufsrechnungszeile."VK-Preis (MW)";
+            Belege.Endkunde:=Verkaufsrechnungszeile."Endkundennr.";
+            Belege."Endkontaktnr Pivot" := EndkontaktPivot_fuellen(Verkaufsrechnungskopf."Sell-to Contact No.",
+                                           Verkaufsrechnungszeile."Endkundennr.",Verkaufsrechnungszeile.Endkunde);
+
+            Belege.INSERT;
+          UNTIL Verkaufsrechnungszeile.NEXT = 0;
+        END;
+      rechnungen += 1;
+    UNTIL Verkaufsrechnungskopf.NEXT = 0;
+  END;
+
+//***************************************************************************************************
+//GU_fuellen
+//***************************************************************************************************
+
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1',Belege.Belegart::"Credit Memo");
+IF Belege.FINDLAST THEN
+  BEGIN
+    letzte_belegnr:= Belege."Belegnr.";
+  END
+ELSE
+  BEGIN
+    letzte_belegnr:='GU';
+  END;
+Belege.RESET;
+
+Verkaufsgutschriftskopf.RESET;
+Verkaufsgutschriftskopf.SETFILTER(Verkaufsgutschriftskopf."No.",'>%1',letzte_belegnr);
+IF Verkaufsgutschriftskopf.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      Verkaufsgutschriftszeile.RESET;
+      Verkaufsgutschriftszeile.SETFILTER(Verkaufsgutschriftszeile."Document No.",'%1',Verkaufsgutschriftskopf."No.");
+      Verkaufsgutschriftszeile.SETFILTER(Verkaufsgutschriftszeile.Type,'%1',Verkaufsgutschriftszeile.Type::Item);
+      IF Verkaufsgutschriftszeile.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Belege.INIT;
+            Belege.Belegart := Belege.Belegart::"Credit Memo";
+            Belege."Belegnr." := Verkaufsgutschriftskopf."No.";
+            Belege."Zeilennr." := Verkaufsgutschriftszeile."Line No.";
+            Belege."Debitornr." := Verkaufsgutschriftszeile."Sell-to Customer No.";
+            Belege.Herstellercode := Verkaufsgutschriftszeile."Manufacturer Code";
+            Belege."Artikelnr." := Verkaufsgutschriftszeile."Artikelnr. 2";
+            Belege.Lagerortcode := Verkaufsgutschriftszeile."Location Code";
+            Belege.Menge := Verkaufsgutschriftszeile.Quantity;
+            //Belege.Restauftragsmenge := NA!!
+            Belege."EK-Preis" := Verkaufsgutschriftszeile."DC-Preis (EKW)";
+            Belege."EK-Währung" := Verkaufsgutschriftszeile.Einkaufswährungscode;
+            Belege."EK-Kurs" := Verkaufsgutschriftszeile.Einkaufswährungsfaktor;
+            Belege."Einstandspreis MW" := Verkaufsgutschriftszeile."Unit Cost (LCY)";
+            IF Verkaufsgutschriftskopf.Währungsabgleich = TRUE THEN Belege.Währungsabgleich := 'WÄ'
+             ELSE Belege.Währungsabgleich := '';
+            Belege."VK-Preis" := Verkaufsgutschriftszeile."Unit Price";
+            Belege."VK-Währung" := Verkaufsgutschriftskopf."Currency Code";
+            Belege."VK-Kurs" :=Verkaufsgutschriftskopf."Currency Factor";
+            Belege.Betrag := Verkaufsgutschriftszeile.Amount;
+            // Belege."DB %" :=
+            Belege.Quote := Verkaufsgutschriftszeile."Quotenr.";
+            Belege.Kampagne := Verkaufsgutschriftskopf."Campaign No.";
+            Belege.Belegdatum := Verkaufsgutschriftskopf."Posting Date";
+            // Belege.Lieferdatum :=     NA!!
+            // Belege.Wunschtermin :=    NA!!
+            Belege.Verkäufercode := Verkaufsgutschriftskopf."Salesperson Code";
+            Belege."Betreuer Innendienst" := Verkaufsgutschriftskopf."Betreuer Innendienst";
+            Belege.Teams := Verkaufsgutschriftskopf.Teams;
+            Belege.Gebiet := Verkaufsgutschriftskopf."Territory Code";
+            Belege.Referenz := Verkaufsgutschriftszeile."Cross-Reference No.";
+            Belege.Kontakt := Verkaufsgutschriftszeile."Endkundennr.";
+            Belege."Rahmenauftragsnr.":= Verkaufsgutschriftszeile."Blanket Order No.";
+            Belege."Rahmenauftragszeilennr.":= Verkaufsgutschriftszeile."Blanket Order Line No.";
+            Belege."Betrag MW ohne Mwst.":=Verkaufsgutschriftszeile."Quantity (Base)" *
+                   Verkaufsgutschriftszeile."VK-Preis (MW)";
+            Belege.Endkunde:=Verkaufsgutschriftszeile."Endkundennr.";
+            Belege."Endkontaktnr Pivot" := EndkontaktPivot_fuellen(Verkaufsgutschriftskopf."Sell-to Contact No.",
+                                           Verkaufsgutschriftszeile."Endkundennr.",Verkaufsgutschriftszeile.Endkunde);
+
+            Belege.INSERT;
+          UNTIL Verkaufsgutschriftszeile.NEXT = 0;
+        END;
+      gutschriften += 1;
+    UNTIL Verkaufsgutschriftskopf.NEXT = 0;
+  END;
+
+
+//***************************************************************************************************
+//Sachkonten_DL_fuellen
+//***************************************************************************************************
+
+{noch nicht aktiv
+
+{
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1',Belege.Belegart::Invoice);
+IF Belege.FINDLAST THEN
+  BEGIN
+    letzte_belegnr:= Belege."Belegnr.";
+  END
+ELSE
+  BEGIN
+    letzte_belegnr:='RE';
+  END;
+Belege.RESET;
+}
+
+//Verkaufsrechnungskopf.RESET;
+//Verkaufsrechnungskopf.SETFILTER(Verkaufsrechnungskopf."No.",'>%1',letzte_belegnr);
+//IF Verkaufsrechnungskopf.FINDFIRST THEN
+//  BEGIN
+//    REPEAT
+      Verkaufsrechnungszeile.RESET;
+      //Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile."Document No.",'%1',Verkaufsrechnungskopf."No.");
+      Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile.Type,'%1',Verkaufsrechnungszeile.Type::"G/L Account");
+      Verkaufsrechnungszeile.SETFILTER("No.",'%1|%2|%3','4407','4408','4424');
+      IF Verkaufsrechnungszeile.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Verkaufsrechnungskopf.GET(Verkaufsrechnungszeile."Document No.");
+            Belege.INIT;
+            Belege.Belegart := Belege.Belegart::Invoice;
+            Belege."Belegnr." := Verkaufsrechnungszeile."Document No.";
+            Belege."Zeilennr." := Verkaufsrechnungszeile."Line No.";
+            Belege."Debitornr." := Verkaufsrechnungszeile."Sell-to Customer No.";
+            Belege.Herstellercode := Verkaufsrechnungszeile."Manufacturer Code";
+            Belege."Artikelnr." := Verkaufsrechnungszeile."No.";
+            Belege.Lagerortcode := Verkaufsrechnungszeile."Location Code";
+            Belege.Menge := Verkaufsrechnungszeile.Quantity;
+            //Belege.Restauftragsmenge := NA!!
+            Belege."EK-Preis" := Verkaufsrechnungszeile."DC-Preis (EKW)";
+            Belege."EK-Währung" := Verkaufsrechnungszeile.Einkaufswährungscode;
+            Belege."EK-Kurs" := Verkaufsrechnungszeile.Einkaufswährungsfaktor;
+            Belege."Einstandspreis MW" := Verkaufsrechnungszeile."Unit Cost (LCY)";
+          IF Verkaufsrechnungskopf.Währungsabgleich = TRUE THEN Belege.Währungsabgleich := 'WÄ' ELSE Belege.Währungsabgleich := '' ;
+            Belege."VK-Preis" := Verkaufsrechnungszeile."Unit Price";
+            Belege."VK-Währung" := Verkaufsrechnungskopf."Currency Code";
+          IF Verkaufsrechnungskopf."Currency Factor" <> 0 THEN Belege."VK-Kurs" :=Verkaufsrechnungskopf."Currency Factor"
+          ELSE Belege."VK-Kurs" := 1;
+            Belege.Betrag := Verkaufsrechnungszeile.Amount;
+          IF Verkaufsrechnungszeile."Unit Price" <> 0 THEN
+             BEGIN
+                 Belege."DB %" := (Verkaufsrechnungszeile."Unit Price"/Belege."VK-Kurs" -
+                 Verkaufsrechnungszeile."Unit Cost (LCY)") /(Verkaufsrechnungszeile."Unit Price"
+                 /Belege."VK-Kurs" ) *100;
+             END;
+            Belege.Quote := Verkaufsrechnungszeile."Quotenr.";
+            Belege.Kampagne := Verkaufsrechnungskopf."Campaign No.";
+            Belege.Belegdatum := Verkaufsrechnungskopf."Posting Date";
+            // Belege.Lieferdatum :=     NA!!
+            // Belege.Wunschtermin :=    NA!!
+            Belege.Verkäufercode := Verkaufsrechnungskopf."Salesperson Code";
+            Belege."Betreuer Innendienst" := Verkaufsrechnungskopf."Betreuer Innendienst";
+            Belege.Teams := Verkaufsrechnungskopf.Teams;
+            Belege.Gebiet := Verkaufsrechnungskopf."Territory Code";
+            Belege.Referenz := Verkaufsrechnungszeile."Cross-Reference No.";
+            Belege.Kontakt := Verkaufsrechnungszeile."Endkundennr.";
+            Belege."Rahmenauftragsnr.":= Verkaufsrechnungszeile."Blanket Order No.";
+            Belege."Rahmenauftragszeilennr.":= Verkaufsrechnungszeile."Blanket Order Line No.";
+            Belege."Auftragsnr.":=Verkaufsrechnungszeile."Order No.";
+            Belege."Auftragszeilennr.":=Verkaufsrechnungszeile."Order Line No.";
+            Belege."Betrag MW ohne Mwst.":=Verkaufsrechnungszeile."Quantity (Base)" * Verkaufsrechnungszeile."VK-Preis (MW)";
+            Belege.Endkunde:=Verkaufsrechnungszeile."Endkundennr.";
+            Belege."Endkontaktnr Pivot" := EndkontaktPivot_fuellen(Verkaufsrechnungskopf."Sell-to Contact No.",
+                                           Verkaufsrechnungszeile."Endkundennr.",Verkaufsrechnungszeile.Endkunde);
+
+            Belege.INSERT;
+          UNTIL Verkaufsrechnungszeile.NEXT = 0;
+        END;
+      sachkonten += 1;
+    //UNTIL Verkaufsrechnungskopf.NEXT = 0;
+  //END;
+}
+
+----------------------------()
+
+Statistik_fuellen_beleg()
+Jahr := '2007';
+IF DATE2DMY(TODAY,2) < 7 THEN Jahr_x := FORMAT(DATE2DMY(TODAY,3)-1) ELSE Jahr_x := FORMAT(DATE2DMY(TODAY,3)) ;
+
+REPEAT
+
+  Jahr:=INCSTR(Jahr);
+
+  Statistik.RESET;
+  Statistik.SETFILTER(Statistik.Jahr,'%1',Jahr);
+  IF Statistik.FINDFIRST THEN Statistik.DELETEALL(TRUE);
+  Statistik.RESET;
+
+  datumsfilter_fuellen(Jahr);
+  geschaeftsjahr_aufbauen(Jahr);
+
+UNTIL Jahr = Jahr_x;
+
+datumsfilter_fuellen(gjahr : Text[10])
+gjahr:= COPYSTR(gjahr,3);
+Datum_Q1:= '0107'+gjahr+'..3009'+gjahr;
+Datum_Q2:= '0110'+gjahr+'..3112'+gjahr;
+Datum_Q3:= '0101'+INCSTR(gjahr)+'..3103'+INCSTR(gjahr);
+Datum_Q4:= '0104'+INCSTR(gjahr)+'..3006'+INCSTR(gjahr);
+
+geschaeftsjahr_aufbauen(gjahr : Text[10])
+// Je Debitor & Artikel
+statistikfuellen_artikel(Datum_Q1,1,gjahr);
+statistikfuellen_artikel(Datum_Q2,2,gjahr);
+statistikfuellen_artikel(Datum_Q3,3,gjahr);
+statistikfuellen_artikel(Datum_Q4,4,gjahr);
+
+// Je Debitor & Herstellercode
+statistikfuellen_hersteller(Datum_Q1,1,gjahr);
+statistikfuellen_hersteller(Datum_Q2,2,gjahr);
+statistikfuellen_hersteller(Datum_Q3,3,gjahr);
+statistikfuellen_hersteller(Datum_Q4,4,gjahr);
+
+// Je Debitor & Endkunde
+statistikfuellen_endkunden(Datum_Q1,1,gjahr);
+statistikfuellen_endkunden(Datum_Q2,2,gjahr);
+statistikfuellen_endkunden(Datum_Q3,3,gjahr);
+statistikfuellen_endkunden(Datum_Q4,4,gjahr);
+
+// Je Debitor & Endkunde & Artikel
+statistikfuellen_endkunden_art(Datum_Q1,1,gjahr);
+statistikfuellen_endkunden_art(Datum_Q2,2,gjahr);
+statistikfuellen_endkunden_art(Datum_Q3,3,gjahr);
+statistikfuellen_endkunden_art(Datum_Q4,4,gjahr);
+
+// Je Debitor & Endkunde & Artikel
+statistikfuellen_endkunden_hst(Datum_Q1,1,gjahr);
+statistikfuellen_endkunden_hst(Datum_Q2,2,gjahr);
+statistikfuellen_endkunden_hst(Datum_Q3,3,gjahr);
+statistikfuellen_endkunden_hst(Datum_Q4,4,gjahr);
+
+statistikfuellen_artikel(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      anzahl:=0;
+      wert:=0;
+      Statistik.RESET();
+      Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::Artikel);
+      Statistik.SETFILTER(Statistik."Debitornr.",'%1',Belege."Debitornr.");
+      Statistik.SETFILTER(Statistik."Artikelnr.2",'%1',Belege."Artikelnr.");
+      Statistik.SETFILTER(Statistik.Herstellercode,'%1',Belege.Herstellercode);
+      Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+      IF Belege.Belegart = Belege.Belegart::Invoice THEN
+        BEGIN
+           wert:=Belege."Betrag MW ohne Mwst.";
+           anzahl:= Belege.Menge;
+        END
+      ELSE                                // Gutschriften
+        BEGIN
+           wert:=Belege."Betrag MW ohne Mwst."*(-1);
+           anzahl:= Belege.Menge*(-1);
+        END;
+
+      IF Statistik.FINDFIRST THEN
+        BEGIN
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+                 Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+                 Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+                 Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+                 Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            END;
+
+          Statistik.Herstellercode := Belege.Herstellercode;
+          Statistik.Kontakt := Belege.Kontakt;
+          Statistik.MODIFY;
+
+        END
+        ELSE
+        BEGIN
+          Statistik.INIT;
+          Statistik.Art:=Statistik.Art::Artikel;
+          Statistik."Debitornr.":=Belege."Debitornr.";
+          Statistik."Artikelnr.2":=Belege."Artikelnr.";
+          Statistik.Jahr:=gjahr;
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl;
+                 Statistik.Q1_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl;
+                 Statistik.Q2_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl;
+                 Statistik.Q3_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl;
+                 Statistik.Q4_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            END;
+
+          Statistik.Herstellercode := Belege.Herstellercode;
+          Statistik.Kontakt := Belege.Kontakt;
+
+          Hersteller.RESET();
+          Hersteller.SETFILTER(Hersteller.Code,'%1',Belege.Herstellercode);
+          IF Hersteller.FINDFIRST THEN 
+             BEGIN
+               Statistik.Herstellername:=Hersteller.Herstellerkurzname;
+               Statistik.Kreditor_Nr:=Hersteller."Zugeordnete Kreditorennr.";
+             END
+                ELSE Statistik.Herstellername:=Belege.Herstellercode;
+
+          Artikel.RESET();
+          Artikel.SETFILTER(Artikel."No. 2",'%1',Belege."Artikelnr.");
+          IF Artikel.FINDFIRST THEN Statistik."Artikelnr.":= Artikel."No.";
+
+          Debitor.RESET();
+          Debitor.SETFILTER(Debitor."No.",'%1',Belege."Debitornr.");
+          IF Debitor.FINDFIRST THEN
+             BEGIN
+               Statistik.Verkäufercode:=Debitor."Salesperson Code";
+               Statistik."Betreuer Innendienst":=Debitor."Betreuer Innendienst";
+               Statistik.Teams:=Debitor.Teams;
+               Statistik.Gebiet:=Debitor."Territory Code";
+             END;
+
+          Statistik.INSERT;
+        END;
+
+    UNTIL Belege.NEXT = 0;
+  END;
+
+statistikfuellen_hersteller(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      anzahl:=0;
+      wert:=0;
+      Statistik.RESET();
+      Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::Hersteller);
+      Statistik.SETFILTER(Statistik."Debitornr.",'%1',Belege."Debitornr.");
+      Statistik.SETFILTER(Statistik.Herstellercode,'%1',Belege.Herstellercode);
+      Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+      IF Belege.Belegart = Belege.Belegart::Invoice THEN
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst.";
+            anzahl:= Belege.Menge;
+         END
+         ELSE                                // Gutschriften
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst."*(-1);
+            anzahl:= Belege.Menge*(-1);
+         END;
+
+      IF Statistik.FINDFIRST THEN
+        BEGIN
+         CASE quartal OF
+           1: BEGIN; 
+                Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+                Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+                Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+              END;
+           2: BEGIN;
+                Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+                Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+                Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+              END;
+           3: BEGIN;
+                Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+                Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+                Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+              END;
+           4: BEGIN; 
+                Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+                Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+                Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+              END;
+           END;
+
+         Statistik.Kontakt := Belege.Kontakt;
+         Statistik.MODIFY;
+
+        END
+      ELSE
+        BEGIN
+          Statistik.INIT;
+          Statistik.Art:=Statistik.Art::Hersteller;
+          Statistik."Debitornr.":=Belege."Debitornr.";
+          Statistik.Jahr:=gjahr;
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl;
+                 Statistik.Q1_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl;
+                 Statistik.Q2_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl;
+                 Statistik.Q3_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl;
+                 Statistik.Q4_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            END;
+
+          Statistik."Artikelnr.2":='';
+          Statistik.Herstellercode := Belege.Herstellercode;
+          Statistik.Kontakt := Belege.Kontakt;
+
+          Hersteller.RESET();
+          Hersteller.SETFILTER(Hersteller.Code,'%1',Belege.Herstellercode);
+          IF Hersteller.FINDFIRST THEN 
+             BEGIN
+               Statistik.Herstellername:=Hersteller.Herstellerkurzname;
+               Statistik.Kreditor_Nr:=Hersteller."Zugeordnete Kreditorennr.";
+             END
+               ELSE Statistik.Herstellername:=Belege.Herstellercode;
+
+          Debitor.RESET();
+          Debitor.SETFILTER(Debitor."No.",'%1',Belege."Debitornr.");
+          IF Debitor.FINDFIRST THEN
+             BEGIN
+               Statistik.Verkäufercode:=Debitor."Salesperson Code";
+               Statistik."Betreuer Innendienst":=Debitor."Betreuer Innendienst";
+               Statistik.Teams:=Debitor.Teams;
+               Statistik.Gebiet:=Debitor."Territory Code";
+             END;
+
+          Statistik.INSERT;
+        END;
+    UNTIL Belege.NEXT = 0;
+  END;
+
+statistikfuellen_endkunden(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      anzahl:=0;
+      wert:=0;
+      Statistik.RESET();
+      Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::Endkunden);
+      Statistik.SETFILTER(Statistik."Debitornr.",'%1',Belege."Debitornr.");
+      Statistik.SETFILTER(Statistik.Endkunde,'%1',Belege.Endkunde);
+      Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+      IF Belege.Belegart = Belege.Belegart::Invoice THEN
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst.";
+            anzahl:= Belege.Menge;
+         END
+         ELSE                                // Gutschriften
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst."*(-1);
+            anzahl:= Belege.Menge*(-1);
+         END;
+
+      IF Statistik.FINDFIRST THEN
+        BEGIN
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+                 Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+                 Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+                 Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+                 Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            END;
+          Statistik.Kontakt := Belege.Kontakt;
+          Statistik.MODIFY;
+        END
+      ELSE
+        BEGIN
+          Statistik.INIT;
+          Statistik.Art:=Statistik.Art::Endkunden;
+          Statistik."Debitornr.":=Belege."Debitornr.";
+          Statistik.Jahr:=gjahr;
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl;
+                 Statistik.Q1_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl;
+                 Statistik.Q2_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl;
+                 Statistik.Q3_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl;
+                 Statistik.Q4_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            END;
+
+          Statistik."Artikelnr.2":='';
+          Statistik.Endkunde:=Belege.Endkunde;
+          Statistik.Kontakt := Belege.Kontakt;
+
+          IF Belege.Endkunde <> '' THEN
+            BEGIN
+             Contact.RESET();
+             Contact.SETFILTER(Contact."No.",'%1',Belege.Endkunde);
+             IF Contact.FINDFIRST THEN
+               BEGIN
+                 Statistik.Verkäufercode:=Contact."Salesperson Code";
+                 Statistik."Betreuer Innendienst":=Contact."Betreuer Innendienst";
+                 Statistik.Teams:=Contact.Teams;
+                 Statistik.Gebiet:=Contact."Territory Code";
+
+                 Contact_Rel.RESET();
+                 Contact_Rel.SETFILTER(Contact_Rel."Contact No.",'%1',Contact."No.");
+                 IF Contact_Rel.FINDFIRST THEN
+                   BEGIN
+                     Statistik.Endkunde_deb_nr:=Contact_Rel."No.";
+                   END;
+
+               END;
+
+             END;
+          Statistik.INSERT;
+        END;
+    UNTIL Belege.NEXT = 0;
+  END;
+
+statistikfuellen_endkunden_art(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      anzahl:=0;
+      wert:=0;
+      Statistik.RESET();
+      Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::"Endkunde-Art");
+      Statistik.SETFILTER(Statistik."Debitornr.",'%1',Belege."Debitornr.");
+      Statistik.SETFILTER(Statistik.Endkunde,'%1',Belege.Endkunde);
+      // Artikel    //Endkunde-Art
+      Statistik.SETFILTER(Statistik."Artikelnr.2",'%1',Belege."Artikelnr.");
+      Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+      IF Belege.Belegart = Belege.Belegart::Invoice THEN
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst.";
+            anzahl:= Belege.Menge;
+         END
+         ELSE                                // Gutschriften
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst."*(-1);
+            anzahl:= Belege.Menge*(-1);
+         END;
+
+      IF Statistik.FINDFIRST THEN
+        BEGIN
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+                 Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+                 Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+                 Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+                 Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            END;
+          Statistik.Kontakt := Belege.Kontakt;
+          Statistik.MODIFY;
+        END
+      ELSE
+        BEGIN
+          Statistik.INIT;
+          Statistik.Art:=Statistik.Art::"Endkunde-Art";
+          Statistik."Debitornr.":=Belege."Debitornr.";
+
+          // Artikel // Endkunde-Art
+
+          Statistik.Jahr:=gjahr;
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl;
+                 Statistik.Q1_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl;
+                 Statistik.Q2_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl;
+                 Statistik.Q3_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl;
+                 Statistik.Q4_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            END;
+
+    ///// Endkunde-Art
+          Statistik."Artikelnr.2":=Belege."Artikelnr.";
+          Statistik.Herstellercode := Belege.Herstellercode;
+          
+          Artikel.RESET();
+          Artikel.SETFILTER(Artikel."No. 2",'%1',Belege."Artikelnr.");
+          IF Artikel.FINDFIRST THEN Statistik."Artikelnr.":= Artikel."No.";
+
+          Hersteller.RESET();
+          Hersteller.SETFILTER(Hersteller.Code,'%1',Belege.Herstellercode);
+          IF Hersteller.FINDFIRST THEN 
+             BEGIN
+               Statistik.Herstellername:=Hersteller.Herstellerkurzname;
+               Statistik.Kreditor_Nr:=Hersteller."Zugeordnete Kreditorennr.";
+             END
+               ELSE Statistik.Herstellername:=Belege.Herstellercode;
+
+    //// Endkunde-Art
+
+          Statistik.Endkunde:=Belege.Endkunde;
+          Statistik.Kontakt := Belege.Kontakt;
+
+          IF Belege.Endkunde <> '' THEN
+            BEGIN
+             Contact.RESET();
+             Contact.SETFILTER(Contact."No.",'%1',Belege.Endkunde);
+             IF Contact.FINDFIRST THEN
+               BEGIN
+                 Statistik.Verkäufercode:=Contact."Salesperson Code";
+                 Statistik."Betreuer Innendienst":=Contact."Betreuer Innendienst";
+                 Statistik.Teams:=Contact.Teams;
+                 Statistik.Gebiet:=Contact."Territory Code";
+                 Contact_Rel.RESET();
+                 Contact_Rel.SETFILTER(Contact_Rel."Contact No.",'%1',Contact."No.");
+                 IF Contact_Rel.FINDFIRST THEN
+                   BEGIN
+                     Statistik.Endkunde_deb_nr:=Contact_Rel."No.";
+                   END;
+
+               END;
+             END;
+          Statistik.INSERT;
+        END;
+    UNTIL Belege.NEXT = 0;
+  END;
+
+statistikfuellen_endkunden_hst(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Belege.RESET;
+Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);        /// Prüfen
+IF Belege.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      anzahl:=0;
+      wert:=0;
+      Statistik.RESET();
+      Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::"Endkunde-Hersteller");
+      Statistik.SETFILTER(Statistik."Debitornr.",'%1',Belege."Debitornr.");
+      Statistik.SETFILTER(Statistik.Endkunde,'%1',Belege.Endkunde);
+      // Herstellercode    //Endkunde-Art
+      Statistik.SETFILTER(Statistik.Herstellercode,'%1',Belege.Herstellercode);
+      Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+      IF Belege.Belegart = Belege.Belegart::Invoice THEN
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst.";
+            anzahl:= Belege.Menge;
+         END
+         ELSE                                // Gutschriften
+         BEGIN
+            wert:=Belege."Betrag MW ohne Mwst."*(-1);
+            anzahl:= Belege.Menge*(-1);
+         END;
+
+      IF Statistik.FINDFIRST THEN
+        BEGIN
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+                 Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+                 Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+                 Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+                 Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+                 Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+                 Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+               END;
+            END;
+          Statistik.Kontakt := Belege.Kontakt;
+          Statistik.MODIFY;
+        END
+      ELSE
+        BEGIN
+          Statistik.INIT;
+          Statistik.Art:=Statistik.Art::"Endkunde-Hersteller";
+          Statistik."Debitornr.":=Belege."Debitornr.";
+          Statistik."Artikelnr.2" := '';
+
+          // Artikel // Endkunde-Hersteller
+
+          Statistik.Jahr:=gjahr;
+          CASE quartal OF
+            1: BEGIN; 
+                 Statistik.Q1_Menge:=anzahl;
+                 Statistik.Q1_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            2: BEGIN;
+                 Statistik.Q2_Menge:=anzahl;
+                 Statistik.Q2_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            3: BEGIN;
+                 Statistik.Q3_Menge:=anzahl;
+                 Statistik.Q3_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            4: BEGIN; 
+                 Statistik.Q4_Menge:=anzahl;
+                 Statistik.Q4_Wert:=wert;
+                 Statistik."Gesamt Menge":=anzahl;
+                 Statistik.Gesamt_Umsatz:=wert;
+               END;
+            END;
+
+    ///// Endkunde-Hersteller
+          Statistik.Herstellercode := Belege.Herstellercode;
+          
+
+          Hersteller.RESET();
+          Hersteller.SETFILTER(Hersteller.Code,'%1',Belege.Herstellercode);
+          IF Hersteller.FINDFIRST THEN 
+             BEGIN
+               Statistik.Herstellername:=Hersteller.Herstellerkurzname;
+               Statistik.Kreditor_Nr:=Hersteller."Zugeordnete Kreditorennr.";
+             END
+               ELSE Statistik.Herstellername:=Belege.Herstellercode;
+
+    //// Endkunde-Hersteller
+
+          Statistik.Endkunde:=Belege.Endkunde;
+          Statistik.Kontakt := Belege.Kontakt;
+
+          IF Belege.Endkunde <> '' THEN
+            BEGIN
+             Contact.RESET();
+             Contact.SETFILTER(Contact."No.",'%1',Belege.Endkunde);
+             IF Contact.FINDFIRST THEN
+               BEGIN
+                 Statistik.Verkäufercode:=Contact."Salesperson Code";
+                 Statistik."Betreuer Innendienst":=Contact."Betreuer Innendienst";
+                 Statistik.Teams:=Contact.Teams;
+                 Statistik.Gebiet:=Contact."Territory Code";
+                 Contact_Rel.RESET();
+                 Contact_Rel.SETFILTER(Contact_Rel."Contact No.",'%1',Contact."No.");
+                 IF Contact_Rel.FINDFIRST THEN
+                   BEGIN
+                     Statistik.Endkunde_deb_nr:=Contact_Rel."No.";
+                   END;
+
+               END;
+             END;
+          Statistik.INSERT;
+        END;
+    UNTIL Belege.NEXT = 0;
+  END;
+
+..............................()
+
+Statistik_fuellen_beleghist()
+Jahr := '2004';
+
+IF DATE2DMY(TODAY,2) < 7 THEN Jahr_x := FORMAT(DATE2DMY(TODAY,3)-1) ELSE Jahr_x := FORMAT(DATE2DMY(TODAY,3)) ;
+
+REPEAT
+  Jahr:=INCSTR(Jahr);
+
+  Statistik.RESET;
+  Statistik.SETFILTER(Statistik.Jahr,'%1',Jahr);
+  IF Statistik.FINDFIRST THEN Statistik.DELETEALL(TRUE);
+  Statistik.RESET;
+
+  datumsfilter_fuellen(Jahr);
+  geschaeftsjahr_historie(Jahr);
+
+//UNTIL Jahr = Jahr_x;
+UNTIL Jahr = '2007';
+
+geschaeftsjahr_historie(gjahr : Text[10])
+// Je Debitor & Artikel
+statistik_artikel_historie(Datum_Q1,1,gjahr);
+statistik_artikel_historie(Datum_Q2,2,gjahr);
+statistik_artikel_historie(Datum_Q3,3,gjahr);
+statistik_artikel_historie(Datum_Q4,4,gjahr);
+
+// Je Debitor & Herstellercode
+statistik_hersteller_historie(Datum_Q1,1,gjahr);
+statistik_hersteller_historie(Datum_Q2,2,gjahr);
+statistik_hersteller_historie(Datum_Q3,3,gjahr);
+statistik_hersteller_historie(Datum_Q4,4,gjahr);
+
+statistik_artikel_historie(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Beleghistorie.RESET;
+Beleghistorie.SETFILTER(Beleghistorie.Belegart,'%1|%2',Beleghistorie.Belegart::Invoice,Beleghistorie.Belegart::"Credit Memo");
+Beleghistorie.SETFILTER(Beleghistorie.Belegdatum,Datumsfilter);
+Beleghistorie.FINDFIRST;
+
+REPEAT
+  anzahl:=0;
+  wert:=0;
+  Statistik.RESET();
+  Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::Artikel);
+  Statistik.SETFILTER(Statistik."Debitornr.",'%1',Beleghistorie."Debitornr.");
+  Statistik.SETFILTER(Statistik."Artikelnr.2",'%1',Beleghistorie."Artikelnr.");
+  Statistik.SETFILTER(Statistik.Herstellercode,'%1',Beleghistorie.Herstellercode);
+  Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+  IF Beleghistorie.Belegart = Beleghistorie.Belegart::Invoice THEN
+    BEGIN
+       wert:=Beleghistorie."Betrag MW ohne Mwst.";
+       anzahl:= Beleghistorie.Menge;
+    END
+  ELSE                                // Gutschriften
+    BEGIN
+       wert:=Beleghistorie."Betrag MW ohne Mwst."*(-1);
+       anzahl:= Beleghistorie.Menge*(-1);
+    END;
+
+  IF Statistik.FINDFIRST THEN
+    BEGIN
+      CASE quartal OF
+        1: BEGIN; 
+             Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+             Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        2: BEGIN;
+             Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+             Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        3: BEGIN;
+             Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+             Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        4: BEGIN; 
+             Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+             Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        END;
+      Statistik.Herstellercode := Beleghistorie.Herstellercode;
+      Statistik.Kontakt := Beleghistorie.Kontakt;
+      Statistik.MODIFY;
+    END
+  ELSE
+    BEGIN
+      Statistik.INIT;
+      Statistik.Art:=Statistik.Art::Artikel;
+      Statistik."Debitornr.":=Beleghistorie."Debitornr.";
+      Statistik."Artikelnr.2":=Beleghistorie."Artikelnr.";
+      Statistik.Jahr:=gjahr;
+      CASE quartal OF
+        1: BEGIN; 
+             Statistik.Q1_Menge:=anzahl;
+             Statistik.Q1_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        2: BEGIN;
+             Statistik.Q2_Menge:=anzahl;
+             Statistik.Q2_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        3: BEGIN;
+             Statistik.Q3_Menge:=anzahl;
+             Statistik.Q3_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        4: BEGIN; 
+             Statistik.Q4_Menge:=anzahl;
+             Statistik.Q4_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        END;
+
+      Statistik.Herstellercode := Beleghistorie.Herstellercode;
+      Statistik.Kontakt := Beleghistorie.Kontakt;
+
+      Hersteller.RESET();
+      Hersteller.SETFILTER(Hersteller.Code,'%1',Beleghistorie.Herstellercode);
+      IF Hersteller.FINDFIRST THEN Statistik.Herstellername:=Hersteller.Herstellerkurzname
+                              ELSE Statistik.Herstellername:=Beleghistorie.Herstellercode;
+
+      Artikel.RESET();
+      Artikel.SETFILTER(Artikel."No. 2",'%1',Beleghistorie."Artikelnr.");
+      IF Artikel.FINDFIRST THEN Statistik."Artikelnr.":= Artikel."No.";
+
+      Debitor.RESET();
+      Debitor.SETFILTER(Debitor."No.",'%1',Beleghistorie."Debitornr.");
+      IF Debitor.FINDFIRST THEN
+         BEGIN
+           Statistik.Verkäufercode:=Debitor."Salesperson Code";
+           Statistik."Betreuer Innendienst":=Debitor."Betreuer Innendienst";
+           Statistik.Teams:=Debitor.Teams;
+           Statistik.Gebiet:=Debitor."Territory Code";
+         END;
+
+      Statistik.INSERT;
+    END;
+UNTIL Beleghistorie.NEXT = 0;
+
+statistik_hersteller_historie(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[30])
+Beleghistorie.RESET;
+Beleghistorie.SETFILTER(Beleghistorie.Belegart,'%1|%2',Beleghistorie.Belegart::Invoice,Beleghistorie.Belegart::"Credit Memo");
+Beleghistorie.SETFILTER(Beleghistorie.Belegdatum,Datumsfilter);
+Beleghistorie.FINDFIRST;
+
+REPEAT
+  anzahl:=0;
+  wert:=0;
+  Statistik.RESET();
+  Statistik.SETFILTER(Statistik.Art,'%1',Statistik.Art::Hersteller);
+  Statistik.SETFILTER(Statistik."Debitornr.",'%1',Beleghistorie."Debitornr.");
+  Statistik.SETFILTER(Statistik.Herstellercode,'%1',Beleghistorie.Herstellercode);
+  Statistik.SETFILTER(Statistik.Jahr,'%1',gjahr);
+  IF Beleghistorie.Belegart = Beleghistorie.Belegart::Invoice THEN
+    BEGIN
+       wert:=Beleghistorie."Betrag MW ohne Mwst.";
+       anzahl:= Beleghistorie.Menge;
+    END
+  ELSE                                // Gutschriften
+    BEGIN
+       wert:=Beleghistorie."Betrag MW ohne Mwst."*(-1);
+       anzahl:= Beleghistorie.Menge*(-1);
+    END;
+
+  IF Statistik.FINDFIRST THEN
+    BEGIN
+      CASE quartal OF
+        1: BEGIN; 
+             Statistik.Q1_Menge:=anzahl+Statistik.Q1_Menge;
+             Statistik.Q1_Wert:=wert+Statistik.Q1_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        2: BEGIN;
+             Statistik.Q2_Menge:=anzahl+Statistik.Q2_Menge;
+             Statistik.Q2_Wert:=wert+Statistik.Q2_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        3: BEGIN;
+             Statistik.Q3_Menge:=anzahl+Statistik.Q3_Menge;
+             Statistik.Q3_Wert:=wert+Statistik.Q3_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        4: BEGIN; 
+             Statistik.Q4_Menge:=anzahl+Statistik.Q4_Menge;
+             Statistik.Q4_Wert:=wert+Statistik.Q4_Wert;
+             Statistik."Gesamt Menge":=anzahl+Statistik."Gesamt Menge";
+             Statistik.Gesamt_Umsatz:=wert+Statistik.Gesamt_Umsatz;
+           END;
+        END;
+      Statistik.Kontakt := Beleghistorie.Kontakt;
+      Statistik.MODIFY;
+    END
+  ELSE
+    BEGIN
+      Statistik.INIT;
+      Statistik.Art:=Statistik.Art::Hersteller;
+      Statistik."Debitornr.":=Beleghistorie."Debitornr.";
+      Statistik.Jahr:=gjahr;
+      CASE quartal OF
+        1: BEGIN; 
+             Statistik.Q1_Menge:=anzahl;
+             Statistik.Q1_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        2: BEGIN;
+             Statistik.Q2_Menge:=anzahl;
+             Statistik.Q2_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        3: BEGIN;
+             Statistik.Q3_Menge:=anzahl;
+             Statistik.Q3_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        4: BEGIN; 
+             Statistik.Q4_Menge:=anzahl;
+             Statistik.Q4_Wert:=wert;
+             Statistik."Gesamt Menge":=anzahl;
+             Statistik.Gesamt_Umsatz:=wert;
+           END;
+        END;
+
+      Statistik."Artikelnr.2":='';
+      Statistik.Herstellercode := Beleghistorie.Herstellercode;
+      Statistik.Kontakt := Beleghistorie.Kontakt;
+
+      Hersteller.RESET();
+      Hersteller.SETFILTER(Hersteller.Code,'%1',Beleghistorie.Herstellercode);
+      IF Hersteller.FINDFIRST THEN Statistik.Herstellername:=Hersteller.Herstellerkurzname 
+                              ELSE Statistik.Herstellername:=Beleghistorie.Herstellercode;
+
+      Debitor.RESET();
+      Debitor.SETFILTER(Debitor."No.",'%1',Beleghistorie."Debitornr.");
+      IF Debitor.FINDFIRST THEN
+         BEGIN
+           Statistik.Verkäufercode:=Debitor."Salesperson Code";
+           Statistik."Betreuer Innendienst":=Debitor."Betreuer Innendienst";
+           Statistik.Teams:=Debitor.Teams;
+           Statistik.Gebiet:=Debitor."Territory Code";
+         END;
+      Statistik.INSERT;
+    END;
+UNTIL Beleghistorie.NEXT = 0;
+
+_________________()
+
+EndkontaktPivot_fuellen(VerkAnKontakt : Code[20];Endkundennr : Code[20];Endkundenname : Text[50]) : Code[20]
+IF (Endkundennr <> '') THEN
+  IF (COPYSTR(Endkundennr,1,2) = 'KT') AND (STRLEN(Endkundennr) = 8) THEN
+    EXIT(Endkundennr)
+  ELSE
+    EXIT('KT000240')
+ELSE
+  IF (Endkundenname <> '') THEN
+    EXIT('KT000240')
+  ELSE
+    EXIT(VerkAnKontakt);
