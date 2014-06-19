@@ -37,7 +37,7 @@ ELSE
   CurrForm."Geräte Artikelnr.".EDITABLE := FALSE;
 
 IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
-OR (Artikel.Artikelgruppe = 'ACHAT')) THEN
+OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')) THEN
   BEGIN
     CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
     CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -629,7 +629,8 @@ IF Rec.HASFILTER THEN
 
     //ACTS und ACHAT Prüfung
     Artikel.GET(Belegzeile."No.");
-    IF (Artikel.Artikelgruppe <> 'ACTS') OR (Artikel.Artikelgruppe <> 'ACHAT') THEN
+    IF (Artikel.Artikelgruppe <> 'ACTS') OR (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
+    OR (Artikel.Artikelgruppe <> 'ACHAT') THEN
       ACTS := FALSE
     ELSE
       ACTS := TRUE;
@@ -1332,6 +1333,7 @@ Service_Artikel.GET(Service_Artikelnr);
 
 IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS')
 OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
+OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')) 
 AND (Geräte_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
   EXIT(FALSE)
 ELSE
