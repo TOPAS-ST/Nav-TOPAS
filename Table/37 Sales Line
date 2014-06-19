@@ -4504,7 +4504,7 @@ IF ("Blanket Order No." <> '') AND ("Blanket Order Line No." <> 0)  THEN
 Gen_Service_DC("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Runden : Boolean;Währung : Code[20]) : Decimal
 //***************************************************************************************************
 //              TOPAS 26.07.2011-ST  Generiert den DC für den jeweiligen Champ Artikel
-//              TOPAS 10.01.2014-ST  Nun auch für ACTS
+//              TOPAS 10.01.2014-ST  Nun auch für ACTS und ACHAT
 //***************************************************************************************************
 
 IF Runden = TRUE THEN
@@ -4522,8 +4522,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       spezial_discount := 1;
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
-    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
-    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
+    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
     Opt_laufzeit.RESET;
@@ -4537,14 +4537,18 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Champs.RESET;
     Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACHAT') THEN
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
+    OR (Artikel.Artikelgruppe = 'ACHAT') THEN
       Champs.SETFILTER(Art,'%1',Champs.Art :: ACTS)
     ELSE
       Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
+      //Manuelle Artikel Filter erspart separate ACHAT Preisliste
       IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
         "SUP Artikelnr" := 'ACTS-SUPP-24X7/SO#01';
       IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
         "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
+      IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
+         "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
     Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     Champs.SETFILTER("Artikelnr.",'%1',"Basis Artikelnr");
     Champs.SETFILTER(Währungscode,'%1',Währung);
@@ -4617,11 +4621,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
-    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
-    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
+    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
-    IF Artikel.Artikelgruppe = 'ACTS' THEN
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
     ELSE
       ACTS := FALSE;
@@ -4861,7 +4865,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 FindMSRP(Artikelnr : Code[20];Startdatum : Date;Wäh : Code[10];Stkcode : Code[10];SUP_Artikelnr : Code[20];ACTS : Boolean) : Decimal
 //***************************************************************************************************
 //        TOPAS 01.03.2011 ST Findet den aktuellen VK-Preis des Gerätes, sprich MSRP-Preis
-//        TOPAS 09.01.2014 ST Für ACTS den entsprechenden ACTS MSRP
+//        TOPAS 09.01.2014 ST Für ACTS und ACHAT den entsprechenden ACTS MSRP
 //***************************************************************************************************
 
 IF Artikelnr = '' THEN EXIT;
@@ -4909,17 +4913,20 @@ IF (ACTS = FALSE) AND (ACHAT = FALSE) THEN
   END;
 
 //***************************************************************************************************
-//                                         ACTS Berechnung
+//                                     ACTS und ACHAT Berechnung
 //***************************************************************************************************
 
 IF (ACTS = TRUE) OR (ACHAT = TRUE) THEN
   BEGIN
     WITH FindMSRPPrice DO BEGIN
       SETRANGE("Artikelnr.",Artikelnr);
+      //Manuelle Artikel Filter erspart separate ACHAT Preisliste
       IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
         SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
       IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
         SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
+      IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
+        SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
       SETRANGE("SUP Artikelnr.",SUP_Artikelnr);
       SETRANGE(Währungscode,Wäh);
       SETRANGE(Art,Art:: ACTS);
