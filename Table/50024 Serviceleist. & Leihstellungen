@@ -1898,7 +1898,7 @@ IF Vkliefkopf.FINDLAST THEN
              ELSE
                ACTS := FALSE;
 
-             IF Artikel.Artikelgruppe = 'ACHAT' THEN
+             IF (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
                ACHAT := TRUE
              ELSE
                ACHAT := FALSE;
@@ -2929,7 +2929,8 @@ ELSE
 
 ServiceArtikelnrErmitteln(Artikelnr : Code[20];"SUP Artikelnr" : Code[20]) : Code[40]
 Artikel.GET("SUP Artikelnr");
-IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACHAT') THEN
+IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
+OR (Artikel.Artikelgruppe = 'ACHAT') THEN
   ACTS := TRUE
 ELSE
   ACTS := FALSE;
@@ -2941,11 +2942,13 @@ IF ACTS THEN
 ELSE
   Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
 Champs.SETFILTER("Artikelnr.",'%1',Artikelnr);
-//Für ACHAT wird auf das ACTS pendant verwiesen
+//Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
 IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
   "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#01';
 IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
   "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
+IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
+  "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
 Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
 Champs.SETFILTER(Währungscode,'%1','USD');
 IF Champs.FINDFIRST THEN
@@ -2979,6 +2982,7 @@ ServicePreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Lauf
 //06.12.2011-ST Für Übergang genutzt, bis eindeutig Champ Preise vor dem Buchen neu kalkuliert werden
 //10.01.2014-ST Nun auch für ACTS
 //27.01.2014-ST Nun auch für ACHAT
+//18.06.2014-ST Nun auch für Misch ACTS/ACHAT
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -2992,7 +2996,7 @@ Artikel.GET("SUP Artikelnr");
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
-    IF Artikel.Artikelgruppe = 'ACTS' THEN
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
     ELSE
       ACTS := FALSE;
@@ -3003,7 +3007,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       ACHAT := FALSE;
 
     IF ACHAT THEN
-      spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (ZUrückrechnung Champ DC auf 100 % MSRP) * 0.58 EK ACHAT
+      spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (Zurückrechnung Champ DC auf 100 % MSRP) * 0.58 EK ACHAT
     ELSE
       spezial_discount := 1;
 
@@ -3025,11 +3029,13 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ELSE
       Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
     Champs.SETFILTER("Artikelnr.",'%1',Artikelnr);
-    //Für ACHAT wird auf das ACTS pendant verwiesen
+    //Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
     IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
       "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#01';
     IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
       "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
+    IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
+      "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
     Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     Champs.SETFILTER(Währungscode,'%1',Währung);
     IF Champs.FINDFIRST THEN
