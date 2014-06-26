@@ -1,0 +1,338 @@
+
+Documentation()
+
+OnRun()
+
+Zähle_Service_verlängerungen(Klasse : 'Einzelgerät,Mehrgeräte')
+//***************************************************************************************************
+//    Zählt verschiedene Statistiken zu den Wartungsverträgen z.B. wieviele velängert wurden etc.
+//***************************************************************************************************
+
+{
+InfoFileF.TEXTMODE := TRUE;
+InfoFileF.CREATE('C:\Temp\Service_Verlängerungen_alle.txt');
+InfoFileF2.TEXTMODE := TRUE;
+InfoFileF2.CREATE('C:\Temp\Service_Verlängerungen_mehrmals.txt');
+InfoFileF.OPEN('C:\Temp\Service_Verlängerungen.txt');
+"CR+LF"[2]:=10;
+}
+
+Window.OPEN('Wartungsvertrag #1######');
+Wartungsvertrag.RESET;
+//Wartungsvertrag.SETFILTER(Inaktiv,'%1',FALSE);
+IF Klasse = Klasse :: Einzelgerät THEN
+  Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Einzelgerät);
+IF Klasse = Klasse :: Mehrgeräte THEN
+  Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Mehrgeräte);
+Wartungsvertrag.SETFILTER(Status,'%1|%2|%3',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+                          Wartungsvertrag.Status :: ACHAT);
+IF Wartungsvertrag.FINDFIRST THEN
+  REPEAT
+    Window.UPDATE(1,Wartungsvertrag."Wartungsvertragsnr.");
+    temp_sup_artikelnr := '';
+
+    IF Klasse = Klasse :: Einzelgerät THEN
+      BEGIN
+        //Zählt ADV-Hardware Replacement
+        ServicePositionen.RESET;
+        ServicePositionen.SETFILTER(Art,'%1',ServicePositionen.Art :: Service);
+        ServicePositionen.SETFILTER("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+        ServicePositionen.SETFILTER(Basisgerät,'%1',TRUE);
+        ServicePositionen.SETFILTER("SUP Artikelnr.",'%1|%2|%3','CHAMPS-ADV*','ACTS*','ACHAT*');
+        //ServicePositionen.SETFILTER(Inaktiv,'%1',FALSE);
+        IF ServicePositionen.FINDFIRST THEN
+          zähler7 += 1;
+
+        //Zählt 1 Jahres oder 3 Jahres Artikel
+        ServicePositionen.RESET;
+        ServicePositionen.SETFILTER(Art,'%1',ServicePositionen.Art :: Service);
+        ServicePositionen.SETFILTER("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+        ServicePositionen.SETFILTER("Dauer Serviceleistung",'<>%1','');
+        //ServicePositionen.SETFILTER(Basisgerät,'%1',TRUE);
+        //ServicePositionen.SETFILTER(Inaktiv,'%1',FALSE);
+        IF ServicePositionen.FINDFIRST THEN
+          BEGIN
+            REPEAT
+              IF ServicePositionen."SUP Artikelnr." <> temp_sup_artikelnr THEN
+                BEGIN
+                  Artikel.GET(ServicePositionen."SUP Artikelnr.");
+                  IF STRPOS(Artikel."No. 2",'3YR') <> 0 THEN
+                    zähler9 += 1
+                  ELSE
+                    zähler8 += 1;
+                END;
+
+              temp_sup_artikelnr := ServicePositionen."SUP Artikelnr.";
+            UNTIL ServicePositionen.NEXT = 0;
+          END;
+      END;
+
+    IF Klasse = Klasse :: Mehrgeräte THEN
+      BEGIN
+        //Zählt EXT-HW Warranty
+        ServicePositionen.RESET;
+        ServicePositionen.SETFILTER(Art,'%1',ServicePositionen.Art :: Service);
+        ServicePositionen.SETFILTER("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+        ServicePositionen.SETFILTER(Basisgerät,'%1',TRUE);
+        ServicePositionen.SETRANGE(Inaktiv,FALSE);
+        ServicePositionen.SETFILTER("SUP Artikelnr.",'EXTD-HW*');
+        IF ServicePositionen.FINDFIRST THEN
+          zähler7 += 1;
+      END;
+
+    ServicePositionen.RESET;
+    ServicePositionen.SETRANGE(Art,ServicePositionen.Art :: Service);
+    ServicePositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+    ServicePositionen.SETRANGE(Basisgerät,TRUE);
+    ServicePositionen.SETRANGE(Verlängerung,TRUE);
+    ServicePositionen.SETRANGE(Inaktiv,FALSE);
+    IF ServicePositionen.FINDFIRST THEN
+      BEGIN
+        REPEAT
+          IF ServicePositionen.Benutzername <> '' THEN
+            BEGIN
+              IF ServicePositionen."Wartungsvertragsnr." <> temp_vertragsnr THEN
+                BEGIN
+                  zähler += 1;
+                  Wartungsvertrag.Verlängerungen := 1;
+                  Wartungsvertrag.MODIFY;
+                  IF (ServicePositionen.Belegdatum >= CALCDATE('-1W',TODAY))
+                  AND (ServicePositionen."Ablaufdatum Serviceleistung" > TODAY) THEN
+                    zähler5 += 1;
+                  {
+                  InfoFileF.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
+                  FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
+                  }
+                  temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
+                END;
+            END;
+          temp_vertragsnr := ServicePositionen."Wartungsvertragsnr.";
+
+          IF ServicePositionen.Benutzername <> '' THEN
+            BEGIN
+              IF ServicePositionen."Ablaufdatum Serviceleistung" <> temp_ablaufdatum THEN
+                BEGIN
+                  zähler2 += 1;
+                  Wartungsvertrag.Verlängerungen += 1;
+                  Wartungsvertrag.MODIFY;
+                  {
+                  InfoFileF2.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
+                  FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
+                  }
+                END;
+            END;
+            temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
+
+        UNTIL ServicePositionen.NEXT = 0;
+        IF (temp_ablaufdatum <> Wartungsvertrag.Vertragsablaufdatum) //AND (Wartungsvertrag."Wartungsvertragsnr." <> 'SV100000')
+        AND (ServicePositionen.Benutzername <> '') THEN
+          BEGIN
+            //Window.CLOSE;
+            {
+            InfoFileF.CLOSE;
+            InfoFileF2.CLOSE;
+            }
+            MESSAGE('Fehler in Wartungsvertrag %1, Vertragsablaufdatum nicht korrekt.',Wartungsvertrag."Wartungsvertragsnr.");
+          END;
+      END;
+
+      IF Wartungsvertrag.Vertragsablaufdatum < WORKDATE THEN
+        zähler3 += 1;
+      zähler4 += 1;
+
+      //abgelaufene Verträge, letzten 7 Tage
+      IF (Wartungsvertrag.Vertragsablaufdatum >= CALCDATE('-1W',TODAY))
+      AND (Wartungsvertrag.Vertragsablaufdatum < TODAY) THEN
+        zähler6 += 1;
+
+  UNTIL Wartungsvertrag.NEXT = 0;
+
+IF Klasse = Klasse :: Einzelgerät THEN
+  statistik_header := 'Service';
+IF Klasse = Klasse :: Mehrgeräte THEN
+  statistik_header := 'Flat Geräte';
+
+
+MESSAGE('Statistik %1:\\Es wurden insgesamt %2 Verträge verlängert.\(umfasst aktive & abgelaufene)'+
+'\%3 von %2 wurden mehr als 1x verlängert\(umfasst aktive & abgelaufene)\\Abgelaufene Verträge: %4\\'+
+'Letzte 7 Tage verlängert: %6\Letzte 7 Tage abgelaufen: %7\\Wartungsverträge gesamt: %5\davon AHR / EXTD: %8'+
+'\davon 1YR Service Artikel: %9\davon 3YR Service Artikel: %10',
+statistik_header,zähler,zähler2,zähler3,zähler4,zähler5,zähler6,zähler7,zähler8,zähler9);
+
+Window.CLOSE;
+{
+InfoFileF.CLOSE;
+InfoFileF2.CLOSE;
+}
+
+GetUserStatistics(UserID : Code[20];Criteria : Text[30]) : Text[1024]
+chr := 10;
+CASE Criteria OF
+
+  'Urlaub_offen','Urlaub_rest','Urlaub_gesamt':
+  BEGIN
+    v_resturlaub:=0;
+    Urlaubskartei.RESET;
+    Urlaubskartei.SETCURRENTKEY(Mitarbeiter,"genommen von");
+    Urlaubskartei.SETFILTER(Urlaubskartei.Mitarbeiter,'%1',UserID);
+    Urlaubskartei.SETFILTER(Urlaubskartei.Jahr,'<=%1',FORMAT(DATE2DMY(WORKDATE, 3)));
+    IF Urlaubskartei.FINDFIRST THEN
+    v_abgr_urlaub:=0;
+    v_resturlaub:=0;
+    REPEAT
+      IF Urlaubskartei.Jahr < FORMAT(DATE2DMY(WORKDATE, 3)) THEN 
+        BEGIN
+          IF Urlaubskartei.Art=Urlaubskartei.Art::Zugang THEN 
+            BEGIN
+              v_resturlaub:=v_resturlaub+Urlaubskartei.Urlaubstage;
+              v_abgr_urlaub:=v_abgr_urlaub+Urlaubskartei.Urlaubstage;
+            END 
+          ELSE 
+            BEGIN
+              v_resturlaub:=v_resturlaub-Urlaubskartei.Urlaubstage;
+              v_abgr_urlaub:=v_abgr_urlaub-Urlaubskartei.Urlaubstage;
+            END;
+         END 
+       ELSE 
+         BEGIN
+           IF Urlaubskartei.Art=Urlaubskartei.Art::Zugang THEN 
+             BEGIN
+               v_abgr_urlaub:=v_abgr_urlaub+Urlaubskartei.Urlaubstage;
+               v_Art:='Zugang';
+               IF (DATE2DMY(Urlaubskartei.Datum,1) = 1) AND (DATE2DMY(Urlaubskartei.Datum,2) = 1) THEN
+                 v_urlaub_gesamt := Urlaubskartei.Urlaubstage;
+             END 
+           ELSE 
+             BEGIN
+               v_abgr_urlaub:=v_abgr_urlaub-Urlaubskartei.Urlaubstage;
+               v_Art:='Abgang';
+             END;
+         END;
+    UNTIL Urlaubskartei.NEXT=0;
+    IF Criteria = 'Urlaub_offen' THEN
+      EXIT(FORMAT(v_abgr_urlaub));
+    IF Criteria = 'Urlaub_rest' THEN
+      EXIT(FORMAT(v_resturlaub));
+    IF Criteria = 'Urlaub_gesamt' THEN
+      EXIT(FORMAT(v_urlaub_gesamt));
+  END;
+
+  'Urlaub_genommen_text','Urlaub_genommen':
+  BEGIN
+    v_urlaub_text := 'Urlaub wie folgt genommen:' + FORMAT(chr) + FORMAT(chr);
+    Urlaubskartei.RESET;
+    Urlaubskartei.SETCURRENTKEY(Mitarbeiter,"genommen von");
+    Urlaubskartei.SETFILTER(Urlaubskartei.Art,'%1',Urlaubskartei.Art :: Abgang);
+    Urlaubskartei.SETFILTER(Urlaubskartei.Mitarbeiter,'%1',UserID);
+    Urlaubskartei.SETFILTER(Urlaubskartei.Jahr,'%1',FORMAT(DATE2DMY(WORKDATE, 3)));
+    IF Urlaubskartei.FINDFIRST THEN
+      BEGIN
+        REPEAT
+          CASE DATE2DWY(Urlaubskartei."genommen von",1) OF
+            1 : weekday := 'Mo.';
+            2 : weekday := 'Di.';
+            3 : weekday := 'Mi.';
+            4 : weekday := 'Do.';
+            5 : weekday := 'Fr.';
+            6 : weekday := 'Sa.';
+            7 : weekday := 'So.';
+          END;
+          v_urlaub_text := v_urlaub_text + weekday +  '   ' + FORMAT(Urlaubskartei."genommen von") + '-' +
+                               FORMAT(Urlaubskartei."genommen bis") + '  (' + FORMAT(Urlaubskartei.Urlaubstage) + ')' + FORMAT(chr);
+          v_urlaub_genommen += Urlaubskartei.Urlaubstage;
+        UNTIL Urlaubskartei.NEXT=0;
+        v_urlaub_text := v_urlaub_text + FORMAT(chr) + 'Insgesamt genommen: ' + FORMAT(v_urlaub_genommen);
+      END;
+    IF Criteria = 'Urlaub_genommen_text' THEN
+      EXIT(v_urlaub_text);
+    IF Criteria = 'Urlaub_genommen' THEN
+      EXIT(FORMAT(v_urlaub_genommen));
+  END;
+
+  'Mandanten':
+  BEGIN
+    Kontakte.RESET;
+    Kontakte.SETFILTER(Type,'%1',Kontakte.Type :: Company);
+    Kontakte.SETFILTER("Betreuer Innendienst",'%1',UserID);
+    IF Kontakte.FINDFIRST THEN
+      v_betr_mandant := Kontakte.COUNT;
+    Kontakte.RESET;
+    Kontakte.SETFILTER(Type,'%1',Kontakte.Type :: Company);
+    Kontakte.SETFILTER("Salesperson Code",'%1',UserID);
+    IF Kontakte.FINDFIRST THEN
+      v_verk_mandant := Kontakte.COUNT;
+
+    EXIT(FORMAT(v_betr_mandant + v_verk_mandant));
+  END;
+
+  'Aufgaben':
+  BEGIN
+    Aufgaben.RESET;
+    Aufgaben.SETFILTER("Salesperson Code",'%1',UserID);
+    Aufgaben.SETFILTER(Closed,'%1',FALSE);
+    IF Aufgaben.FINDFIRST THEN
+      v_aufgaben := Aufgaben.COUNT;
+    EXIT(FORMAT(v_aufgaben));
+  END;
+
+  'Auftragseingang':
+  BEGIN
+    hilfsstring := '01.'+FORMAT(DATE2DMY(WORKDATE,2))+'.'+ FORMAT(DATE2DMY(WORKDATE,3));
+    EVALUATE(v_datum_von,hilfsstring);
+    v_datum_bis := CALCDATE('1M-1T',v_datum_von);
+    AE_mtl.RESET;
+    AE_mtl.SETFILTER(AE_mtl.Belegart,'%1|%2|%3','AMTL','AEMT','GUMT');
+    AE_mtl.SETFILTER(AE_mtl.Datum,'%1..%2',v_datum_von,v_datum_bis);
+    //AE_mtl.SETFILTER(AE_mtl.Betreuer,'%1|%2|%3','RL','MK','IF');
+    IF AE_mtl.FINDFIRST THEN 
+      BEGIN
+        REPEAT
+          v_ae_mtl := v_ae_mtl + AE_mtl."Betrag in EUR";
+        UNTIL AE_mtl.NEXT=0;
+      END;
+    //AE_mtl.RESET;
+    //AE_mtl.SETFILTER(AE_mtl.Belegart,'%1|%2|%3','AMTL','AEMT','GUMT');
+    //AE_mtl.SETFILTER(AE_mtl.Datum,'%1..%2',v_datum_von,v_datum_bis);
+    //AE_mtl.SETFILTER(AE_mtl.Betreuer,'%1','ML');
+    //AE_mtl.SETFILTER(AE_mtl.Vertreter,'%1|%2|%3|%4|%5|%6','RL','MK','TWW','TWE','TWA','IF');
+    //IF AE_mtl.FINDFIRST THEN
+    //  BEGIN
+    //    REPEAT
+    //      v_ae_mtl := v_ae_mtl + AE_mtl."Betrag in EUR";
+    //    UNTIL AE_mtl.NEXT=0;
+    //  END;
+    EXIT(FORMAT(ROUND(v_ae_mtl,0.01))+' €');
+  END;
+
+  'Angebote':
+  BEGIN
+    AktBelege.RESET;
+    AktBelege.SETFILTER("Document Type",'%1',AktBelege."Document Type" :: Quote);
+    AktBelege.SETFILTER("Betreuer Innendienst",'%1',UserID);
+    IF AktBelege.FINDFIRST THEN
+      v_akt_angebote := AktBelege.COUNT;
+    EXIT(FORMAT(v_akt_angebote));
+  END;
+
+  'Angebote_1J':
+  BEGIN
+    AktBelege.RESET;
+    AktBelege.SETFILTER("Document Type",'%1',AktBelege."Document Type" :: Quote);
+    AktBelege.SETFILTER("Document Date",'<%1',CALCDATE('-1J',WORKDATE));
+    AktBelege.SETFILTER("Betreuer Innendienst",'%1',UserID);
+    IF AktBelege.FINDFIRST THEN
+      v_akt_angebote := AktBelege.COUNT;
+    EXIT(FORMAT(v_akt_angebote));
+  END;
+
+  'Aufträge':
+  BEGIN
+    AktBelege.RESET;
+    AktBelege.SETFILTER("Document Type",'%1',AktBelege."Document Type" :: Order);
+    AktBelege.SETFILTER("Betreuer Innendienst",'%1',UserID);
+    IF AktBelege.FINDFIRST THEN
+      v_akt_aufträge := AktBelege.COUNT;
+    EXIT(FORMAT(v_akt_aufträge));
+  END;
+
+END
