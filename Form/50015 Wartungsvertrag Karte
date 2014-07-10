@@ -1,0 +1,347 @@
+
+Documentation()
+
+Form - OnInit()
+
+Form - OnOpenForm()
+CurrForm.SORSymb.VISIBLE := FALSE;
+CurrForm.Vertrag_AN_Hinweis.VISIBLE := FALSE;
+
+Form - OnCloseForm()
+
+Form - OnQueryCloseForm() : Boolean
+
+Form - OnActivateForm()
+
+Form - OnDeactivateForm()
+
+Form - OnFindRecord(Which : Text[1024]) : Boolean
+
+Form - OnNextRecord(Steps : Integer) : Integer
+
+Form - OnAfterGetRecord()
+
+Form - OnAfterGetCurrRecord()
+IF "Wartungsvertragsnr." <> '' THEN
+  BEGIN
+    "Topas Bemerkungen".RESET;
+    "Topas Bemerkungen".SETFILTER("Topas Bemerkungen"."Nr.",'%1',"Wartungsvertragsnr.");
+    "Topas Bemerkungen".SETFILTER("Topas Bemerkungen".Art,'Wartung');
+    IF "Topas Bemerkungen".FINDFIRST THEN
+      comment := TRUE
+    ELSE
+      comment := FALSE;
+  END;
+
+IF (Status = Status :: System) OR (Status = Status :: " ") THEN
+  überschrift := 'Systemvertrag'
+ELSE
+  IF Status = Status :: ACTS THEN
+    überschrift := 'ACTS'
+  ELSE
+    IF Status = Status :: ACHAT THEN
+      überschrift := 'ACHAT'
+    ELSE
+      überschrift := 'Wartungsvertrag';
+
+CurrForm.SORSymb.VISIBLE := FALSE;
+IF SOR = TRUE THEN
+  CurrForm.SORSymb.VISIBLE := TRUE;
+
+
+//Record Links
+CurrForm.Link.VISIBLE := FALSE;
+RecLinkRef.GETTABLE(Rec);
+RecID := RecLinkRef.RECORDID;
+RecLink.SETRANGE("Record ID",RecID);
+IF RecLink.FINDFIRST THEN
+  CurrForm.Link.VISIBLE := TRUE;
+
+Angebote_pruefen(FALSE);
+
+Form - OnBeforePutRecord()
+
+Form - OnNewRecord(BelowxRec : Boolean)
+
+Form - OnInsertRecord(BelowxRec : Boolean) : Boolean
+
+Form - OnModifyRecord() : Boolean
+
+Form - OnDeleteRecord() : Boolean
+
+Form - OnTimer()
+
+Form - OnCreateHyperlink(VAR URL : Text[1024])
+
+Form - OnHyperlink(URL : Text[1024])
+
+SystemPos_anlegen()
+//*****************************************************************************************************
+MESSAGE('Funktion vorerst deaktiviert.');
+EXIT;
+//*****************************************************************************************************
+
+IF NOT CONFIRM(Text000,FALSE) THEN
+  EXIT;
+
+TESTFIELD("Lieferscheinnr.");
+TESTFIELD("Lieferscheinzeilennr.");
+TESTFIELD("Wartungsvertragsnr.");
+TESTFIELD("Hauptwartungsvertragsnr.");
+
+Liefzeile.RESET;
+Liefzeile.SETFILTER(Type,'%1',Liefzeile.Type :: Item);
+Liefzeile.SETFILTER("Document No.",'%1',"Lieferscheinnr.");
+//Liefzeile.SETFILTER("Line No.",'%1',"Lieferscheinzeilennr.");
+Liefzeile.SETFILTER(Quantity,'>%1',0);
+IF Liefzeile.FINDFIRST THEN
+  BEGIN
+    Artikel.GET(Liefzeile."No.");
+    //IF Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS' THEN
+    //  ERROR('Die Angaben %1, %2 müssen auf auf ein Systemgerät verweisen.');
+    Liefkopf.GET("Lieferscheinnr.");
+    REPEAT
+      SeriennrVerfolgung.RESET;
+      //SeriennrVerfolgung.SETFILTER("Item Tracking",'%1',SeriennrVerfolgung."Item Tracking":: "Serial No.");
+      SeriennrVerfolgung.SETFILTER("Document No.",'%1',Liefzeile."Document No.");
+      SeriennrVerfolgung.SETFILTER("Document Line No.",'%1',Liefzeile."Line No.");
+      IF SeriennrVerfolgung.FINDFIRST THEN
+        REPEAT
+          SystemPos.RESET;
+          SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+          SystemPos.SETFILTER("Nr.",'%1',Liefzeile."Document No.");
+          SystemPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+          SystemPos.SETFILTER("Seriennr.",'%1',SeriennrVerfolgung."Serial No.");
+          IF NOT SystemPos.FINDFIRST THEN
+            BEGIN
+              SystemPos.RESET;
+              SystemPos.INIT;
+              SystemPos.Art := SystemPos.Art :: System;
+              SystemPos."Nr." := Liefzeile."Document No.";
+              SystemPos.INSERT(TRUE);
+              SystemPos.Belegdatum := Liefkopf."Posting Date";
+              SystemPos.VALIDATE("Artikelnr.",Liefzeile."No.");
+              SystemPos."Seriennr." := SeriennrVerfolgung."Serial No.";
+              SystemPos."Debitornr." := Liefkopf."Sell-to Customer No.";
+              SystemPos.Debitorname := Liefkopf."Sell-to Customer Name";
+              SystemPos.Menge := SeriennrVerfolgung.Quantity * (-1);
+              SystemPos.Kontakt := Liefkopf."Sell-to Contact";
+              SystemPos."Name 2" := Liefkopf."Sell-to Customer Name 2";
+              SystemPos.Adresse := Liefkopf."Sell-to Address";
+              SystemPos."Adresse 2" := Liefkopf."Sell-to Address 2";
+              SystemPos."PLZ-Code" := Liefkopf."Sell-to Post Code";
+              SystemPos.Ort := Liefkopf."Sell-to City";
+              SystemPos."System Projektinfos" := Liefzeile."ACS Projektinfos";
+              SystemPos."Auftragsnr." := Liefkopf."Order No.";
+              SystemPos."Auftragszeilennr." := Liefzeile."Line No.";
+              SystemPos.Ursprungsland := SeriennrVerfolgung.Ursprungsland;
+              SystemPos."Belegzeilennr." := Liefzeile."Line No.";
+              SystemPos."Wartungsvertragsnr." := "Wartungsvertragsnr.";
+              SystemPos."Hauptwartungsvertragsnr." := "Hauptwartungsvertragsnr.";
+
+              //Zugehörigkeit der Positionen untereinander ermitteln
+              SystemPos."Gehört zu Lfd. Nr." := SystemPos.SystemZugehörigkeitErmitteln(Liefkopf."Order No.",SystemPos."Lfd. Nr.",
+                                                SystemPos."Wartungsvertragsnr.");
+
+              IF (Artikel.GET(SeriennrVerfolgung."Item No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+              OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
+                BEGIN
+                  SystemPos.Basisgerät := TRUE;
+                  "Auftragsnr." := Liefzeile."Order No.";
+                  "Auftragszeilennr." := Liefzeile."Order Line No.";
+                  "Debitornr." := SeriennrVerfolgung."Source No.";
+                  Basisgerät := SystemPos."Artikelnr.";
+                  MODIFY(TRUE);
+                END;
+
+              SystemPos.MODIFY;
+            END;
+        UNTIL SeriennrVerfolgung.NEXT = 0;
+      UNTIL Liefzeile.NEXT = 0;
+  END;
+
+SystemPos_verschieben(Aktueller_WV : Code[20];Neuer_WV : Code[20])
+IF NOT CONFIRM(Text001,TRUE) THEN
+  EXIT;
+
+NeuerVertrag.GET(temp_vertragsnr);
+AlterVertrag.GET("Wartungsvertragsnr.");
+
+//IF "Debitornr." <> NeuerVertrag."Debitornr." THEN ERROR(Text002);
+
+SystemPos.RESET;
+SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+SystemPos.SETFILTER("Zum Verschieben markieren",'%1',TRUE);
+SystemPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+IF SystemPos.FINDFIRST THEN
+  REPEAT
+    //IF SystemPos.Basisgerät = TRUE THEN ERROR(Text003);
+
+    IF SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
+    SystemPos."Belegzeilennr.") = FALSE THEN
+      BEGIN
+        SystemPos."Wartungsvertragsnr." := NeuerVertrag."Wartungsvertragsnr.";
+        SystemPos."Hauptwartungsvertragsnr." := NeuerVertrag."Hauptwartungsvertragsnr.";
+        SystemPos."Zum Verschieben markieren" := FALSE;
+
+        NeueSystemPos.RESET;
+        NeueSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+        NeueSystemPos.SETFILTER(Art,'%1',NeueSystemPos.Art :: System);
+        NeueSystemPos.SETFILTER(Basisgerät,'%1',TRUE);
+        NeueSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',NeuerVertrag."Wartungsvertragsnr.");
+        IF NeueSystemPos.FINDFIRST THEN
+          BEGIN
+            SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+          END
+        ELSE
+          BEGIN
+            NeueSystemPos.RESET;
+            NeueSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+            NeueSystemPos.SETFILTER(Art,'%1',NeueSystemPos.Art :: System);
+            NeueSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',NeuerVertrag."Wartungsvertragsnr.");
+            IF NeueSystemPos.FINDFIRST THEN
+              BEGIN
+                SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+              END
+            ELSE
+              IF SystemPos.Basisgerät = TRUE THEN
+                SystemPos."Gehört zu Lfd. Nr." := SystemPos."Lfd. Nr."
+              ELSE
+                MESSAGE(Text004,SystemPos."Seriennr.",SystemPos.FIELDCAPTION("Gehört zu Lfd. Nr."));
+          END;
+
+        IF SystemPos.Basisgerät = TRUE THEN
+          BEGIN
+            IF (NeuerVertrag.Basisgerät = '') OR (NeuerVertrag."Ablauf Gewährleistung" = 0D) THEN
+              BEGIN
+                NeuerVertrag."Debitornr." := AlterVertrag."Debitornr.";
+                NeuerVertrag.Basisgerät := AlterVertrag.Basisgerät;
+                NeuerVertrag."Ablauf Gewährleistung" := AlterVertrag."Ablauf Gewährleistung";
+                NeuerVertrag.MODIFY(TRUE);
+              END;
+
+            //04.12.2013-ST
+            IF AlterVertrag.Klasse = AlterVertrag.Klasse :: Mehrgeräte THEN
+              BEGIN
+                AlterVertrag.Volumen -= 1;
+                AlterVertrag.MODIFY(TRUE);
+                NeuerVertrag.Volumen += 1;
+                NeuerVertrag.MODIFY(TRUE);
+              END;
+
+          END;
+
+        SystemPos.MODIFY(TRUE);
+        MESSAGE(Text005,SystemPos."Seriennr.",temp_vertragsnr);
+      END;
+  UNTIL SystemPos.NEXT = 0;
+
+SystemPos_entfernen()
+IF NOT CONFIRM(Text006,TRUE) THEN
+  EXIT;
+
+SystemPos.RESET;
+SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+SystemPos.SETFILTER("Zum Verschieben markieren",'%1',TRUE);
+SystemPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+IF SystemPos.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      IF SystemPos.Basisgerät = TRUE THEN
+        ERROR(Text003);
+
+      IF SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
+      SystemPos."Belegzeilennr.") = FALSE THEN
+        BEGIN
+          SystemPos."Wartungsvertragsnr." := '';
+          SystemPos."Hauptwartungsvertragsnr." := '';
+          SystemPos."Zum Verschieben markieren" := FALSE;
+          SystemPos."Gehört zu Lfd. Nr." := '';
+          SystemPos.MODIFY(TRUE);
+          MESSAGE(Text007);
+        END;
+    UNTIL SystemPos.NEXT = 0;
+  END;
+
+SystemPos_aktion_gesperrt(Artikelnr : Code[20];Seriennr : Code[20];Lieferscheinnr : Code[20];Lieferscheinzeilennr : Integer) : Boolean
+//Prüft, ob die Seriennr. auch temporär vorbelegt wurden, um Fehlbuchungen zu verhindern
+
+TempSystemPos.RESET;
+TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
+TempSystemPos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+TempSystemPos.SETFILTER("Seriennr.",'%1',Seriennr);
+TempSystemPos.SETFILTER("Nr.",'%1',Lieferscheinnr);
+TempSystemPos.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
+TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
+IF TempSystemPos.FINDFIRST THEN
+  BEGIN
+    IF CONFIRM(Text008,TRUE) THEN
+      BEGIN
+        TempSystemPos.MODIFYALL(Vormerkung,FALSE);
+        EXIT(FALSE);
+      END
+    ELSE
+      EXIT(TRUE);
+  END
+ELSE
+  EXIT(FALSE);
+
+Angebote_pruefen(ausgabe : Boolean)
+AN_liegt_vor := FALSE;
+CurrForm.Vertrag_AN_Hinweis.VISIBLE := FALSE;
+
+IF Vertragsablaufdatum = 0D THEN EXIT;
+
+IF ((Vertragsablaufdatum > WORKDATE) AND (CALCDATE('-3M',Vertragsablaufdatum) < WORKDATE)) OR (ausgabe) THEN
+  BEGIN
+    ServicePos.RESET;
+    ServicePos.ASCENDING(FALSE);
+    ServicePos.SETRANGE("Wartungsvertragsnr.","Wartungsvertragsnr.");
+    ServicePos.SETRANGE(Art,ServicePos.Art :: Service);
+    ServicePos.SETRANGE(Basisgerät,TRUE);
+    //ServicePos.SETRANGE(Inaktiv,FALSE);
+    IF ServicePos.FINDFIRST THEN
+      BEGIN
+        //REPEAT
+          ServiceZuordnung.RESET;
+          ServiceZuordnung.SETRANGE("Belegnr.",ServicePos."Urspr. Lieferscheinnr.");
+          ServiceZuordnung.SETRANGE("Belegzeilennr.",ServicePos."Urspr. Lieferscheinzeilennr.");
+          IF ServiceZuordnung.FINDFIRST THEN
+            REPEAT
+              SalesHeader.SETRANGE("No.",ServiceZuordnung."Nr.");
+              IF SalesHeader.FINDFIRST THEN
+                IF CALCDATE('-3M',WORKDATE) < SalesHeader."Document Date" THEN
+                  BEGIN
+                    AN_liegt_vor := TRUE;
+                    v_datum := SalesHeader."Document Date";
+                    v_belegnr := SalesHeader."No.";
+                    v_zeilennr := ServiceZuordnung."Belegzeilennr.";
+                    v_service_artikel := ServiceZuordnung."SUP Artikelnr.";
+                  END;
+
+              ArchSalesHeader.SETRANGE("No.",ServiceZuordnung."Nr.");
+              IF ArchSalesHeader.FINDFIRST THEN
+                IF CALCDATE('-3M',WORKDATE) < ArchSalesHeader."Document Date" THEN
+                  BEGIN
+                    AN_liegt_vor := TRUE;
+                    v_datum := ArchSalesHeader."Document Date";
+                    v_belegnr := ArchSalesHeader."No.";
+                    v_zeilennr := ServiceZuordnung."Belegzeilennr.";
+                    v_service_artikel := ServiceZuordnung."SUP Artikelnr.";
+                  END;
+
+            UNTIL (ServiceZuordnung.NEXT = 0) OR (AN_liegt_vor);
+        //UNTIL (ServicePos.NEXT = 0) OR (AN_liegt_vor);
+      END;
+
+    IF AN_liegt_vor = FALSE THEN
+      CurrForm.Vertrag_AN_Hinweis.VISIBLE := TRUE;
+
+  END;
+
+IF (ausgabe) AND (AN_liegt_vor) THEN
+  MESSAGE('Folgender Beleg im Zeitraum der letzten 3 Monate gefunden:'+'\\'+'Service: %1'+'\'+
+  'Belegnr: %2, Zeile: %3 vom %4',v_service_artikel,v_belegnr,v_zeilennr,v_datum);
+
+IF (ausgabe) AND (AN_liegt_vor = FALSE) THEN
+  MESSAGE('Es liegt kein aktueller Beleg für die letzten 3 Monate vor.');
