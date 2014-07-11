@@ -2496,7 +2496,8 @@ IF Vkliefkopf.FINDLAST THEN
     IF (NichtDrucken = FALSE) AND (zudrucken = TRUE) THEN
       BEGIN
         GetDruckWartung.RESET;
-        GetDruckWartung.SETFILTER(Status,'%1|%2',GetDruckWartung.Status :: Auftrag,GetDruckWartung.Status :: ACHAT);
+        GetDruckWartung.SETFILTER(Status,'%1|%2|%3',GetDruckWartung.Status :: System,GetDruckWartung.Status :: Auftrag,
+        GetDruckWartung.Status :: ACHAT);
         GetDruckWartung.SETFILTER("Lieferscheinnr. Service",'%1',Vkliefzeile."Document No.");
         IF GetDruckWartung.FINDFIRST THEN
           REPEAT
@@ -2512,7 +2513,8 @@ IF Vkliefkopf.FINDLAST THEN
               BEGIN
                 REPEAT
                   GetDruckWartung.RESET;
-                  GetDruckWartung.SETFILTER(Status,'%1|%2',GetDruckWartung.Status :: Auftrag,GetDruckWartung.Status :: ACHAT);
+                  GetDruckWartung.SETFILTER(Status,'%1|%2|%3',GetDruckWartung.Status :: System,GetDruckWartung.Status :: Auftrag,
+                  GetDruckWartung.Status :: ACHAT);
                   GetDruckWartung.SETFILTER("Wartungsvertragsnr.",'%1',GetDruckÄnderung."Wartungsvertragsnr.");
                   IF GetDruckWartung.FINDFIRST THEN
                     //REPEAT
