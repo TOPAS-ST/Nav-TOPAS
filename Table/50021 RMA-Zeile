@@ -371,25 +371,32 @@ CASE Belegart OF
               // Führt Umbuchungen der Seriennr. im System durch, wenn diese noch nicht gekennzeichnet sind
               ServicePos.RESET;
               ServicePos.SETFILTER(Art,'%1|%2',ServicePos.Art :: System,ServicePos.Art :: Service);
-              ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+              //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
               ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
               ServicePos.SETFILTER("Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
               ServicePos.SETFILTER(Reklamiert,'%1',FALSE);
               IF ServicePos.FINDFIRST THEN
                 BEGIN
+
+                  selection := STRMENU(Text013,1);
+
+                  IF selection = 1 THEN
                   IF CONFIRM(Text106,FALSE,xRec."SN-Nr. / DC","SN-Nr. / DC") THEN
-                  REPEAT
-                   ServicePos.NewPosFromRMA(ServicePos."Lfd. Nr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC","RMA-Nr.",ServicePos);
-                   MESSAGE(Text100,"RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",ServicePos."Wartungsvertragsnr.",ServicePos."Lfd. Nr.");
-                  UNTIL ServicePos.NEXT = 0
+                    REPEAT
+                      ServicePos.NewPosFromRMA(ServicePos."Lfd. Nr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",
+                      "RMA-Nr.",ServicePos,FALSE,'');
+                      MESSAGE(Text100,"RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",ServicePos."Wartungsvertragsnr.",
+                      ServicePos."Lfd. Nr.");
+                    UNTIL ServicePos.NEXT = 0
                   ELSE ERROR('Abbruch');
+
                 END
               ELSE
                 BEGIN
                   // Bereits neue gebuchte Pos. mit neuer SN wird nochmals geändert, z.B. aufgrund von Tippfehler etc.
                   ServicePosRekl.RESET;
                   ServicePosRekl.SETFILTER(Art,'%1|%2',ServicePosRekl.Art :: System,ServicePosRekl.Art :: Service);
-                  ServicePosRekl.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+                  //ServicePosRekl.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
                   ServicePosRekl.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
                   ServicePosRekl.SETFILTER("Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
                   ServicePosRekl.SETFILTER(Reklamiert,'%1',TRUE);
@@ -399,7 +406,7 @@ CASE Belegart OF
                     BEGIN
                       ServicePos.RESET;
                       ServicePos.SETFILTER(Art,'%1|%2',ServicePos.Art :: System,ServicePos.Art :: Service);
-                      ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+                      //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
                       ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
                       ServicePos.SETFILTER("Urspr. Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
                       ServicePos.SETFILTER("Ersatz für Lfd. Nr.",'%1',ServicePosRekl."Lfd. Nr.");
@@ -423,7 +430,7 @@ CASE Belegart OF
 
                   ServicePos.RESET;
                   ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
-                  ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+                  //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
                   ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
                   ServicePos.SETFILTER("Urspr. Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
                   ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
@@ -443,7 +450,7 @@ CASE Belegart OF
                   // die urspr. Seriennr. in der Nachfolge Position aktualisiert werden, auch temporäre
 
                   ServicePos.RESET;
-                  ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+                  //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
                   ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
                   ServicePos.SETFILTER("Urspr. Seriennr.",'%1',xRec."SN-Nr. / DC");
                   ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
@@ -464,7 +471,7 @@ CASE Belegart OF
               // auf die neue Seriennr. und definiert Ersatzverfahren
               ServicePos.RESET;
               ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Temporär);
-              ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+              //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
               ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
               ServicePos.SETFILTER("Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
               ServicePos.SETFILTER(Ersatzverfahren,'%1',FALSE);
@@ -483,7 +490,7 @@ CASE Belegart OF
                 BEGIN
                   ServicePos.RESET;
                   ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Temporär);
-                  ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+                  //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
                   ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
                   ServicePos.SETFILTER("Seriennr.",'%1',xRec."SN-Nr. / DC");
                   ServicePos.SETFILTER("Urspr. Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
@@ -498,7 +505,7 @@ CASE Belegart OF
 
               ServicePos.RESET;
               ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Temporär);
-              ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+              //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
               ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
               ServicePos.SETFILTER("Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
               ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
@@ -515,6 +522,76 @@ CASE Belegart OF
         END;
     END;
 
+  Belegart:: Vorab: 
+    BEGIN
+      "RMA-Zeilen".RESET;
+      "RMA-Zeilen".SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
+      "RMA-Zeilen".SETFILTER(Belegart,'%1',"RMA-Zeilen".Belegart :: "vom Kunden");
+      "RMA-Zeilen".SETFILTER("Datecode Pos.",'%1',"Datecode Pos.");
+      "RMA-Zeilen".SETFILTER("Artikelnr.",'%1',"Artikelnr.");
+      IF "RMA-Zeilen".FINDFIRST THEN
+        BEGIN
+          IF ("RMA-Zeilen"."SN-Nr. / DC" <> "SN-Nr. / DC") AND (xRec."SN-Nr. / DC" <> "SN-Nr. / DC")
+          AND ("SN-Nr. / DC" <> '') THEN
+            BEGIN 
+
+              // SICHERHEITSSPERRE
+              // Wenn für eine bereits ersetzte Seriennr. die Seriennr. nachträglich wieder geändert wird,
+              // muss das System die Änderung abbrechen, da es sonst zu Inkonsistenzen im System kommt,
+              // die Seriennr. muss manuell in der neuen RMA Pos. auf die neue Seriennr. vorbereitet werden
+              // bevor die alte RMA Pos. geändert werden kann
+
+              Artikel.GET("RMA-Zeilen"."Artikelnr.");
+              IF Artikel."Item Tracking Code" = 'SERIENNR' THEN
+               BEGIN
+                 RMA_pruefung.RESET;
+                 RMA_pruefung.SETFILTER(RMA_pruefung.Belegart,'%1|%2',RMA_pruefung.Belegart :: Rechnung, 
+                 RMA_pruefung.Belegart :: "vom Kunden");
+                 RMA_pruefung.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
+                 RMA_pruefung.SETFILTER("SN-Nr. / DC",'%1',xRec."SN-Nr. / DC");
+                 RMA_pruefung.SETFILTER("Datecode Pos.",'<>%1',xRec."Datecode Pos.");
+                 IF RMA_pruefung.FINDFIRST THEN
+                   ERROR(Text104,RMA_pruefung."SN-Nr. / DC","RMA-Zeilen"."SN-Nr. / DC",RMA_pruefung."RMA-Nr.",
+                   RMA_pruefung."Belegnr.",RMA_pruefung."Belegnr.",RMA_pruefung."Datecode Pos.",Rec."SN-Nr. / DC",
+                   "RMA-Zeilen"."Belegnr.","RMA-Zeilen"."Datecode Pos.");
+               END;
+
+              // Beginn der eigentlichen Buchungs- bzw. Aktualisierungroutinen im Servicesystem
+
+              // Prüft, ob Umbuchungen möglich sind und führt dann Buchungen der Seriennr. im System durch
+              // Hier auch nur Service prüfen und buchen, da Systempos. vorher verschoben wird
+              ServicePos.RESET;
+              ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
+              //ServicePos.SETFILTER("Debitornr.",'%1',"RMA-Zeilen"."Debitornr.");
+              ServicePos.SETFILTER("Artikelnr.",'%1',"RMA-Zeilen"."Artikelnr.");
+              ServicePos.SETFILTER("Seriennr.",'%1',"RMA-Zeilen"."SN-Nr. / DC");
+              ServicePos.SETFILTER(Reklamiert,'%1',FALSE);
+              IF ServicePos.FINDFIRST THEN
+                BEGIN
+                  selection := STRMENU(Text014,1);
+                  IF selection = 1 THEN
+                      BEGIN
+                      IF PrüfeSeriennrAustausch("Artikelnr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC") = TRUE THEN
+                        BEGIN
+                          REPEAT
+                            ServicePos.NewPosFromRMA(ServicePos."Lfd. Nr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",
+                            "RMA-Nr.",ServicePos,TRUE,"Artikelnr.");
+                            MESSAGE(Text100,"RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",ServicePos."Wartungsvertragsnr.",
+                            ServicePos."Lfd. Nr.");
+                          UNTIL ServicePos.NEXT = 0;
+                          IF Herstellercode ='59' THEN
+                            IF CONFIRM(Text109,TRUE) THEN
+                              BEGIN
+                                SendEmail('Carmit',Debitor.Name,"Artikelnr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",
+                                ServicePos."ACO Nr.");
+                              END;
+                        END;
+                    END
+                  ELSE ERROR('Abbruch');
+                END;
+            END;
+        END;
+    END;
 END;
 
 SN-Nr. / DC - OnLookup()
@@ -1408,3 +1485,50 @@ TrackingInternetAddr :=
     ShippingAgent."Internet Address","Paketverfolgungsnr.",'',
     Datum,ShippingAgent."Account No.");
 HYPERLINK(TrackingInternetAddr);
+
+PrüfeSeriennrAustausch(Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20]) : Boolean
+status := FALSE;
+
+IF (Alte_SN = '') OR (Neue_SN = '') THEN
+  EXIT(status);
+
+IF (Artikel.GET(Artikelnr)) AND (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') THEN
+  ERROR(Text108);
+
+Servicezeilen.RESET;
+Servicezeilen.SETRANGE("Artikelnr.",Artikelnr);
+Servicezeilen.SETRANGE("Seriennr.",Alte_SN);
+Servicezeilen.SETRANGE(Art,Servicezeilen.Art :: Service);
+IF Servicezeilen.FINDLAST THEN
+   BEGIN
+     TempSystemzeilen.RESET;
+     TempSystemzeilen.SETRANGE("Artikelnr.",Artikelnr);
+     TempSystemzeilen.SETRANGE("Seriennr.",Neue_SN);
+     TempSystemzeilen.SETRANGE(Art,TempSystemzeilen.Art :: Service);
+     TempSystemzeilen.SETRANGE(Inaktiv,FALSE);
+     IF TempSystemzeilen.FINDLAST THEN
+       ERROR(Text107,TempSystemzeilen.FIELDCAPTION("Seriennr."),Alte_SN,Neue_SN)
+     ELSE
+       BEGIN
+          TempSystemzeilen.SETRANGE(Art,TempSystemzeilen.Art :: System);
+          IF TempSystemzeilen.FINDLAST THEN
+            BEGIN
+              TempSystemzeilen."Zum Verschieben markieren" := TRUE;
+              TempSystemzeilen.MODIFY;
+              status := TempSystemzeilen.SystemPos_verschieben
+                        (TempSystemzeilen."Wartungsvertragsnr.",Servicezeilen."Wartungsvertragsnr.");
+            END;
+       END;
+   END;
+
+EXIT(status);
+
+SendEmail(Ansprechname : Text[50];Debname : Text[50];Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];ACO : Code[20])
+chr := 10;
+Debitor.GET("Debitornr.");
+subject := 'Please amend customer contract';
+body := STRSUBSTNO(Text999,Ansprechname,FORMAT(chr)+FORMAT(chr),Debname,FORMAT(chr),Artikelnr,
+        Alte_SN,Neue_SN,ACO,
+        FORMAT(chr)+FORMAT(chr),FORMAT(chr)+FORMAT(chr));
+TOPAS_API.NewMail('EMEAPurchasing@audiocodes.com','','',subject,body,'','');
