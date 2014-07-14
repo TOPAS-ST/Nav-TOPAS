@@ -2968,8 +2968,22 @@ IF CopyRec.Reklamiert = FALSE THEN
     NewRec."Urspr. Seriennr." := AlteSN;
     NewRec.Ersatzverfahren := TRUE;
     NewRec."Ersatz für Lfd. Nr." := CopyRec."Lfd. Nr.";
-    NewRec."Korrigiert von" := '';
-    NewRec."Korrigiert am" := 0D;
+    IF KundenPool THEN
+      BEGIN
+        PrüfeSystemPos.RESET;
+        PrüfeSystemPos.SETFILTER(Art,'%1',PrüfeSystemPos.Art :: System);
+        PrüfeSystemPos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+        PrüfeSystemPos.SETFILTER("Seriennr.",'%1',NeueSN);
+        PrüfeSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+        PrüfeSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',CopyRec."Wartungsvertragsnr.");
+        IF PrüfeSystemPos.FINDFIRST THEN
+          BEGIN
+            NewRec."Urspr. Lieferscheinnr." := PrüfeSystemPos."Nr.";
+            NewRec."Urspr. Lieferscheinzeilennr." := PrüfeSystemPos."Belegzeilennr.";
+            NewRec."Urspr. Auftragsnr." := PrüfeSystemPos."Auftragsnr.";
+            NewRec."Urspr. Auftragszeilennr." := PrüfeSystemPos."Auftragszeilennr.";
+          END;
+      END;
     NewRec.INSERT(TRUE);
 
     CopyRec.Reklamiert := TRUE;
@@ -3105,3 +3119,104 @@ WITH Wartung DO BEGIN
       Wartung.MODIFY(TRUE);
     END;
 END;
+
+SystemPos_verschieben(Aktueller_WV : Code[20];Neuer_WV : Code[20]) : Boolean
+aktion := FALSE;
+
+IF NOT CONFIRM(Text070,TRUE) THEN
+  EXIT(aktion);
+
+NeuerVertrag.GET(Neuer_WV);
+AlterVertrag.GET(Aktueller_WV);
+
+SystemPos.RESET;
+SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+SystemPos.SETFILTER("Zum Verschieben markieren",'%1',TRUE);
+SystemPos.SETFILTER("Wartungsvertragsnr.",'%1',Aktueller_WV);
+IF SystemPos.FINDFIRST THEN
+  REPEAT
+    //IF SystemPos.Basisgerät = TRUE THEN ERROR(Text071);
+
+    IF SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
+    SystemPos."Belegzeilennr.") = FALSE THEN
+      BEGIN
+        SystemPos."Wartungsvertragsnr." := NeuerVertrag."Wartungsvertragsnr.";
+        SystemPos."Hauptwartungsvertragsnr." := NeuerVertrag."Hauptwartungsvertragsnr.";
+        SystemPos."Zum Verschieben markieren" := FALSE;
+
+        NeueSystemPos.RESET;
+        NeueSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+        NeueSystemPos.SETFILTER(Art,'%1',NeueSystemPos.Art :: System);
+        NeueSystemPos.SETFILTER(Basisgerät,'%1',TRUE);
+        NeueSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',NeuerVertrag."Wartungsvertragsnr.");
+        IF NeueSystemPos.FINDFIRST THEN
+          BEGIN
+            SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+          END
+        ELSE
+          BEGIN
+            NeueSystemPos.RESET;
+            NeueSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+            NeueSystemPos.SETFILTER(Art,'%1',NeueSystemPos.Art :: System);
+            NeueSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',NeuerVertrag."Wartungsvertragsnr.");
+            IF NeueSystemPos.FINDFIRST THEN
+              BEGIN
+                SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+              END
+            ELSE
+              IF SystemPos.Basisgerät = TRUE THEN
+                SystemPos."Gehört zu Lfd. Nr." := SystemPos."Lfd. Nr."
+              ELSE
+                MESSAGE(Text072,SystemPos."Seriennr.",SystemPos.FIELDCAPTION("Gehört zu Lfd. Nr."));
+          END;
+
+        IF SystemPos.Basisgerät = TRUE THEN
+          BEGIN
+            IF (NeuerVertrag.Basisgerät = '') OR (NeuerVertrag."Ablauf Gewährleistung" = 0D) THEN
+              BEGIN
+                NeuerVertrag."Debitornr." := AlterVertrag."Debitornr.";
+                NeuerVertrag.Basisgerät := AlterVertrag.Basisgerät;
+                NeuerVertrag."Ablauf Gewährleistung" := AlterVertrag."Ablauf Gewährleistung";
+                NeuerVertrag.MODIFY(TRUE);
+              END;
+
+            IF AlterVertrag.Klasse = AlterVertrag.Klasse :: Mehrgeräte THEN
+              BEGIN
+                AlterVertrag.Volumen -= 1;
+                AlterVertrag.MODIFY(TRUE);
+                NeuerVertrag.Volumen += 1;
+                NeuerVertrag.MODIFY(TRUE);
+              END;
+
+          END;
+
+        SystemPos.MODIFY(TRUE);
+        aktion :=  TRUE;
+        MESSAGE(Text073,SystemPos."Seriennr.",Neuer_WV);
+      END;
+  UNTIL SystemPos.NEXT = 0;
+
+EXIT(aktion);
+
+SystemPos_aktion_gesperrt(Artikelnr : Code[20];Seriennr : Code[20];Lieferscheinnr : Code[20];Lieferscheinzeilennr : Integer) : Boolean
+//Prüft, ob die Seriennr. auch temporär vorbelegt wurden, um Fehlbuchungen zu verhindern
+
+TempSystemPos.RESET;
+TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
+TempSystemPos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+TempSystemPos.SETFILTER("Seriennr.",'%1',Seriennr);
+TempSystemPos.SETFILTER("Nr.",'%1',Lieferscheinnr);
+TempSystemPos.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
+TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
+IF TempSystemPos.FINDFIRST THEN
+  BEGIN
+    IF CONFIRM(Text074,TRUE) THEN
+      BEGIN
+        TempSystemPos.MODIFYALL(Vormerkung,FALSE);
+        EXIT(FALSE);
+      END
+    ELSE
+      EXIT(TRUE);
+  END
+ELSE
+  EXIT(FALSE);
