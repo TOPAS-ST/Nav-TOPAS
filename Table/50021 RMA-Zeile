@@ -571,7 +571,7 @@ CASE Belegart OF
                   selection := STRMENU(Text014,1);
                   IF selection = 1 THEN
                       BEGIN
-                      IF PrüfeSeriennrAustausch("Artikelnr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC") = TRUE THEN
+                      IF PrüfeSeriennrAustausch("Artikelnr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC","RMA-Nr.") = TRUE THEN
                         BEGIN
                           REPEAT
                             ServicePos.NewPosFromRMA(ServicePos."Lfd. Nr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",
@@ -582,8 +582,8 @@ CASE Belegart OF
                           IF Herstellercode ='59' THEN
                             IF CONFIRM(Text109,TRUE) THEN
                               BEGIN
-                                SendEmail('Carmit',Debitor.Name,"Artikelnr.","RMA-Zeilen"."SN-Nr. / DC","SN-Nr. / DC",
-                                ServicePos."ACO Nr.");
+                                EmailVorbereiten('ACS',"Artikelnr.","RMA-Zeilen"."Debitornr.","RMA-Zeilen"."SN-Nr. / DC",
+                                "SN-Nr. / DC",ServicePos."ACO Nr.");
                               END;
                         END;
                     END
@@ -1486,7 +1486,7 @@ TrackingInternetAddr :=
     Datum,ShippingAgent."Account No.");
 HYPERLINK(TrackingInternetAddr);
 
-PrüfeSeriennrAustausch(Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20]) : Boolean
+PrüfeSeriennrAustausch(Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];"RMA-Nr" : Code[20]) : Boolean
 status := FALSE;
 
 IF (Alte_SN = '') OR (Neue_SN = '') THEN
@@ -1518,17 +1518,93 @@ IF Servicezeilen.FINDLAST THEN
               TempSystemzeilen.MODIFY;
               status := TempSystemzeilen.SystemPos_verschieben
                         (TempSystemzeilen."Wartungsvertragsnr.",Servicezeilen."Wartungsvertragsnr.");
+            END
+          ELSE
+            BEGIN
+              //Hier muss nun eine Pseudo Position angelegt werden, da keine Systemposition dazu gebucht ist
+              IF CONFIRM(Text110,TRUE,Servicezeilen.FIELDCAPTION("Seriennr."),Neue_SN) THEN
+                BEGIN
+                  SystemPseudoPositionAnlegen(Artikelnr,Alte_SN,Neue_SN,Servicezeilen."Wartungsvertragsnr.");
+                  TempSystemzeilen.SETRANGE(Art,TempSystemzeilen.Art :: System);
+                  TempSystemzeilen.FINDLAST;
+                  TempSystemzeilen."Zum Verschieben markieren" := TRUE;
+                  TempSystemzeilen.MODIFY;
+                  status := TempSystemzeilen.SystemPos_verschieben
+                            (TempSystemzeilen."Wartungsvertragsnr.",Servicezeilen."Wartungsvertragsnr.");
+                END
+              ELSE ERROR('Abbruch');
             END;
+         SystemPositionDeaktivieren(Artikelnr,Alte_SN,Neue_SN,Servicezeilen."Wartungsvertragsnr.","RMA-Nr");
        END;
    END;
 
 EXIT(status);
 
-SendEmail(Ansprechname : Text[50];Debname : Text[50];Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];ACO : Code[20])
-chr := 10;
-Debitor.GET("Debitornr.");
-subject := 'Please amend customer contract';
-body := STRSUBSTNO(Text999,Ansprechname,FORMAT(chr)+FORMAT(chr),Debname,FORMAT(chr),Artikelnr,
-        Alte_SN,Neue_SN,ACO,
-        FORMAT(chr)+FORMAT(chr),FORMAT(chr)+FORMAT(chr));
-TOPAS_API.NewMail('EMEAPurchasing@audiocodes.com','','',subject,body,'','');
+SystemPseudoPositionAnlegen(Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];Wartungsnr : Code[20])
+TempSystemPos.RESET;
+TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: System);
+TempSystemPos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+TempSystemPos.SETFILTER("Seriennr.",'%1',Alte_SN);
+TempSystemPos.SETFILTER("Wartungsvertragsnr.",Wartungsnr);
+TempSystemPos.FINDFIRST;
+
+SystemPos.RESET;
+SystemPos.INIT;
+SystemPos.Art := SystemPos.Art :: System;
+ok := EVALUATE(eingabe,'TOPAS-PSEU');
+laufende_nummer:='';
+NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
+SystemPos."Nr." := 'LS_' + laufende_nummer;
+SystemPos.INSERT(TRUE);
+SystemPos.Belegdatum := TempSystemPos.Belegdatum;
+SystemPos."Belegzeilennr." := 11111;
+SystemPos.VALIDATE("Artikelnr.",Artikelnr);
+SystemPos."Seriennr." := Neue_SN;
+SystemPos."Debitornr." := TempSystemPos."Debitornr.";
+SystemPos.Debitorname := TempSystemPos.Debitorname;
+SystemPos.Menge := TempSystemPos.Menge;
+SystemPos.Kontakt := TempSystemPos.Kontakt;
+SystemPos."Name 2" := TempSystemPos."Name 2";
+SystemPos.Adresse := TempSystemPos.Adresse;
+SystemPos."Adresse 2" := TempSystemPos."Adresse 2";
+SystemPos."PLZ-Code" := TempSystemPos."PLZ-Code";
+SystemPos.Ort := TempSystemPos.Ort;
+SystemPos."System Projektinfos" := TempSystemPos."System Projektinfos";
+SystemPos."Auftragsnr." := 'AU_' + laufende_nummer;
+SystemPos."Auftragszeilennr." := SystemPos."Belegzeilennr.";
+Artikel.GET("Artikelnr.");
+SystemPos.Ursprungsland := Artikel."Country/Region of Origin Code";;
+SystemPos.Fremderwerb := TRUE;
+SystemPos."Wartungsvertragsnr." := Wartungsnr;
+SystemPos."Hauptwartungsvertragsnr." := Wartungsnr;
+IF (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') THEN
+  SystemPos.Basisgerät := TRUE;
+SystemPos."Gehört zu Lfd. Nr." := TempSystemPos."Gehört zu Lfd. Nr.";
+SystemPos.MODIFY;
+
+SystemPositionDeaktivieren(Artikelnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];Wartungsnr : Code[20];"RMA-Nr" : Code[20])
+SystemPos.RESET;
+SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+SystemPos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+SystemPos.SETFILTER("Seriennr.",'%1',Alte_SN);
+SystemPos.SETFILTER("Wartungsvertragsnr.",Wartungsnr);
+SystemPos.FINDFIRST;
+
+SystemPos.Reklamiert := TRUE;
+SystemPos."RMA-Nr." := "RMA-Nr";
+SystemPos.Ersatzverfahren := TRUE;
+SystemPos.Inaktiv := TRUE;
+SystemPos.MODIFY(TRUE);
+
+EmailVorbereiten(Hersteller : Code[20];Artikelnr : Code[20];Debnr : Code[20];Alte_SN : Code[20];Neue_SN : Code[20];ACO : Code[20])
+CASE Hersteller OF
+  'ACS' :
+    BEGIN
+      chr := 10;
+      Debitor.GET(Debnr);
+      subject := 'Please amend customer contract';
+      body := STRSUBSTNO(Text999,'Carmit',FORMAT(chr)+FORMAT(chr),Debitor.Name,FORMAT(chr),
+              Artikelnr,Alte_SN,Neue_SN,ACO,FORMAT(chr)+FORMAT(chr),FORMAT(chr)+FORMAT(chr));
+      TOPAS_API.NewMail('EMEAPurchasing@audiocodes.com','','',subject,body,'','');
+    END;
+END;
