@@ -1582,7 +1582,7 @@ IF Liefkopf.FINDLAST THEN
     Liefzeile.RESET;
     Liefzeile.SETFILTER(Liefzeile."Document No.",'%1',Liefkopf."No.");
     Liefzeile.SETFILTER(Liefzeile."Order No.",AUnr);
-    Liefzeile.SETFILTER("Manufacturer Code",'%1|%2|%3','53','57','59','5710');
+    Liefzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
     Liefzeile.SETFILTER(Type,'%1',Liefzeile.Type::Item);
     Liefzeile.SETFILTER(Quantity,'>%1',0);
     IF Liefzeile.FINDFIRST THEN
