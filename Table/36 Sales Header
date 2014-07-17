@@ -1,0 +1,3909 @@
+
+Documentation()
+TOPAS-080226: Felder 50000..50030 und 60000..60002
+
+OnInsert()
+SalesSetup.GET;
+
+IF "No." = '' THEN BEGIN
+  TestNoSeries;
+  NoSeriesMgt.InitSeries(GetNoSeriesCode,xRec."No. Series","Posting Date","No.","No. Series");
+END;
+
+InitRecord;
+InsertMode := TRUE;
+
+IF GETFILTER("Sell-to Customer No.") <> '' THEN
+  IF GETRANGEMIN("Sell-to Customer No.") = GETRANGEMAX("Sell-to Customer No.") THEN
+    VALIDATE("Sell-to Customer No.",GETRANGEMIN("Sell-to Customer No."));
+
+IF GETFILTER("Sell-to Contact No.") <> '' THEN
+  IF GETRANGEMIN("Sell-to Contact No.") = GETRANGEMAX("Sell-to Contact No.") THEN
+    VALIDATE("Sell-to Contact No.",GETRANGEMIN("Sell-to Contact No."));
+
+"Doc. No. Occurrence" := ArchiveManagement.GetNextOccurrenceNo(DATABASE::"Sales Header","Document Type","No.");
+
+DimMgt.InsertDocDim(
+  DATABASE::"Sales Header","Document Type","No.",0,
+  "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+
+OnModify()
+
+OnDelete()
+IF NOT UserMgt.CheckRespCenter(0,"Responsibility Center") THEN
+  ERROR(
+    Text022,
+    RespCenter.TABLECAPTION,UserMgt.GetSalesFilter);
+
+IF ("Document Type" = "Document Type"::Quote) OR
+   ("Document Type" = "Document Type"::Order)
+THEN BEGIN
+  Opp.RESET;
+  Opp.SETCURRENTKEY("Sales Document Type","Sales Document No.");
+  IF "Document Type" = "Document Type"::Quote THEN
+    Opp.SETRANGE("Sales Document Type",Opp."Sales Document Type"::Quote)
+  ELSE IF "Document Type" = "Document Type"::Order THEN
+      Opp.SETRANGE("Sales Document Type",Opp."Sales Document Type"::Order);
+  Opp.SETRANGE("Sales Document No.","No.");
+  IF Opp.FINDFIRST THEN BEGIN
+    IF Opp."Sales Document Type" = Opp."Sales Document Type"::Order THEN BEGIN
+      IF CONFIRM(Text040 + Text041 + Text042,TRUE) THEN BEGIN
+        TempOpportunityEntry.DELETEALL;
+        TempOpportunityEntry.INIT;
+        TempOpportunityEntry.VALIDATE("Opportunity No.",Opp."No.");
+        TempOpportunityEntry."Sales Cycle Code" := Opp."Sales Cycle Code";
+        TempOpportunityEntry."Contact No." := Opp."Contact No.";
+        TempOpportunityEntry."Contact Company No." := Opp."Contact Company No.";
+        TempOpportunityEntry."Salesperson Code" := Opp."Salesperson Code";
+        TempOpportunityEntry."Campaign No." := Opp."Campaign No.";
+        TempOpportunityEntry."Action Taken" := TempOpportunityEntry."Action Taken"::Lost;
+        TempOpportunityEntry.INSERT;
+        TempOpportunityEntry.SETRANGE("Action Taken",TempOpportunityEntry."Action Taken"::Lost);
+        FORM.RUNMODAL(FORM::"Close Opportunity",TempOpportunityEntry);
+        Opp2.RESET;
+        Opp2.SETCURRENTKEY("Sales Document Type","Sales Document No.");
+        Opp2.SETRANGE("Sales Document Type",Opp."Sales Document Type"::Order);
+        Opp2.SETRANGE("Sales Document No.","No.");
+        Opp2.SETRANGE(Status,Opp.Status::Won);
+        IF NOT Opp2.ISEMPTY THEN
+          ERROR(Text043);
+      END ELSE
+        ERROR(Text044);
+    END;
+    IF Opp.FINDFIRST THEN BEGIN
+      IF Opp."Sales Document Type" = Opp."Sales Document Type"::Order THEN
+        Opp.Status := Opp.Status::Lost;
+      Opp."Sales Document Type" := Opp."Sales Document Type"::" ";
+      Opp."Sales Document No." := '';
+      Opp.MODIFY;
+    END;
+  END;
+END;
+
+LicPermission.GET(
+  LicPermission."Object Type"::Codeunit,
+  CODEUNIT::"Archiving Sales Header");
+IF (LicPermission."Execute Permission" = LicPermission."Execute Permission"::Yes) THEN
+  CASE "Document Type" OF
+    "Document Type"::Quote:
+      IF ArchSalesHeader.ArchivingYesNo THEN
+        ArchSalesHeader.Archiving(Rec, 1, FALSE);  { 1 - Manually Deleting }
+    "Document Type"::"Blanket Order","Document Type"::Order:
+      ArchSalesHeader.Archiving(Rec, 1, FALSE);  { 1 - Manually Deleting }
+  END;
+
+SalesPost.DeleteHeader(
+  Rec,SalesShptHeader,SalesInvHeader,SalesCrMemoHeader,ReturnRcptHeader,SalesInvHeaderPrepmt,SalesCrMemoHeaderPrepmt);
+VALIDATE("Applies-to ID",'');
+
+DimMgt.DeleteDocDim(DATABASE::"Sales Header","Document Type","No.",0);
+
+ApprovalMgt.DeleteApprovalEntry(DATABASE::"Sales Header","Document Type","No.");
+SalesLine.RESET;
+SalesLine.LOCKTABLE;
+
+WhseRequest.SETRANGE("Source Type",DATABASE::"Sales Line");
+WhseRequest.SETRANGE("Source Subtype","Document Type");
+WhseRequest.SETRANGE("Source No.","No.");
+WhseRequest.DELETEALL(TRUE);
+
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+SalesLine.SETRANGE(Type,SalesLine.Type::"Charge (Item)");
+
+DeleteSalesLines;
+SalesLine.SETRANGE(Type);
+DeleteSalesLines;
+
+//TOPAS 13.08.09
+UpdateAufgaben;
+//TOPAS Ende
+
+SalesCommentLine.SETRANGE("Document Type","Document Type");
+SalesCommentLine.SETRANGE("No.","No.");
+SalesCommentLine.DELETEALL;
+
+IF (SalesShptHeader."No." <> '') OR
+   (SalesInvHeader."No." <> '') OR
+   (SalesCrMemoHeader."No." <> '') OR
+   (ReturnRcptHeader."No." <> '') OR
+   (SalesInvHeaderPrepmt."No." <> '') OR
+   (SalesCrMemoHeaderPrepmt."No." <> '')
+THEN BEGIN
+  DELETE;
+  COMMIT;
+
+  IF SalesShptHeader."No." <> '' THEN
+    IF CONFIRM(
+         Text000,TRUE,
+         SalesShptHeader."No.")
+    THEN BEGIN
+      SalesShptHeader.SETRECFILTER;
+      SalesShptHeader.PrintRecords(TRUE);
+    END;
+
+  IF SalesInvHeader."No." <> '' THEN
+    IF CONFIRM(
+         Text001,TRUE,
+         SalesInvHeader."No.")
+    THEN BEGIN
+      SalesInvHeader.SETRECFILTER;
+      SalesInvHeader.PrintRecords(TRUE);
+    END;
+
+  IF SalesCrMemoHeader."No." <> '' THEN
+    IF CONFIRM(
+         Text002,TRUE,
+         SalesCrMemoHeader."No.")
+    THEN BEGIN
+      SalesCrMemoHeader.SETRECFILTER;
+      SalesCrMemoHeader.PrintRecords(TRUE);
+    END;
+
+  IF ReturnRcptHeader."No." <> '' THEN
+    IF CONFIRM(
+         Text023,TRUE,
+         ReturnRcptHeader."No.")
+    THEN BEGIN
+      ReturnRcptHeader.SETRECFILTER;
+      ReturnRcptHeader.PrintRecords(TRUE);
+    END;
+
+  IF SalesInvHeaderPrepmt."No." <> '' THEN
+    IF CONFIRM(
+         Text057,TRUE,
+         SalesInvHeader."No.")
+    THEN BEGIN
+      SalesInvHeaderPrepmt.SETRECFILTER;
+      SalesInvHeaderPrepmt.PrintRecords(TRUE);
+    END;
+
+  IF SalesCrMemoHeaderPrepmt."No." <> '' THEN
+    IF CONFIRM(
+         Text058,TRUE,
+         SalesCrMemoHeaderPrepmt."No.")
+    THEN BEGIN
+      SalesCrMemoHeaderPrepmt.SETRECFILTER;
+      SalesCrMemoHeaderPrepmt.PrintRecords(TRUE);
+    END;
+END;
+
+OnRename()
+ERROR(Text003,TABLECAPTION);
+
+Document Type - OnValidate()
+
+Document Type - OnLookup()
+
+Sell-to Customer No. - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF ("Sell-to Customer No." <> xRec."Sell-to Customer No.") AND
+   (xRec."Sell-to Customer No." <> '')
+THEN BEGIN
+  IF HideValidationDialog OR NOT GUIALLOWED THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Sell-to Customer No."));
+  IF Confirmed THEN BEGIN
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF "Sell-to Customer No." = '' THEN BEGIN
+      IF SalesLine.FINDFIRST THEN
+        ERROR(
+          Text005,
+          FIELDCAPTION("Sell-to Customer No."));
+      INIT;
+      SalesSetup.GET;
+      "No. Series" := xRec."No. Series";
+      InitRecord;
+      IF xRec."Shipping No." <> '' THEN BEGIN
+        "Shipping No. Series" := xRec."Shipping No. Series";
+        "Shipping No." := xRec."Shipping No.";
+      END;
+      IF xRec."Posting No." <> '' THEN BEGIN
+        "Posting No. Series" := xRec."Posting No. Series";
+        "Posting No." := xRec."Posting No.";
+      END;
+      IF xRec."Return Receipt No." <> '' THEN BEGIN
+        "Return Receipt No. Series" := xRec."Return Receipt No. Series";
+        "Return Receipt No." := xRec."Return Receipt No.";
+      END;
+      IF xRec."Prepayment No." <> '' THEN BEGIN
+        "Prepayment No. Series" := xRec."Prepayment No. Series";
+        "Prepayment No." := xRec."Prepayment No.";
+      END;
+      IF xRec."Prepmt. Cr. Memo No." <> '' THEN BEGIN
+        "Prepmt. Cr. Memo No. Series" := xRec."Prepmt. Cr. Memo No. Series";
+        "Prepmt. Cr. Memo No." := xRec."Prepmt. Cr. Memo No.";
+      END;
+      EXIT;
+    END;
+    IF "Document Type" = "Document Type"::Order THEN
+      SalesLine.SETFILTER("Quantity Shipped",'<>0')
+    ELSE IF "Document Type" = "Document Type"::Invoice THEN BEGIN
+        SalesLine.SETRANGE("Sell-to Customer No.",xRec."Sell-to Customer No.");
+        SalesLine.SETFILTER("Shipment No.",'<>%1','');
+      END;
+
+    IF SalesLine.FINDFIRST THEN
+      IF "Document Type" = "Document Type"::Order THEN
+        SalesLine.TESTFIELD("Quantity Shipped",0)
+      ELSE
+        SalesLine.TESTFIELD("Shipment No.",'');
+    SalesLine.SETRANGE("Shipment No.");
+    SalesLine.SETRANGE("Quantity Shipped");
+
+    IF "Document Type" = "Document Type"::Order THEN BEGIN
+      SalesLine.SETFILTER("Prepmt. Amt. Inv.",'<>0');
+      IF SalesLine.FIND('-') THEN
+        SalesLine.TESTFIELD("Prepmt. Amt. Inv.",0);
+      SalesLine.SETRANGE("Prepmt. Amt. Inv.");
+    END;
+
+    IF "Document Type" = "Document Type"::"Return Order" THEN
+      SalesLine.SETFILTER("Return Qty. Received",'<>0')
+    ELSE
+      IF "Document Type" = "Document Type"::"Credit Memo" THEN BEGIN
+        SalesLine.SETRANGE("Sell-to Customer No.",xRec."Sell-to Customer No.");
+        SalesLine.SETFILTER("Return Receipt No.",'<>%1','');
+      END;
+
+    IF SalesLine.FINDFIRST THEN
+      IF "Document Type" = "Document Type"::"Return Order" THEN
+        SalesLine.TESTFIELD("Return Qty. Received",0)
+      ELSE
+        SalesLine.TESTFIELD("Return Receipt No.",'');
+    SalesLine.RESET
+  END ELSE BEGIN
+    Rec := xRec;
+    EXIT;
+  END;
+END;
+
+IF ("Document Type" = "Document Type"::Order) AND
+   (xRec."Sell-to Customer No." <> "Sell-to Customer No.")
+THEN BEGIN
+  SalesLine.SETRANGE("Document Type",SalesLine."Document Type"::Order);
+  SalesLine.SETRANGE("Document No.","No.");
+  SalesLine.SETFILTER("Purch. Order Line No.",'<>0');
+  IF NOT SalesLine.ISEMPTY THEN
+    ERROR(
+      Text006,
+      FIELDCAPTION("Sell-to Customer No."));
+  SalesLine.RESET;
+END;
+
+GetCust("Sell-to Customer No.");
+
+Cust.CheckBlockedCustOnDocs(Cust,"Document Type",FALSE,FALSE);
+Cust.TESTFIELD("Gen. Bus. Posting Group");
+"Sell-to Customer Template Code" := '';
+"Sell-to Customer Name" := Cust.Name;
+"Sell-to Customer Name 2" := Cust."Name 2";
+"Sell-to Address" := Cust.Address;
+"Sell-to Address 2" := Cust."Address 2";
+"Sell-to City" := Cust.City;
+"Sell-to Post Code" := Cust."Post Code";
+"Sell-to County" := Cust.County;
+"Sell-to Country/Region Code" := Cust."Country/Region Code";
+IF NOT SkipSellToContact THEN
+  "Sell-to Contact" := Cust.Contact;
+"Gen. Bus. Posting Group" := Cust."Gen. Bus. Posting Group";
+"VAT Bus. Posting Group" := Cust."VAT Bus. Posting Group";
+"Tax Area Code" := Cust."Tax Area Code";
+"Tax Liable" := Cust."Tax Liable";
+
+//TOPAS+
+"Territory Code" := Cust."Territory Code";
+"Betreuer Innendienst" := Cust."Betreuer Innendienst";
+Teams := Cust.Teams;
+IF Cust."AB via EMail" = TRUE THEN
+  BEGIN
+    "AB via EMail-Adresse" := Cust."AB via EMail-Adresse";
+  END;
+//27.08.2013-ST
+IF Cust."Rech via EMail" = TRUE THEN
+  BEGIN
+    "Rech EMail-Adresse" := Cust."Rech via EMail-Adresse";
+  END;
+Spediteuraccount := Cust.Spediteuraccount;
+VALIDATE(Kontaktperson,'');
+//TOPAS-
+
+GLSetup.GET;
+IF GLSetup."Bill-to/Sell-to VAT Calc." = GLSetup."Bill-to/Sell-to VAT Calc."::"Sell-to/Buy-from No." THEN BEGIN
+  "VAT Registration No." := Cust."VAT Registration No.";
+  "VAT Country/Region Code" := Cust."Country/Region Code";
+END;
+"Shipping Advice" := Cust."Shipping Advice";
+"Responsibility Center" := UserMgt.GetRespCenter(0,Cust."Responsibility Center");
+VALIDATE("Location Code",UserMgt.GetLocation(0,Cust."Location Code","Responsibility Center"));
+
+IF "Sell-to Customer No." = xRec."Sell-to Customer No." THEN BEGIN
+  IF ShippedSalesLinesExist OR ReturnReceiptExist THEN BEGIN
+    TESTFIELD("VAT Bus. Posting Group",xRec."VAT Bus. Posting Group");
+    TESTFIELD("Gen. Bus. Posting Group",xRec."Gen. Bus. Posting Group");
+  END;
+END;
+
+"Sell-to IC Partner Code" := Cust."IC Partner Code";
+"Send IC Document" := ("Sell-to IC Partner Code" <> '') AND ("IC Direction" = "IC Direction"::Outgoing);
+
+IF Cust."Bill-to Customer No." <> '' THEN
+  VALIDATE("Bill-to Customer No.",Cust."Bill-to Customer No.")
+ELSE BEGIN
+  IF "Bill-to Customer No." = "Sell-to Customer No." THEN
+    SkipBillToContact := TRUE;
+  VALIDATE("Bill-to Customer No.","Sell-to Customer No.");
+  SkipBillToContact := FALSE;
+END;
+VALIDATE("Ship-to Code",'');
+
+IF "Sell-to IC Partner Code" = '' THEN
+  TESTFIELD("Bill-to IC Partner Code",'')
+ELSE
+  TESTFIELD("Bill-to IC Partner Code");
+
+GetShippingTime(FIELDNO("Sell-to Customer No."));
+
+IF (xRec."Sell-to Customer No." <> "Sell-to Customer No.") OR
+   (xRec."Currency Code" <> "Currency Code") OR
+   (xRec."Gen. Bus. Posting Group" <> "Gen. Bus. Posting Group") OR
+   (xRec."VAT Bus. Posting Group" <> "VAT Bus. Posting Group")
+THEN
+  RecreateSalesLines(FIELDCAPTION("Sell-to Customer No."));
+
+IF NOT SkipSellToContact THEN
+  UpdateSellToCont("Sell-to Customer No.");
+
+Sell-to Customer No. - OnLookup()
+
+No. - OnValidate()
+IF "No." <> xRec."No." THEN BEGIN
+  SalesSetup.GET;
+  NoSeriesMgt.TestManual(GetNoSeriesCode);
+  "No. Series" := '';
+END;
+
+No. - OnLookup()
+
+Bill-to Customer No. - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF (xRec."Bill-to Customer No." <> "Bill-to Customer No.") AND
+   (xRec."Bill-to Customer No." <> '')
+THEN BEGIN
+  IF HideValidationDialog OR NOT GUIALLOWED THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Bill-to Customer No."));
+  IF Confirmed THEN BEGIN
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF "Document Type" = "Document Type"::Order THEN
+      SalesLine.SETFILTER("Quantity Shipped",'<>0')
+    ELSE
+      IF "Document Type" = "Document Type"::Invoice THEN
+        SalesLine.SETFILTER("Shipment No.",'<>%1','');
+
+    IF SalesLine.FINDFIRST THEN
+      IF "Document Type" = "Document Type"::Order THEN
+        SalesLine.TESTFIELD("Quantity Shipped",0)
+      ELSE
+        SalesLine.TESTFIELD("Shipment No.",'');
+    SalesLine.SETRANGE("Shipment No.");
+    SalesLine.SETRANGE("Quantity Shipped");
+
+    IF "Document Type" = "Document Type"::Order THEN BEGIN
+      SalesLine.SETFILTER("Prepmt. Amt. Inv.",'<>0');
+      IF SalesLine.FIND('-') THEN
+        SalesLine.TESTFIELD("Prepmt. Amt. Inv.",0);
+      SalesLine.SETRANGE("Prepmt. Amt. Inv.");
+    END;
+
+    IF "Document Type" = "Document Type"::"Return Order" THEN
+      SalesLine.SETFILTER("Return Qty. Received",'<>0')
+    ELSE
+      IF "Document Type" = "Document Type"::"Credit Memo" THEN
+        SalesLine.SETFILTER("Return Receipt No.",'<>%1','');
+
+    IF SalesLine.FINDFIRST THEN
+      IF "Document Type" = "Document Type"::"Return Order" THEN
+        SalesLine.TESTFIELD("Return Qty. Received",0)
+      ELSE
+        SalesLine.TESTFIELD("Return Receipt No.",'');
+    SalesLine.RESET
+  END ELSE
+    "Bill-to Customer No." := xRec."Bill-to Customer No.";
+END;
+
+GetCust("Bill-to Customer No.");
+Cust.CheckBlockedCustOnDocs(Cust,"Document Type",FALSE,FALSE);
+Cust.TESTFIELD("Customer Posting Group");
+
+IF GUIALLOWED AND (CurrFieldNo <> 0) AND ("Document Type" <= "Document Type"::Invoice) THEN BEGIN
+  "Amount Including VAT" := 0;
+  CASE "Document Type" OF
+    "Document Type"::Quote,"Document Type"::Invoice:
+      CustCheckCreditLimit.SalesHeaderCheck(Rec);
+    "Document Type"::Order:
+      BEGIN
+        IF "Bill-to Customer No." <> xRec."Bill-to Customer No." THEN BEGIN
+          SalesLine.SETRANGE("Document Type",SalesLine."Document Type"::Order);
+          SalesLine.SETRANGE("Document No.","No.");
+          SalesLine.CALCSUMS("Outstanding Amount","Shipped Not Invoiced");
+          "Amount Including VAT" := SalesLine."Outstanding Amount" + SalesLine."Shipped Not Invoiced";
+        END;
+        CustCheckCreditLimit.SalesHeaderCheck(Rec);
+      END;
+  END;
+  CALCFIELDS("Amount Including VAT");
+END;
+
+"Bill-to Customer Template Code" := '';
+"Bill-to Name" := Cust.Name;
+"Bill-to Name 2" := Cust."Name 2";
+"Bill-to Address" := Cust.Address;
+"Bill-to Address 2" := Cust."Address 2";
+"Bill-to City" := Cust.City;
+"Bill-to Post Code" := Cust."Post Code";
+"Bill-to County" := Cust.County;
+"Bill-to Country/Region Code" := Cust."Country/Region Code";
+IF NOT SkipBillToContact THEN
+  "Bill-to Contact" := Cust.Contact;
+"Payment Terms Code" := Cust."Payment Terms Code";
+
+IF "Document Type" = "Document Type"::"Credit Memo" THEN BEGIN
+  "Payment Method Code" := '';
+  IF PaymentTerms.GET("Payment Terms Code") THEN
+    IF PaymentTerms."Calc. Pmt. Disc. on Cr. Memos" THEN
+      "Payment Method Code" := Cust."Payment Method Code"
+END ELSE
+  "Payment Method Code" := Cust."Payment Method Code";
+
+GLSetup.GET;
+IF GLSetup."Bill-to/Sell-to VAT Calc." = GLSetup."Bill-to/Sell-to VAT Calc."::"Bill-to/Pay-to No." THEN BEGIN
+  "VAT Bus. Posting Group" := Cust."VAT Bus. Posting Group";
+  "Gen. Bus. Posting Group" := Cust."Gen. Bus. Posting Group";
+END;
+"Customer Posting Group" := Cust."Customer Posting Group";
+"Currency Code" := Cust."Currency Code";
+"Customer Price Group" := Cust."Customer Price Group";
+"Prices Including VAT" := Cust."Prices Including VAT";
+"Allow Line Disc." := Cust."Allow Line Disc.";
+"Invoice Disc. Code" := Cust."Invoice Disc. Code";
+"Customer Disc. Group" := Cust."Customer Disc. Group";
+"Language Code" := Cust."Language Code";
+"Salesperson Code" := Cust."Salesperson Code";
+"Combine Shipments" := Cust."Combine Shipments";
+Reserve := Cust.Reserve;
+IF GLSetup."Bill-to/Sell-to VAT Calc." = GLSetup."Bill-to/Sell-to VAT Calc."::"Bill-to/Pay-to No." THEN BEGIN
+  "VAT Registration No." := Cust."VAT Registration No.";
+  "VAT Country/Region Code" := Cust."Country/Region Code";
+END;
+IF "Document Type" = "Document Type"::Order THEN
+  "Prepayment %" := Cust."Prepayment %";
+
+IF "Bill-to Customer No." = xRec."Bill-to Customer No." THEN BEGIN
+  IF ShippedSalesLinesExist THEN BEGIN
+    TESTFIELD("Customer Disc. Group",xRec."Customer Disc. Group");
+    TESTFIELD("Currency Code",xRec."Currency Code");
+  END;
+END;
+
+TempDocDim.GetDimensions(DATABASE::"Sales Header","Document Type","No.",0,TempDocDim);
+
+CreateDim(
+  DATABASE::Customer,"Bill-to Customer No.",
+  DATABASE::"Salesperson/Purchaser","Salesperson Code",
+  DATABASE::Campaign,"Campaign No.",
+  DATABASE::"Responsibility Center","Responsibility Center",
+  DATABASE::"Customer Template","Bill-to Customer Template Code");
+
+VALIDATE("Payment Terms Code");
+VALIDATE("Payment Method Code");
+VALIDATE("Currency Code");
+
+IF (xRec."Sell-to Customer No." = "Sell-to Customer No.") AND
+   (xRec."Bill-to Customer No." <> "Bill-to Customer No.")
+THEN
+  RecreateSalesLines(FIELDCAPTION("Bill-to Customer No."))
+ELSE
+  IF (xRec."Bill-to Customer No." <> '') AND SalesLinesExist THEN
+    TempDocDim.UpdateAllLineDim(DATABASE::"Sales Header","Document Type","No.",TempDocDim);
+
+IF NOT SkipBillToContact THEN
+  UpdateBillToCont("Bill-to Customer No.");
+
+IF "Sell-to IC Partner Code" = '' THEN
+  Cust.TESTFIELD("IC Partner Code",'')
+ELSE
+  Cust.TESTFIELD("IC Partner Code");
+"Bill-to IC Partner Code" := Cust."IC Partner Code";
+
+Bill-to Customer No. - OnLookup()
+
+Bill-to Name - OnValidate()
+
+Bill-to Name - OnLookup()
+
+Bill-to Name 2 - OnValidate()
+
+Bill-to Name 2 - OnLookup()
+
+Bill-to Address - OnValidate()
+
+Bill-to Address - OnLookup()
+
+Bill-to Address 2 - OnValidate()
+
+Bill-to Address 2 - OnLookup()
+
+Bill-to City - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidateCity("Bill-to City","Bill-to Post Code");
+
+Bill-to City - OnLookup()
+PostCode.LookUpCity("Bill-to City","Bill-to Post Code",TRUE);
+
+Bill-to Contact - OnValidate()
+
+Bill-to Contact - OnLookup()
+
+Your Reference - OnValidate()
+
+Your Reference - OnLookup()
+
+Ship-to Code - OnValidate()
+IF ("Document Type" = "Document Type"::Order) AND
+   (xRec."Ship-to Code" <> "Ship-to Code")
+THEN BEGIN
+  SalesLine.SETRANGE("Document Type",SalesLine."Document Type"::Order);
+  SalesLine.SETRANGE("Document No.","No.");
+  SalesLine.SETFILTER("Purch. Order Line No.",'<>0');
+  IF NOT SalesLine.ISEMPTY THEN
+    ERROR(
+      Text006,
+      FIELDCAPTION("Ship-to Code"));
+  SalesLine.RESET;
+END;
+
+IF ("Document Type" <> "Document Type"::"Return Order") AND
+   ("Document Type" <> "Document Type"::"Credit Memo")
+THEN BEGIN
+  IF "Ship-to Code" <> '' THEN BEGIN
+    IF xRec."Ship-to Code" <> '' THEN
+      BEGIN
+      GetCust("Sell-to Customer No.");
+      IF Cust."Location Code" <> '' THEN
+        VALIDATE("Location Code",Cust."Location Code");
+      "Tax Area Code" := Cust."Tax Area Code";
+    END;
+    ShipToAddr.GET("Sell-to Customer No.","Ship-to Code");
+    "Ship-to Name" := ShipToAddr.Name;
+    "Ship-to Name 2" := ShipToAddr."Name 2";
+    "Ship-to Address" := ShipToAddr.Address;
+    "Ship-to Address 2" := ShipToAddr."Address 2";
+    "Ship-to City" := ShipToAddr.City;
+    "Ship-to Post Code" := ShipToAddr."Post Code";
+    "Ship-to County" := ShipToAddr.County;
+    VALIDATE("Ship-to Country/Region Code",ShipToAddr."Country/Region Code");
+    "Ship-to Contact" := ShipToAddr.Contact;
+    "Shipment Method Code" := ShipToAddr."Shipment Method Code";
+    IF ShipToAddr."Location Code" <> '' THEN
+      VALIDATE("Location Code",ShipToAddr."Location Code");
+    "Shipping Agent Code" := ShipToAddr."Shipping Agent Code";
+    "Shipping Agent Service Code" := ShipToAddr."Shipping Agent Service Code";
+    //TOPAS 25.05.2012-ST
+    IF ShipToAddr.Spediteuraccount <> '' THEN
+      Spediteuraccount := ShipToAddr.Spediteuraccount;
+    //TOPAS Ende
+    IF ShipToAddr."Tax Area Code" <> '' THEN
+      "Tax Area Code" := ShipToAddr."Tax Area Code";
+    "Tax Liable" := ShipToAddr."Tax Liable";
+  END ELSE
+    IF "Sell-to Customer No." <> '' THEN BEGIN
+      GetCust("Sell-to Customer No.");
+      "Ship-to Name" := Cust.Name;
+      "Ship-to Name 2" := Cust."Name 2";
+      "Ship-to Address" := Cust.Address;
+      "Ship-to Address 2" := Cust."Address 2";
+      "Ship-to City" := Cust.City;
+      "Ship-to Post Code" := Cust."Post Code";
+      "Ship-to County" := Cust.County;
+      VALIDATE("Ship-to Country/Region Code",Cust."Country/Region Code");
+      "Ship-to Contact" := Cust.Contact;
+      "Shipment Method Code" := Cust."Shipment Method Code";
+      "Tax Area Code" := Cust."Tax Area Code";
+      "Tax Liable" := Cust."Tax Liable";
+      IF Cust."Location Code" <> '' THEN
+        VALIDATE("Location Code",Cust."Location Code");
+      "Shipping Agent Code" := Cust."Shipping Agent Code";
+      "Shipping Agent Service Code" := Cust."Shipping Agent Service Code";
+    END;
+END;
+
+GetShippingTime(FIELDNO("Ship-to Code"));
+
+IF (xRec."Sell-to Customer No." = "Sell-to Customer No.") AND
+   (xRec."Ship-to Code" <> "Ship-to Code")
+THEN
+  IF (xRec."VAT Country/Region Code" <> "VAT Country/Region Code") OR
+     (xRec."Tax Area Code" <> "Tax Area Code")
+  THEN
+    RecreateSalesLines(FIELDCAPTION("Ship-to Code"))
+  ELSE BEGIN
+    IF xRec."Shipping Agent Code" <> "Shipping Agent Code" THEN
+      MessageIfSalesLinesExist(FIELDCAPTION("Shipping Agent Code"));
+    IF xRec."Shipping Agent Service Code" <> "Shipping Agent Service Code" THEN
+      MessageIfSalesLinesExist(FIELDCAPTION("Shipping Agent Service Code"));
+    IF xRec."Tax Liable" <> "Tax Liable" THEN
+      VALIDATE("Tax Liable");
+  END;
+
+Ship-to Code - OnLookup()
+
+Ship-to Name - OnValidate()
+
+Ship-to Name - OnLookup()
+
+Ship-to Name 2 - OnValidate()
+
+Ship-to Name 2 - OnLookup()
+
+Ship-to Address - OnValidate()
+
+Ship-to Address - OnLookup()
+
+Ship-to Address 2 - OnValidate()
+
+Ship-to Address 2 - OnLookup()
+
+Ship-to City - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidateCity("Ship-to City","Ship-to Post Code");
+
+Ship-to City - OnLookup()
+PostCode.LookUpCity("Ship-to City","Ship-to Post Code",TRUE);
+
+Ship-to Contact - OnValidate()
+
+Ship-to Contact - OnLookup()
+
+Order Date - OnValidate()
+IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order]) AND
+   NOT ("Order Date" = xRec."Order Date")
+THEN
+  PriceMessageIfSalesLinesExist(FIELDCAPTION("Order Date"));
+
+Order Date - OnLookup()
+
+Posting Date - OnValidate()
+TestNoSeriesDate(
+  "Posting No.","Posting No. Series",
+  FIELDCAPTION("Posting No."),FIELDCAPTION("Posting No. Series"));
+TestNoSeriesDate(
+  "Prepayment No.","Prepayment No. Series",
+  FIELDCAPTION("Prepayment No."),FIELDCAPTION("Prepayment No. Series"));
+TestNoSeriesDate(
+  "Prepmt. Cr. Memo No.","Prepmt. Cr. Memo No. Series",
+  FIELDCAPTION("Prepmt. Cr. Memo No."),FIELDCAPTION("Prepmt. Cr. Memo No. Series"));
+
+VALIDATE("Document Date","Posting Date");
+
+IF ("Document Type" IN ["Document Type"::Invoice,"Document Type"::"Credit Memo"]) AND
+   NOT ("Posting Date" = xRec."Posting Date")
+THEN
+  PriceMessageIfSalesLinesExist(FIELDCAPTION("Posting Date"));
+
+IF "Currency Code" <> '' THEN BEGIN
+  UpdateCurrencyFactor;
+  IF "Currency Factor" <> xRec."Currency Factor" THEN
+    ConfirmUpdateCurrencyFactor;
+END;
+
+Posting Date - OnLookup()
+
+Shipment Date - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Shipment Date"),CurrFieldNo <> 0);
+
+Shipment Date - OnLookup()
+
+Posting Description - OnValidate()
+
+Posting Description - OnLookup()
+
+Payment Terms Code - OnValidate()
+IF ("Payment Terms Code" <> '') AND ("Document Date" <> 0D) THEN BEGIN
+  PaymentTerms.GET("Payment Terms Code");
+  IF (("Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]) AND
+      NOT PaymentTerms."Calc. Pmt. Disc. on Cr. Memos")
+  THEN BEGIN
+    VALIDATE("Due Date","Document Date");
+    VALIDATE("Pmt. Discount Date",0D);
+    VALIDATE("Payment Discount %",0);
+  END ELSE BEGIN
+    "Due Date" := CALCDATE(PaymentTerms."Due Date Calculation","Document Date");
+    "Pmt. Discount Date" := CALCDATE(PaymentTerms."Discount Date Calculation","Document Date");
+    VALIDATE("Payment Discount %",PaymentTerms."Discount %")
+  END;
+END ELSE BEGIN
+  VALIDATE("Due Date","Document Date");
+  VALIDATE("Pmt. Discount Date",0D);
+  VALIDATE("Payment Discount %",0);
+END;
+IF xRec."Payment Terms Code" = "Prepmt. Payment Terms Code" THEN BEGIN
+  IF xRec."Prepayment Due Date" = 0D THEN
+    "Prepayment Due Date" := CALCDATE(PaymentTerms."Due Date Calculation","Document Date");
+  VALIDATE("Prepmt. Payment Terms Code","Payment Terms Code");
+END;
+
+Payment Terms Code - OnLookup()
+
+Due Date - OnValidate()
+
+Due Date - OnLookup()
+
+Payment Discount % - OnValidate()
+IF NOT (CurrFieldNo IN [0,FIELDNO("Posting Date"),FIELDNO("Document Date")]) THEN
+  TESTFIELD(Status,Status::Open);
+GLSetup.GET;
+IF "Payment Discount %" < GLSetup."VAT Tolerance %" THEN
+  "VAT Base Discount %" := "Payment Discount %"
+ELSE
+  "VAT Base Discount %" := GLSetup."VAT Tolerance %";
+VALIDATE("VAT Base Discount %");
+
+Payment Discount % - OnLookup()
+
+Pmt. Discount Date - OnValidate()
+
+Pmt. Discount Date - OnLookup()
+
+Shipment Method Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+
+Shipment Method Code - OnLookup()
+
+Location Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF ("Location Code" <> xRec."Location Code") AND
+   (xRec."Sell-to Customer No." = "Sell-to Customer No.")
+THEN
+  MessageIfSalesLinesExist(FIELDCAPTION("Location Code"));
+
+UpdateShipToAddress;
+
+IF "Location Code" <> '' THEN BEGIN
+  IF Location.GET("Location Code") THEN
+    "Outbound Whse. Handling Time" := Location."Outbound Whse. Handling Time";
+END ELSE BEGIN
+  IF InvtSetup.GET THEN
+    "Outbound Whse. Handling Time" := InvtSetup."Outbound Whse. Handling Time";
+END;
+
+Location Code - OnLookup()
+
+Shortcut Dimension 1 Code - OnValidate()
+ValidateShortcutDimCode(1,"Shortcut Dimension 1 Code");
+
+Shortcut Dimension 1 Code - OnLookup()
+
+Shortcut Dimension 2 Code - OnValidate()
+ValidateShortcutDimCode(2,"Shortcut Dimension 2 Code");
+
+Shortcut Dimension 2 Code - OnLookup()
+
+Customer Posting Group - OnValidate()
+
+Customer Posting Group - OnLookup()
+
+Currency Code - OnValidate()
+IF NOT (CurrFieldNo IN [0,FIELDNO("Posting Date")]) THEN
+  TESTFIELD(Status,Status::Open);
+IF CurrFieldNo <> FIELDNO("Currency Code") THEN
+  UpdateCurrencyFactor
+ELSE BEGIN
+  IF "Currency Code" <> xRec."Currency Code" THEN BEGIN
+    UpdateCurrencyFactor;
+    RecreateSalesLines(FIELDCAPTION("Currency Code"));
+  END ELSE
+    IF "Currency Code" <> '' THEN BEGIN
+      UpdateCurrencyFactor;
+      IF "Currency Factor" <> xRec."Currency Factor" THEN
+        ConfirmUpdateCurrencyFactor;
+    END;
+END;
+
+Currency Code - OnLookup()
+
+Currency Factor - OnValidate()
+IF "Currency Factor" <> xRec."Currency Factor" THEN
+  UpdateSalesLines(FIELDCAPTION("Currency Factor"),FALSE);
+
+Currency Factor - OnLookup()
+
+Customer Price Group - OnValidate()
+MessageIfSalesLinesExist(FIELDCAPTION("Customer Price Group"));
+
+Customer Price Group - OnLookup()
+
+Prices Including VAT - OnValidate()
+TESTFIELD(Status,Status::Open);
+
+IF "Prices Including VAT" <> xRec."Prices Including VAT" THEN BEGIN
+  SalesLine.SETRANGE("Document Type","Document Type");
+  SalesLine.SETRANGE("Document No.","No.");
+  SalesLine.SETFILTER("Job Contract Entry No.",'<>%1',0);
+  IF SalesLine.FIND('-') THEN BEGIN
+    SalesLine.TESTFIELD("Job No.",'');
+    SalesLine.TESTFIELD("Job Contract Entry No.",0);
+  END;
+
+  SalesLine.SETRANGE("Document Type","Document Type");
+  SalesLine.SETRANGE("Document No.","No.");
+  SalesLine.SETFILTER("Unit Price",'<>%1',0);
+  SalesLine.SETFILTER("VAT %",'<>%1',0);
+  IF SalesLine.FINDFIRST THEN BEGIN
+    RecalculatePrice :=
+      CONFIRM(
+        STRSUBSTNO(
+          Text024 +
+          Text026,
+          FIELDCAPTION("Prices Including VAT"),SalesLine.FIELDCAPTION("Unit Price")),
+        TRUE);
+    SalesLine.SetSalesHeader(Rec);
+
+    IF "Currency Code" = '' THEN
+      Currency.InitRoundingPrecision
+    ELSE
+      Currency.GET("Currency Code");
+    SalesLine.LOCKTABLE;
+    LOCKTABLE;
+    SalesLine.FINDSET;
+    REPEAT
+      SalesLine.TESTFIELD("Quantity Invoiced",0);
+      SalesLine.TESTFIELD("Prepmt. Amt. Inv.",0);
+      IF NOT RecalculatePrice THEN BEGIN
+        SalesLine."VAT Difference" := 0;
+        SalesLine.InitOutstandingAmount;
+      END ELSE
+        IF "Prices Including VAT" THEN BEGIN
+          SalesLine."Unit Price" :=
+            ROUND(
+              SalesLine."Unit Price" * (1 + (SalesLine."VAT %" / 100)),
+              Currency."Unit-Amount Rounding Precision");
+          IF SalesLine.Quantity <> 0 THEN BEGIN
+            SalesLine."Line Discount Amount" :=
+              ROUND(
+                SalesLine.Quantity * SalesLine."Unit Price" * SalesLine."Line Discount %" / 100,
+                Currency."Amount Rounding Precision");
+            SalesLine.VALIDATE("Inv. Discount Amount",
+              ROUND(
+                SalesLine."Inv. Discount Amount" * (1 + (SalesLine."VAT %" / 100)),
+                Currency."Amount Rounding Precision"));
+          END;
+        END ELSE BEGIN
+          SalesLine."Unit Price" :=
+            ROUND(
+              SalesLine."Unit Price" / (1 + (SalesLine."VAT %" / 100)),
+              Currency."Unit-Amount Rounding Precision");
+          IF SalesLine.Quantity <> 0 THEN BEGIN
+            SalesLine."Line Discount Amount" :=
+              ROUND(
+                SalesLine.Quantity * SalesLine."Unit Price" * SalesLine."Line Discount %" / 100,
+                Currency."Amount Rounding Precision");
+            SalesLine.VALIDATE("Inv. Discount Amount",
+              ROUND(
+                SalesLine."Inv. Discount Amount" / (1 + (SalesLine."VAT %" / 100)),
+                Currency."Amount Rounding Precision"));
+          END;
+        END;
+      SalesLine.MODIFY;
+    UNTIL SalesLine.NEXT = 0;
+  END;
+END;
+
+Prices Including VAT - OnLookup()
+
+Invoice Disc. Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+MessageIfSalesLinesExist(FIELDCAPTION("Invoice Disc. Code"));
+
+Invoice Disc. Code - OnLookup()
+
+Customer Disc. Group - OnValidate()
+TESTFIELD(Status,Status::Open);
+MessageIfSalesLinesExist(FIELDCAPTION("Customer Disc. Group"));
+
+Customer Disc. Group - OnLookup()
+
+Language Code - OnValidate()
+MessageIfSalesLinesExist(FIELDCAPTION("Language Code"));
+
+Language Code - OnLookup()
+
+Salesperson Code - OnValidate()
+ApprovalEntry.SETRANGE("Table ID",DATABASE::"Sales Header");
+ApprovalEntry.SETRANGE("Document Type","Document Type");
+ApprovalEntry.SETRANGE("Document No.","No.");
+ApprovalEntry.SETFILTER(Status,'<>%1&<>%2',ApprovalEntry.Status::Canceled,ApprovalEntry.Status::Rejected);
+IF ApprovalEntry.FIND('-') THEN
+  ERROR(Text053,FIELDCAPTION("Salesperson Code"));
+
+TempDocDim.GetDimensions(DATABASE::"Sales Header","Document Type","No.",0,TempDocDim);
+
+CreateDim(
+  DATABASE::"Salesperson/Purchaser","Salesperson Code",
+  DATABASE::Customer,"Bill-to Customer No.",
+  DATABASE::Campaign,"Campaign No.",
+  DATABASE::"Responsibility Center","Responsibility Center",
+  DATABASE::"Customer Template","Bill-to Customer Template Code");
+
+IF SalesLinesExist THEN
+  TempDocDim.UpdateAllLineDim(DATABASE::"Sales Header","Document Type","No.",TempDocDim);
+
+Salesperson Code - OnLookup()
+
+Order Class - OnValidate()
+
+Order Class - OnLookup()
+
+Comment - OnValidate()
+
+Comment - OnLookup()
+
+No. Printed - OnValidate()
+
+No. Printed - OnLookup()
+
+On Hold - OnValidate()
+
+On Hold - OnLookup()
+
+Applies-to Doc. Type - OnValidate()
+
+Applies-to Doc. Type - OnLookup()
+
+Applies-to Doc. No. - OnValidate()
+IF "Applies-to Doc. No." <> '' THEN
+  TESTFIELD("Bal. Account No.",'');
+
+IF ("Applies-to Doc. No." <> xRec."Applies-to Doc. No.") AND (xRec."Applies-to Doc. No." <> '') AND
+   ("Applies-to Doc. No." <> '')
+THEN BEGIN
+  SetAmountToApply("Applies-to Doc. No.","Bill-to Customer No.");
+  SetAmountToApply(xRec."Applies-to Doc. No.","Bill-to Customer No.");
+END ELSE
+  IF ("Applies-to Doc. No." <> xRec."Applies-to Doc. No.") AND (xRec."Applies-to Doc. No." = '') THEN
+    SetAmountToApply("Applies-to Doc. No.","Bill-to Customer No.")
+  ELSE IF ("Applies-to Doc. No." <> xRec."Applies-to Doc. No.") AND ("Applies-to Doc. No." = '') THEN
+      SetAmountToApply(xRec."Applies-to Doc. No.","Bill-to Customer No.");
+
+Applies-to Doc. No. - OnLookup()
+TESTFIELD("Bal. Account No.",'');
+CustLedgEntry.SETCURRENTKEY("Customer No.",Open,Positive,"Due Date");
+CustLedgEntry.SETRANGE("Customer No.","Bill-to Customer No.");
+CustLedgEntry.SETRANGE(Open,TRUE);
+IF "Applies-to Doc. No." <> '' THEN BEGIN
+  CustLedgEntry.SETRANGE("Document Type","Applies-to Doc. Type");
+  CustLedgEntry.SETRANGE("Document No.","Applies-to Doc. No.");
+  IF CustLedgEntry.FINDFIRST THEN;
+  CustLedgEntry.SETRANGE("Document Type");
+  CustLedgEntry.SETRANGE("Document No.");
+END ELSE IF "Applies-to Doc. Type" <> 0 THEN BEGIN
+    CustLedgEntry.SETRANGE("Document Type","Applies-to Doc. Type");
+    IF CustLedgEntry.FINDFIRST THEN;
+    CustLedgEntry.SETRANGE("Document Type");
+  END ELSE IF Amount <> 0 THEN BEGIN
+      CustLedgEntry.SETRANGE(Positive,Amount < 0);
+      IF CustLedgEntry.FINDFIRST THEN;
+      CustLedgEntry.SETRANGE(Positive);
+    END;
+
+ApplyCustEntries.SetSales(Rec,CustLedgEntry,SalesHeader.FIELDNO("Applies-to Doc. No."));
+ApplyCustEntries.SETTABLEVIEW(CustLedgEntry);
+ApplyCustEntries.SETRECORD(CustLedgEntry);
+ApplyCustEntries.LOOKUPMODE(TRUE);
+IF ApplyCustEntries.RUNMODAL = ACTION::LookupOK THEN BEGIN
+  ApplyCustEntries.GetCustLedgEntry(CustLedgEntry);
+  GenJnlApply.CheckAgainstApplnCurrency(
+    "Currency Code",CustLedgEntry."Currency Code",GenJnILine."Account Type"::Customer,TRUE);
+  "Applies-to Doc. Type" := CustLedgEntry."Document Type";
+  "Applies-to Doc. No." := CustLedgEntry."Document No.";
+END;
+CLEAR(ApplyCustEntries);
+
+Bal. Account No. - OnValidate()
+IF "Bal. Account No." <> '' THEN
+  CASE "Bal. Account Type" OF
+    "Bal. Account Type"::"G/L Account":
+      BEGIN
+        GLAcc.GET("Bal. Account No.");
+        GLAcc.CheckGLAcc;
+        GLAcc.TESTFIELD("Direct Posting",TRUE);
+      END;
+    "Bal. Account Type"::"Bank Account":
+      BEGIN
+        BankAcc.GET("Bal. Account No.");
+        BankAcc.TESTFIELD(Blocked,FALSE);
+        BankAcc.TESTFIELD("Currency Code","Currency Code");
+      END;
+  END;
+
+Bal. Account No. - OnLookup()
+
+Ship - OnValidate()
+
+Ship - OnLookup()
+
+Invoice - OnValidate()
+
+Invoice - OnLookup()
+
+Amount - OnValidate()
+
+Amount - OnLookup()
+
+Amount Including VAT - OnValidate()
+
+Amount Including VAT - OnLookup()
+
+Shipping No. - OnValidate()
+
+Shipping No. - OnLookup()
+
+Posting No. - OnValidate()
+
+Posting No. - OnLookup()
+
+Last Shipping No. - OnValidate()
+
+Last Shipping No. - OnLookup()
+
+Last Posting No. - OnValidate()
+
+Last Posting No. - OnLookup()
+
+Prepayment No. - OnValidate()
+
+Prepayment No. - OnLookup()
+
+Last Prepayment No. - OnValidate()
+
+Last Prepayment No. - OnLookup()
+
+Prepmt. Cr. Memo No. - OnValidate()
+
+Prepmt. Cr. Memo No. - OnLookup()
+
+Last Prepmt. Cr. Memo No. - OnValidate()
+
+Last Prepmt. Cr. Memo No. - OnLookup()
+
+VAT Registration No. - OnValidate()
+
+VAT Registration No. - OnLookup()
+
+Combine Shipments - OnValidate()
+
+Combine Shipments - OnLookup()
+
+Reason Code - OnValidate()
+
+Reason Code - OnLookup()
+
+Gen. Bus. Posting Group - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF xRec."Gen. Bus. Posting Group" <> "Gen. Bus. Posting Group" THEN
+  IF GenBusPostingGrp.ValidateVatBusPostingGroup(GenBusPostingGrp,"Gen. Bus. Posting Group") THEN BEGIN
+    "VAT Bus. Posting Group" := GenBusPostingGrp."Def. VAT Bus. Posting Group";
+    RecreateSalesLines(FIELDCAPTION("Gen. Bus. Posting Group"));
+  END;
+
+Gen. Bus. Posting Group - OnLookup()
+
+EU 3-Party Trade - OnValidate()
+
+EU 3-Party Trade - OnLookup()
+
+Transaction Type - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Transaction Type"),FALSE);
+
+Transaction Type - OnLookup()
+
+Transport Method - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Transport Method"),FALSE);
+
+Transport Method - OnLookup()
+
+VAT Country/Region Code - OnValidate()
+
+VAT Country/Region Code - OnLookup()
+
+Sell-to Customer Name - OnValidate()
+
+Sell-to Customer Name - OnLookup()
+
+Sell-to Customer Name 2 - OnValidate()
+
+Sell-to Customer Name 2 - OnLookup()
+
+Sell-to Address - OnValidate()
+
+Sell-to Address - OnLookup()
+
+Sell-to Address 2 - OnValidate()
+
+Sell-to Address 2 - OnLookup()
+
+Sell-to City - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidateCity("Sell-to City","Sell-to Post Code");
+
+Sell-to City - OnLookup()
+PostCode.LookUpCity("Sell-to City","Sell-to Post Code",TRUE);
+
+Sell-to Contact - OnValidate()
+
+Sell-to Contact - OnLookup()
+
+Bill-to Post Code - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidatePostCode("Bill-to City","Bill-to Post Code");
+
+Bill-to Post Code - OnLookup()
+PostCode.LookUpPostCode("Bill-to City","Bill-to Post Code",TRUE);
+
+Bill-to County - OnValidate()
+
+Bill-to County - OnLookup()
+
+Bill-to Country/Region Code - OnValidate()
+
+Bill-to Country/Region Code - OnLookup()
+
+Sell-to Post Code - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidatePostCode("Sell-to City","Sell-to Post Code");
+
+Sell-to Post Code - OnLookup()
+PostCode.LookUpPostCode("Sell-to City","Sell-to Post Code",TRUE);
+
+Sell-to County - OnValidate()
+
+Sell-to County - OnLookup()
+
+Sell-to Country/Region Code - OnValidate()
+VALIDATE("Ship-to Country/Region Code");
+
+Sell-to Country/Region Code - OnLookup()
+
+Ship-to Post Code - OnValidate()
+IF "Date Received" = 0D THEN
+  PostCode.ValidatePostCode("Ship-to City","Ship-to Post Code");
+
+Ship-to Post Code - OnLookup()
+PostCode.LookUpPostCode("Ship-to City","Ship-to Post Code",TRUE);
+
+Ship-to County - OnValidate()
+
+Ship-to County - OnLookup()
+
+Ship-to Country/Region Code - OnValidate()
+
+Ship-to Country/Region Code - OnLookup()
+
+Bal. Account Type - OnValidate()
+
+Bal. Account Type - OnLookup()
+
+Exit Point - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Exit Point"),FALSE);
+
+Exit Point - OnLookup()
+
+Correction - OnValidate()
+
+Correction - OnLookup()
+
+Document Date - OnValidate()
+VALIDATE("Payment Terms Code");
+VALIDATE("Prepmt. Payment Terms Code");
+
+Document Date - OnLookup()
+
+External Document No. - OnValidate()
+
+External Document No. - OnLookup()
+
+Area - OnValidate()
+UpdateSalesLines(FIELDCAPTION(Area),FALSE);
+
+Area - OnLookup()
+
+Transaction Specification - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Transaction Specification"),FALSE);
+
+Transaction Specification - OnLookup()
+
+Payment Method Code - OnValidate()
+PaymentMethod.INIT;
+IF "Payment Method Code" <> '' THEN
+  PaymentMethod.GET("Payment Method Code");
+"Bal. Account Type" := PaymentMethod."Bal. Account Type";
+"Bal. Account No." := PaymentMethod."Bal. Account No.";
+IF "Bal. Account No." <> '' THEN BEGIN
+  TESTFIELD("Applies-to Doc. No.",'');
+  TESTFIELD("Applies-to ID",'');
+END;
+
+Payment Method Code - OnLookup()
+
+Shipping Agent Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF xRec."Shipping Agent Code" = "Shipping Agent Code" THEN
+  EXIT;
+
+"Shipping Agent Service Code" := '';
+GetShippingTime(FIELDNO("Shipping Agent Code"));
+UpdateSalesLines(FIELDCAPTION("Shipping Agent Code"),CurrFieldNo <> 0);
+
+Shipping Agent Code - OnLookup()
+
+Package Tracking No. - OnValidate()
+
+Package Tracking No. - OnLookup()
+
+No. Series - OnValidate()
+
+No. Series - OnLookup()
+
+Posting No. Series - OnValidate()
+IF "Posting No. Series" <> '' THEN BEGIN
+  SalesSetup.GET;
+  TestNoSeries;
+  NoSeriesMgt.TestSeries(GetPostingNoSeriesCode,"Posting No. Series");
+END;
+TESTFIELD("Posting No.",'');
+
+Posting No. Series - OnLookup()
+WITH SalesHeader DO BEGIN
+  SalesHeader := Rec;
+  SalesSetup.GET;
+  TestNoSeries;
+  IF NoSeriesMgt.LookupSeries(GetPostingNoSeriesCode,"Posting No. Series") THEN
+    VALIDATE("Posting No. Series");
+  Rec := SalesHeader;
+END;
+
+Shipping No. Series - OnValidate()
+IF "Shipping No. Series" <> '' THEN BEGIN
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Shipment Nos.");
+  NoSeriesMgt.TestSeries(SalesSetup."Posted Shipment Nos.","Shipping No. Series");
+END;
+TESTFIELD("Shipping No.",'');
+
+Shipping No. Series - OnLookup()
+WITH SalesHeader DO BEGIN
+  SalesHeader := Rec;
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Shipment Nos.");
+  IF NoSeriesMgt.LookupSeries(SalesSetup."Posted Shipment Nos.","Shipping No. Series") THEN
+    VALIDATE("Shipping No. Series");
+  Rec := SalesHeader;
+END;
+
+Tax Area Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+MessageIfSalesLinesExist(FIELDCAPTION("Tax Area Code"));
+
+Tax Area Code - OnLookup()
+
+Tax Liable - OnValidate()
+TESTFIELD(Status,Status::Open);
+MessageIfSalesLinesExist(FIELDCAPTION("Tax Liable"));
+
+Tax Liable - OnLookup()
+
+VAT Bus. Posting Group - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF xRec."VAT Bus. Posting Group" <> "VAT Bus. Posting Group" THEN
+  RecreateSalesLines(FIELDCAPTION("VAT Bus. Posting Group"));
+
+VAT Bus. Posting Group - OnLookup()
+
+Reserve - OnValidate()
+
+Reserve - OnLookup()
+
+Applies-to ID - OnValidate()
+IF "Applies-to ID" <> '' THEN
+  TESTFIELD("Bal. Account No.",'');
+IF ("Applies-to ID" <> xRec."Applies-to ID") AND (xRec."Applies-to ID" <> '') THEN BEGIN
+  CustLedgEntry.SETCURRENTKEY("Customer No.",Open);
+  CustLedgEntry.SETRANGE("Customer No.","Bill-to Customer No.");
+  CustLedgEntry.SETRANGE(Open,TRUE);
+  CustLedgEntry.SETRANGE("Applies-to ID",xRec."Applies-to ID");
+  IF CustLedgEntry.FINDFIRST THEN
+    CustEntrySetApplID.SetApplId(CustLedgEntry,TempCustLedgEntry,0,0,'');
+  CustLedgEntry.RESET;
+END;
+
+Applies-to ID - OnLookup()
+
+VAT Base Discount % - OnValidate()
+IF NOT (CurrFieldNo IN [0,FIELDNO("Posting Date"),FIELDNO("Document Date")]) THEN
+  TESTFIELD(Status,Status::Open);
+GLSetup.GET;
+IF "VAT Base Discount %" > GLSetup."VAT Tolerance %" THEN
+  ERROR(
+    Text007,
+    FIELDCAPTION("VAT Base Discount %"),
+    GLSetup.FIELDCAPTION("VAT Tolerance %"),
+    GLSetup.TABLECAPTION);
+
+IF ("VAT Base Discount %" = xRec."VAT Base Discount %") AND
+   (CurrFieldNo <> 0)
+THEN
+  EXIT;
+
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+SalesLine.SETFILTER(Type,'<>%1',SalesLine.Type::" ");
+SalesLine.SETFILTER(Quantity,'<>0');
+DocDim.LOCKTABLE;
+SalesLine.LOCKTABLE;
+LOCKTABLE;
+IF SalesLine.FINDSET THEN BEGIN
+  MODIFY;
+  REPEAT
+    IF (SalesLine."Quantity Invoiced" <> SalesLine.Quantity) OR
+       ("Shipping Advice" <> "Shipping Advice"::Partial) OR
+       (SalesLine.Type <> SalesLine.Type::"Charge (Item)") OR
+       (CurrFieldNo <> 0)
+    THEN BEGIN
+      SalesLine.UpdateAmounts;
+      SalesLine.MODIFY;
+    END;
+  UNTIL SalesLine.NEXT = 0;
+END;
+SalesLine.RESET;
+
+VAT Base Discount % - OnLookup()
+
+Status - OnValidate()
+
+Status - OnLookup()
+
+Invoice Discount Calculation - OnValidate()
+
+Invoice Discount Calculation - OnLookup()
+
+Invoice Discount Value - OnValidate()
+
+Invoice Discount Value - OnLookup()
+
+Send IC Document - OnValidate()
+IF "Send IC Document" THEN BEGIN
+  TESTFIELD("Sell-to IC Partner Code");
+  TESTFIELD("IC Direction","IC Direction"::Outgoing);
+END;
+
+Send IC Document - OnLookup()
+
+IC Status - OnValidate()
+
+IC Status - OnLookup()
+
+Sell-to IC Partner Code - OnValidate()
+
+Sell-to IC Partner Code - OnLookup()
+
+Bill-to IC Partner Code - OnValidate()
+
+Bill-to IC Partner Code - OnLookup()
+
+IC Direction - OnValidate()
+IF "IC Direction" = "IC Direction"::Incoming THEN
+  "Send IC Document" := FALSE;
+
+IC Direction - OnLookup()
+
+Prepayment % - OnValidate()
+UpdateSalesLines(FIELDCAPTION("Prepayment %"),CurrFieldNo <> 0);
+
+Prepayment % - OnLookup()
+
+Prepayment No. Series - OnValidate()
+IF "Prepayment No. Series" <> '' THEN BEGIN
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Prepmt. Inv. Nos.");
+  NoSeriesMgt.TestSeries(SalesSetup."Posted Prepmt. Inv. Nos.","Prepayment No. Series");
+END;
+TESTFIELD("Prepayment No.",'');
+
+Prepayment No. Series - OnLookup()
+WITH SalesHeader DO BEGIN
+  SalesHeader := Rec;
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Prepmt. Inv. Nos.");
+  IF NoSeriesMgt.LookupSeries(SalesSetup."Posted Prepmt. Inv. Nos.","Prepayment No. Series") THEN
+    VALIDATE("Prepayment No. Series");
+  Rec := SalesHeader;
+END;
+
+Compress Prepayment - OnValidate()
+
+Compress Prepayment - OnLookup()
+
+Prepayment Due Date - OnValidate()
+
+Prepayment Due Date - OnLookup()
+
+Prepmt. Cr. Memo No. Series - OnValidate()
+IF "Prepmt. Cr. Memo No." <> '' THEN BEGIN
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Prepmt. Cr. Memo Nos.");
+  NoSeriesMgt.TestSeries(SalesSetup."Posted Prepmt. Cr. Memo Nos.","Prepmt. Cr. Memo No.");
+END;
+TESTFIELD("Prepmt. Cr. Memo No.",'');
+
+Prepmt. Cr. Memo No. Series - OnLookup()
+WITH SalesHeader DO BEGIN
+  SalesHeader := Rec;
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Prepmt. Cr. Memo Nos.");
+  IF NoSeriesMgt.LookupSeries(GetPostingNoSeriesCode,"Prepmt. Cr. Memo No.") THEN
+    VALIDATE("Prepmt. Cr. Memo No.");
+  Rec := SalesHeader;
+END;
+
+Prepmt. Posting Description - OnValidate()
+
+Prepmt. Posting Description - OnLookup()
+
+Prepmt. Pmt. Discount Date - OnValidate()
+
+Prepmt. Pmt. Discount Date - OnLookup()
+
+Prepmt. Payment Terms Code - OnValidate()
+IF ("Prepmt. Payment Terms Code" <> '') AND ("Document Date" <> 0D) THEN BEGIN
+  PaymentTerms.GET("Prepmt. Payment Terms Code");
+  IF (("Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"]) AND
+     NOT PaymentTerms."Calc. Pmt. Disc. on Cr. Memos")
+  THEN BEGIN
+    VALIDATE("Prepayment Due Date","Document Date");
+    VALIDATE("Prepmt. Pmt. Discount Date",0D);
+    VALIDATE("Prepmt. Payment Discount %",0);
+  END ELSE BEGIN
+    "Prepayment Due Date" := CALCDATE(PaymentTerms."Due Date Calculation","Document Date");
+    "Prepmt. Pmt. Discount Date" := CALCDATE(PaymentTerms."Discount Date Calculation","Document Date");
+    VALIDATE("Prepmt. Payment Discount %",PaymentTerms."Discount %")
+  END;
+END ELSE BEGIN
+  VALIDATE("Prepayment Due Date","Document Date");
+  VALIDATE("Prepmt. Pmt. Discount Date",0D);
+  VALIDATE("Prepmt. Payment Discount %",0);
+END;
+
+Prepmt. Payment Terms Code - OnLookup()
+
+Prepmt. Payment Discount % - OnValidate()
+IF NOT (CurrFieldNo IN [0,FIELDNO("Posting Date"),FIELDNO("Document Date")]) THEN
+  TESTFIELD(Status,Status::Open);
+GLSetup.GET;
+IF "Payment Discount %" < GLSetup."VAT Tolerance %" THEN
+  "VAT Base Discount %" := "Payment Discount %"
+ELSE
+  "VAT Base Discount %" := GLSetup."VAT Tolerance %";
+VALIDATE("VAT Base Discount %");
+
+Prepmt. Payment Discount % - OnLookup()
+
+No. of Archived Versions - OnValidate()
+
+No. of Archived Versions - OnLookup()
+
+Doc. No. Occurrence - OnValidate()
+
+Doc. No. Occurrence - OnLookup()
+
+Campaign No. - OnValidate()
+MODIFY;
+TempDocDim.GetDimensions(DATABASE::"Sales Header","Document Type","No.",0,TempDocDim);
+
+CreateDim(
+  DATABASE::Campaign,"Campaign No.",
+  DATABASE::Customer,"Bill-to Customer No.",
+  DATABASE::"Salesperson/Purchaser","Salesperson Code",
+  DATABASE::"Responsibility Center","Responsibility Center",
+  DATABASE::"Customer Template","Bill-to Customer Template Code");
+
+IF SalesLinesExist THEN
+  TempDocDim.UpdateAllLineDim(DATABASE::"Sales Header","Document Type","No.",TempDocDim);
+
+//TOPAS 14.07.08-ST - Neu Füllen der Kampagnennr. in den dazugehörigen Zeilen, 22.02.11-ST Änderung
+Verkaufszeile.SETFILTER(Verkaufszeile."Document No.",'%1',"No.");
+Verkaufszeile.SETFILTER(Verkaufszeile."Document Type",'%1',"Document Type");
+Verkaufszeile.SETFILTER(Verkaufszeile.Type,'%1',Verkaufszeile.Type::Item);
+IF Verkaufszeile.FINDFIRST THEN 
+  BEGIN
+    REPEAT
+      Verkaufszeile.VALIDATE("Kampagnennr.","Campaign No.");
+      Verkaufszeile.MODIFY(TRUE);
+    UNTIL Verkaufszeile.NEXT = 0;
+  END;
+
+Campaign No. - OnLookup()
+//TOPAS 12.09.08-ST - Neu, 22.02.11-ST Änderung
+ProjAnsprech.RESET;
+ProjAnsprech.SETFILTER(ProjAnsprech."Kontaktnr.",'%1',"Sell-to Contact No.");
+ProjAnsprech.SETFILTER(ProjAnsprech."Kampagnennr.",'<>%1','');
+ProjAnsprech.SETFILTER(ProjAnsprech.Projektstatus,'<>%1','BEENDET');
+IF ProjAnsprech.FINDFIRST THEN 
+  BEGIN
+    PosFilter:= ('Kontakt Mandantennr.=CONST('+ProjAnsprech."Kontakt Mandantennr."+'),'+
+                 'Kontaktnr.=CONST('+ProjAnsprech."Kontaktnr."+'),'+
+                 'Kampagnennr.=CONST('+"Campaign No."+'),'+
+                 'Memonr.=CONST()');
+    ProjAnsprech.SETPOSITION(PosFilter);
+    IF FORM.RUNMODAL(50062,ProjAnsprech) = ACTION::LookupOK THEN
+      BEGIN
+        IF ProjAnsprech.Projektstatus <> 'BEENDET' THEN
+          VALIDATE("Campaign No.",ProjAnsprech."Kampagnennr.")
+        ELSE
+          ERROR('%1 ist kein aktives Projekt.',ProjAnsprech."Kampagnennr.");
+      END;
+  END
+ELSE
+  ERROR('Es existieren keine aktiven Projekte.');
+
+//TOPAS Ende
+
+Sell-to Customer Template Code - OnValidate()
+TESTFIELD("Document Type","Document Type"::Quote);
+TESTFIELD(Status,Status::Open);
+
+IF NOT InsertMode AND
+   ("Sell-to Customer Template Code" <> xRec."Sell-to Customer Template Code") AND
+   (xRec."Sell-to Customer Template Code" <> '')
+THEN BEGIN
+  IF HideValidationDialog THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Sell-to Customer Template Code"));
+  IF Confirmed THEN BEGIN
+    SalesLine.RESET;
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF "Sell-to Customer Template Code" = '' THEN BEGIN
+      IF NOT SalesLine.ISEMPTY THEN
+        ERROR(Text005,FIELDCAPTION("Sell-to Customer Template Code"));
+      INIT;
+      SalesSetup.GET;
+      InitRecord;
+      "No. Series" := xRec."No. Series";
+      IF xRec."Shipping No." <> '' THEN BEGIN
+        "Shipping No. Series" := xRec."Shipping No. Series";
+        "Shipping No." := xRec."Shipping No.";
+      END;
+      IF xRec."Posting No." <> '' THEN BEGIN
+        "Posting No. Series" := xRec."Posting No. Series";
+        "Posting No." := xRec."Posting No.";
+      END;
+      IF xRec."Return Receipt No." <> '' THEN BEGIN
+        "Return Receipt No. Series" := xRec."Return Receipt No. Series";
+        "Return Receipt No." := xRec."Return Receipt No.";
+      END;
+      IF xRec."Prepayment No." <> '' THEN BEGIN
+        "Prepayment No. Series" := xRec."Prepayment No. Series";
+        "Prepayment No." := xRec."Prepayment No.";
+      END;
+      IF xRec."Prepmt. Cr. Memo No." <> '' THEN BEGIN
+        "Prepmt. Cr. Memo No. Series" := xRec."Prepmt. Cr. Memo No. Series";
+        "Prepmt. Cr. Memo No." := xRec."Prepmt. Cr. Memo No.";
+      END;
+      EXIT;
+    END;
+  END ELSE BEGIN
+    "Sell-to Customer Template Code" := xRec."Sell-to Customer Template Code";
+    EXIT;
+  END;
+END;
+
+IF SellToCustTemplate.GET("Sell-to Customer Template Code") THEN BEGIN
+  SellToCustTemplate.TESTFIELD("Gen. Bus. Posting Group");
+  "Gen. Bus. Posting Group" := SellToCustTemplate."Gen. Bus. Posting Group";
+  "VAT Bus. Posting Group" := SellToCustTemplate."VAT Bus. Posting Group";
+  IF "Bill-to Customer No." = '' THEN
+    VALIDATE("Bill-to Customer Template Code","Sell-to Customer Template Code");
+END;
+
+IF NOT InsertMode AND
+   ((xRec."Sell-to Customer Template Code" <> "Sell-to Customer Template Code") OR
+    (xRec."Currency Code" <> "Currency Code"))
+THEN
+  RecreateSalesLines(FIELDCAPTION("Sell-to Customer Template Code"));
+
+Sell-to Customer Template Code - OnLookup()
+
+Sell-to Contact No. - OnValidate()
+TESTFIELD(Status,Status::Open);
+
+IF ("Sell-to Contact No." <> xRec."Sell-to Contact No.") AND
+   (xRec."Sell-to Contact No." <> '')
+THEN BEGIN
+  IF ("Sell-to Contact No." = '') AND ("Opportunity No." <> '') THEN
+    ERROR(Text049,FIELDCAPTION("Sell-to Contact No."));
+  IF HideValidationDialog THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Sell-to Contact No."));
+  IF Confirmed THEN BEGIN
+    SalesLine.RESET;
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF ("Sell-to Contact No." = '') AND ("Sell-to Customer No." = '') THEN BEGIN
+      IF NOT SalesLine.ISEMPTY THEN
+        ERROR(Text005,FIELDCAPTION("Sell-to Contact No."));
+      INIT;
+      SalesSetup.GET;
+      InitRecord;
+      "No. Series" := xRec."No. Series";
+      IF xRec."Shipping No." <> '' THEN BEGIN
+        "Shipping No. Series" := xRec."Shipping No. Series";
+        "Shipping No." := xRec."Shipping No.";
+      END;
+      IF xRec."Posting No." <> '' THEN BEGIN
+        "Posting No. Series" := xRec."Posting No. Series";
+        "Posting No." := xRec."Posting No.";
+      END;
+      IF xRec."Return Receipt No." <> '' THEN BEGIN
+        "Return Receipt No. Series" := xRec."Return Receipt No. Series";
+        "Return Receipt No." := xRec."Return Receipt No.";
+      END;
+      IF xRec."Prepayment No." <> '' THEN BEGIN
+        "Prepayment No. Series" := xRec."Prepayment No. Series";
+        "Prepayment No." := xRec."Prepayment No.";
+      END;
+      IF xRec."Prepmt. Cr. Memo No." <> '' THEN BEGIN
+        "Prepmt. Cr. Memo No. Series" := xRec."Prepmt. Cr. Memo No. Series";
+        "Prepmt. Cr. Memo No." := xRec."Prepmt. Cr. Memo No.";
+      END;
+      EXIT;
+    END;
+    IF "Opportunity No." <> '' THEN BEGIN
+      Opportunity.GET("Opportunity No.");
+      IF Opportunity."Contact No." <> "Sell-to Contact No." THEN BEGIN
+        MODIFY;
+        Opportunity.VALIDATE("Contact No.","Sell-to Contact No.");
+        Opportunity.MODIFY;
+      END
+    END;
+  END ELSE BEGIN
+    Rec := xRec;
+    EXIT;
+  END;
+END;
+
+IF ("Sell-to Customer No." <> '') AND ("Sell-to Contact No." <> '') THEN BEGIN
+  Cont.GET("Sell-to Contact No.");
+  ContBusinessRelation.RESET;
+  ContBusinessRelation.SETCURRENTKEY("Link to Table","No.");
+  ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+  ContBusinessRelation.SETRANGE("No.","Sell-to Customer No.");
+  IF ContBusinessRelation.FINDFIRST THEN
+    IF ContBusinessRelation."Contact No." <> Cont."Company No." THEN
+      ERROR(Text038,Cont."No.",Cont.Name,"Sell-to Customer No.");
+END;
+
+UpdateSellToCust("Sell-to Contact No.");
+
+Sell-to Contact No. - OnLookup()
+IF ("Sell-to Customer No." <> '') AND Cont.GET("Sell-to Contact No.") THEN
+  Cont.SETRANGE("Company No.",Cont."Company No.")
+ELSE
+  IF "Sell-to Customer No." <> '' THEN BEGIN
+    ContBusinessRelation.RESET;
+    ContBusinessRelation.SETCURRENTKEY("Link to Table","No.");
+    ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+    ContBusinessRelation.SETRANGE("No.","Sell-to Customer No.");
+    IF ContBusinessRelation.FINDFIRST THEN
+      Cont.SETRANGE("Company No.",ContBusinessRelation."Contact No.");
+  END ELSE
+    Cont.SETFILTER("Company No.",'<>''''');
+
+IF "Sell-to Contact No." <> '' THEN
+  IF Cont.GET("Sell-to Contact No.") THEN ;
+IF FORM.RUNMODAL(0,Cont) = ACTION::LookupOK THEN BEGIN
+  xRec := Rec;
+  VALIDATE("Sell-to Contact No.",Cont."No.");
+END;
+
+Bill-to Contact No. - OnValidate()
+TESTFIELD(Status,Status::Open);
+
+IF ("Bill-to Contact No." <> xRec."Bill-to Contact No.") AND
+   (xRec."Bill-to Contact No." <> '')
+THEN BEGIN
+  IF HideValidationDialog THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Bill-to Contact No."));
+  IF Confirmed THEN BEGIN
+    SalesLine.RESET;
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF ("Bill-to Contact No." = '') AND ("Bill-to Customer No." = '') THEN BEGIN
+      IF NOT SalesLine.ISEMPTY THEN
+        ERROR(Text005,FIELDCAPTION("Bill-to Contact No."));
+      INIT;
+      SalesSetup.GET;
+      InitRecord;
+      "No. Series" := xRec."No. Series";
+      IF xRec."Shipping No." <> '' THEN BEGIN
+        "Shipping No. Series" := xRec."Shipping No. Series";
+        "Shipping No." := xRec."Shipping No.";
+      END;
+      IF xRec."Posting No." <> '' THEN BEGIN
+        "Posting No. Series" := xRec."Posting No. Series";
+        "Posting No." := xRec."Posting No.";
+      END;
+      IF xRec."Return Receipt No." <> '' THEN BEGIN
+        "Return Receipt No. Series" := xRec."Return Receipt No. Series";
+        "Return Receipt No." := xRec."Return Receipt No.";
+      END;
+      IF xRec."Prepayment No." <> '' THEN BEGIN
+        "Prepayment No. Series" := xRec."Prepayment No. Series";
+        "Prepayment No." := xRec."Prepayment No.";
+      END;
+      IF xRec."Prepmt. Cr. Memo No." <> '' THEN BEGIN
+        "Prepmt. Cr. Memo No. Series" := xRec."Prepmt. Cr. Memo No. Series";
+        "Prepmt. Cr. Memo No." := xRec."Prepmt. Cr. Memo No.";
+      END;
+      EXIT;
+    END;
+  END ELSE BEGIN
+    "Bill-to Contact No." := xRec."Bill-to Contact No.";
+    EXIT;
+  END;
+END;
+
+IF ("Bill-to Customer No." <> '') AND ("Bill-to Contact No." <> '') THEN BEGIN
+  Cont.GET("Bill-to Contact No.");
+  ContBusinessRelation.RESET;
+  ContBusinessRelation.SETCURRENTKEY("Link to Table","No.");
+  ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+  ContBusinessRelation.SETRANGE("No.","Bill-to Customer No.");
+  IF ContBusinessRelation.FINDFIRST THEN
+    IF ContBusinessRelation."Contact No." <> Cont."Company No." THEN
+      ERROR(Text038,Cont."No.",Cont.Name,"Bill-to Customer No.");
+END;
+
+UpdateBillToCust("Bill-to Contact No.");
+
+Bill-to Contact No. - OnLookup()
+IF ("Bill-to Customer No." <> '') AND Cont.GET("Bill-to Contact No.") THEN
+  Cont.SETRANGE("Company No.",Cont."Company No.")
+ELSE
+  IF Cust.GET("Bill-to Customer No.") THEN BEGIN
+    ContBusinessRelation.RESET;
+    ContBusinessRelation.SETCURRENTKEY("Link to Table","No.");
+    ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+    ContBusinessRelation.SETRANGE("No.","Bill-to Customer No.");
+    IF ContBusinessRelation.FINDFIRST THEN
+      Cont.SETRANGE("Company No.",ContBusinessRelation."Contact No.");
+  END ELSE
+    Cont.SETFILTER("Company No.",'<>''''');
+
+IF "Bill-to Contact No." <> '' THEN
+  IF Cont.GET("Bill-to Contact No.") THEN ;
+IF FORM.RUNMODAL(0,Cont) = ACTION::LookupOK THEN BEGIN
+  xRec := Rec;
+  VALIDATE("Bill-to Contact No.",Cont."No.");
+END;
+
+Bill-to Customer Template Code - OnValidate()
+TESTFIELD("Document Type","Document Type"::Quote);
+TESTFIELD(Status,Status::Open);
+
+IF NOT InsertMode AND
+   ("Bill-to Customer Template Code" <> xRec."Bill-to Customer Template Code") AND
+   (xRec."Bill-to Customer Template Code" <> '')
+THEN BEGIN
+  IF HideValidationDialog THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text004,FALSE,FIELDCAPTION("Bill-to Customer Template Code"));
+  IF Confirmed THEN BEGIN
+    SalesLine.RESET;
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF "Bill-to Customer Template Code" = '' THEN BEGIN
+      IF NOT SalesLine.ISEMPTY THEN
+        ERROR(Text005,FIELDCAPTION("Bill-to Customer Template Code"));
+      INIT;
+      SalesSetup.GET;
+      InitRecord;
+      "No. Series" := xRec."No. Series";
+      IF xRec."Shipping No." <> '' THEN BEGIN
+        "Shipping No. Series" := xRec."Shipping No. Series";
+        "Shipping No." := xRec."Shipping No.";
+      END;
+      IF xRec."Posting No." <> '' THEN BEGIN
+        "Posting No. Series" := xRec."Posting No. Series";
+        "Posting No." := xRec."Posting No.";
+      END;
+      IF xRec."Return Receipt No." <> '' THEN BEGIN
+        "Return Receipt No. Series" := xRec."Return Receipt No. Series";
+        "Return Receipt No." := xRec."Return Receipt No.";
+      END;
+      IF xRec."Prepayment No." <> '' THEN BEGIN
+        "Prepayment No. Series" := xRec."Prepayment No. Series";
+        "Prepayment No." := xRec."Prepayment No.";
+      END;
+      IF xRec."Prepmt. Cr. Memo No." <> '' THEN BEGIN
+        "Prepmt. Cr. Memo No. Series" := xRec."Prepmt. Cr. Memo No. Series";
+        "Prepmt. Cr. Memo No." := xRec."Prepmt. Cr. Memo No.";
+      END;
+      EXIT;
+    END;
+  END ELSE BEGIN
+    "Bill-to Customer Template Code" := xRec."Bill-to Customer Template Code";
+    EXIT;
+  END;
+END;
+
+VALIDATE("Ship-to Code",'');
+IF BillToCustTemplate.GET("Bill-to Customer Template Code") THEN BEGIN
+  BillToCustTemplate.TESTFIELD("Customer Posting Group");
+  "Customer Posting Group" := BillToCustTemplate."Customer Posting Group";
+  "Invoice Disc. Code" := BillToCustTemplate."Invoice Disc. Code";
+  "Customer Price Group" := BillToCustTemplate."Customer Price Group";
+  "Customer Disc. Group" := BillToCustTemplate."Customer Disc. Group";
+  "Allow Line Disc." := BillToCustTemplate."Allow Line Disc.";
+  VALIDATE("Payment Terms Code",BillToCustTemplate."Payment Terms Code");
+  VALIDATE("Payment Method Code",BillToCustTemplate."Payment Method Code");
+  "Shipment Method Code" := BillToCustTemplate."Shipment Method Code";
+END;
+
+TempDocDim.GetDimensions(DATABASE::"Sales Header","Document Type","No.",0,TempDocDim);
+CreateDim(
+  DATABASE::"Customer Template","Bill-to Customer Template Code",
+  DATABASE::"Salesperson/Purchaser","Salesperson Code",
+  DATABASE::Customer,"Bill-to Customer No.",
+  DATABASE::Campaign,"Campaign No.",
+  DATABASE::"Responsibility Center","Responsibility Center");
+IF SalesLinesExist THEN
+  TempDocDim.UpdateAllLineDim(DATABASE::"Sales Header","Document Type","No.",TempDocDim);
+
+IF NOT InsertMode AND
+   (xRec."Sell-to Customer Template Code" = "Sell-to Customer Template Code") AND
+   (xRec."Bill-to Customer Template Code" <> "Bill-to Customer Template Code")
+THEN
+  RecreateSalesLines(FIELDCAPTION("Bill-to Customer Template Code"));
+
+Bill-to Customer Template Code - OnLookup()
+
+Opportunity No. - OnValidate()
+IF xRec."Opportunity No." <> "Opportunity No." THEN BEGIN
+  IF "Opportunity No." <> '' THEN
+    IF Opportunity.GET("Opportunity No.") THEN BEGIN
+      Opportunity.TESTFIELD(Status,Opportunity.Status::"In Progress");
+      IF Opportunity."Sales Document No." <> '' THEN BEGIN
+        IF CONFIRM(Text048,FALSE,Opportunity."Sales Document No.",Opportunity."No.") THEN BEGIN
+          IF SalesHeader.GET("Document Type"::Quote,Opportunity."Sales Document No.") THEN BEGIN
+            SalesHeader."Opportunity No." := '';
+            SalesHeader.MODIFY;
+          END;
+          Opportunity."Sales Document Type" := Opportunity."Sales Document Type"::Quote;
+          Opportunity."Sales Document No." := "No.";
+          Opportunity.MODIFY;
+        END ELSE
+          "Opportunity No." := xRec."Opportunity No.";
+      END ELSE BEGIN
+        Opportunity."Sales Document Type" := Opportunity."Sales Document Type"::Quote;
+        Opportunity."Sales Document No." := "No.";
+        Opportunity.MODIFY;
+      END
+    END;
+  IF xRec."Opportunity No." <> '' THEN
+    IF Opportunity.GET(xRec."Opportunity No.") THEN BEGIN
+      Opportunity."Sales Document No." := '';
+      Opportunity."Sales Document Type" := Opportunity."Sales Document Type"::" ";
+      Opportunity.MODIFY;
+    END;
+END;
+
+Opportunity No. - OnLookup()
+
+Responsibility Center - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF NOT UserMgt.CheckRespCenter(0,"Responsibility Center") THEN
+  ERROR(
+    Text027,
+    RespCenter.TABLECAPTION,UserMgt.GetSalesFilter);
+
+"Location Code" := UserMgt.GetLocation(0,'',"Responsibility Center");
+IF "Location Code" <> '' THEN BEGIN
+  IF Location.GET("Location Code") THEN
+    "Outbound Whse. Handling Time" := Location."Outbound Whse. Handling Time";
+END ELSE BEGIN
+  IF InvtSetup.GET THEN
+    "Outbound Whse. Handling Time" := InvtSetup."Outbound Whse. Handling Time";
+END;
+
+UpdateShipToAddress;
+
+CreateDim(
+  DATABASE::"Responsibility Center","Responsibility Center",
+  DATABASE::Customer,"Bill-to Customer No.",
+  DATABASE::"Salesperson/Purchaser","Salesperson Code",
+  DATABASE::Campaign,"Campaign No.",
+  DATABASE::"Customer Template","Bill-to Customer Template Code");
+
+IF xRec."Responsibility Center" <> "Responsibility Center" THEN BEGIN
+  RecreateSalesLines(FIELDCAPTION("Responsibility Center"));
+  "Assigned User ID" := '';
+END;
+
+Responsibility Center - OnLookup()
+
+Shipping Advice - OnValidate()
+TESTFIELD(Status,Status::Open);
+WhseSourceHeader.SalesHeaderVerifyChange(Rec,xRec);
+
+Shipping Advice - OnLookup()
+
+Completely Shipped - OnValidate()
+
+Completely Shipped - OnLookup()
+
+Posting from Whse. Ref. - OnValidate()
+
+Posting from Whse. Ref. - OnLookup()
+
+Location Filter - OnValidate()
+
+Location Filter - OnLookup()
+
+Requested Delivery Date - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF "Promised Delivery Date" <> 0D THEN
+  ERROR(
+    Text028,
+    FIELDCAPTION("Requested Delivery Date"),
+    FIELDCAPTION("Promised Delivery Date"));
+
+IF "Requested Delivery Date" <> xRec."Requested Delivery Date" THEN
+  UpdateSalesLines(FIELDCAPTION("Requested Delivery Date"),CurrFieldNo <> 0);
+
+Requested Delivery Date - OnLookup()
+
+Promised Delivery Date - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF "Promised Delivery Date" <> xRec."Promised Delivery Date" THEN
+  UpdateSalesLines(FIELDCAPTION("Promised Delivery Date"),CurrFieldNo <> 0);
+
+Promised Delivery Date - OnLookup()
+
+Shipping Time - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF "Shipping Time" <> xRec."Shipping Time" THEN
+  UpdateSalesLines(FIELDCAPTION("Shipping Time"),CurrFieldNo <> 0);
+
+Shipping Time - OnLookup()
+
+Outbound Whse. Handling Time - OnValidate()
+TESTFIELD(Status,Status::Open);
+IF ("Outbound Whse. Handling Time" <> xRec."Outbound Whse. Handling Time") AND
+   (xRec."Sell-to Customer No." = "Sell-to Customer No.")
+THEN
+  UpdateSalesLines(FIELDCAPTION("Outbound Whse. Handling Time"),CurrFieldNo <> 0);
+
+Outbound Whse. Handling Time - OnLookup()
+
+Shipping Agent Service Code - OnValidate()
+TESTFIELD(Status,Status::Open);
+GetShippingTime(FIELDNO("Shipping Agent Service Code"));
+UpdateSalesLines(FIELDCAPTION("Shipping Agent Service Code"),CurrFieldNo <> 0);
+
+Shipping Agent Service Code - OnLookup()
+
+Late Order Shipping - OnValidate()
+
+Late Order Shipping - OnLookup()
+
+Date Filter - OnValidate()
+
+Date Filter - OnLookup()
+
+Receive - OnValidate()
+
+Receive - OnLookup()
+
+Return Receipt No. - OnValidate()
+
+Return Receipt No. - OnLookup()
+
+Return Receipt No. Series - OnValidate()
+IF "Return Receipt No. Series" <> '' THEN BEGIN
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Return Receipt Nos.");
+  NoSeriesMgt.TestSeries(SalesSetup."Posted Return Receipt Nos.","Return Receipt No. Series");
+END;
+TESTFIELD("Return Receipt No.",'');
+
+Return Receipt No. Series - OnLookup()
+WITH SalesHeader DO BEGIN
+  SalesHeader := Rec;
+  SalesSetup.GET;
+  SalesSetup.TESTFIELD("Posted Return Receipt Nos.");
+  IF NoSeriesMgt.LookupSeries(SalesSetup."Posted Return Receipt Nos.","Return Receipt No. Series") THEN
+    VALIDATE("Return Receipt No. Series");
+  Rec := SalesHeader;
+END;
+
+Last Return Receipt No. - OnValidate()
+
+Last Return Receipt No. - OnLookup()
+
+Allow Line Disc. - OnValidate()
+TESTFIELD(Status,Status::Open);
+MessageIfSalesLinesExist(FIELDCAPTION("Allow Line Disc."));
+
+Allow Line Disc. - OnLookup()
+
+Get Shipment Used - OnValidate()
+
+Get Shipment Used - OnLookup()
+
+Assigned User ID - OnValidate()
+IF NOT UserMgt.CheckRespCenter2(0,"Responsibility Center","Assigned User ID") THEN
+  ERROR(
+    Text061,"Assigned User ID",
+    RespCenter.TABLECAPTION,UserMgt.GetSalesFilter2("Assigned User ID"));
+
+Assigned User ID - OnLookup()
+
+Kontaktperson - OnValidate()
+IF Rec.Kontaktperson='' THEN
+  Rec."Kontaktnr.":='';
+
+Kontaktperson - OnLookup()
+//TOPAS 16.05.08 ST
+KontBez.SETFILTER(KontBez."Business Relation Code",'DEB');
+KontBez.SETFILTER(KontBez."No.","Sell-to Customer No.");
+IF KontBez.FINDFIRST THEN
+  BEGIN
+    "Mandantennr.":=KontBez."Contact No.";
+    Kontakt.SETFILTER(Kontakt."Company No.","Mandantennr.");
+    IF Kontakt.FINDFIRST THEN
+      BEGIN
+        IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
+          BEGIN
+            IF Kontakt."Salutation Code"='' THEN
+              ERROR(Text101);
+            "Kontaktnr.":=Kontakt."No.";
+            IF (Kontakt."Salutation Code"='HERR') THEN
+              BEGIN
+               // IF ((Kontakt."Language Code"='DEU') OR (Kontakt."Language Code"='DEA')
+               // OR (Kontakt."Language Code"='DES') OR(Kontakt."Language Code"='')) THEN
+                IF (("Language Code"='DEU') OR ("Language Code"='DEA')
+                OR ("Language Code"='DES') OR ("Language Code"='')) THEN
+                  Kontaktperson:='Herr' +' ' +Kontakt.Surname
+                ELSE
+                  Kontaktperson:='Mr.' +' ' +Kontakt.Surname;
+              END;
+            IF (Kontakt."Salutation Code"='FRAU') THEN
+              BEGIN
+                // IF ((Kontakt."Language Code"='DEU') OR (Kontakt."Language Code"='DEA')
+                // OR (Kontakt."Language Code"='DES')OR(Kontakt."Language Code"='')) THEN
+                IF (("Language Code"='DEU') OR ("Language Code"='DEA')
+                OR ("Language Code"='DES')OR("Language Code"='')) THEN
+                  Kontaktperson:='Frau' + ' ' +Kontakt.Surname
+                ELSE
+                  Kontaktperson:='Ms.' +' ' +Kontakt.Surname;
+              END;
+            IF Kontakt.Type = Kontakt.Type :: Company THEN
+              MESSAGE(Text102);
+          END;
+      END;
+  END
+ELSE
+  MESSAGE(Text103,Kontakt.TABLECAPTION);
+//TOPAS Ende
+
+Angebotsstatus - OnValidate()
+{
+// TOPAS ANFANG  NT-DE_2.60.F.2004.05.09-00
+   VerkZeile.SETFILTER("Belegnr.",'%1',"Nr.");
+   VerkZeile.FIND('-');
+   Sum_Angebot:=0;
+   REPEAT
+   IF (VerkZeile.Art= VerkZeile.Art::Artikel) THEN BEGIN
+    Sum_Angebot:=Sum_Angebot+(VerkZeile."VK-Preis (MW)"*VerkZeile."Menge (Basis)");
+   END;
+   UNTIL VerkZeile.NEXT=0;
+   IF (Sum_Angebot < 50 ) AND (Lagerortcode='ZENT') THEN BEGIN
+    MESSAGE('HINWEIS: Der Angebotswert ist unter 50,-- Euro');
+   END;
+// TOPAS ENDE   NT-DE_2.60.F.2004.05.09-00
+}
+
+Angebotsstatus - OnLookup()
+
+Erledigtstatus - OnValidate()
+
+Erledigtstatus - OnLookup()
+
+Wiedervorlage - OnValidate()
+
+Wiedervorlage - OnLookup()
+
+Gültigkeitsdatum - OnValidate()
+
+Gültigkeitsdatum - OnLookup()
+
+Ursprungsangebotsnr. - OnValidate()
+{
+// -002.2
+Angebote.SETRANGE (Belegart, Belegart::Angebot);
+Angebote.SETRANGE ("Ursprungsangebotsnr.", "Ursprungsangebotsnr.");
+IF ("Ursprungsangebotsnr." <> xRec."Ursprungsangebotsnr.") OR (xRec."Versionsnr." = 0) THEN
+  "Versionsnr." := Angebote.COUNT + 1;
+IF ("Ursprungsangebotsnr." = '') THEN
+  "Versionsnr." := 0;
+// +002.2
+}
+
+Ursprungsangebotsnr. - OnLookup()
+
+Versionsnr. - OnValidate()
+
+Versionsnr. - OnLookup()
+
+Wunschliefertermin - OnValidate()
+{
+// -008.7
+AktualisiereVerkZeilen (FIELDNAME(Wunschliefertermin));
+// +008.7
+}
+
+Wunschliefertermin - OnLookup()
+
+Änderungskennzeichen - OnValidate()
+
+Änderungskennzeichen - OnLookup()
+
+Währungsabgleich - OnValidate()
+{
+ScanVerw.ErmittleWährungsabgleich (Rec);
+}
+
+Währungsabgleich - OnLookup()
+
+Euro-Paritätswährungscode - OnValidate()
+{
+// -004.1
+IF "Euro-Paritätswährungscode" <> '' THEN
+  TESTFIELD (Währungscode,'');
+
+IF CurrFieldNo <> FIELDNO("Euro-Paritätswährungscode") THEN
+  AktualisiereParWährungsfaktor
+ELSE BEGIN
+  IF "Euro-Paritätswährungscode" <> xRec."Euro-Paritätswährungscode" THEN BEGIN
+    AktualisiereParWährungsfaktor;
+  END ELSE
+    IF "Euro-Paritätswährungscode" <> '' THEN BEGIN
+      AktualisiereParWährungsfaktor;
+      IF "Euro-Paritätswährungsfaktor" <> xRec."Euro-Paritätswährungsfaktor" THEN
+        BestätigeAktualPWährungsfaktor;
+    END;
+END;
+// +004.1
+}
+
+Euro-Paritätswährungscode - OnLookup()
+
+Euro-Paritätswährungsfaktor - OnValidate()
+
+Euro-Paritätswährungsfaktor - OnLookup()
+
+Innendienst Verkäufercode - OnValidate()
+
+Innendienst Verkäufercode - OnLookup()
+
+Kontaktnr. - OnValidate()
+
+Kontaktnr. - OnLookup()
+
+Projektnummer TEVIS - OnValidate()
+
+Projektnummer TEVIS - OnLookup()
+
+Text1 - OnValidate()
+
+Text1 - OnLookup()
+//TOPAS 14.07.08-ST
+Standardtext.SETFILTER(Standardtext.Code,'AG_TEXT*');
+IF Standardtext.FINDFIRST THEN
+BEGIN
+  IF FORM.RUNMODAL(FORM::"Standard Text Codes",Standardtext) = ACTION::LookupOK THEN
+  BEGIN
+    Text1 := Standardtext.Description;
+    Text2 := 'bieten wir Ihnen wie folgt freibleibend an:';
+  END;
+END;
+
+//TOPAS Ende
+
+Text2 - OnValidate()
+
+Text2 - OnLookup()
+
+Kontaktperson (kopie) - OnValidate()
+
+Kontaktperson (kopie) - OnLookup()
+
+AB via EMail - OnValidate()
+
+AB via EMail - OnLookup()
+
+Ausfuhrbegleitdokument - OnValidate()
+
+Ausfuhrbegleitdokument - OnLookup()
+
+AB via EMail-Adresse - OnValidate()
+
+AB via EMail-Adresse - OnLookup()
+//TOPAS 16.05.08 ST
+KontBez.SETFILTER(KontBez."Business Relation Code",'DEB');
+KontBez.SETFILTER(KontBez."No.","Sell-to Customer No.");
+IF KontBez.FINDFIRST THEN
+  BEGIN
+    "Mandantennr.":=KontBez."Contact No.";
+    Kontakt.SETFILTER(Kontakt."Company No.","Mandantennr.");
+    IF Kontakt.FINDFIRST THEN BEGIN
+      IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
+        "AB via EMail-Adresse" := Kontakt."E-Mail";
+    END;
+  END;
+
+Rech EMail-Adresse - OnValidate()
+
+Rech EMail-Adresse - OnLookup()
+//TOPAS 160508 ST
+KontBez.SETFILTER(KontBez."Business Relation Code",'DEB');
+KontBez.SETFILTER(KontBez."No.","Sell-to Customer No.");
+IF KontBez.FINDFIRST THEN
+  BEGIN
+    "Mandantennr.":=KontBez."Contact No.";
+    Kontakt.SETFILTER(Kontakt."Company No.","Mandantennr.");
+    IF Kontakt.FINDFIRST THEN BEGIN
+      IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
+        "Rech EMail-Adresse" := Kontakt."E-Mail";
+    END;
+  END;
+
+Spediteuraccount - OnValidate()
+
+Spediteuraccount - OnLookup()
+
+Nicht rechnen - OnValidate()
+
+Nicht rechnen - OnLookup()
+
+USt13b2 - OnValidate()
+
+USt13b2 - OnLookup()
+
+Endkunde - OnValidate()
+
+Endkunde - OnLookup()
+
+Endkunde Adresse - OnValidate()
+
+Endkunde Adresse - OnLookup()
+
+Endkunde PLZ-Code - OnValidate()
+PostCode.ValidatePostCode("Endkunde Ort","Endkunde PLZ-Code");
+
+Endkunde PLZ-Code - OnLookup()
+PostCode.LookUpPostCode("Endkunde Ort","Endkunde PLZ-Code",TRUE);
+
+Endkunde Ort - OnValidate()
+PostCode.ValidateCity("Endkunde Ort","Endkunde PLZ-Code");
+
+Endkunde Ort - OnLookup()
+PostCode.LookUpCity("Endkunde Ort","Endkunde PLZ-Code",TRUE);
+
+Endkunde Land - OnValidate()
+
+Endkunde Land - OnLookup()
+
+Endkunde Kontakt - OnValidate()
+
+Endkunde Kontakt - OnLookup()
+
+Endkunde Telefonnr. - OnValidate()
+
+Endkunde Telefonnr. - OnLookup()
+
+Endkunde E-Mail - OnValidate()
+
+Endkunde E-Mail - OnLookup()
+
+keine Rahmen-AB an Kunden - OnValidate()
+
+keine Rahmen-AB an Kunden - OnLookup()
+
+Line Amount - OnValidate()
+
+Line Amount - OnLookup()
+
+Keine AB an Kunden - OnValidate()
+
+Keine AB an Kunden - OnLookup()
+
+Territory Code - OnValidate()
+
+Territory Code - OnLookup()
+
+Betreuer Innendienst - OnValidate()
+
+Betreuer Innendienst - OnLookup()
+
+Teams - OnValidate()
+
+Teams - OnLookup()
+
+Date Received - OnValidate()
+
+Date Received - OnLookup()
+
+Time Received - OnValidate()
+
+Time Received - OnLookup()
+
+BizTalk Request for Sales Qte. - OnValidate()
+
+BizTalk Request for Sales Qte. - OnLookup()
+
+BizTalk Sales Order - OnValidate()
+
+BizTalk Sales Order - OnLookup()
+
+Date Sent - OnValidate()
+
+Date Sent - OnLookup()
+
+Time Sent - OnValidate()
+
+Time Sent - OnLookup()
+
+BizTalk Sales Quote - OnValidate()
+
+BizTalk Sales Quote - OnLookup()
+
+BizTalk Sales Order Cnfmn. - OnValidate()
+
+BizTalk Sales Order Cnfmn. - OnLookup()
+
+Customer Quote No. - OnValidate()
+
+Customer Quote No. - OnLookup()
+
+Customer Order No. - OnValidate()
+
+Customer Order No. - OnLookup()
+
+BizTalk Document Sent - OnValidate()
+
+BizTalk Document Sent - OnLookup()
+
+InitRecord()
+CASE "Document Type" OF
+  "Document Type"::Quote,"Document Type"::Order:
+    BEGIN
+      NoSeriesMgt.SetDefaultSeries("Posting No. Series",SalesSetup."Posted Invoice Nos.");
+      NoSeriesMgt.SetDefaultSeries("Shipping No. Series",SalesSetup."Posted Shipment Nos.");
+      IF "Document Type" = "Document Type"::Order THEN BEGIN
+        NoSeriesMgt.SetDefaultSeries("Prepayment No. Series",SalesSetup."Posted Prepmt. Inv. Nos.");
+        NoSeriesMgt.SetDefaultSeries("Prepmt. Cr. Memo No. Series",SalesSetup."Posted Prepmt. Cr. Memo Nos.");
+      END;
+    END;
+  "Document Type"::Invoice:
+    BEGIN
+      IF ("No. Series" <> '') AND
+         (SalesSetup."Invoice Nos." = SalesSetup."Posted Invoice Nos.")
+      THEN
+        "Posting No. Series" := "No. Series"
+      ELSE
+        NoSeriesMgt.SetDefaultSeries("Posting No. Series",SalesSetup."Posted Invoice Nos.");
+      IF SalesSetup."Shipment on Invoice" THEN
+        NoSeriesMgt.SetDefaultSeries("Shipping No. Series",SalesSetup."Posted Shipment Nos.");
+    END;
+  "Document Type"::"Return Order":
+    BEGIN
+      NoSeriesMgt.SetDefaultSeries("Posting No. Series",SalesSetup."Posted Credit Memo Nos.");
+      NoSeriesMgt.SetDefaultSeries("Return Receipt No. Series",SalesSetup."Posted Return Receipt Nos.");
+    END;
+  "Document Type"::"Credit Memo":
+    BEGIN
+      IF ("No. Series" <> '') AND
+         (SalesSetup."Credit Memo Nos." = SalesSetup."Posted Credit Memo Nos.")
+      THEN
+        "Posting No. Series" := "No. Series"
+      ELSE
+        NoSeriesMgt.SetDefaultSeries("Posting No. Series",SalesSetup."Posted Credit Memo Nos.");
+      IF SalesSetup."Return Receipt on Credit Memo" THEN
+        NoSeriesMgt.SetDefaultSeries("Return Receipt No. Series",SalesSetup."Posted Return Receipt Nos.");
+    END;
+END;
+
+IF "Document Type" IN ["Document Type"::Order,"Document Type"::Invoice,"Document Type"::Quote] THEN
+  BEGIN
+  "Shipment Date" := WORKDATE;
+  "Order Date" := WORKDATE;
+END;
+IF "Document Type" = "Document Type"::"Return Order" THEN
+  "Order Date" := WORKDATE;
+
+IF NOT ("Document Type" IN ["Document Type"::"Blanket Order","Document Type"::Quote]) AND
+   ("Posting Date" = 0D)
+THEN
+  "Posting Date" := WORKDATE;
+"Document Date" := WORKDATE;
+
+VALIDATE("Location Code",UserMgt.GetLocation(0,Cust."Location Code","Responsibility Center"));
+
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+  GLSetup.GET;
+  Correction := GLSetup."Mark Cr. Memos as Corrections";
+END;
+
+"Posting Description" := FORMAT("Document Type") + ' ' + "No.";
+
+Reserve := Reserve::Optional;
+
+IF InvtSetup.GET THEN
+  VALIDATE("Outbound Whse. Handling Time",InvtSetup."Outbound Whse. Handling Time");
+
+"Responsibility Center" := UserMgt.GetRespCenter(0,"Responsibility Center");
+
+AssistEdit(OldSalesHeader : Record "Sales Header") : Boolean
+WITH SalesHeader DO BEGIN
+  COPY(Rec);
+  SalesSetup.GET;
+  TestNoSeries;
+  IF NoSeriesMgt.SelectSeries(GetNoSeriesCode,OldSalesHeader."No. Series","No. Series") THEN BEGIN
+    IF ("Sell-to Customer No." = '') AND ("Sell-to Contact No." = '') THEN BEGIN
+      HideCreditCheckDialogue := FALSE;
+      CheckCreditMaxBeforeInsert;
+      HideCreditCheckDialogue := TRUE;
+    END;
+    NoSeriesMgt.SetSeries("No.");
+    IF SalesHeader2.GET("Document Type","No.") THEN
+      ERROR(Text051,LOWERCASE(FORMAT("Document Type")),"No.");
+    Rec := SalesHeader;
+    EXIT(TRUE);
+  END;
+END;
+
+TestNoSeries() : Boolean
+CASE "Document Type" OF
+  "Document Type"::Quote:
+    SalesSetup.TESTFIELD("Quote Nos.");
+  "Document Type"::Order:
+    SalesSetup.TESTFIELD("Order Nos.");
+  "Document Type"::Invoice:
+    BEGIN
+      SalesSetup.TESTFIELD("Invoice Nos.");
+      SalesSetup.TESTFIELD("Posted Invoice Nos.");
+    END;
+  "Document Type"::"Return Order":
+    SalesSetup.TESTFIELD("Return Order Nos.");
+  "Document Type"::"Credit Memo":
+    BEGIN
+      SalesSetup.TESTFIELD("Credit Memo Nos.");
+      SalesSetup.TESTFIELD("Posted Credit Memo Nos.");
+    END;
+  "Document Type"::"Blanket Order":
+    SalesSetup.TESTFIELD("Blanket Order Nos.");
+END;
+
+GetNoSeriesCode() : Code[10]
+CASE "Document Type" OF
+  "Document Type"::Quote:
+    EXIT(SalesSetup."Quote Nos.");
+  "Document Type"::Order:
+    EXIT(SalesSetup."Order Nos.");
+  "Document Type"::Invoice:
+    EXIT(SalesSetup."Invoice Nos.");
+  "Document Type"::"Return Order":
+    EXIT(SalesSetup."Return Order Nos.");
+  "Document Type"::"Credit Memo":
+    EXIT(SalesSetup."Credit Memo Nos.");
+  "Document Type"::"Blanket Order":
+    EXIT(SalesSetup."Blanket Order Nos.");
+END;
+
+GetPostingNoSeriesCode() : Code[10]
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN
+  EXIT(SalesSetup."Posted Credit Memo Nos.");
+EXIT(SalesSetup."Posted Invoice Nos.");
+
+TestNoSeriesDate(No : Code[20];NoSeriesCode : Code[10];NoCapt : Text[1024];NoSeriesCapt : Text[1024])
+IF (No <> '') AND (NoSeriesCode <> '') THEN BEGIN
+  NoSeries.GET(NoSeriesCode);
+  IF NoSeries."Date Order" THEN
+    ERROR(
+      Text045,
+      FIELDCAPTION("Posting Date"),NoSeriesCapt,NoSeriesCode,
+      NoSeries.FIELDCAPTION("Date Order"),NoSeries."Date Order","Document Type",
+      NoCapt,No);
+END;
+
+ConfirmDeletion() : Boolean
+SalesPost.TestDeleteHeader(
+  Rec,SalesShptHeader,SalesInvHeader,SalesCrMemoHeader,ReturnRcptHeader,
+  SalesInvHeaderPrepmt,SalesCrMemoHeaderPrepmt);
+IF SalesShptHeader."No." <> '' THEN
+  IF NOT CONFIRM(
+       Text008 +
+       Text009 +
+       Text010,TRUE,
+       SalesShptHeader."No.")
+  THEN
+    EXIT;
+IF SalesInvHeader."No." <> '' THEN
+  IF NOT CONFIRM(
+       Text011 +
+       Text012 +
+       Text010,TRUE,
+       SalesInvHeader."No.")
+  THEN
+    EXIT;
+IF SalesCrMemoHeader."No." <> '' THEN
+  IF NOT CONFIRM(
+       Text013 +
+       Text014 +
+       Text010,TRUE,
+       SalesCrMemoHeader."No.")
+  THEN
+    EXIT;
+IF ReturnRcptHeader."No." <> '' THEN
+  IF NOT CONFIRM(
+       Text029 +
+       Text030 +
+       Text010,TRUE,
+       ReturnRcptHeader."No.")
+  THEN
+    EXIT;
+IF "Prepayment No." <> '' THEN
+  IF NOT CONFIRM(
+       Text053 +
+       Text054 +
+       Text010,TRUE,
+       SalesInvHeaderPrepmt.TABLENAME,
+       SalesInvHeaderPrepmt."No.")
+  THEN
+    EXIT;
+IF "Prepmt. Cr. Memo No." <> '' THEN
+  IF NOT CONFIRM(
+       Text055 +
+       Text056 +
+       Text010,TRUE,
+       SalesCrMemoHeaderPrepmt."No.")
+  THEN
+    EXIT;
+EXIT(TRUE);
+
+GetCust(CustNo : Code[20])
+IF NOT (("Document Type" = "Document Type"::Quote) AND (CustNo = '')) THEN BEGIN
+  IF CustNo <> Cust."No." THEN
+    Cust.GET(CustNo);
+END ELSE
+  CLEAR(Cust);
+
+SalesLinesExist() : Boolean
+SalesLine.RESET;
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+EXIT(SalesLine.FINDFIRST);
+
+RecreateSalesLines(ChangedFieldName : Text[100])
+IF SalesLinesExist THEN BEGIN
+  IF HideValidationDialog OR NOT GUIALLOWED THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed :=
+      CONFIRM(
+        Text015 +
+        Text004,FALSE,ChangedFieldName);
+  IF Confirmed THEN BEGIN
+    DocDim.LOCKTABLE;
+    SalesLine.LOCKTABLE;
+    ItemChargeAssgntSales.LOCKTABLE;
+    ReservEntry.LOCKTABLE;
+    MODIFY;
+
+    SalesLine.RESET;
+    SalesLine.SETRANGE("Document Type","Document Type");
+    SalesLine.SETRANGE("Document No.","No.");
+    IF SalesLine.FINDSET THEN BEGIN
+      REPEAT
+        SalesLine.TESTFIELD("Job No.",'');
+        SalesLine.TESTFIELD("Job Contract Entry No.",0);
+        SalesLine.TESTFIELD("Quantity Shipped",0);
+        SalesLine.TESTFIELD("Quantity Invoiced",0);
+        SalesLine.TESTFIELD("Return Qty. Received",0);
+        SalesLine.TESTFIELD("Shipment No.",'');
+        SalesLine.TESTFIELD("Return Receipt No.",'');
+        SalesLine.TESTFIELD("Blanket Order No.",'');
+        SalesLine.TESTFIELD("Prepmt. Amt. Inv.",0);
+        SalesLineTmp := SalesLine;
+        IF SalesLine.Nonstock THEN BEGIN
+          SalesLine.Nonstock := FALSE;
+          SalesLine.MODIFY;
+        END;
+        SalesLineTmp.INSERT;
+        RecreateReservEntry(SalesLine,0,TRUE);
+        RecreateReqLine(SalesLine,0,TRUE);
+      UNTIL SalesLine.NEXT = 0;
+
+      IF "Location Code" <> xRec."Location Code" THEN
+        IF NOT TempReservEntry.ISEMPTY THEN
+          ERROR(Text047,FIELDCAPTION("Location Code"));
+
+      ItemChargeAssgntSales.SETRANGE("Document Type","Document Type");
+      ItemChargeAssgntSales.SETRANGE("Document No.","No.");
+      IF ItemChargeAssgntSales.FINDSET THEN BEGIN
+        REPEAT
+          TempItemChargeAssgntSales.INIT;
+          TempItemChargeAssgntSales := ItemChargeAssgntSales;
+          TempItemChargeAssgntSales.INSERT;
+        UNTIL ItemChargeAssgntSales.NEXT = 0;
+        ItemChargeAssgntSales.DELETEALL;
+      END;
+
+      SalesLine.DELETEALL(TRUE);
+      SalesLine.INIT;
+      SalesLine."Line No." := 0;
+      SalesLineTmp.FINDSET;
+      ExtendedTextAdded := FALSE;
+      SalesLine.BlockDynamicTracking(TRUE);
+      REPEAT
+        IF SalesLineTmp."Attached to Line No." = 0 THEN BEGIN
+          SalesLine.INIT;
+          SalesLine."Line No." := SalesLine."Line No." + 10000;
+          SalesLine.VALIDATE(Type,SalesLineTmp.Type);
+          IF SalesLineTmp."No." = '' THEN BEGIN
+            SalesLine.VALIDATE(Description,SalesLineTmp.Description);
+            SalesLine.VALIDATE("Description 2",SalesLineTmp."Description 2");
+          END ELSE BEGIN
+            SalesLine.VALIDATE("No.",SalesLineTmp."No.");
+            IF SalesLine.Type <> SalesLine.Type::" " THEN BEGIN
+              SalesLine.VALIDATE("Unit of Measure Code",SalesLineTmp."Unit of Measure Code");
+              SalesLine.VALIDATE("Variant Code",SalesLineTmp."Variant Code");
+              IF SalesLineTmp.Quantity <> 0 THEN
+                SalesLine.VALIDATE(Quantity,SalesLineTmp.Quantity);
+              SalesLine."Purchase Order No." := SalesLineTmp."Purchase Order No.";
+              SalesLine."Purch. Order Line No." := SalesLineTmp."Purch. Order Line No.";
+              SalesLine."Drop Shipment" := SalesLine."Purch. Order Line No." <> 0;
+            END;
+          END;
+
+          SalesLine.INSERT;
+          ExtendedTextAdded := FALSE;
+
+          IF SalesLine.Type = SalesLine.Type::Item THEN BEGIN
+            ClearItemAssgntSalesFilter(TempItemChargeAssgntSales);
+            TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. Type",SalesLineTmp."Document Type");
+            TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. No.",SalesLineTmp."Document No.");
+            TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. Line No.",SalesLineTmp."Line No.");
+            IF TempItemChargeAssgntSales.FINDSET THEN BEGIN
+              REPEAT
+                IF NOT TempItemChargeAssgntSales.MARK THEN BEGIN
+                  TempItemChargeAssgntSales."Applies-to Doc. Line No." := SalesLine."Line No.";
+                  TempItemChargeAssgntSales.Description := SalesLine.Description;
+                  TempItemChargeAssgntSales.MODIFY;
+                  TempItemChargeAssgntSales.MARK(TRUE);
+                END;
+              UNTIL TempItemChargeAssgntSales.NEXT = 0;
+            END;
+          END;
+          IF SalesLine.Type = SalesLine.Type::"Charge (Item)" THEN BEGIN
+            TempInteger.INIT;
+            TempInteger.Number := SalesLine."Line No.";
+            TempInteger.INSERT;
+          END;
+        END ELSE
+          IF NOT ExtendedTextAdded THEN BEGIN
+            TransferExtendedText.SalesCheckIfAnyExtText(SalesLine,TRUE);
+            TransferExtendedText.InsertSalesExtText(SalesLine);
+            SalesLine.FINDLAST;
+            ExtendedTextAdded := TRUE;
+          END;
+        RecreateReservEntry(SalesLineTmp,SalesLine."Line No.",FALSE);
+        RecreateReqLine(SalesLineTmp,SalesLine."Line No.",FALSE);
+      UNTIL SalesLineTmp.NEXT = 0;
+
+      ClearItemAssgntSalesFilter(TempItemChargeAssgntSales);
+      SalesLineTmp.SETRANGE(Type,SalesLine.Type::"Charge (Item)");
+      IF SalesLineTmp.FINDSET THEN
+        REPEAT
+          TempItemChargeAssgntSales.SETRANGE("Document Line No.",SalesLineTmp."Line No.");
+          IF TempItemChargeAssgntSales.FINDSET THEN BEGIN
+            REPEAT
+              TempInteger.FINDFIRST;
+              ItemChargeAssgntSales.INIT;
+              ItemChargeAssgntSales := TempItemChargeAssgntSales;
+              ItemChargeAssgntSales."Document Line No." := TempInteger.Number;
+              ItemChargeAssgntSales.VALIDATE("Unit Cost",0);
+              ItemChargeAssgntSales.INSERT;
+            UNTIL TempItemChargeAssgntSales.NEXT = 0;
+            TempInteger.DELETE;
+          END;
+        UNTIL SalesLineTmp.NEXT = 0;
+
+      SalesLineTmp.SETRANGE(Type);
+      SalesLineTmp.DELETEALL;
+      ClearItemAssgntSalesFilter(TempItemChargeAssgntSales);
+      TempItemChargeAssgntSales.DELETEALL;
+    END;
+  END ELSE
+    ERROR(
+      Text017,ChangedFieldName);
+END;
+SalesLine.BlockDynamicTracking(FALSE);
+
+MessageIfSalesLinesExist(ChangedFieldName : Text[100])
+IF SalesLinesExist AND NOT HideValidationDialog THEN
+  MESSAGE(
+    Text018 +
+    Text019,
+    ChangedFieldName);
+
+PriceMessageIfSalesLinesExist(ChangedFieldName : Text[100])
+IF SalesLinesExist AND NOT HideValidationDialog THEN
+  MESSAGE(
+    Text018 +
+    Text020,ChangedFieldName);
+
+UpdateCurrencyFactor()
+IF "Currency Code" <> '' THEN BEGIN
+  IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::"Blanket Order"]) AND
+     ("Posting Date" = 0D)
+  THEN
+    CurrencyDate := WORKDATE
+  ELSE
+    CurrencyDate := "Posting Date";
+
+  "Currency Factor" := CurrExchRate.ExchangeRate(CurrencyDate,"Currency Code");
+END ELSE
+  "Currency Factor" := 0;
+
+ConfirmUpdateCurrencyFactor()
+IF HideValidationDialog THEN
+  Confirmed := TRUE
+ELSE
+  Confirmed := CONFIRM(Text021,FALSE);
+IF Confirmed THEN
+  VALIDATE("Currency Factor")
+ELSE
+  "Currency Factor" := xRec."Currency Factor";
+
+SetHideValidationDialog(NewHideValidationDialog : Boolean)
+HideValidationDialog := NewHideValidationDialog;
+
+UpdateSalesLines(ChangedFieldName : Text[100];AskQuestion : Boolean)
+IF SalesLinesExist AND AskQuestion THEN BEGIN
+  Question := STRSUBSTNO(
+      Text031 +
+      Text032,ChangedFieldName);
+  IF GUIALLOWED AND NOT DIALOG.CONFIRM(Question,TRUE) THEN
+    EXIT
+  ELSE
+    UpdateLines := TRUE;
+END;
+IF SalesLinesExist THEN BEGIN
+  DocDim.LOCKTABLE;
+  SalesLine.LOCKTABLE;
+  MODIFY;
+
+  SalesLine.RESET;
+  SalesLine.SETRANGE("Document Type","Document Type");
+  SalesLine.SETRANGE("Document No.","No.");
+  IF SalesLine.FINDSET THEN
+    REPEAT
+      CASE ChangedFieldName OF
+        FIELDCAPTION("Shipment Date"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Shipment Date","Shipment Date");
+        FIELDCAPTION("Currency Factor"):
+          IF SalesLine.Type <> SalesLine.Type::" " THEN BEGIN
+            SalesLine.VALIDATE("Unit Price");
+            SalesLine.VALIDATE("Unit Cost (LCY)");
+            IF SalesLine."Job No." <> '' THEN
+              JobTransferLine.FromSalesHeaderToPlanningLine(SalesLine,Rec."Currency Code",Rec."Currency Factor");
+          END;
+        FIELDCAPTION("Transaction Type"):
+          SalesLine.VALIDATE("Transaction Type","Transaction Type");
+        FIELDCAPTION("Transport Method"):
+          SalesLine.VALIDATE("Transport Method","Transport Method");
+        FIELDCAPTION("Exit Point"):
+          SalesLine.VALIDATE("Exit Point","Exit Point");
+        FIELDCAPTION(Area):
+          SalesLine.VALIDATE(Area,Area);
+        FIELDCAPTION("Transaction Specification"):
+          SalesLine.VALIDATE("Transaction Specification","Transaction Specification");
+        FIELDCAPTION("Shipping Agent Code"):
+          SalesLine.VALIDATE("Shipping Agent Code","Shipping Agent Code");
+        FIELDCAPTION("Shipping Agent Service Code"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Shipping Agent Service Code","Shipping Agent Service Code");
+        FIELDCAPTION("Shipping Time"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Shipping Time","Shipping Time");
+        FIELDCAPTION("Prepayment %"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Prepayment %","Prepayment %");
+        FIELDCAPTION("Requested Delivery Date"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Requested Delivery Date","Requested Delivery Date");
+        FIELDCAPTION("Promised Delivery Date"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Promised Delivery Date","Promised Delivery Date");
+        FIELDCAPTION("Outbound Whse. Handling Time"):
+          IF SalesLine."No." <> '' THEN
+            SalesLine.VALIDATE("Outbound Whse. Handling Time","Outbound Whse. Handling Time");
+      END;
+      SalesLineReserve.AssignForPlanning(SalesLine);
+      SalesLine.MODIFY(TRUE);
+    UNTIL SalesLine.NEXT = 0;
+END;
+
+CreateDim(Type1 : Integer;No1 : Code[20];Type2 : Integer;No2 : Code[20];Type3 : Integer;No3 : Code[20];Type4 : Integer;No4 : Code[20];T
+SourceCodeSetup.GET;
+TableID[1] := Type1;
+No[1] := No1;
+TableID[2] := Type2;
+No[2] := No2;
+TableID[3] := Type3;
+No[3] := No3;
+TableID[4] := Type4;
+No[4] := No4;
+TableID[5] := Type5;
+No[5] := No5;
+"Shortcut Dimension 1 Code" := '';
+"Shortcut Dimension 2 Code" := '';
+DimMgt.GetDefaultDim(
+  TableID,No,SourceCodeSetup.Sales,
+  "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+IF "No." <> '' THEN
+  DimMgt.UpdateDocDefaultDim(
+    DATABASE::"Sales Header","Document Type","No.",0,
+    "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+
+ValidateShortcutDimCode(FieldNumber : Integer;VAR ShortcutDimCode : Code[20])
+DimMgt.ValidateDimValueCode(FieldNumber,ShortcutDimCode);
+IF "No." <> '' THEN BEGIN
+  DimMgt.SaveDocDim(
+    DATABASE::"Sales Header","Document Type","No.",0,FieldNumber,ShortcutDimCode);
+  MODIFY;
+END ELSE
+  DimMgt.SaveTempDim(FieldNumber,ShortcutDimCode);
+
+ShippedSalesLinesExist() : Boolean
+SalesLine.RESET;
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+SalesLine.SETFILTER("Quantity Shipped",'<>0');
+EXIT(SalesLine.FINDFIRST);
+
+ReturnReceiptExist() : Boolean
+SalesLine.RESET;
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+SalesLine.SETFILTER("Return Qty. Received",'<>0');
+EXIT(SalesLine.FINDFIRST);
+
+DeleteSalesLines()
+IF SalesLine.FINDSET THEN BEGIN
+  HandleItemTrackingDeletion;
+  REPEAT
+    SalesLine.SuspendStatusCheck(TRUE);
+    SalesLine.DELETE(TRUE);
+  UNTIL SalesLine.NEXT = 0;
+END;
+
+HandleItemTrackingDeletion()
+WITH ReservEntry DO BEGIN
+  RESET;
+  SETCURRENTKEY(
+    "Source ID","Source Ref. No.","Source Type","Source Subtype",
+    "Source Batch Name","Source Prod. Order Line","Reservation Status");
+  SETRANGE("Source Type",DATABASE::"Sales Line");
+  SETRANGE("Source Subtype","Document Type");
+  SETRANGE("Source ID","No.");
+  SETRANGE("Source Batch Name",'');
+  SETRANGE("Source Prod. Order Line",0);
+  SETFILTER("Item Tracking",'> %1',"Item Tracking"::None);
+  IF ISEMPTY THEN
+    EXIT;
+
+  IF HideValidationDialog OR NOT GUIALLOWED THEN
+    Confirmed := TRUE
+  ELSE
+    Confirmed := CONFIRM(Text052,FALSE,LOWERCASE(FORMAT("Document Type")),"No.");
+
+  IF NOT Confirmed THEN
+    ERROR('');
+
+  IF FINDSET THEN
+    REPEAT
+      ReservEntry2 := ReservEntry;
+      ReservEntry2.ClearItemTrackingFields;
+      ReservEntry2.MODIFY;
+    UNTIL NEXT = 0;
+END;
+
+ClearItemAssgntSalesFilter(VAR TempItemChargeAssgntSales : Record "Item Charge Assignment (Sales)")
+TempItemChargeAssgntSales.SETRANGE("Document Line No.");
+TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. Type");
+TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. No.");
+TempItemChargeAssgntSales.SETRANGE("Applies-to Doc. Line No.");
+
+CheckCustomerCreated(Prompt : Boolean) : Boolean
+IF ("Bill-to Customer No." <> '') AND ("Sell-to Customer No." <> '') THEN
+  EXIT(TRUE);
+
+IF Prompt THEN
+  IF NOT CONFIRM(Text035,TRUE) THEN
+    EXIT(FALSE);
+
+IF "Sell-to Customer No." = '' THEN BEGIN
+  TESTFIELD("Sell-to Contact No.");
+  TESTFIELD("Sell-to Customer Template Code");
+  Cont.GET("Sell-to Contact No.");
+  Cont.CreateCustomer("Sell-to Customer Template Code");
+  COMMIT;
+  GET("Document Type"::Quote,"No.");
+END;
+
+IF "Bill-to Customer No." = '' THEN BEGIN
+  TESTFIELD("Bill-to Contact No.");
+  TESTFIELD("Bill-to Customer Template Code");
+  Cont.GET("Bill-to Contact No.");
+  Cont.CreateCustomer("Bill-to Customer Template Code");
+  COMMIT;
+  GET("Document Type"::Quote,"No.");
+END;
+
+EXIT(("Bill-to Customer No." <> '') AND ("Sell-to Customer No." <> ''));
+
+RecreateReservEntry(OldSalesLine : Record "Sales Line";NewSourceRefNo : Integer;ToTemp : Boolean)
+IF ToTemp THEN BEGIN
+  CLEAR(ReservEntry);
+  ReservEntry.SETCURRENTKEY("Source ID","Source Ref. No.","Source Type","Source Subtype");
+  ReservEntry.SETRANGE("Source ID",OldSalesLine."Document No.");
+  ReservEntry.SETRANGE("Source Ref. No.",OldSalesLine."Line No.");
+  ReservEntry.SETRANGE("Source Type",DATABASE::"Sales Line");
+  ReservEntry.SETRANGE("Source Subtype",OldSalesLine."Document Type");
+  IF ReservEntry.FINDSET THEN
+    REPEAT
+      TempReservEntry := ReservEntry;
+      TempReservEntry.INSERT;
+    UNTIL ReservEntry.NEXT = 0;
+  ReservEntry.DELETEALL;
+END ELSE BEGIN
+  CLEAR(TempReservEntry);
+  TempReservEntry.SETCURRENTKEY("Source ID","Source Ref. No.","Source Type","Source Subtype");
+  TempReservEntry.SETRANGE("Source Type",DATABASE::"Sales Line");
+  TempReservEntry.SETRANGE("Source Subtype",OldSalesLine."Document Type");
+  TempReservEntry.SETRANGE("Source ID",OldSalesLine."Document No.");
+  TempReservEntry.SETRANGE("Source Ref. No.",OldSalesLine."Line No.");
+  IF TempReservEntry.FINDSET THEN
+    REPEAT
+      ReservEntry := TempReservEntry;
+      ReservEntry."Source Ref. No." := NewSourceRefNo;
+      ReservEntry.INSERT;
+    UNTIL TempReservEntry.NEXT = 0;
+  TempReservEntry.DELETEALL;
+END;
+
+RecreateReqLine(OldSalesLine : Record "Sales Line";NewSourceRefNo : Integer;ToTemp : Boolean)
+IF ToTemp THEN BEGIN
+  ReqLine.SETCURRENTKEY("Order Promising ID","Order Promising Line ID","Order Promising Line No.");
+  ReqLine.SETRANGE("Order Promising ID",OldSalesLine."Document No.");
+  ReqLine.SETRANGE("Order Promising Line ID",OldSalesLine."Line No.");
+  IF ReqLine.FINDSET THEN
+    REPEAT
+      TempReqLine := ReqLine;
+      TempReqLine.INSERT;
+    UNTIL ReqLine.NEXT = 0;
+  ReqLine.DELETEALL;
+END ELSE BEGIN
+  CLEAR(TempReqLine);
+  TempReqLine.SETCURRENTKEY("Order Promising ID","Order Promising Line ID","Order Promising Line No.");
+  TempReqLine.SETRANGE("Order Promising ID",OldSalesLine."Document No.");
+  TempReqLine.SETRANGE("Order Promising Line ID",OldSalesLine."Line No.");
+  IF TempReqLine.FINDSET THEN
+    REPEAT
+      ReqLine := TempReqLine;
+      ReqLine."Order Promising Line ID" := NewSourceRefNo;
+      ReqLine.INSERT;
+    UNTIL TempReqLine.NEXT = 0;
+  TempReqLine.DELETEALL;
+END;
+
+UpdateSellToCont(CustomerNo : Code[20])
+IF Cust.GET(CustomerNo) THEN BEGIN
+  IF Cust."Primary Contact No." <> '' THEN
+    "Sell-to Contact No." := Cust."Primary Contact No."
+  ELSE BEGIN
+    ContBusRel.RESET;
+    ContBusRel.SETCURRENTKEY("Link to Table","No.");
+    ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+    ContBusRel.SETRANGE("No.","Sell-to Customer No.");
+    IF ContBusRel.FINDFIRST THEN
+      "Sell-to Contact No." := ContBusRel."Contact No.";
+  END;
+  "Sell-to Contact" := Cust.Contact;
+END;
+
+UpdateBillToCont(CustomerNo : Code[20])
+IF Cust.GET(CustomerNo) THEN BEGIN
+  IF Cust."Primary Contact No." <> '' THEN
+    "Bill-to Contact No." := Cust."Primary Contact No."
+  ELSE BEGIN
+    ContBusRel.RESET;
+    ContBusRel.SETCURRENTKEY("Link to Table","No.");
+    ContBusRel.SETRANGE("Link to Table",ContBusRel."Link to Table"::Customer);
+    ContBusRel.SETRANGE("No.","Bill-to Customer No.");
+    IF ContBusRel.FINDFIRST THEN
+      "Bill-to Contact No." := ContBusRel."Contact No.";
+  END;
+  "Bill-to Contact" := Cust.Contact;
+END;
+
+UpdateSellToCust(ContactNo : Code[20])
+IF Cont.GET(ContactNo) THEN
+  "Sell-to Contact No." := Cont."No."
+ELSE BEGIN
+  "Sell-to Contact" := '';
+  EXIT;
+END;
+
+ContBusinessRelation.RESET;
+ContBusinessRelation.SETCURRENTKEY("Link to Table","Contact No.");
+ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+ContBusinessRelation.SETRANGE("Contact No.",Cont."Company No.");
+IF ContBusinessRelation.FINDFIRST THEN BEGIN
+  IF ("Sell-to Customer No." <> '') AND
+     ("Sell-to Customer No." <> ContBusinessRelation."No.")
+  THEN
+    ERROR(Text037,Cont."No.",Cont.Name,"Sell-to Customer No.")
+  ELSE IF "Sell-to Customer No." = '' THEN BEGIN
+      SkipSellToContact := TRUE;
+      VALIDATE("Sell-to Customer No.",ContBusinessRelation."No.");
+      SkipSellToContact := FALSE;
+    END;
+END ELSE BEGIN
+  IF "Document Type" = "Document Type"::Quote THEN BEGIN
+    Cont.TESTFIELD("Company No.");
+    ContComp.GET(Cont."Company No.");
+    "Sell-to Customer Name" := ContComp."Company Name";
+    "Sell-to Customer Name 2" := ContComp."Name 2";
+    "Ship-to Name" := ContComp."Company Name";
+    "Ship-to Name 2" := ContComp."Name 2";
+    "Ship-to Address" := ContComp.Address;
+    "Ship-to Address 2" := ContComp."Address 2";
+    "Ship-to City" := ContComp.City;
+    "Ship-to Post Code" := ContComp."Post Code";
+    "Ship-to County" := ContComp.County;
+    VALIDATE("Ship-to Country/Region Code",ContComp."Country/Region Code");
+    IF ("Sell-to Customer Template Code" = '') AND (NOT CustTemplate.ISEMPTY) THEN
+      VALIDATE("Sell-to Customer Template Code",Cont.FindCustomerTemplate);
+  END ELSE
+    ERROR(Text039,Cont."No.",Cont.Name);
+END;
+
+IF Cont.Type = Cont.Type::Person THEN
+  "Sell-to Contact" := Cont.Name
+ELSE
+  IF Customer.GET("Sell-to Customer No.") THEN
+    "Sell-to Contact" := Customer.Contact
+  ELSE
+    "Sell-to Contact" := '';
+
+IF "Document Type" = "Document Type"::Quote THEN BEGIN
+  IF Customer.GET("Sell-to Customer No.") OR Customer.GET(ContBusinessRelation."No.") THEN BEGIN
+    IF Customer."Copy Sell-to Addr. to Qte From" = Customer."Copy Sell-to Addr. to Qte From"::Company THEN BEGIN
+      Cont.TESTFIELD("Company No.");
+      Cont.GET(Cont."Company No.");
+    END;
+  END ELSE BEGIN
+    Cont.TESTFIELD("Company No.");
+    Cont.GET(Cont."Company No.");
+  END;
+  "Sell-to Address" := Cont.Address;
+  "Sell-to Address 2" := Cont."Address 2";
+  "Sell-to City" := Cont.City;
+  "Sell-to Post Code" := Cont."Post Code";
+  "Sell-to County" := Cont.County;
+  "Sell-to Country/Region Code" := Cont."Country/Region Code";
+END;
+IF ("Sell-to Customer No." = "Bill-to Customer No.") OR
+   ("Bill-to Customer No." = '')
+THEN
+  VALIDATE("Bill-to Contact No.","Sell-to Contact No.");
+
+UpdateBillToCust(ContactNo : Code[20])
+IF Cont.GET(ContactNo) THEN BEGIN
+  "Bill-to Contact No." := Cont."No.";
+  IF Cont.Type = Cont.Type::Person THEN
+    "Bill-to Contact" := Cont.Name
+  ELSE
+    IF Cust.GET("Bill-to Customer No.") THEN
+      "Bill-to Contact" := Cust.Contact
+    ELSE
+      "Bill-to Contact" := '';
+END ELSE BEGIN
+  "Bill-to Contact" := '';
+  EXIT;
+END;
+
+ContBusinessRelation.RESET;
+ContBusinessRelation.SETCURRENTKEY("Link to Table","Contact No.");
+ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+ContBusinessRelation.SETRANGE("Contact No.",Cont."Company No.");
+IF ContBusinessRelation.FINDFIRST THEN BEGIN
+  IF "Bill-to Customer No." = '' THEN BEGIN
+    SkipBillToContact := TRUE;
+    VALIDATE("Bill-to Customer No.",ContBusinessRelation."No.");
+    SkipBillToContact := FALSE;
+    "Bill-to Customer Template Code" := '';
+  END ELSE
+    IF "Bill-to Customer No." <> ContBusinessRelation."No." THEN
+      ERROR(Text037,Cont."No.",Cont.Name,"Bill-to Customer No.");
+END ELSE BEGIN
+  IF "Document Type" = "Document Type"::Quote THEN BEGIN
+    Cont.TESTFIELD("Company No.");
+    ContComp.GET(Cont."Company No.");
+    "Bill-to Name" := ContComp."Company Name";
+    "Bill-to Name 2" := ContComp."Name 2";
+    "Bill-to Address" := ContComp.Address;
+    "Bill-to Address 2" := ContComp."Address 2";
+    "Bill-to City" := ContComp.City;
+    "Bill-to Post Code" := ContComp."Post Code";
+    "Bill-to County" := ContComp.County;
+    "Bill-to Country/Region Code" := ContComp."Country/Region Code";
+    "VAT Registration No." := ContComp."VAT Registration No.";
+    VALIDATE("Currency Code",ContComp."Currency Code");
+    "Language Code" := ContComp."Language Code";
+    IF ("Bill-to Customer Template Code" = '') AND (NOT CustTemplate.ISEMPTY) THEN
+      VALIDATE("Bill-to Customer Template Code",Cont.FindCustomerTemplate);
+  END ELSE
+    ERROR(Text039,Cont."No.",Cont.Name);
+END;
+
+GetShippingTime(CalledByFieldNo : Integer)
+IF (CalledByFieldNo <> CurrFieldNo) AND (CurrFieldNo <> 0) THEN
+  EXIT;
+
+IF ShippingAgentService.GET("Shipping Agent Code","Shipping Agent Service Code") THEN
+  "Shipping Time" := ShippingAgentService."Shipping Time"
+ELSE BEGIN
+  GetCust("Sell-to Customer No.");
+  "Shipping Time" := Cust."Shipping Time"
+END;
+IF NOT (CalledByFieldNo IN [FIELDNO("Shipping Agent Code"),FIELDNO("Shipping Agent Service Code")]) THEN
+  VALIDATE("Shipping Time");
+
+CheckCreditMaxBeforeInsert()
+IF HideCreditCheckDialogue THEN
+  EXIT;
+IF GETFILTER("Sell-to Customer No.") <> '' THEN BEGIN
+  IF GETRANGEMIN("Sell-to Customer No.") = GETRANGEMAX("Sell-to Customer No.") THEN BEGIN
+    SalesHeader."Bill-to Customer No." := GETRANGEMIN("Sell-to Customer No.");
+    CustCheckCreditLimit.SalesHeaderCheck(SalesHeader);
+  END
+END ELSE
+  IF GETFILTER("Sell-to Contact No.") <> '' THEN
+    IF GETRANGEMIN("Sell-to Contact No.") = GETRANGEMAX("Sell-to Contact No.") THEN BEGIN
+      Cont.GET(GETRANGEMIN("Sell-to Contact No."));
+      ContBusinessRelation.RESET;
+      ContBusinessRelation.SETCURRENTKEY("Link to Table","No.");
+      ContBusinessRelation.SETRANGE("Link to Table",ContBusinessRelation."Link to Table"::Customer);
+      ContBusinessRelation.SETRANGE("Contact No.",Cont."Company No.");
+      IF ContBusinessRelation.FINDFIRST THEN BEGIN
+        SalesHeader."Bill-to Customer No." := ContBusinessRelation."No.";
+        CustCheckCreditLimit.SalesHeaderCheck(SalesHeader);
+      END;
+    END;
+
+CreateInvtPutAwayPick()
+TESTFIELD(Status,Status::Released);
+
+WhseRequest.RESET;
+WhseRequest.SETCURRENTKEY("Source Document","Source No.");
+CASE "Document Type" OF
+  "Document Type"::Order:
+    WhseRequest.SETRANGE("Source Document",WhseRequest."Source Document"::"Sales Order");
+  "Document Type"::"Return Order":
+    WhseRequest.SETRANGE("Source Document",WhseRequest."Source Document"::"Sales Return Order");
+END;
+WhseRequest.SETRANGE("Source No.","No.");
+REPORT.RUNMODAL(REPORT::"Create Invt. Put-away / Pick",TRUE,FALSE,WhseRequest);
+
+CreateTodo()
+TESTFIELD("Sell-to Contact No.");
+TempTodo.CreateToDoFromSalesHeader(Rec);
+
+UpdateShipToAddress()
+IF "Document Type" IN ["Document Type"::"Return Order","Document Type"::"Credit Memo"] THEN BEGIN
+  IF "Location Code" <> '' THEN BEGIN
+    Location.GET("Location Code");
+    "Ship-to Name" := Location.Name;
+    "Ship-to Name 2" := Location."Name 2";
+    "Ship-to Address" := Location.Address;
+    "Ship-to Address 2" := Location."Address 2";
+    "Ship-to City" := Location.City;
+    "Ship-to Post Code" := Location."Post Code";
+    "Ship-to County" := Location.County;
+    "Ship-to Country/Region Code" := Location."Country/Region Code";
+    "Ship-to Contact" := Location.Contact;
+  END ELSE BEGIN
+    CompanyInfo.GET;
+    "Ship-to Code" := '';
+    "Ship-to Name" := CompanyInfo."Ship-to Name";
+    "Ship-to Name 2" := CompanyInfo."Ship-to Name 2";
+    "Ship-to Address" := CompanyInfo."Ship-to Address";
+    "Ship-to Address 2" := CompanyInfo."Ship-to Address 2";
+    "Ship-to City" := CompanyInfo."Ship-to City";
+    "Ship-to Post Code" := CompanyInfo."Ship-to Post Code";
+    "Ship-to County" := CompanyInfo."Ship-to County";
+    "Ship-to Country/Region Code" := CompanyInfo."Ship-to Country/Region Code";
+    "Ship-to Contact" := CompanyInfo."Ship-to Contact";
+  END;
+  "VAT Country/Region Code" := "Sell-to Country/Region Code";
+END;
+
+ShowDocDim()
+DocDim.SETRANGE("Table ID",DATABASE::"Sales Header");
+DocDim.SETRANGE("Document Type","Document Type");
+DocDim.SETRANGE("Document No.","No.");
+DocDim.SETRANGE("Line No.",0);
+DocDims.SETTABLEVIEW(DocDim);
+DocDims.RUNMODAL;
+GET("Document Type","No.");
+
+CheckLocation(ShowError : Boolean) : Boolean
+IF NOT ("Shipping Advice" = "Shipping Advice"::Complete) THEN
+  EXIT(FALSE);
+
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+SalesLine.SETRANGE(Type,SalesLine.Type::Item);
+IF SalesLine.FINDFIRST THEN BEGIN
+  SalesLine2.COPYFILTERS(SalesLine);
+  SalesLine2.SETCURRENTKEY("Document Type","Document No.","Location Code");
+  SalesLine2.SETFILTER("Location Code",'<> %1',SalesLine."Location Code");
+  IF SalesLine2.FINDFIRST THEN BEGIN
+    IF ShowError THEN
+      ERROR(Text050,FIELDCAPTION("Shipping Advice"),"Shipping Advice","No.",SalesLine.Type);
+    EXIT(TRUE);
+  END;
+END;
+
+SetAmountToApply(AppliesToDocNo : Code[20];CustomerNo : Code[20])
+CustLedgEntry.SETCURRENTKEY("Document No.");
+CustLedgEntry.SETRANGE("Document No.",AppliesToDocNo);
+CustLedgEntry.SETRANGE("Customer No.",CustomerNo);
+CustLedgEntry.SETRANGE(Open,TRUE);
+IF CustLedgEntry.FINDFIRST THEN BEGIN
+  IF CustLedgEntry."Amount to Apply" = 0 THEN  BEGIN
+    CustLedgEntry.CALCFIELDS("Remaining Amount");
+    CustLedgEntry."Amount to Apply" := CustLedgEntry."Remaining Amount";
+  END ELSE
+    CustLedgEntry."Amount to Apply" := 0;
+  CODEUNIT.RUN(CODEUNIT::"Cust. Entry-Edit",CustLedgEntry);
+END;
+
+LookupAdjmtValueEntries(QtyType : 'General,Invoicing')
+SalesLine.SETRANGE("Document Type","Document Type");
+SalesLine.SETRANGE("Document No.","No.");
+TempValueEntry.RESET;
+TempValueEntry.DELETEALL;
+
+CASE "Document Type" OF
+  "Document Type"::Order,"Document Type"::Invoice:
+    BEGIN
+      IF SalesLine.FINDSET THEN
+        REPEAT
+          IF (SalesLine.Type = SalesLine.Type::Item) AND (SalesLine.Quantity <> 0) THEN
+            WITH SalesShptLine DO BEGIN
+              IF SalesLine."Shipment No." <> '' THEN BEGIN
+                SETRANGE("Document No.",SalesLine."Shipment No.");
+                SETRANGE("Line No.",SalesLine."Shipment Line No.");
+              END ELSE BEGIN
+                SETCURRENTKEY("Order No.","Order Line No.");
+                SETRANGE("Order No.",SalesLine."Document No.");
+                SETRANGE("Order Line No.",SalesLine."Line No.");
+              END;
+              SETRANGE(Correction,FALSE);
+              IF QtyType = QtyType::Invoicing THEN
+                SETFILTER("Qty. Shipped Not Invoiced",'<>0');
+
+              IF FINDSET THEN
+                REPEAT
+                  FilterPstdDocLnItemLedgEntries(ItemLedgEntry);
+                  IF ItemLedgEntry.FINDSET THEN
+                    REPEAT
+                      CreateTempAdjmtValueEntries(TempValueEntry,ItemLedgEntry."Entry No.");
+                    UNTIL ItemLedgEntry.NEXT = 0;
+                UNTIL NEXT = 0;
+            END;
+        UNTIL SalesLine.NEXT = 0;
+    END;
+  "Document Type"::"Return Order","Document Type"::"Credit Memo":
+    BEGIN
+      IF SalesLine.FINDSET THEN
+        REPEAT
+          IF (SalesLine.Type = SalesLine.Type::Item) AND (SalesLine.Quantity <> 0) THEN
+            WITH ReturnRcptLine DO BEGIN
+              IF SalesLine."Return Receipt No." <> '' THEN BEGIN
+                SETRANGE("Document No.",SalesLine."Return Receipt No.");
+                SETRANGE("Line No.",SalesLine."Return Receipt Line No.");
+              END ELSE BEGIN
+                SETCURRENTKEY("Return Order No.","Return Order Line No.");
+                SETRANGE("Return Order No.",SalesLine."Document No.");
+                SETRANGE("Return Order Line No.",SalesLine."Line No.");
+              END;
+              SETRANGE(Correction,FALSE);
+              IF QtyType = QtyType::Invoicing THEN
+                SETFILTER("Return Qty. Rcd. Not Invd.",'<>0');
+
+              IF FINDSET THEN
+                REPEAT
+                  FilterPstdDocLnItemLedgEntries(ItemLedgEntry);
+                  IF ItemLedgEntry.FINDSET THEN
+                    REPEAT
+                      CreateTempAdjmtValueEntries(TempValueEntry,ItemLedgEntry."Entry No.");
+                    UNTIL ItemLedgEntry.NEXT = 0;
+                UNTIL NEXT = 0;
+            END;
+        UNTIL SalesLine.NEXT = 0;
+    END;
+END;
+FORM.RUNMODAL(0,TempValueEntry);
+
+CreateTempAdjmtValueEntries(VAR TempValueEntry : TEMPORARY Record "Value Entry";ItemLedgEntryNo : Integer)
+WITH ValueEntry DO BEGIN
+  SETCURRENTKEY("Item Ledger Entry No.");
+  SETRANGE("Item Ledger Entry No.",ItemLedgEntryNo);
+  IF FINDSET THEN
+    REPEAT
+      IF Adjustment THEN BEGIN
+        TempValueEntry := ValueEntry;
+        IF TempValueEntry.INSERT THEN;
+      END;
+    UNTIL NEXT = 0;
+END;
+
+GetPstdDocLinesToRevere()
+GetCust("Sell-to Customer No.");
+SalesPostedDocLines.SetToSalesHeader(Rec);
+SalesPostedDocLines.SETRECORD(Cust);
+SalesPostedDocLines.LOOKUPMODE := TRUE;
+IF SalesPostedDocLines.RUNMODAL = ACTION::LookupOK THEN
+  SalesPostedDocLines.CopyLineToDoc;
+
+CLEAR(SalesPostedDocLines);
+
+UpdateAufgaben()
+//TOPAS 29.07.09-ST Abfrage, ob Status der offenen Aufgaben auf erl. gesetzt werden soll
+IF ("Document Type"="Document Type"::Quote) THEN
+  BEGIN
+    ToDo.RESET;
+    ToDo.SETFILTER(ToDo."Arch. Belegnr.",'%1',"No.");
+    ToDo.SETFILTER(ToDo."System To-do Type",'%1',ToDo."System To-do Type"::Organizer);
+    ToDo.SETFILTER(ToDo.Closed,'%1',FALSE);
+    IF (ToDo.FINDFIRST) AND (ToDo."Arch. Belegnr."<>'') THEN
+      BEGIN
+        REPEAT
+          IF CONFIRM(Text100,TRUE,ToDo."No.") THEN
+            BEGIN
+              ToDo.VALIDATE(ToDo.Status,ToDo.Status::Completed);
+              ToDo.MODIFY(TRUE);
+            END;
+        UNTIL ToDo.NEXT = 0;
+      END;
+  END;
+
+//TOPAS Ende
+
+PrüfeVerfgSUP(AUnr : Code[20])
+//***************************************************************************************************
+//   TOPAS 01.03.2011-ST Prüft, ob die Generierung von Lizenz Urkunden ACS möglich ist (27.09.10)
+//***************************************************************************************************
+
+AUzeile.RESET;
+AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
+AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
+AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4','53','57','59','98','5710');
+IF AUzeile.FINDFIRST THEN
+  BEGIN
+    REPEAT
+
+      //***************************************************************************************************
+      //                                        Prüfung Allgemein
+      //***************************************************************************************************
+
+      //***************************************************************************************************
+      //    Allgemeine Überprüfung der Serviceklassifizierung, diese darf für ACS Produkte nicht fehlen
+      //***************************************************************************************************
+
+      Artikel.GET(AUzeile."No.");
+      IF (Artikel."Manufacturer Code" = '59' ) AND (Artikel."Software Upgrade Protection" = FALSE)
+      AND (Artikel.Serviceklassifizierung = '') THEN
+        ERROR(Text110,AUzeile."No.");
+
+      //***************************************************************************************************
+      //          Ein System Basisgeräte darf nicht mit Menge Zu liefern > 1 ausgebucht werden
+      //***************************************************************************************************
+
+      IF Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS' THEN
+        BEGIN
+          IF AUzeile."Qty. to Ship" > 1 THEN
+            ERROR(Text111,AUzeile."Unit of Measure",AUzeile."No.",AUzeile."Line No.",AUzeile.FIELDCAPTION("Qty. to Ship"));
+        END;
+
+      //***************************************************************************************************
+      //                   SOR Aufträge dürfen nicht mit Champs fakturiert werden
+      //***************************************************************************************************
+
+      IF (AUkopf.GET(AUkopf."Document Type" :: Order,AUzeile."Document No."))
+      AND (Artikel."Software Upgrade Protection" = TRUE) AND (STRPOS(AUkopf."Payment Terms Code",'SOR') <> 0) THEN
+          ERROR(Text132,AUkopf.FIELDCAPTION(AUkopf."Payment Terms Code"));
+
+      //***************************************************************************************************
+      //Prüfung, ob Artikel in Champ Kalkulation auftauchen und ob dieser Champ Artikel auch geliefert wird
+      //***************************************************************************************************
+
+      ChampZuordnungHolen.RESET;
+      ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+      ChampZuordnungHolen.SETFILTER("Belegnr.",'%1',AUnr);
+      ChampZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',AUzeile."Line No.");
+      ChampZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
+      ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+      IF ChampZuordnungHolen.FINDFIRST THEN
+        REPEAT
+          PrüfeAUzeile.RESET;
+          PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Nr.");
+          PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Zeilennr.");
+          IF PrüfeAUzeile.FINDFIRST THEN
+            BEGIN
+              IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
+                ERROR(Text117,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.");
+            END
+          ELSE
+            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen."Geräte Artikelnr.",
+                          ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.");
+        UNTIL ChampZuordnungHolen.NEXT = 0;
+
+      //***************************************************************************************************
+      //        Prüfung, ob auch wirklich alle Artikel, die in der Champ Kalkulation auftauchen, auch
+      //          tatsächlich mit dem Champ Artikel ausgeliefert werden, der obere Fall umgedreht
+      //***************************************************************************************************
+
+      ChampZuordnungHolen.RESET;
+      ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+      ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+      ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+      ChampZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
+      ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+      IF ChampZuordnungHolen.FINDFIRST THEN
+        REPEAT
+          PrüfeAUzeile.RESET;
+          PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
+          PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
+          IF PrüfeAUzeile.FINDFIRST THEN
+            BEGIN
+              IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
+                ERROR(Text117,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.");
+
+              //Zu liefernde Pos. im AU müssen mengenmäßig mit der Kalkulation übereinstimmen,
+              //um Überbuchungen zu verhindern, betrifft keine Basisgeräte (Sonderregel für FLAT)
+              IF (PrüfeAUzeile."Qty. to Ship" <> ChampZuordnungHolen."Menge kalk.")
+              AND (ChampZuordnungHolen.Basisgerät = FALSE) THEN
+                ERROR(Text122,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.",ChampZuordnungHolen."Zeilennr.",
+                      ChampZuordnungHolen."Menge kalk.");
+
+            END
+          ELSE
+            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen."Geräte Artikelnr.",
+                          ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.");
+        UNTIL ChampZuordnungHolen.NEXT = 0;
+
+      //***************************************************************************************************
+      //          Ein Champ Artikel kann nicht ohne Kalkulation gebucht werden, kann auch nur mit
+      //                               Menge Zu liefern > 1 ausgebucht werden
+      //***************************************************************************************************
+
+      IF (Artikel."Software Upgrade Protection" = TRUE)  THEN
+        BEGIN
+          IF ((Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '5710')) AND (AUzeile."Qty. to Ship" > 1) THEN
+            ERROR(Text112,AUzeile.FIELDCAPTION("Qty. to Ship"),Artikel.Artikelgruppe,AUzeile."No.");
+
+          ChampZuordnungHolen.RESET;
+          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          IF NOT ChampZuordnungHolen.FINDFIRST THEN
+            ERROR(Text113,AUzeile."No.",AUzeile."Line No.");
+
+          //***************************************************************************************************
+          //                          Es muss ein System Basisgeräte vorhanden sein
+          //              Ausnahme: Alle Champ Kalkulationszeilen haben eine Wartungsvertragsnr.
+          //***************************************************************************************************
+
+          ChampZuordnungHolen.RESET;
+          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          ChampZuordnungHolen.SETFILTER(Basisgerät,'%1',TRUE);
+          IF NOT ChampZuordnungHolen.FINDFIRST THEN
+            BEGIN
+              ChampZuordnungHolen.SETFILTER(Basisgerät,'%1|%2',TRUE,FALSE);
+              IF ChampZuordnungHolen.FINDFIRST THEN
+                REPEAT
+                  IF ChampZuordnungHolen."Wartungsvertragsnr." = '' THEN
+                    ERROR(Text118,AUzeile."No.",AUzeile."Line No.");
+
+                  //***************************************************************************************************
+                  //         Der Wartungsvertrag muss bei nachträglicher Zubuchung neuer Pos. noch gültig sein
+                  //***************************************************************************************************
+
+                  IF ChampZuordnungHolen."Wartungsvertragsnr." <> '' THEN
+                    BEGIN
+                      Wartungsvertrag.GET(ChampZuordnungHolen."Wartungsvertragsnr.");
+                      IF (Wartungsvertrag.Vertragsablaufdatum < WORKDATE) THEN
+                        ERROR(Text121,Wartungsvertrag."Wartungsvertragsnr.",AUzeile."Line No.",Wartungsvertrag.Vertragsablaufdatum);
+                    END;
+
+                UNTIL ChampZuordnungHolen.NEXT = 0;
+            END;
+
+          //***************************************************************************************************
+          //      Gleicht die Menge kalk. des zuliefernden Support Artikels gegen die zu  liefernde Menge
+          //           der einzeln zu liefernden Artikel bzw. die gelieferte Menge ab, Fall 1 und 2
+          //***************************************************************************************************
+
+          ChampZuordnungHolen.RESET;
+          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+          IF ChampZuordnungHolen.FINDFIRST THEN
+            BEGIN
+              menge_champ_kalk_ges := 0;
+              menge_liefern_ges := 0;
+              REPEAT
+                menge_champ_kalk_ges := menge_champ_kalk_ges + ChampZuordnungHolen."Menge kalk.";
+                IF ChampZuordnungHolen."Nachträgliche Service Order" = FALSE THEN
+                  BEGIN
+                    PrüfeAUzeile.RESET;
+                    PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
+                    PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
+                    PrüfeAUzeile.SETFILTER("No.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    IF PrüfeAUzeile.FINDFIRST THEN
+                      menge_liefern_ges := menge_liefern_ges + PrüfeAUzeile."Qty. to Ship";
+                  END
+                ELSE
+                  BEGIN
+                    PrüfeLiefzeile.RESET;
+                    PrüfeLiefzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
+                    PrüfeLiefzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
+                    PrüfeLiefzeile.SETFILTER("No.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    IF PrüfeLiefzeile.FINDFIRST THEN
+                      menge_liefern_ges := menge_liefern_ges + PrüfeLiefzeile.Quantity;
+                  END;
+              UNTIL ChampZuordnungHolen.NEXT = 0;
+
+              IF (menge_champ_kalk_ges * AUzeile."Qty. to Ship") > menge_liefern_ges THEN
+                ERROR(Text114,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen.FIELDCAPTION("Menge kalk."));
+
+            END;
+
+          //***************************************************************************************************
+          //                            Champ Kalkulation auf Plausibilität prüfen
+          //***************************************************************************************************
+
+          ChampZuordnungHolen.RESET;
+          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
+          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          IF ChampZuordnungHolen.FINDFIRST THEN
+            BEGIN
+              menge_champ_kalk_ges := 0;
+              menge_auswahl_ges := 0;
+              REPEAT
+                Artikel.GET(ChampZuordnungHolen."Geräte Artikelnr.");
+                IF Artikel.Serviceklassifizierung = '' THEN
+                  ERROR(Text110,ChampZuordnungHolen."Geräte Artikelnr.",' (Champ Kalkulation)');
+
+                IF ChampZuordnungHolen."Menge kalk." = 0 THEN
+                  ERROR(Text120,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen.FIELDCAPTION("Menge kalk."));
+
+                //***************************************************************************************************
+                //            Prüft auch darauf, ob nach der Buchung nur genau ein aktives Basisgerät vorliegt
+                //***************************************************************************************************
+
+                basisgerät_kollision_ok := FALSE;
+                IF ChampZuordnungHolen.Basisgerät THEN
+                  BEGIN
+                    ServiceZuordnungBeleg.RESET;
+                    ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
+                    ServiceZuordnungBeleg.SETFILTER("Nr.",'%1',AUnr);
+                    ServiceZuordnungBeleg.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+                    IF ServiceZuordnungBeleg.FINDFIRST THEN
+                      REPEAT
+                        PrüfeServicePos.RESET;
+                        PrüfeServicePos.SETFILTER(Art,'%1',PrüfeServicePos.Art ::Temporär);
+                        PrüfeServicePos.SETFILTER("Nr.",'%1',ServiceZuordnungBeleg."Belegnr.");
+                        PrüfeServicePos.SETFILTER("Belegzeilennr.",'%1',ServiceZuordnungBeleg."Belegzeilennr.");
+                        PrüfeServicePos.SETFILTER(Vormerkung,'%1',TRUE);
+                        IF PrüfeServicePos.FINDFIRST THEN
+                          BEGIN
+                            PrüfeSystemPos.RESET;
+                            PrüfeSystemPos.SETFILTER(Art,'%1|%2',PrüfeSystemPos.Art :: System,PrüfeSystemPos.Art :: Service);
+                            PrüfeSystemPos.SETFILTER("Seriennr.",'%1',PrüfeServicePos."Seriennr.");
+                            IF PrüfeSystemPos.FINDFIRST THEN
+                              BEGIN
+                                PrüfeServicePos.RESET;
+                                PrüfeServicePos.SETFILTER(Art,'%1|%2',PrüfeServicePos.Art :: System,PrüfeServicePos.Art :: Service);
+                                PrüfeServicePos.SETFILTER("Nr.",'<>%1','');
+                                PrüfeServicePos.SETFILTER("Belegzeilennr.",'<>%1',0);
+                                PrüfeServicePos.SETFILTER(Basisgerät,'%1',TRUE);
+                                PrüfeServicePos.SETFILTER("Wartungsvertragsnr.",'%1',PrüfeSystemPos."Wartungsvertragsnr.");
+                                PrüfeServicePos.SETFILTER(Inaktiv,'%1',FALSE);
+                                IF PrüfeServicePos.FINDFIRST THEN
+                                  REPEAT
+                                    IF PrüfeServicePos.Art = PrüfeServicePos.Art :: Service THEN
+                                      BEGIN
+                                        IF PrüfeServicePos."Urspr. Lieferscheinnr." <> ChampZuordnungHolen."Belegnr." THEN
+                                          ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                        ELSE
+                                          basisgerät_kollision_ok := TRUE;
+                                      END
+                                    ELSE
+                                      BEGIN
+                                        IF PrüfeServicePos.Art = PrüfeServicePos.Art :: System THEN
+                                          IF PrüfeServicePos."Nr." <> ChampZuordnungHolen."Belegnr." THEN
+                                            ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                          ELSE
+                                            basisgerät_kollision_ok := TRUE;
+                                      END;
+                                  UNTIL PrüfeServicePos.NEXT = 0;
+                             END;
+                          END;
+                      UNTIL (ServiceZuordnungBeleg.NEXT = 0) OR (basisgerät_kollision_ok);
+                  END;
+
+                //***************************************************************************************************
+                //         Prüfung Menge kalk. gegen Auswahl Seriennr. der einzelnen Artikel, Fall 2 oder 3
+                //***************************************************************************************************
+
+                IF (ChampZuordnungHolen."Nachträgliche Service Order" = TRUE) OR (ChampZuordnungHolen.Fremderwerb = TRUE) THEN
+                  BEGIN
+                    ChampZuordnungHolen.TESTFIELD("Geräte Artikelnr.");
+                    menge_champ_kalk_pos := 0;
+                    //Ausnahme wieder für FLAT Geräte, bei denen mehr als 1 Gerät ausgeliefert werden darf
+                    Artikel.GET(ChampZuordnungHolen."Geräte Artikelnr.");
+                    IF Artikel.Serviceklassifizierung = 'SYSTEM FLAT' THEN
+                      menge_champ_kalk_pos := menge_champ_kalk_pos + (ChampZuordnungHolen."Menge kalk." * AUzeile."Qty. to Ship")
+                    ELSE
+                      menge_champ_kalk_pos := menge_champ_kalk_pos + ChampZuordnungHolen."Menge kalk.";
+
+                    menge_champ_kalk_ges := menge_champ_kalk_ges + menge_champ_kalk_pos;
+
+                    HoleTempLizenzTab.RESET;
+                    HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
+                    HoleTempLizenzTab.SETFILTER("Nr.",'%1',ChampZuordnungHolen."Belegnr.");
+                    HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',ChampZuordnungHolen."Belegzeilennr.");
+                    HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',ChampZuordnungHolen."Nr.");
+                    HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',ChampZuordnungHolen."Zeilennr.");
+                    HoleTempLizenzTab.SETFILTER("Artikelnr.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
+                    IF HoleTempLizenzTab.FINDFIRST THEN
+                      BEGIN
+                        menge_auswahl_pos := 0;
+                        REPEAT
+
+                          //***************************************************************************************************
+                          //   Prüft auch darauf, ob die Seriennr. nur einmal in einem Vertrag als aktiv gekennzeichnet ist
+                          //***************************************************************************************************
+
+                          HoleTempLizenzTab.CheckDoubleSerialNo(HoleTempLizenzTab."Artikelnr.",HoleTempLizenzTab."Seriennr.");
+
+                          //***************************************************************************************************
+                          //                     Prüft auch darauf, ob die Seriennr. noch aktiv sind
+                          //***************************************************************************************************
+
+                          PrüfeSystemPos.RESET;
+                          PrüfeSystemPos.SETFILTER(Art,'%1',PrüfeSystemPos.Art :: System);
+                          PrüfeSystemPos.SETFILTER("Nr.",'%1',HoleTempLizenzTab."Nr.");
+                          PrüfeSystemPos.SETFILTER("Belegzeilennr.",'%1',HoleTempLizenzTab."Belegzeilennr.");
+                          PrüfeSystemPos.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
+                          PrüfeSystemPos.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
+                          IF (PrüfeSystemPos.FINDLAST) AND (PrüfeSystemPos.Inaktiv = TRUE) THEN
+                            ERROR(Text131,HoleTempLizenzTab.FIELDCAPTION("Seriennr."),PrüfeSystemPos."Seriennr.",
+                                  ChampZuordnungHolen."Zeilennr.");
+
+                          IF (PrüfeSystemPos.FINDLAST) AND (ChampZuordnungHolen."Wartungsvertragsnr." <> '')
+                          AND ((PrüfeSystemPos."Wartungsvertragsnr." = '') OR (ChampZuordnungHolen."Wartungsvertragsnr." <>
+                          PrüfeSystemPos."Wartungsvertragsnr.")) THEN
+                            ERROR(Text133,ChampZuordnungHolen."Geräte Artikelnr.",PrüfeSystemPos."Seriennr.",
+                            ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.",
+                            ChampZuordnungHolen."Wartungsvertragsnr.");
+
+                          menge_auswahl_pos := menge_auswahl_pos + HoleTempLizenzTab.Menge;
+                          menge_auswahl_ges := menge_auswahl_ges + HoleTempLizenzTab.Menge;
+
+                        UNTIL HoleTempLizenzTab.NEXT = 0;
+                      END;
+
+                    IF menge_auswahl_pos <> menge_champ_kalk_pos THEN
+                      ERROR(Text116,AUzeile."No.",AUzeile."Line No.");
+
+                  END;
+              UNTIL ChampZuordnungHolen.NEXT = 0;
+
+              IF menge_champ_kalk_ges <> menge_auswahl_ges THEN
+                ERROR(Text115,AUzeile."No.",AUzeile."Line No.");
+
+            END;
+        END;
+
+    UNTIL AUzeile.NEXT = 0;
+
+    //***************************************************************************************************
+    //                                       12.02.2014-ST TOPAS
+    //   DCs der Service Artikel werden bei Abweichungen gegenüber der Service Preisliste aktualisiert
+    //***************************************************************************************************
+
+    AktualisiereServiceDC(AUnr);
+
+  END;
+
+PrüfeOVTNDA(Belegnr : Code[20];Belegart : Option)
+Belegzeile.RESET;
+Belegzeile.SETFILTER("Document No.",'%1',Belegnr);
+Belegzeile.SETFILTER("Document Type",'%1',Belegart);
+Belegzeile.SETFILTER(Type,'%1',Belegzeile.Type :: Item);
+Belegzeile.SETFILTER("Manufacturer Code",'%1','43');
+IF Belegzeile.FINDFIRST THEN
+  BEGIN
+    Doku.RESET;
+    Doku.SETFILTER(Linie,'%1','43');
+    Doku.SETFILTER(Ablaufdatum,'>=%1',WORKDATE);
+    Doku.SETFILTER("Mandantennr.",'%1',"Sell-to Contact No.");
+    IF NOT Doku.FINDFIRST THEN
+      MESSAGE(Text130);
+  END;
+
+PrüfeChampKalkAngelegt(Belegnr : Code[20];Belegart : Option)
+//Bei Beleg Freigabe wird das Vorhandensein einer Champ Kalkulation überprüft
+Belegzeile.RESET;
+Belegzeile.SETFILTER("Document No.",'%1',Belegnr);
+Belegzeile.SETFILTER("Document Type",'%1',Belegart);
+Belegzeile.SETFILTER(Type,'%1',Belegzeile.Type :: Item);
+Belegzeile.SETFILTER(Quantity,'>%1',0);
+IF Belegzeile.FINDFIRST THEN
+  REPEAT
+    Artikel.GET(Belegzeile."No.");
+    IF Artikel."Software Upgrade Protection" = TRUE THEN
+      BEGIN
+        ChampKalk.RESET;
+        ChampKalk.SETFILTER(Art,'%1',ChampKalk.Art :: "SUP-AU");
+        ChampKalk.SETFILTER("Nr.",'%1',Belegzeile."Document No.");
+        ChampKalk.SETFILTER("Zeilennr.",'%1',Belegzeile."Line No.");
+        IF NOT ChampKalk.FINDFIRST THEN
+          MESSAGE(Text113,Belegzeile."No.",Belegzeile."Line No.");
+      END;
+  UNTIL Belegzeile.NEXT = 0;
+
+AktualisiereServiceDC(AUnr : Code[20])
+//***************************************************************************************************
+//             NEU: 12.02.2014-ST Aktualisiert die DCs aller zu liefernden Service Artikel
+//               im Auftrag und für die in der Kalkulation hinterlegten Geräte Artikel
+//***************************************************************************************************
+
+IF AUnr = '' THEN EXIT;
+
+AUzeile.RESET;
+AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
+AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
+AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4','53','57','59','98','5710');
+IF AUzeile.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      service_dc_einzeln_neu := 0;
+      service_dc_gesamt_neu := 0;
+      Artikel.GET(AUzeile."No.");
+      IF Artikel."Software Upgrade Protection" = TRUE THEN
+        BEGIN
+          ServiceZuordnungHolen.RESET;
+          ServiceZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          IF ServiceZuordnungHolen.FINDFIRST THEN
+            REPEAT
+              service_dc_einzeln_neu := ServiceTab.ServicePreiseNeuKalkulieren(ServiceZuordnungHolen."Geräte Artikelnr.",
+                                  ServiceZuordnungHolen."SUP Artikelnr.",ServiceZuordnungHolen.Laufzeit,'DC',FALSE,
+                                  AUzeile.Einkaufswährungscode);
+
+              //***************************************************************************************************
+              //    Prüft, ob die Service Artikel in der Service Preisliste zu finden ist, wenn nein dann bricht
+              //      er den Aktualisierungsvorgang komplett ab, so dass nicht der korrekte DC geändert wird
+              //***************************************************************************************************
+
+              IF  service_dc_einzeln_neu = 0 THEN EXIT;
+
+              // Jetzt wird der DC neu berechnet
+              service_dc_gesamt_neu := service_dc_gesamt_neu + (service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.");
+              ServiceZuordnungHolen."Service DC einzeln" := service_dc_einzeln_neu;
+              ServiceZuordnungHolen."Service DC Gesamt" := service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.";
+              ServiceZuordnungHolen.MODIFY;
+
+            UNTIL ServiceZuordnungHolen.NEXT = 0;
+
+          //***************************************************************************************************
+          // Vergleicht Gesamt DC aus Kalkulation und Beleg DC, führt bei Abweichung eine Aktualisierung durch
+          //***************************************************************************************************
+
+          IF (AUzeile."DC-Preis (EKW)" <> service_dc_gesamt_neu) AND (Artikel."Software Upgrade Protection" = TRUE) THEN
+            BEGIN
+              IF CONFIRM(Text135,TRUE,AUzeile."No.",AUzeile."Line No.") THEN
+                BEGIN
+                  AUzeile.VALIDATE(AUzeile."DC-Preis (EKW)",service_dc_gesamt_neu);
+                  AUzeile.MODIFY;
+
+                  Window.OPEN('#1################################\\'+
+                              'Fortschritt @2@@@@@@@@');
+                  Window.UPDATE(1,'Der Service DC wird neu errechnet...');
+                  Window.UPDATE(2,9999);
+                  Window.CLOSE;
+                END;
+            END;
+        END;
+    UNTIL AUzeile.NEXT = 0;
+  END;
