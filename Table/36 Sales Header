@@ -3456,7 +3456,7 @@ AUzeile.RESET;
 AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
 AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
 AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
-AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4','53','57','59','98','5710');
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
 IF AUzeile.FINDFIRST THEN
   BEGIN
     REPEAT
@@ -3851,7 +3851,7 @@ AUzeile.RESET;
 AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
 AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
 AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
-AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4','53','57','59','98','5710');
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
 IF AUzeile.FINDFIRST THEN
   BEGIN
     REPEAT
