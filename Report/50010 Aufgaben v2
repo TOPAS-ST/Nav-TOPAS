@@ -1,0 +1,1206 @@
+
+Documentation()
+
+Report - OnInitReport()
+
+Report - OnPreReport()
+//*******************************************************************************************************
+//                    Sicherheitsabfrage ob Temp Tabelle auch Berichtstabelle ist
+//*******************************************************************************************************
+IF Berichtstabelle.TABLECAPTION <> 'Berichtstabelle' THEN
+  ERROR('Eine Sicherheitssperre verhindert die Ausführung dieses Berichtes.'+
+        'Stellen Sie sicher, dass die TABLECAPTION der Berichtstabelle auch auf Berichtstabelle lautet.');
+
+Berichtstabelle.RESET;
+IF Berichtstabelle.ISEMPTY = FALSE THEN
+  BEGIN
+    REPEAT
+      Berichtstabelle.RESET;
+      IF Berichtstabelle.ISEMPTY = FALSE THEN
+        BEGIN
+          SLEEP(500);
+          counter += 1;
+        END;
+
+      IF counter MOD 30 = 0 THEN
+        BEGIN
+          Berichtstabelle.FINDFIRST;
+          IF CONFIRM('Die Berichtstabelle ist seit %1 durch Anwender %2 gesperrt. Wollen Sie die Anwendung abbrechen?',
+          TRUE,Berichtstabelle.Uhrzeit,Berichtstabelle.User,counter,TRUE) THEN
+            ERROR('');
+        END;
+    UNTIL Berichtstabelle.ISEMPTY = TRUE;
+  END;
+
+//*******************************************************************************************************
+//                                    Vorbereitende Filter
+//*******************************************************************************************************
+
+Aufgaben.RESET;
+Aufgaben.SETFILTER("System To-do Type",'%1',aufgabe."System To-do Type" :: Organizer);
+
+//*******************************************************************************************************
+/////Filter - Übersicht Aufgaben\\\\\
+IF option=option:: "Übersicht - Aufgaben" THEN
+  BEGIN
+    Aufgaben.SETFILTER(Aufgabenart,filter_art);
+    IF (STRPOS(filter_betreuer,'|') = 0) AND (filter_verkäufer = '')
+    AND (filter_teams = '') THEN
+      Aufgaben.SETFILTER("Salesperson Code",filter_betreuer);
+    IF (filter_startdatum <> 0D) OR (filter_startdatum_e <> 0D) THEN
+      //Zusatzabfrage, denn wenn das Enddatum 0D ist, gibt es einen internen Bug, setzt für leer '' ein
+      IF filter_startdatum_e <> 0D THEN
+        Aufgaben.SETFILTER(Date,'%1..%2',filter_startdatum,filter_startdatum_e)
+      ELSE
+        Aufgaben.SETFILTER(Date,'%1..',filter_startdatum);
+    IF (filter_datum <> 0D) OR (filter_datum_e <> 0D) THEN
+      IF filter_datum_e <> 0D THEN
+        Aufgaben.SETFILTER("Follow Up",'%1..%2',filter_datum,filter_datum_e)
+      ELSE
+        Aufgaben.SETFILTER("Follow Up",'%1..',filter_datum);
+
+    IF filter_abgeschlossen = FALSE THEN
+     Aufgaben.SETFILTER(Closed,'%1',FALSE);
+
+    überschrift:='Übersicht - Aufgaben';
+
+    filter:='Bearbeiter: ' + filter_betreuer + ' ,Verkäufer: ' + filter_verkäufer + ' ,Teams: '
+    + filter_teams + ' ,Gebiete: ' + filter_gebiet + ' ,FU-Datum von: ' + FORMAT(filter_datum)
+    + ' bis: ' + FORMAT(filter_datum_e) + ' ,Aufgabenart: ' + filter_art +
+    ',Startdatum: ' + FORMAT(filter_startdatum) + ' bis: ' + FORMAT(filter_startdatum_e) +
+    ', Herstellercode: ' + filter_hersteller;
+  END;
+
+
+//*******************************************************************************************************
+/////Filter - FU's d.l. Wo. - Projekt Aufgaben\\\\\
+IF option=option:: "FU's d.l. Wo. - Projekt Aufgaben" THEN
+  BEGIN
+   Aufgaben.SETFILTER(Aufgabenart,'%1','PROJEKT');
+   IF (filter_datum <> 0D) OR (filter_datum_e <> 0D) THEN
+     IF filter_datum_e <> 0D THEN
+       Aufgaben.SETFILTER("Follow Up",'%1..%2',filter_datum,filter_datum_e)
+     ELSE
+       Aufgaben.SETFILTER("Follow Up",'%1..',filter_datum);
+
+    IF filter_abgeschlossen = FALSE THEN
+     Aufgaben.SETFILTER(Closed,'%1',FALSE);
+
+    überschrift:='FU´s d.l. Wo. - Projekt Aufgaben';
+
+    filter:='Betreuer Projekt: ' + filter_betreuer +' ,Verkäufer Projekt: ' + filter_verkäufer
+    +', Teams: ' + filter_teams + ' ,Gebiete: ' + filter_gebiet +' ,FU-Datum von: ' + FORMAT(filter_datum)
+    +' bis: ' + FORMAT(filter_datum_e);
+  END;
+
+
+//*******************************************************************************************************
+/////Filter - FU's d.l. Wo. - Muster\\\\\
+IF option=option:: "FU's d.l. Wo. - Muster" THEN
+  BEGIN
+    Aufgaben.SETFILTER(Aufgabenart,'%1','MUSTER');
+    IF (filter_datum <> 0D) OR (filter_datum_e <> 0D) THEN
+      IF filter_datum_e <> 0D THEN
+        Aufgaben.SETFILTER("Follow Up",'%1..%2',filter_datum,filter_datum_e)
+      ELSE
+        Aufgaben.SETFILTER("Follow Up",'%1..',filter_datum);
+
+     IF filter_abgeschlossen = FALSE THEN
+      Aufgaben.SETFILTER(Closed,'%1',FALSE);
+
+     überschrift:='FU´s d.l. Wo. - Muster';
+
+     filter:='Betreuer Auftrag:' +' ' +filter_betreuer +'  ' +',Verkäufer Auftrag: ' + filter_verkäufer
+     +', Teams: ' + filter_teams + ' ,Gebiete: ' + filter_gebiet +' ,FU-Datum von: ' +FORMAT(filter_datum) +' '
+     +'bis: ' +FORMAT(filter_datum_e) + ', Herstellercode: ' + filter_hersteller;
+  END;
+
+
+//*******************************************************************************************************
+/////Filter - FU's d.l. Wo. - Angebote\\\\\
+IF option=option:: "FU's d.l. Wo. - Angebote" THEN
+  BEGIN
+    Aufgaben.SETFILTER(Aufgabenart,'ANGEBOT');
+    IF (filter_datum <> 0D) OR (filter_datum_e <> 0D) THEN
+      IF filter_datum_e <> 0D THEN
+        Aufgaben.SETFILTER("Follow Up",'%1..%2',filter_datum,filter_datum_e)
+      ELSE
+        Aufgaben.SETFILTER("Follow Up",'%1..',filter_datum);
+     
+    IF filter_abgeschlossen = FALSE THEN
+     Aufgaben.SETFILTER(Closed,'%1',FALSE);
+
+    überschrift:='FU´s d.l. Wo. - Angebote';
+
+    filter:='Betreuer Angebot:' +' ' +filter_betreuer +' ,Verkäufer Angebot: ' +filter_verkäufer
+    +', Teams: ' + filter_teams + ' ,Gebiete: ' + filter_gebiet + ', FU-Datum von:' +' ' +FORMAT(filter_datum) +' '
+    +'bis:' +' ' +FORMAT(filter_datum_e) +
+    ', Herstellercode: ' + filter_hersteller;
+  END;
+
+
+//*******************************************************************************************************
+//                                  Aufgaben werden durchsucht
+//*******************************************************************************************************
+
+IF Aufgaben.FINDFIRST THEN
+  REPEAT
+
+    //*******************************************************************************************************
+    ////Übersicht Aufgaben
+    IF option=option:: "Übersicht - Aufgaben" THEN
+      BEGIN
+        IF (STRPOS(filter_betreuer,'|') = 0) AND (filter_verkäufer = '')
+        AND (filter_teams = '') THEN
+          Aufgabe_füllen_v2(FALSE)
+        ELSE
+          BEGIN
+            IF Aufgaben."Arch. Belegnr." <> '' THEN
+              BEGIN
+                Zusatz_Arch_Belege_füllen_v2;
+              END
+            ELSE
+              BEGIN
+                IF Aufgaben."Belegnr." <> '' THEN
+                  Zusatz_Akt_Belege_füllen_v2;
+              END;
+
+            ////Zusatzinfos aus Projekt
+            IF Aufgaben."Campaign No." <> '' THEN
+              Zusatz_Projekte_füllen_v2;
+
+            IF (Aufgaben."Belegnr." = '') AND (Aufgaben."Arch. Belegnr." = '') 
+            AND (Aufgaben."Campaign No." = '') AND (filter_hersteller = '') THEN
+              Aufgabe_füllen_v2(TRUE);
+          END;
+      END;
+
+
+    //*******************************************************************************************************
+    ////Projekt Aufgaben
+    IF option=option:: "FU's d.l. Wo. - Projekt Aufgaben" = TRUE THEN
+      BEGIN
+        Zusatz_Projekte_füllen;
+      END;
+    
+
+    //*******************************************************************************************************
+    ////Muster Aufgaben
+    ////Angebote - Aufgaben
+    IF (option=option:: "FU's d.l. Wo. - Muster") 
+    OR (option=option:: "FU's d.l. Wo. - Angebote") THEN
+      BEGIN
+
+        IF Aufgaben."Arch. Belegnr." <> '' THEN
+          BEGIN
+            Zusatz_Arch_Belege_füllen;
+          END
+        ELSE
+          BEGIN
+            IF Aufgaben."Belegnr." <> '' THEN
+              Zusatz_Akt_Belege_füllen;
+          END;
+
+       ////Zusatzinfos aus Projekt
+       IF zusatz_projekt = TRUE THEN
+         Zusatz_Projekte_füllen;
+
+      END;
+
+  UNTIL Aufgaben.NEXT = 0;
+
+Report - OnPostReport()
+IF Berichtstabelle.TABLECAPTION = 'Berichtstabelle' THEN
+  Berichtstabelle.DELETEALL;
+
+Report - OnCreateHyperlink(VAR URL : Text[1024])
+
+Report - OnHyperlink(URL : Text[1024])
+
+Aufgabe_füllen()
+//*******************************************************************************************************
+////Aufgaben füllen
+Berichtstabelle.INIT;
+  Berichtstabelle.Index := Aufgaben."No.";
+  Berichtstabelle.Tabelle := 'AUFGABEN';
+  Berichtstabelle.Datum := Aufgaben.Date;
+  Berichtstabelle."Feld 1" := Aufgaben.Description;
+  Berichtstabelle."Feld 3" := Aufgaben.Aufgabenart;
+  Berichtstabelle."Feld 6" := Aufgaben.Ersteller;
+  Berichtstabelle."Feld 7" := Aufgaben."Salesperson Code";
+  Berichtstabelle."Feld 10" := FORMAT(Aufgaben.Status);
+  Berichtstabelle."Feld 18" := Aufgaben."Follow Up";
+  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+  Berichtstabelle.User := USERID;
+
+  //*******************************************************************************************************
+  ////Zusatzinfos aus Kontakt
+  IF zusatz_kontakt = TRUE THEN
+    BEGIN
+      kontakt.RESET;
+
+      CASE Aufgaben.Type OF
+
+        Aufgaben.Type::Meeting:
+          BEGIN
+            teilnehmer.RESET;
+            teilnehmer.SETFILTER("To-do No.",'%1',Aufgaben."No.");
+            teilnehmer.SETFILTER("Attendee Type",'%1',teilnehmer."Attendee Type"::Contact);
+            IF teilnehmer.FINDFIRST THEN
+              BEGIN
+                kontakt.SETFILTER("No.",teilnehmer."Attendee No.");
+                IF (kontakt.FINDFIRST) AND (teilnehmer."Attendee No."<>'') THEN
+                  BEGIN
+                    Berichtstabelle."Feld 8" := kontakt."No.";
+                    //*******************************************************************************************************
+                    /////Debitornr. füllen\\\\\
+                    beziehung.RESET;
+                    beziehung.SETFILTER(beziehung."Contact No.",'%1',Aufgaben."Contact Company No.");
+                    IF beziehung.FINDFIRST THEN
+                     BEGIN
+                      debitor.SETFILTER(debitor."No.",'%1',beziehung."No.");
+                       IF debitor.FINDFIRST THEN
+                          Berichtstabelle."Feld 9" := debitor."No.";
+                     END;
+                    Berichtstabelle."Feld 11" := kontakt."Company Name";
+                    Berichtstabelle."Feld 12" := kontakt.Name;
+                    Berichtstabelle."Feld 13" := kontakt."Phone No.";
+                    Berichtstabelle."Feld 14" := kontakt."Betreuer Innendienst";
+                    Berichtstabelle."Feld 15" := kontakt."Salesperson Code";
+                    Berichtstabelle."Feld 16" := kontakt."Territory Code";
+                    Berichtstabelle."Feld 19" := kontakt."Company No.";
+                  END
+                ELSE
+                  BEGIN
+                    Berichtstabelle."Feld 11" := 'Bitte Kontakt eintragen,da Besprechung'
+                  END;
+              END
+            ELSE
+                BEGIN
+                  Berichtstabelle."Feld 11" := 'Bitte Kontakt eintragen,da Besprechung'
+                END;
+          END;
+
+        Aufgaben.Type::" ",Aufgaben.Type::"Phone Call":
+          BEGIN
+            kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+            IF (kontakt.FINDFIRST) AND (Aufgaben."Contact No."<>'') THEN
+              BEGIN
+                Berichtstabelle."Feld 8" := kontakt."No.";
+                //*******************************************************************************************************
+                /////Debitornr. füllen\\\\\
+                beziehung.RESET;
+                beziehung.SETFILTER(beziehung."Contact No.",'%1',Aufgaben."Contact Company No.");
+                IF beziehung.FINDFIRST THEN
+                 BEGIN
+                  debitor.SETFILTER(debitor."No.",'%1',beziehung."No.");
+                   IF debitor.FINDFIRST THEN
+                      Berichtstabelle."Feld 9" := debitor."No.";
+                 END;
+                Berichtstabelle."Feld 11" := kontakt."Company Name";
+                Berichtstabelle."Feld 12" := kontakt.Name;
+                Berichtstabelle."Feld 13" := kontakt."Phone No.";
+                Berichtstabelle."Feld 14" := kontakt."Betreuer Innendienst";
+                Berichtstabelle."Feld 15" := kontakt."Salesperson Code";
+                Berichtstabelle."Feld 16" := kontakt."Territory Code";
+                Berichtstabelle."Feld 19" := kontakt."Company No.";
+              END
+            ELSE
+              BEGIN
+              END;
+          END;
+      END;
+    END;
+
+Berichtstabelle.INSERT;
+
+//*******************************************************************************************************
+//                                        Bemerkungen füllen
+//*******************************************************************************************************
+Bemerkungen.RESET;
+Bemerkungen.SETFILTER("Table Name",'%1',Bemerkungen."Table Name" :: "To-do");
+Bemerkungen.SETFILTER("No.",'%1',Aufgaben."No.");
+IF Bemerkungen.FINDFIRST THEN
+  REPEAT
+     Berichtstabelle.INIT;
+       Berichtstabelle.Index := Bemerkungen."No.";
+       Berichtstabelle.Tabelle := 'BEMERKUNG';
+       Berichtstabelle.Datum := Bemerkungen.Date;
+       Berichtstabelle."Zeilennr." := Bemerkungen."Line No.";
+       Berichtstabelle."Feld 1" := Bemerkungen.Comment;
+       Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+       Berichtstabelle.User := USERID;
+     Berichtstabelle.INSERT;
+  UNTIL Bemerkungen.NEXT = 0;
+
+Aufgabe_füllen_v2(Nachlauf : Boolean)
+//*******************************************************************************************************
+////Aufgaben füllen
+
+Temp_Berichtstabelle.RESET;
+Temp_Berichtstabelle.SETFILTER(Tabelle,'%1','AUFGABEN');
+Temp_Berichtstabelle.SETFILTER(Index,'%1',Aufgaben."No.");
+IF NOT Temp_Berichtstabelle.FINDFIRST THEN
+  BEGIN
+    Berichtstabelle.INIT;
+
+    //*******************************************************************************************************
+    ////Zusatzinfos aus Kontakt
+    //IF zusatz_kontakt = TRUE THEN
+    //  BEGIN
+    kontakt.RESET;
+    CASE Aufgaben.Type OF
+      Aufgaben.Type::Meeting:
+        BEGIN
+          teilnehmer.RESET;
+          teilnehmer.SETFILTER("To-do No.",'%1',Aufgaben."No.");
+          teilnehmer.SETFILTER("Attendee Type",'%1',teilnehmer."Attendee Type"::Contact);
+          IF teilnehmer.FINDFIRST THEN
+            BEGIN
+              kontakt.SETFILTER("No.",teilnehmer."Attendee No.");
+              IF Nachlauf THEN
+                BEGIN
+                  IF (STRPOS(filter_betreuer,'|') <> 0) OR (filter_verkäufer <> '')
+                  OR (filter_teams <> '') THEN
+                    BEGIN
+                      kontakt.SETFILTER("Betreuer Innendienst",filter_betreuer);
+                      kontakt.SETFILTER("Salesperson Code",filter_verkäufer);
+                      kontakt.SETFILTER(Teams,filter_teams);
+                      kontakt.SETFILTER("Territory Code",filter_gebiet);
+                      IF NOT kontakt.FINDFIRST THEN EXIT;
+                    END;
+                END;
+              IF (kontakt.FINDFIRST) AND (teilnehmer."Attendee No."<>'') THEN
+                BEGIN
+                  Berichtstabelle."Feld 8" := kontakt."No.";
+                  //*******************************************************************************************************
+                  /////Debitornr. füllen\\\\\
+                  beziehung.RESET;
+                  beziehung.SETFILTER(beziehung."Contact No.",'%1',Aufgaben."Contact Company No.");
+                  IF beziehung.FINDFIRST THEN
+                   BEGIN
+                    debitor.SETFILTER(debitor."No.",'%1',beziehung."No.");
+                     IF debitor.FINDFIRST THEN
+                        Berichtstabelle."Feld 9" := debitor."No.";
+                   END;
+                  Berichtstabelle."Feld 11" := kontakt."Company Name";
+                  Berichtstabelle."Feld 12" := kontakt.Name;
+                  Berichtstabelle."Feld 13" := kontakt."Phone No.";
+                  Berichtstabelle."Feld 14" := kontakt."Betreuer Innendienst";
+                  Berichtstabelle."Feld 15" := kontakt."Salesperson Code";
+                  Berichtstabelle."Feld 16" := kontakt."Territory Code";
+                  Berichtstabelle."Feld 19" := kontakt."Company No.";
+                END
+              ELSE
+                BEGIN
+                  Berichtstabelle."Feld 11" := 'Bitte Kontakt eintragen,da Besprechung'
+                END;
+            END
+          ELSE
+              BEGIN
+                Berichtstabelle."Feld 11" := 'Bitte Kontakt eintragen,da Besprechung'
+              END;
+        END;
+
+      Aufgaben.Type::" ",Aufgaben.Type::"Phone Call":
+        BEGIN
+          kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+          IF Nachlauf THEN
+            BEGIN
+              IF (STRPOS(filter_betreuer,'|') <> 0) OR (filter_verkäufer <> '')
+              OR (filter_teams <> '') THEN
+                BEGIN
+                  kontakt.SETFILTER("Betreuer Innendienst",filter_betreuer);
+                  kontakt.SETFILTER("Salesperson Code",filter_verkäufer);
+                  kontakt.SETFILTER(Teams,filter_teams);
+                  kontakt.SETFILTER("Territory Code",filter_gebiet);
+                  IF NOT kontakt.FINDFIRST THEN EXIT;
+                END;
+            END;
+          IF (kontakt.FINDFIRST) AND (Aufgaben."Contact No."<>'') THEN
+            BEGIN
+              Berichtstabelle."Feld 8" := kontakt."No.";
+              //*******************************************************************************************************
+              /////Debitornr. füllen\\\\\
+              beziehung.RESET;
+              beziehung.SETFILTER(beziehung."Contact No.",'%1',Aufgaben."Contact Company No.");
+              IF beziehung.FINDFIRST THEN
+               BEGIN
+                debitor.SETFILTER(debitor."No.",'%1',beziehung."No.");
+                 IF debitor.FINDFIRST THEN
+                    Berichtstabelle."Feld 9" := debitor."No.";
+               END;
+              Berichtstabelle."Feld 11" := kontakt."Company Name";
+              Berichtstabelle."Feld 12" := kontakt.Name;
+              Berichtstabelle."Feld 13" := kontakt."Phone No.";
+              Berichtstabelle."Feld 14" := kontakt."Betreuer Innendienst";
+              Berichtstabelle."Feld 15" := kontakt."Salesperson Code";
+              Berichtstabelle."Feld 16" := kontakt."Territory Code";
+              Berichtstabelle."Feld 19" := kontakt."Company No.";
+            END
+          ELSE
+            BEGIN
+            END;
+        END;
+    END;
+
+    Berichtstabelle.Index := Aufgaben."No.";
+    Berichtstabelle.Tabelle := 'AUFGABEN';
+    Berichtstabelle.Datum := Aufgaben.Date;
+    Berichtstabelle."Feld 1" := Aufgaben.Description;
+    Berichtstabelle."Feld 3" := Aufgaben.Aufgabenart;
+    Berichtstabelle."Feld 6" := Aufgaben.Ersteller;
+    Berichtstabelle."Feld 7" := Aufgaben."Salesperson Code";
+    Berichtstabelle."Feld 10" := FORMAT(Aufgaben.Status);
+    Berichtstabelle."Feld 18" := Aufgaben."Follow Up";
+    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+    Berichtstabelle.User := USERID;
+
+    IF Aufgaben."Contact No." = '' THEN ERROR('Bitte füllen Sie zu Aufgabe %1 die Kontaktnr. aus' +
+                                              ' und starten Sie dann den Bericht neu.',Aufgaben."No.");
+
+    Berichtstabelle.INSERT;
+
+    //*******************************************************************************************************
+    //                                        Bemerkungen füllen
+    //*******************************************************************************************************
+    Bemerkungen.RESET;
+    Bemerkungen.SETFILTER("Table Name",'%1',Bemerkungen."Table Name" :: "To-do");
+    Bemerkungen.SETFILTER("No.",'%1',Aufgaben."No.");
+    IF Bemerkungen.FINDFIRST THEN
+      REPEAT
+         Berichtstabelle.INIT;
+           Berichtstabelle.Index := Bemerkungen."No.";
+           Berichtstabelle.Tabelle := 'BEMERKUNG';
+           Berichtstabelle.Datum := Bemerkungen.Date;
+           Berichtstabelle."Zeilennr." := Bemerkungen."Line No.";
+           Berichtstabelle."Feld 1" := Bemerkungen.Comment;
+           Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+           Berichtstabelle.User := USERID;
+         Berichtstabelle.INSERT;
+      UNTIL Bemerkungen.NEXT = 0;
+  END;
+
+Zusatz_Projekte_füllen()
+Projekte.RESET;
+Projekte.SETFILTER("No.",'%1',Aufgaben."Campaign No.");
+Projekte.SETFILTER("Betreuer Innendienst",filter_betreuer);
+Projekte.SETFILTER("Salesperson Code",filter_verkäufer);
+Projekte.SETFILTER(Teams,filter_teams);
+Projekte.SETFILTER(Gebietscode,filter_gebiet);
+IF Projekte.FINDFIRST THEN
+  BEGIN
+    Berichtstabelle.INIT;
+      Berichtstabelle.Index := Projekte."No.";
+      Berichtstabelle.Tabelle := 'PROJEKT';
+      Berichtstabelle."Belegnr." := Aufgaben."No.";
+      Berichtstabelle."Feld 1" := Projekte.Description;
+      IF (Projekte.Währungscode = '') OR (Projekte.Währungscode = 'EUR') THEN
+        Berichtstabelle."Feld 2" :=   '€'
+      ELSE
+        Berichtstabelle."Feld 2" := Projekte.Währungscode;
+      Berichtstabelle."Feld 4" := Projekte.Projektvolumen;
+      Berichtstabelle."Feld 5" := Projekte.Projektwert;
+      Berichtstabelle."Feld 6" := Projekte."Betreuer Innendienst";
+      Berichtstabelle."Feld 7" := Projekte."Salesperson Code";
+      Berichtstabelle."Feld 8" := Projekte.Projektstatus;
+      Berichtstabelle."Feld 9" := Projekte.Projektklasse;
+      //*******************************************************************************************************
+      //Führungsrolle
+      ansprechpartner.SETFILTER("Kampagnennr.",Projekte."No.");
+      ansprechpartner.SETFILTER(Führungsrolle,'%1',TRUE);
+      IF ansprechpartner.FINDFIRST THEN
+        BEGIN
+          ansprechpartner.CALCFIELDS(Mandantenname);
+          Berichtstabelle."Feld 10" := ansprechpartner.Mandantenname;
+        END;
+      Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+      Berichtstabelle.User := USERID;
+    Berichtstabelle.INSERT;
+
+    IF option=option:: "FU's d.l. Wo. - Projekt Aufgaben" THEN
+      BEGIN
+        Aufgabe_füllen;
+      END;
+
+  END;
+
+Zusatz_Projekte_füllen_v2()
+Projekte.RESET;
+Projekte.SETFILTER("No.",'%1',Aufgaben."Campaign No.");
+Projekte.SETFILTER("Betreuer Innendienst",filter_betreuer);
+Projekte.SETFILTER("Salesperson Code",filter_verkäufer);
+Projekte.SETFILTER(Teams,filter_teams);
+Projekte.SETFILTER(Gebietscode,filter_gebiet);
+IF Projekte.FINDFIRST THEN
+  BEGIN
+
+    IF option=option:: "FU's d.l. Wo. - Projekt Aufgaben" THEN
+      BEGIN
+        Aufgabe_füllen;
+      END;
+
+    //Wenn Aufgabe mit Projekt und Beleg verknüpft ist und der Beleg nicht die
+    //Kriterienfilter erfüllt, darf die Aufgabe nun auch nicht gefüllt werden
+    //WICHTIG: Akt. und Arch. Belege füllen muss zuerst gelaufen sein, ansonsten steigt
+    //der Bericht für die Aufgabe an dieser Stelle immer aus, auch wenn der Beleg passt
+    IF (Aufgaben."Campaign No." <> '') AND ((Aufgaben."Belegnr." <> '') 
+    OR (Aufgaben."Arch. Belegnr." <> '')) THEN
+      BEGIN
+        Temp_Berichtstabelle.RESET;
+        IF Aufgaben."Belegnr." <> '' THEN
+          Temp_Berichtstabelle.SETFILTER(Index,'%1',Aufgaben."Belegnr.");
+        IF Aufgaben."Arch. Belegnr." <> '' THEN
+          Temp_Berichtstabelle.SETFILTER(Index,'%1',Aufgaben."Arch. Belegnr.");
+        IF NOT Temp_Berichtstabelle.FINDFIRST THEN
+          EXIT;
+      END;
+
+    IF filter_hersteller <> '' THEN
+      BEGIN
+        Linien.RESET;
+        Linien.SETFILTER("Kampagnennr.",'%1',Projekte."No.");
+        Linien.SETFILTER(Linienkürzel,filter_hersteller);
+        IF Linien.FINDFIRST THEN
+          Aufgabe_füllen_v2(FALSE);
+      END
+    ELSE
+      Aufgabe_füllen_v2(FALSE);
+    Berichtstabelle.INIT;
+      Berichtstabelle.Index := Projekte."No.";
+      Berichtstabelle.Tabelle := 'PROJEKT';
+      Berichtstabelle."Belegnr." := Aufgaben."No.";
+      Berichtstabelle."Feld 1" := Projekte.Description;
+      IF (Projekte.Währungscode = '') OR (Projekte.Währungscode = 'EUR') THEN
+        Berichtstabelle."Feld 2" :=   '€'
+      ELSE
+        Berichtstabelle."Feld 2" := Projekte.Währungscode;
+      Berichtstabelle."Feld 4" := Projekte.Projektvolumen;
+      Berichtstabelle."Feld 5" := Projekte.Projektwert;
+      Berichtstabelle."Feld 6" := Projekte."Betreuer Innendienst";
+      Berichtstabelle."Feld 7" := Projekte."Salesperson Code";
+      Berichtstabelle."Feld 8" := Projekte.Projektstatus;
+      Berichtstabelle."Feld 9" := Projekte.Projektklasse;
+      //*******************************************************************************************************
+      //Führungsrolle
+      ansprechpartner.SETFILTER("Kampagnennr.",Projekte."No.");
+      ansprechpartner.SETFILTER(Führungsrolle,'%1',TRUE);
+      IF ansprechpartner.FINDFIRST THEN
+        BEGIN
+          ansprechpartner.CALCFIELDS(Mandantenname);
+          Berichtstabelle."Feld 10" := ansprechpartner.Mandantenname;
+        END;
+      //*******************************************************************************************************
+      //Linien
+      Linien.RESET;
+      Linien.SETFILTER("Kampagnennr.",'%1',Projekte."No.");
+      IF Linien.FINDFIRST THEN
+        REPEAT
+          IF Manufac.GET(Linien.Linienkürzel) THEN
+            Berichtstabelle."Feld 11" := Berichtstabelle."Feld 11" + Manufac.Herstellerkurzname + ' '
+          ELSE
+            Berichtstabelle."Feld 11" := Berichtstabelle."Feld 11" + Linien.Linienkürzel + '(?) '
+        UNTIL Linien.NEXT = 0;
+      Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+      Berichtstabelle.User := USERID;
+    Berichtstabelle.INSERT;
+
+
+  END;
+
+Zusatz_Arch_Belege_füllen()
+aufgabe_eingetragen := FALSE;
+
+kontakt.RESET;
+kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+kontakt.FINDFIRST;
+
+IF (filter_gebiet = 'OST') AND (kontakt."Territory Code" = 'NORDOST') THEN
+  BEGIN
+  END
+ELSE
+  BEGIN
+    "Arch-Kopf".RESET;
+    "Arch-Kopf".SETFILTER("No.",'%1',Aufgaben."Arch. Belegnr.");
+    "Arch-Kopf".SETFILTER("Betreuer Innendienst",filter_betreuer);
+    "Arch-Kopf".SETFILTER("Salesperson Code",filter_verkäufer);
+    "Arch-Kopf".SETFILTER(Teams,filter_teams);
+    "Arch-Kopf".SETFILTER("Territory Code",filter_gebiet);
+    IF "Arch-Kopf".FINDFIRST THEN
+      BEGIN
+
+        "Arch-Zeile".RESET;
+        "Arch-Zeile".SETFILTER("Document No.",'%1',"Arch-Kopf"."No.");
+        "Arch-Zeile".SETFILTER(Type,'%1',"Arch-Zeile".Type :: Item);
+        "Arch-Zeile".SETFILTER("Manufacturer Code",filter_hersteller);
+        IF "Arch-Zeile".FINDFIRST THEN
+          BEGIN
+            Temp_Berichtstabelle.RESET;
+            Temp_Berichtstabelle.SETFILTER(Index,'%1',"Arch-Kopf"."No.");
+            Temp_Berichtstabelle.SETFILTER(Tabelle,'%1','BELEGKOPF');
+            IF Temp_Berichtstabelle.FINDFIRST THEN
+              arch_beleg_doppelt := TRUE
+            ELSE
+              arch_beleg_doppelt := FALSE;
+
+            //*******************************************************************************************************
+            ////Belegkopf füllen, Arch. Auftragskopf
+            IF arch_beleg_doppelt = FALSE THEN
+              BEGIN
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := "Arch-Kopf"."No.";
+                  Berichtstabelle.Tabelle := 'BELEGKOPF';
+                  Berichtstabelle.Datum := "Arch-Kopf"."Document Date";
+                  Berichtstabelle."Belegnr." := Aufgaben."No.";
+                  Berichtstabelle."Feld 2" := "Arch-Kopf"."Sell-to Customer No.";
+                  Berichtstabelle."Feld 6" := "Arch-Kopf"."Betreuer Innendienst";
+                  Berichtstabelle."Feld 7" := "Arch-Kopf"."Salesperson Code";
+                  Berichtstabelle."Feld 9" := "Arch-Kopf"."Territory Code";
+                  Berichtstabelle."Feld 10" := "Arch-Kopf"."Sell-to Customer Name";
+                  Berichtstabelle."Feld 12" := "Arch-Kopf".Kontaktperson;
+                  //*******************************************************************************************************
+                  /////Verbindung MÜ - Aufgaben\\\\\
+                  IF Aufgaben."Campaign No."='' THEN
+                    BEGIN
+                      MÜwach.RESET;
+                      MÜwach.SETFILTER(Aufgabennr,'%1',Aufgaben."No.");
+                      IF MÜwach.FINDFIRST THEN
+                        Berichtstabelle."Feld 17" := TRUE
+                      ELSE
+                        Berichtstabelle."Feld 17" := FALSE;
+                    END;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              END;
+
+            IF arch_beleg_doppelt = FALSE THEN
+              REPEAT
+                //*******************************************************************************************************
+                ////Arch. Auftragszeile
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := "Arch-Zeile"."Document No.";
+                  Berichtstabelle.Tabelle := 'BELEGZEILE';
+                  Berichtstabelle."Belegnr." := "Arch-Kopf"."No.";
+                  Berichtstabelle."Zeilennr." := "Arch-Zeile"."Line No.";
+                  Berichtstabelle."Feld 1" := "Arch-Zeile"."ACS Projektinfos";
+                  Berichtstabelle."Feld 3" := "Arch-Zeile"."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := "Arch-Zeile".Quantity;
+                  Berichtstabelle."Feld 5" := "Arch-Zeile"."DC-Preis (EKW)";
+                  IF Artikel.GET("Arch-Zeile"."No.") THEN
+                    BEGIN
+                        Berichtstabelle."Feld 6" := Artikel.Herstellerkurzname;
+                      IF "Arch-Zeile".Einkaufswährungscode = '' THEN
+                          Berichtstabelle."Feld 7" := '€'
+                        ELSE
+                            Berichtstabelle."Feld 7" := "Arch-Zeile".Einkaufswährungscode;
+                      Berichtstabelle."Feld 17" := Artikel.Registrierbar;
+                      "Ek-Preis".RESET;
+                      "Ek-Preis".SETFILTER("Item No.",'%1',Artikel."No.");
+                      "Ek-Preis".SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                      IF "Ek-Preis".FINDLAST THEN
+                        Berichtstabelle."Feld 14" := FORMAT("Ek-Preis"."Direct Unit Cost");
+                    END;
+                  Berichtstabelle."Feld 10" := "Arch-Zeile"."Unit of Measure";
+                  Berichtstabelle."Feld 11" := "Arch-Zeile".Endkunde;
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND("Arch-Zeile"."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT("Arch-Zeile"."Unit Price");
+
+                  Berichtstabelle."Feld 15" := FORMAT("Arch-Zeile"."Unit Price" * "Arch-Zeile".Quantity);
+                  gesamt_betrag:=0;
+                  "arch-vkzeile".SETFILTER("Document No.",'%1',"Arch-Zeile"."Document No.");
+                  IF "arch-vkzeile".FINDFIRST THEN
+                    REPEAT
+                      gesamt_betrag := gesamt_betrag + ("arch-vkzeile".Quantity*"arch-vkzeile"."DC-Preis (MW)");
+                    UNTIL "arch-vkzeile".NEXT=0;
+                  Berichtstabelle."Feld 16" := FORMAT(gesamt_betrag);
+                  IF "Arch-Zeile"."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 19" := '€'
+                  ELSE
+                   Berichtstabelle."Feld 19" := "Arch-Zeile"."Currency Code";
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              UNTIL "Arch-Zeile".NEXT = 0;
+
+            //*******************************************************************************************************
+            /////Verbindung MÜ - Aufgaben\\\\\
+            IF Aufgaben."Campaign No."='' THEN
+              BEGIN
+                MÜwach.RESET;
+                MÜwach.SETFILTER(Aufgabennr,Aufgaben."No.");
+                IF MÜwach.FINDFIRST THEN
+                  BEGIN
+                   Berichtstabelle.INIT;
+                     Berichtstabelle.Index := MÜwach.Nr;
+                     Berichtstabelle.Tabelle := 'MÜWACH';
+                     Berichtstabelle."Belegnr." := Aufgaben."No.";
+                     Berichtstabelle."Feld 4" := MÜwach."Anzahl pro System";
+                     Berichtstabelle."Feld 10" := MÜwach.Applikation_alt;
+                     Berichtstabelle."Feld 12" := MÜwach.Potenzial;
+                     Berichtstabelle."Feld 13" := FORMAT(MÜwach.Status);
+                     Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                     Berichtstabelle.User := USERID;
+                   Berichtstabelle.INSERT;
+
+                  END;
+              END;
+
+            IF ((option=option:: "FU's d.l. Wo. - Angebote") OR (option=option:: "FU's d.l. Wo. - Muster"))
+             AND (aufgabe_eingetragen = FALSE) THEN
+              BEGIN
+                Aufgabe_füllen;
+                aufgabe_eingetragen := TRUE;
+              END;
+
+          END;
+      END;
+  END;
+
+Zusatz_Arch_Belege_füllen_v2()
+aufgabe_eingetragen := FALSE;
+
+kontakt.RESET;
+kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+kontakt.FINDFIRST;
+
+IF (filter_gebiet = 'OST') AND (kontakt."Territory Code" = 'NORDOST') THEN
+  BEGIN
+  END
+ELSE
+  BEGIN
+    "Arch-Kopf".RESET;
+    "Arch-Kopf".SETFILTER("No.",'%1',Aufgaben."Arch. Belegnr.");
+    "Arch-Kopf".SETFILTER("Betreuer Innendienst",filter_betreuer);
+    "Arch-Kopf".SETFILTER("Salesperson Code",filter_verkäufer);
+    "Arch-Kopf".SETFILTER(Teams,filter_teams);
+    "Arch-Kopf".SETFILTER("Territory Code",filter_gebiet);
+    IF "Arch-Kopf".FINDFIRST THEN
+      BEGIN
+        "Arch-Zeile".RESET;
+        "Arch-Zeile".SETFILTER("Document No.",'%1',"Arch-Kopf"."No.");
+        "Arch-Zeile".SETFILTER(Type,'%1',"Arch-Zeile".Type :: Item);
+        "Arch-Zeile".SETFILTER("Manufacturer Code",filter_hersteller);
+        IF "Arch-Zeile".FINDFIRST THEN
+          BEGIN
+            Temp_Berichtstabelle.RESET;
+            Temp_Berichtstabelle.SETFILTER(Index,'%1',"Arch-Kopf"."No.");
+            Temp_Berichtstabelle.SETFILTER(Tabelle,'%1','BELEGKOPF');
+            IF Temp_Berichtstabelle.FINDFIRST THEN
+              arch_beleg_doppelt := TRUE
+            ELSE
+              arch_beleg_doppelt := FALSE;
+
+            //*******************************************************************************************************
+            ////Belegkopf füllen, Arch. Auftragskopf
+            IF arch_beleg_doppelt = FALSE THEN
+              BEGIN
+                Aufgabe_füllen_v2(FALSE);
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := "Arch-Kopf"."No.";
+                  Berichtstabelle.Tabelle := 'BELEGKOPF';
+                  Berichtstabelle.Datum := "Arch-Kopf"."Document Date";
+                  Berichtstabelle."Belegnr." := Aufgaben."No.";
+                  Berichtstabelle."Feld 2" := "Arch-Kopf"."Sell-to Customer No.";
+                  Berichtstabelle."Feld 6" := "Arch-Kopf"."Betreuer Innendienst";
+                  Berichtstabelle."Feld 7" := "Arch-Kopf"."Salesperson Code";
+                  Berichtstabelle."Feld 9" := "Arch-Kopf"."Territory Code";
+                  Berichtstabelle."Feld 10" := "Arch-Kopf"."Sell-to Customer Name";
+                  Berichtstabelle."Feld 12" := "Arch-Kopf".Kontaktperson;
+                  //*******************************************************************************************************
+                  /////Verbindung MÜ - Aufgaben\\\\\
+                  IF Aufgaben."Campaign No."='' THEN
+                    BEGIN
+                      MÜwach.RESET;
+                      MÜwach.SETFILTER(Aufgabennr,'%1',Aufgaben."No.");
+                      IF MÜwach.FINDFIRST THEN
+                        Berichtstabelle."Feld 17" := TRUE
+                      ELSE
+                        Berichtstabelle."Feld 17" := FALSE;
+                    END;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              END;
+
+            IF arch_beleg_doppelt = FALSE THEN
+              REPEAT
+                //*******************************************************************************************************
+                ////Arch. Auftragszeile
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := "Arch-Zeile"."Document No.";
+                  Berichtstabelle.Tabelle := 'BELEGZEILE';
+                  Berichtstabelle."Belegnr." := "Arch-Kopf"."No.";
+                  Berichtstabelle."Zeilennr." := "Arch-Zeile"."Line No.";
+                  Berichtstabelle."Feld 1" := "Arch-Zeile"."ACS Projektinfos";
+                  Berichtstabelle."Feld 3" := "Arch-Zeile"."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := "Arch-Zeile".Quantity;
+                  Berichtstabelle."Feld 5" := "Arch-Zeile"."DC-Preis (EKW)";
+                  IF Artikel.GET("Arch-Zeile"."No.") THEN
+                    BEGIN
+                        Berichtstabelle."Feld 6" := Artikel.Herstellerkurzname;
+                      IF "Arch-Zeile".Einkaufswährungscode = '' THEN
+                          Berichtstabelle."Feld 7" := '€'
+                        ELSE
+                            Berichtstabelle."Feld 7" := "Arch-Zeile".Einkaufswährungscode;
+                      Berichtstabelle."Feld 17" := Artikel.Registrierbar;
+                      "Ek-Preis".RESET;
+                      "Ek-Preis".SETFILTER("Item No.",'%1',Artikel."No.");
+                      "Ek-Preis".SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                      IF "Ek-Preis".FINDLAST THEN
+                        Berichtstabelle."Feld 14" := FORMAT("Ek-Preis"."Direct Unit Cost");
+                    END;
+                  Berichtstabelle."Feld 10" := "Arch-Zeile"."Unit of Measure";
+                  Berichtstabelle."Feld 11" := "Arch-Zeile".Endkunde;
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND("Arch-Zeile"."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT("Arch-Zeile"."Unit Price");
+
+                  Berichtstabelle."Feld 15" := FORMAT("Arch-Zeile"."Unit Price" * "Arch-Zeile".Quantity);
+                  gesamt_betrag:=0;
+                  "arch-vkzeile".SETFILTER("Document No.",'%1',"Arch-Zeile"."Document No.");
+                  IF "arch-vkzeile".FINDFIRST THEN
+                    REPEAT
+                      gesamt_betrag := gesamt_betrag + ("arch-vkzeile".Quantity*"arch-vkzeile"."DC-Preis (MW)");
+                    UNTIL "arch-vkzeile".NEXT=0;
+                  Berichtstabelle."Feld 16" := FORMAT(gesamt_betrag);
+                  IF "Arch-Zeile"."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 19" := '€'
+                  ELSE
+                   Berichtstabelle."Feld 19" := "Arch-Zeile"."Currency Code";
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              UNTIL "Arch-Zeile".NEXT = 0;
+
+            //*******************************************************************************************************
+            /////Verbindung MÜ - Aufgaben\\\\\
+            IF Aufgaben."Campaign No."='' THEN
+              BEGIN
+                MÜwach.RESET;
+                MÜwach.SETFILTER(Aufgabennr,Aufgaben."No.");
+                IF MÜwach.FINDFIRST THEN
+                  BEGIN
+                   Berichtstabelle.INIT;
+                     Berichtstabelle.Index := MÜwach.Nr;
+                     Berichtstabelle.Tabelle := 'MÜWACH';
+                     Berichtstabelle."Belegnr." := Aufgaben."No.";
+                     Berichtstabelle."Feld 4" := MÜwach."Anzahl pro System";
+                     Berichtstabelle."Feld 10" := MÜwach.Applikation_alt;
+                     Berichtstabelle."Feld 12" := MÜwach.Potenzial;
+                     Berichtstabelle."Feld 13" := FORMAT(MÜwach.Status);
+                     Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                     Berichtstabelle.User := USERID;
+                   Berichtstabelle.INSERT;
+
+                  END;
+              END;
+
+            IF ((option=option:: "FU's d.l. Wo. - Angebote") OR (option=option:: "FU's d.l. Wo. - Muster"))
+             AND (aufgabe_eingetragen = FALSE) THEN
+              BEGIN
+                Aufgabe_füllen;
+                aufgabe_eingetragen := TRUE;
+              END;
+
+          END;
+      END;
+  END;
+
+Zusatz_Akt_Belege_füllen()
+aufgabe_eingetragen := FALSE;
+
+kontakt.RESET;
+kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+kontakt.FINDFIRST;
+
+IF (filter_gebiet = 'OST') AND (kontakt."Territory Code" = 'NORDOST') THEN
+  BEGIN
+  END
+ELSE
+  BEGIN
+    Auftragskopf.RESET;
+    Auftragskopf.SETFILTER("No.",'%1',Aufgaben."Belegnr.");
+    Auftragskopf.SETFILTER("Betreuer Innendienst",filter_betreuer);
+    Auftragskopf.SETFILTER("Salesperson Code",filter_verkäufer);
+    Auftragskopf.SETFILTER(Teams,filter_teams);
+    Auftragskopf.SETFILTER("Territory Code",filter_gebiet);
+    IF Auftragskopf.FINDFIRST THEN
+      BEGIN
+        Auftragszeile.RESET;
+        Auftragszeile.SETFILTER("Document No.",'%1',Auftragskopf."No.");
+        Auftragszeile.SETFILTER(Type,'%1',Auftragszeile.Type :: Item);
+        Auftragszeile.SETFILTER("Manufacturer Code",filter_hersteller);
+        IF Auftragszeile.FINDFIRST THEN
+          BEGIN
+            Temp_Berichtstabelle.RESET;
+            Temp_Berichtstabelle.SETFILTER(Index,'%1',Auftragskopf."No.");
+            Temp_Berichtstabelle.SETFILTER(Tabelle,'%1','BELEGKOPF');
+            IF Temp_Berichtstabelle.FINDFIRST THEN
+              akt_beleg_doppelt := TRUE
+            ELSE
+              akt_beleg_doppelt := FALSE;
+
+            //*******************************************************************************************************
+            ////Belegkopf füllen, Auftragskopf
+            IF akt_beleg_doppelt = FALSE THEN
+              BEGIN
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := Auftragskopf."No.";
+                  Berichtstabelle.Tabelle := 'BELEGKOPF';
+                  Berichtstabelle.Datum := Auftragskopf."Document Date";
+                  Berichtstabelle."Belegnr." := Aufgaben."No.";
+                  Berichtstabelle."Feld 2" := Auftragskopf."Sell-to Customer No.";
+                  Berichtstabelle."Feld 6" := Auftragskopf."Betreuer Innendienst";
+                  Berichtstabelle."Feld 7" := Auftragskopf."Salesperson Code";
+                  Berichtstabelle."Feld 9" := Auftragskopf."Territory Code";
+                  Berichtstabelle."Feld 10" := Auftragskopf."Sell-to Customer Name";
+                  Berichtstabelle."Feld 12" := Auftragskopf.Kontaktperson;
+                  //*******************************************************************************************************
+                  /////Verbindung MÜ - Aufgaben\\\\\
+                  IF Aufgaben."Campaign No."='' THEN
+                    BEGIN
+                      MÜwach.RESET;
+                      MÜwach.SETFILTER(Aufgabennr,'%1',Aufgaben."No.");
+                      IF MÜwach.FINDFIRST THEN
+                        Berichtstabelle."Feld 17" := TRUE
+                      ELSE
+                        Berichtstabelle."Feld 17" := FALSE;
+                    END;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              END;
+
+            IF akt_beleg_doppelt = FALSE THEN
+              REPEAT
+
+                //*******************************************************************************************************
+                ////Auftragszeile
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := Auftragszeile."Document No.";
+                  Berichtstabelle.Tabelle := 'BELEGZEILE';
+                  Berichtstabelle."Belegnr." := Auftragskopf."No.";
+                  Berichtstabelle."Zeilennr." := Auftragszeile."Line No.";
+                  Berichtstabelle."Feld 1" := Auftragszeile."System Projektinfos";
+                  Berichtstabelle."Feld 3" := Auftragszeile."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := Auftragszeile.Quantity;
+                  Berichtstabelle."Feld 5" := Auftragszeile."DC-Preis (EKW)";
+                  IF Artikel.GET(Auftragszeile."No.") THEN
+                    BEGIN
+                        Berichtstabelle."Feld 6" := Artikel.Herstellerkurzname;
+                      IF Auftragszeile.Einkaufswährungscode = '' THEN
+                          Berichtstabelle."Feld 7" := '€'
+                        ELSE
+                            Berichtstabelle."Feld 7" := Auftragszeile.Einkaufswährungscode;
+                      Berichtstabelle."Feld 17" := Artikel.Registrierbar;
+                      "Ek-Preis".RESET;
+                      "Ek-Preis".SETFILTER("Item No.",'%1',Artikel."No.");
+                      "Ek-Preis".SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                      IF "Ek-Preis".FINDLAST THEN
+                        Berichtstabelle."Feld 14" := FORMAT("Ek-Preis"."Direct Unit Cost");
+                    END;
+                  Berichtstabelle."Feld 10" := Auftragszeile."Unit of Measure";
+                  Berichtstabelle."Feld 11" := Auftragszeile.Endkunde;
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND(Auftragszeile."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT(Auftragszeile."Unit Price");
+
+                  Berichtstabelle."Feld 15" := FORMAT(Auftragszeile."Unit Price" * Auftragszeile.Quantity);
+                  gesamt_betrag:=0;
+                  vkzeile.SETFILTER("Document No.",'%1',Auftragszeile."Document No.");
+                  IF vkzeile.FINDFIRST THEN
+                    REPEAT
+                      gesamt_betrag := gesamt_betrag + (vkzeile.Quantity * vkzeile."DC-Preis (MW)");
+                    UNTIL vkzeile.NEXT=0;
+                  Berichtstabelle."Feld 16" := FORMAT(gesamt_betrag);
+                  IF Auftragszeile."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 19" := '€'
+                  ELSE
+                    Berichtstabelle."Feld 19" := Auftragszeile."Currency Code";
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              UNTIL Auftragszeile.NEXT = 0;
+
+            //*******************************************************************************************************
+            /////Verbindung MÜ - Aufgaben\\\\\
+            IF Aufgaben."Campaign No."='' THEN
+              BEGIN
+                MÜwach.RESET;
+                MÜwach.SETFILTER(Aufgabennr,Aufgaben."No.");
+                IF MÜwach.FINDFIRST THEN
+                  BEGIN
+                    Berichtstabelle.INIT;
+                      Berichtstabelle.Index := MÜwach.Nr;
+                      Berichtstabelle.Tabelle := 'MÜWACH';
+                      Berichtstabelle."Belegnr." := Aufgaben."No.";
+                      Berichtstabelle."Feld 4" := MÜwach."Anzahl pro System";
+                      Berichtstabelle."Feld 10" := MÜwach.Applikation_alt;
+                      Berichtstabelle."Feld 12" := MÜwach.Potenzial;
+                      Berichtstabelle."Feld 13" := FORMAT(MÜwach.Status);
+                      Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                      Berichtstabelle.User := USERID;
+                    Berichtstabelle.INSERT;
+
+                  END;
+              END;
+
+            IF ((option=option:: "FU's d.l. Wo. - Angebote") OR (option=option:: "FU's d.l. Wo. - Muster"))
+             AND (aufgabe_eingetragen = FALSE) THEN
+              BEGIN
+                Aufgabe_füllen;
+                aufgabe_eingetragen := TRUE;
+              END;
+
+          END;
+      END;
+  END;
+
+Zusatz_Akt_Belege_füllen_v2()
+aufgabe_eingetragen := FALSE;
+
+kontakt.RESET;
+kontakt.SETFILTER(kontakt."No.",Aufgaben."Contact No.");
+kontakt.FINDFIRST;
+
+IF (filter_gebiet = 'OST') AND (kontakt."Territory Code" = 'NORDOST') THEN
+  BEGIN
+  END
+ELSE
+  BEGIN
+    Auftragskopf.RESET;
+    Auftragskopf.SETFILTER("No.",'%1',Aufgaben."Belegnr.");
+    Auftragskopf.SETFILTER("Betreuer Innendienst",filter_betreuer);
+    Auftragskopf.SETFILTER("Salesperson Code",filter_verkäufer);
+    Auftragskopf.SETFILTER(Teams,filter_teams);
+    Auftragskopf.SETFILTER("Territory Code",filter_gebiet);
+    IF Auftragskopf.FINDFIRST THEN
+      BEGIN
+        Auftragszeile.RESET;
+        Auftragszeile.SETFILTER("Document No.",'%1',Auftragskopf."No.");
+        Auftragszeile.SETFILTER(Type,'%1',Auftragszeile.Type :: Item);
+        Auftragszeile.SETFILTER("Manufacturer Code",filter_hersteller);
+        IF Auftragszeile.FINDFIRST THEN
+          BEGIN
+            Temp_Berichtstabelle.RESET;
+            Temp_Berichtstabelle.SETFILTER(Index,'%1',Auftragskopf."No.");
+            Temp_Berichtstabelle.SETFILTER(Tabelle,'%1','BELEGKOPF');
+            IF Temp_Berichtstabelle.FINDFIRST THEN
+              akt_beleg_doppelt := TRUE
+            ELSE
+              akt_beleg_doppelt := FALSE;
+
+            //*******************************************************************************************************
+            ////Belegkopf füllen, Auftragskopf
+            IF akt_beleg_doppelt = FALSE THEN
+              BEGIN
+                Aufgabe_füllen_v2(FALSE);
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := Auftragskopf."No.";
+                  Berichtstabelle.Tabelle := 'BELEGKOPF';
+                  Berichtstabelle.Datum := Auftragskopf."Document Date";
+                  Berichtstabelle."Belegnr." := Aufgaben."No.";
+                  Berichtstabelle."Feld 2" := Auftragskopf."Sell-to Customer No.";
+                  Berichtstabelle."Feld 6" := Auftragskopf."Betreuer Innendienst";
+                  Berichtstabelle."Feld 7" := Auftragskopf."Salesperson Code";
+                  Berichtstabelle."Feld 9" := Auftragskopf."Territory Code";
+                  Berichtstabelle."Feld 10" := Auftragskopf."Sell-to Customer Name";
+                  Berichtstabelle."Feld 12" := Auftragskopf.Kontaktperson;
+                  //*******************************************************************************************************
+                  /////Verbindung MÜ - Aufgaben\\\\\
+                  IF Aufgaben."Campaign No."='' THEN
+                    BEGIN
+                      MÜwach.RESET;
+                      MÜwach.SETFILTER(Aufgabennr,'%1',Aufgaben."No.");
+                      IF MÜwach.FINDFIRST THEN
+                        Berichtstabelle."Feld 17" := TRUE
+                      ELSE
+                        Berichtstabelle."Feld 17" := FALSE;
+                    END;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              END;
+
+            IF akt_beleg_doppelt = FALSE THEN
+              REPEAT
+
+                //*******************************************************************************************************
+                ////Auftragszeile
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Index := Auftragszeile."Document No.";
+                  Berichtstabelle.Tabelle := 'BELEGZEILE';
+                  Berichtstabelle."Belegnr." := Auftragskopf."No.";
+                  Berichtstabelle."Zeilennr." := Auftragszeile."Line No.";
+                  Berichtstabelle."Feld 1" := Auftragszeile."System Projektinfos";
+                  Berichtstabelle."Feld 3" := Auftragszeile."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := Auftragszeile.Quantity;
+                  Berichtstabelle."Feld 5" := Auftragszeile."DC-Preis (EKW)";
+                  IF Artikel.GET(Auftragszeile."No.") THEN
+                    BEGIN
+                        Berichtstabelle."Feld 6" := Artikel.Herstellerkurzname;
+                      IF Auftragszeile.Einkaufswährungscode = '' THEN
+                          Berichtstabelle."Feld 7" := '€'
+                        ELSE
+                            Berichtstabelle."Feld 7" := Auftragszeile.Einkaufswährungscode;
+                      Berichtstabelle."Feld 17" := Artikel.Registrierbar;
+                      "Ek-Preis".RESET;
+                      "Ek-Preis".SETFILTER("Item No.",'%1',Artikel."No.");
+                      "Ek-Preis".SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                      IF "Ek-Preis".FINDLAST THEN
+                        Berichtstabelle."Feld 14" := FORMAT("Ek-Preis"."Direct Unit Cost");
+                    END;
+                  Berichtstabelle."Feld 10" := Auftragszeile."Unit of Measure";
+                  Berichtstabelle."Feld 11" := Auftragszeile.Endkunde;
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND(Auftragszeile."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT(Auftragszeile."Unit Price");
+
+                  Berichtstabelle."Feld 15" := FORMAT(Auftragszeile."Unit Price" * Auftragszeile.Quantity);
+                  gesamt_betrag:=0;
+                  vkzeile.SETFILTER("Document No.",'%1',Auftragszeile."Document No.");
+                  IF vkzeile.FINDFIRST THEN
+                    REPEAT
+                      gesamt_betrag := gesamt_betrag + (vkzeile.Quantity * vkzeile."DC-Preis (MW)");
+                    UNTIL vkzeile.NEXT=0;
+                  Berichtstabelle."Feld 16" := FORMAT(gesamt_betrag);
+                  IF Auftragszeile."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 19" := '€'
+                  ELSE
+                    Berichtstabelle."Feld 19" := Auftragszeile."Currency Code";
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              UNTIL Auftragszeile.NEXT = 0;
+
+            //*******************************************************************************************************
+            /////Verbindung MÜ - Aufgaben\\\\\
+            IF Aufgaben."Campaign No."='' THEN
+              BEGIN
+                MÜwach.RESET;
+                MÜwach.SETFILTER(Aufgabennr,Aufgaben."No.");
+                IF MÜwach.FINDFIRST THEN
+                  BEGIN
+                    Berichtstabelle.INIT;
+                      Berichtstabelle.Index := MÜwach.Nr;
+                      Berichtstabelle.Tabelle := 'MÜWACH';
+                      Berichtstabelle."Belegnr." := Aufgaben."No.";
+                      Berichtstabelle."Feld 4" := MÜwach."Anzahl pro System";
+                      Berichtstabelle."Feld 10" := MÜwach.Applikation_alt;
+                      Berichtstabelle."Feld 12" := MÜwach.Potenzial;
+                      Berichtstabelle."Feld 13" := FORMAT(MÜwach.Status);
+                      Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                      Berichtstabelle.User := USERID;
+                    Berichtstabelle.INSERT;
+
+                  END;
+              END;
+
+            IF ((option=option:: "FU's d.l. Wo. - Angebote") OR (option=option:: "FU's d.l. Wo. - Muster"))
+             AND (aufgabe_eingetragen = FALSE) THEN
+              BEGIN
+                Aufgabe_füllen;
+                aufgabe_eingetragen := TRUE;
+              END;
+
+          END;
+      END;
+  END;
