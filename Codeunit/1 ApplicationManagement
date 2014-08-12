@@ -252,6 +252,14 @@ CASE PartOfText OF
     Date := TODAY;
   COPYSTR(Text006,1,STRLEN(PartOfText)):
     Date := WORKDATE;
+  //TOPAS 2014-08-12 ST
+  COPYSTR(Text100,1,STRLEN(PartOfText)):
+    Date := 31122055D;
+  COPYSTR(Text101,1,STRLEN(PartOfText)):
+    Date := 31122054D;
+  COPYSTR(Text102,1,STRLEN(PartOfText)):
+    Date := 31122053D;
+  //TOPAS Ende
   ELSE
     EXIT(0);
 END;
