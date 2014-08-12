@@ -1,0 +1,1015 @@
+
+Documentation()
+[Procedure]CaptionClassTranslate (<LANGUAGE>;<CAPTIONEXPR>)
+  LANGUAGE
+    <DataType>   := [Integer]
+    <DataValue>  := // Automatically mentioned by the system
+  CAPTIONEXPR
+    <DataType>   := [String]
+    <Length>     <= 80
+    <DataValue>  := <CAPTIONAREA>,<CAPTIONREF>
+  CAPTIONAREA
+    <DataType>   := [SubString]
+    <Length>     <= 10
+    <DataValue>  := 1..9999999999
+                    // 1 for Dimension Area
+                    // 2 for VAT
+  CAPTIONREF
+    <DataType>   := [SubString]
+    <Length>     <= 10
+    <DataValue>  := IF (<CAPTIONAREA> = 1) <DIMCAPTIONTYPE>,<DIMCAPTIONREF>
+    <DataValue>  := IF (<CAPTIONAREA> = 2) <VATCAPTIONTYPE>
+  DIMCAPTIONTYPE
+    <DataType>   := [SubString]
+    <Length>     <= 10
+    <DataValue>  := 1..6
+                    // 1 to retrieve Code Caption of Global Dimension
+                    // 2 to retrieve Code Caption of Shortcut Dimension
+                    // 3 to retrieve Filter Caption of Global Dimension
+                    // 4 to retrieve Filter Caption of Shortcut Dimension
+                    // 5 to retrieve Code Caption of any kind of Dimensions
+                    // 6 to retrieve Filter Caption of any kind of Dimensions
+  DIMCAPTIONREF
+    <DataType>   := [SubString]
+    <Length>     <= 10
+    <DataValue>  := IF (<DIMCAPTIONTYPE> = 1) 1..2,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+                    IF (<DIMCAPTIONTYPE> = 2) 1..8,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+                    IF (<DIMCAPTIONTYPE> = 3) 1..2,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+                    IF (<DIMCAPTIONTYPE> = 4) 1..8,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+                    IF (<DIMCAPTIONTYPE> = 5) [Table]Dimension.[Field]Code,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+                    IF (<DIMCAPTIONTYPE> = 6) [Table]Dimension.[Field]Code,<DIMOPTIONALPARAM1>,<DIMOPTIONALPARAM2>
+  DIMOPTIONALPARAM1
+    <DataType>   := [SubString]
+    <Length>     <= 30
+    <DataValue>  := [String]
+                    // a string added before the dimension name
+  DIMOPTIONALPARAM2
+    <DataType>   := [SubString]
+    <Length>     <= 30
+    <DataValue>  := [String]
+                    // a string added after the dimension name
+  VATCAPTIONTYPE
+    <DataType>   := [SubString]
+    <Length>     =  1
+    <DataValue>  := '0' -> <field caption + 'Excl. VAT'>
+                    '1' -> <field caption + 'Incl. VAT'>
+
+<changelog>
+  <add id="de0001"
+       dev="mnommens"
+       date="2004-08-01"
+       area="VERSION"
+       releaseversion="DACH4.00"
+       request="DACH-START-40">
+       Codeunit 1 for Version String
+  </add>
+  <change id="de0002"
+          dev="mnommens"
+          date="2005-04-29"
+          area="VERSION"
+          baseversion="DACH4.00"
+          releaseversion="DACH4.00A"
+          request="DACH-START-400A">
+          Codeunit 1 for Version String
+  </change>
+  <add id="de0003" dev="jhoek" date="2006-09-04" area="UID" feature="NAVCORS3366"
+  releaseversion="DE5.00">Added GetUIDOffset function</add>
+</changelog>
+
+OnRun()
+
+CompanyOpen()
+IF GUIALLOWED THEN
+  LogInStart;
+  
+  //TOPAS *********************************
+    FORM.RUN(5099);
+  //TOPAS ende ****************************
+
+CompanyClose()
+IF GUIALLOWED THEN
+  LogInEnd;
+
+FindPrinter(ReportID : Integer) : Text[250]
+CLEAR(PrinterSelection);
+
+IF NOT PrinterSelection.GET(USERID,ReportID) THEN
+  IF NOT PrinterSelection.GET('',ReportID) THEN
+    IF NOT PrinterSelection.GET(USERID,0) THEN
+      IF PrinterSelection.GET('',0) THEN;
+
+EXIT(PrinterSelection."Printer Name");
+
+LogInStart()
+IF (STRPOS(COMPANYNAME,Text000) < 1) AND LicenseAgreement.GET THEN
+  IF (TODAY >= LicenseAgreement."Effective Date") AND NOT LicenseAgreement.Accepted THEN BEGIN
+    FORM.RUNMODAL(FORM::"License Agreement Accept");
+    LicenseAgreement.GET;
+    IF NOT LicenseAgreement.Accepted THEN
+      MESSAGE(Text019);
+  END ELSE
+    IF TODAY < LicenseAgreement."Effective Date" THEN
+      MESSAGE(Text020,LicenseAgreement."Effective Date");
+
+Language.SETRANGE("STX File Exist",TRUE);
+Language.SETRANGE("Globally Enabled",TRUE);
+Language."Language ID" := GLOBALLANGUAGE;
+IF NOT Language.FIND THEN BEGIN
+  Language."Language ID" := WINDOWSLANGUAGE;
+  IF NOT Language.FIND THEN
+    Language."Language ID" := ApplicationLanguage;
+END;
+GLOBALLANGUAGE := Language."Language ID";
+
+IF NOT GLSetup.GET THEN BEGIN
+  CompanyInitialize.RUN;
+  COMMIT;
+  CLEAR(CompanyInitialize);
+END;
+
+LogInDate := TODAY;
+LogInTime := TIME;
+LogInWorkDate := 0D;
+IF STRPOS(COMPANYNAME,Text000) = 1 THEN
+  IF GLEntry.READPERMISSION THEN BEGIN
+    GLEntry.SETCURRENTKEY("G/L Account No.","Posting Date");
+    OK := TRUE;
+    REPEAT
+      GLEntry.SETFILTER("G/L Account No.",'>%1',GLEntry."G/L Account No.");
+      GLEntry.SETFILTER("Posting Date",'>%1',GLEntry."Posting Date");
+      IF GLEntry.FINDFIRST THEN BEGIN
+        GLEntry.SETRANGE("G/L Account No.",GLEntry."G/L Account No.");
+        GLEntry.SETRANGE("Posting Date");
+        GLEntry.FINDLAST;
+      END ELSE
+        OK := FALSE
+    UNTIL NOT OK;
+    IF NOT (GLEntry."Posting Date" IN [0D,WORKDATE]) THEN BEGIN
+      MESSAGE(
+        Text001 +
+        Text002 +
+        Text003,
+        COMPANYNAME,NORMALDATE(GLEntry."Posting Date"));
+      LogInWorkDate := WORKDATE;
+      WORKDATE := NORMALDATE(GLEntry."Posting Date");
+    END;
+  END;
+
+RMSetup.GET;
+IF (RMSetup."E-Mail Logging User ID" <> '') AND (RMSetup."E-Mail Logging User ID" = UPPERCASE(USERID)) THEN
+  CODEUNIT.RUN(CODEUNIT::"E-Mail Dispatcher");
+
+LogInEnd()
+IF LogInWorkDate <> 0D THEN
+  IF LogInWorkDate = LogInDate THEN
+    WORKDATE := TODAY
+  ELSE
+    WORKDATE := LogInWorkDate;
+
+IF USERID <> '' THEN BEGIN
+  IF UserSetup.GET(USERID) THEN BEGIN
+    UserSetupFound := TRUE;
+    RegisterTime := UserSetup."Register Time";
+  END;
+  IF NOT UserSetupFound THEN
+    IF GLSetup.GET THEN
+      RegisterTime := GLSetup."Register Time";
+  IF RegisterTime THEN BEGIN
+    LogOutDate := TODAY;
+    LogOutTime := TIME;
+    IF (LogOutDate > LogInDate) OR (LogOutDate = LogInDate) AND (LogOutTime > LogInTime) THEN
+      Minutes := ROUND((1440 * (LogOutDate - LogInDate)) + ((LogOutTime - LogInTime) / 60000),1);
+    IF Minutes = 0 THEN
+      Minutes := 1;
+    UserTimeRegister.INIT;
+    UserTimeRegister."User ID" := USERID;
+    UserTimeRegister.Date := LogInDate;
+    IF UserTimeRegister.FIND THEN BEGIN
+      UserTimeRegister.Minutes := UserTimeRegister.Minutes + Minutes;
+      UserTimeRegister.MODIFY;
+    END ELSE BEGIN
+      UserTimeRegister.Minutes := Minutes;
+      UserTimeRegister.INSERT;
+    END;
+  END;
+END;
+
+ApplicationVersion() : Text[80]
+EXIT('DE Dynamics NAV 5.0');
+
+ApplicationBuild() : Text[80]
+EXIT('24199');
+
+BaseApplicationBuild() : Text[80]
+EXIT('24199');
+
+ApplicationLanguage() : Integer
+EXIT(1033);
+
+CodeCoverage()
+FORM.RUN(FORM::"Code Coverage");
+
+MakeDateTimeText(VAR DateTimeText : Text[250]) : Integer
+IF GetSeparateDateTime(DateTimeText,Date,Time) THEN BEGIN
+  IF Date = 0D THEN
+    EXIT;
+  IF Time = 0T THEN
+    Time := 000000T;
+  DateTimeText := FORMAT(CREATEDATETIME(Date,Time),0,1);
+END;
+
+GetSeparateDateTime(DateTimeText : Text[250];VAR Date : Date;VAR Time : Time) : Boolean
+Date := 0D;
+Time := 0T;
+Position := 1;
+Length := STRLEN(DateTimeText);
+ReadCharacter(' ',DateTimeText,Position,Length);
+ReadUntilCharacter(' ',DateTimeText,Position,Length);
+DateText := DELCHR(COPYSTR(DateTimeText,1,Position - 1),'<>');
+TimeText := DELCHR(COPYSTR(DateTimeText,Position),'<>');
+IF DateText = '' THEN
+  EXIT(TRUE);
+
+IF MakeDateText(DateText) = 0 THEN;
+IF NOT EVALUATE(Date,DateText) THEN
+  EXIT(FALSE);
+
+IF TimeText = '' THEN
+  EXIT(TRUE);
+
+IF MakeTimeText(TimeText) = 0 THEN;
+IF EVALUATE(Time,TimeText) THEN
+  EXIT(TRUE);
+
+MakeDateText(VAR DateText : Text[250]) : Integer
+Position := 1;
+Length := STRLEN(DateText);
+ReadCharacter(' ',DateText,Position,Length);
+IF NOT FindText(PartOfText,DateText,Position,Length) THEN
+  EXIT(0);
+CASE PartOfText OF
+  COPYSTR(Text005,1,STRLEN(PartOfText)):
+    Date := TODAY;
+  COPYSTR(Text006,1,STRLEN(PartOfText)):
+    Date := WORKDATE;
+  ELSE
+    EXIT(0);
+END;
+Position := Position + STRLEN(PartOfText);
+ReadCharacter(' ',DateText,Position,Length);
+IF Position > Length THEN BEGIN
+  DateText := FORMAT(Date);
+  EXIT(0);
+END;
+EXIT(Position);
+
+MakeTimeText(VAR TimeText : Text[250]) : Integer
+Position := 1;
+Length := STRLEN(TimeText);
+ReadCharacter(' ',TimeText,Position,Length);
+IF NOT FindText(PartOfText,TimeText,Position,Length) THEN
+  EXIT(0);
+IF PartOfText <> COPYSTR(Text007,1,STRLEN(PartOfText)) THEN
+  EXIT(0);
+Position := Position + STRLEN(PartOfText);
+ReadCharacter(' ',TimeText,Position,Length);
+IF Position <= Length THEN
+  EXIT(Position);
+TimeText := FORMAT(000000T + ROUND(TIME - 000000T,1000));
+EXIT(0);
+
+MakeText(VAR Text : Text[250]) : Integer
+Position := 1;
+
+//TOPAS 2011-10-28 ST Remove special characters in text field
+cr := 13;
+lf := 10;
+tab := 9;
+Length := STRLEN(Text);
+IF Length <= 80 THEN
+  BEGIN
+    Text := DELCHR(Text,'=',FORMAT(cr)) ;
+    Text := DELCHR(Text,'=',FORMAT(lf)) ;
+    Text := DELCHR(Text,'=',FORMAT(tab)) ;
+  END ;
+//TOPAS Ende
+
+Length := STRLEN(Text);
+ReadCharacter(' ',Text,Position,Length);
+IF NOT ReadSymbol('?',Text,Position,Length) THEN
+  EXIT(0);
+PartOfText := COPYSTR(Text,Position);
+IF PartOfText = '' THEN BEGIN
+  IF FORM.RUNMODAL(0,StdTxt) = ACTION::LookupOK THEN
+    Text := StdTxt.Description;
+  EXIT(0);
+END;
+StdTxt.Code := COPYSTR(Text,Position,MAXSTRLEN(StdTxt.Code));
+IF NOT StdTxt.FIND('=>') OR
+   (UPPERCASE(PartOfText) <> COPYSTR(StdTxt.Code,1,STRLEN(PartOfText)))
+THEN
+  EXIT(Position);
+Text := StdTxt.Description;
+EXIT(0);
+
+MakeCode(VAR Text : Text[250]) : Integer
+//TOPAS 2011-10-28 ST NEW FUNCTION BY TOPAS Remove special characters in code field
+
+Position := 1;
+
+cr := 13;
+lf := 10;
+tab := 9;
+Length := STRLEN(Text);
+IF Length <= 80 THEN
+  BEGIN
+    Text := DELCHR(Text,'=',FORMAT(cr)) ;
+    Text := DELCHR(Text,'=',FORMAT(lf)) ;
+    Text := DELCHR(Text,'=',FORMAT(tab)) ;
+  END ;
+
+Length := STRLEN(Text);
+ReadCharacter(' ',Text,Position,Length);
+IF NOT ReadSymbol('?',Text,Position,Length) THEN
+  EXIT(0);
+PartOfText := COPYSTR(Text,Position);
+IF PartOfText = '' THEN BEGIN
+  IF FORM.RUNMODAL(0,StdTxt) = ACTION::LookupOK THEN
+    Text := StdTxt.Description;
+  EXIT(0);
+END;
+StdTxt.Code := COPYSTR(Text,Position,MAXSTRLEN(StdTxt.Code));
+IF NOT StdTxt.FIND('=>') OR
+   (UPPERCASE(PartOfText) <> COPYSTR(StdTxt.Code,1,STRLEN(PartOfText)))
+THEN
+  EXIT(Position);
+Text := StdTxt.Description;
+EXIT(0);
+
+//TOPAS Ende
+
+MakeDateTimeFilter(VAR DateTimeFilterText : Text[250]) : Integer
+Position := 1;
+Length := STRLEN(DateTimeFilterText);
+WHILE Length <> 0 DO BEGIN
+  ReadCharacter(' |()',DateTimeFilterText,Position,Length);
+  IF Position > 1 THEN BEGIN
+    Head := Head + COPYSTR(DateTimeFilterText,1,Position - 1);
+    DateTimeFilterText := COPYSTR(DateTimeFilterText,Position);
+    Position := 1;
+    Length := STRLEN(DateTimeFilterText);
+  END;
+  IF Length <> 0 THEN BEGIN
+    ReadUntilCharacter('|()',DateTimeFilterText,Position,Length);
+    IF Position > 1 THEN BEGIN
+      Tail := COPYSTR(DateTimeFilterText,Position);
+      DateTimeFilterText := COPYSTR(DateTimeFilterText,1,Position - 1);
+      MakeDateTimeFilter2(DateTimeFilterText);
+      Head := Head + DateTimeFilterText;
+      DateTimeFilterText := Tail;
+      Position := 1;
+      Length := STRLEN(DateTimeFilterText);
+    END;
+  END;
+END;
+DateTimeFilterText := Head;
+
+MakeDateTimeFilter2(VAR DateTimeFilterText : Text[250])
+StringPosition := STRPOS(DateTimeFilterText,'..');
+IF StringPosition = 0 THEN BEGIN
+  IF NOT GetSeparateDateTime(DateTimeFilterText,Date1,Time1) THEN
+    EXIT;
+  IF Date1 = 0D THEN
+    EXIT;
+  IF Time1 = 0T THEN BEGIN
+    DateTimeFilterText := FORMAT(CREATEDATETIME(Date1,000000T)) + '..' + FORMAT(CREATEDATETIME(Date1,235959.999T),0,1);
+    EXIT;
+  END;
+  DateTimeFilterText := FORMAT(CREATEDATETIME(Date1,Time1),0,1);
+  EXIT;
+END;
+
+IF NOT GetSeparateDateTime(COPYSTR(DateTimeFilterText,1,StringPosition - 1),Date1,Time1) THEN
+  EXIT;
+IF NOT GetSeparateDateTime(COPYSTR(DateTimeFilterText,StringPosition + 2),Date2,Time2) THEN
+  EXIT;
+
+IF (Date1 = 0D) AND (Date2 = 0D) THEN
+  EXIT;
+
+IF (Date1 <> 0D) THEN BEGIN
+  IF Time1 = 0T THEN
+    Time1 := 000000T;
+  DateTime1 := CREATEDATETIME(Date1,Time1);
+END;
+IF (Date2 <> 0D) THEN BEGIN
+  IF Time2 = 0T THEN
+    Time2 := 235959T;
+  DateTime2 := CREATEDATETIME(Date2,Time2);
+END;
+DateTimeFilterText := FORMAT(DateTime1,0,1) + '..' + FORMAT(DateTime2,0,1);
+
+MakeDateFilter(VAR DateFilterText : Text[250]) : Integer
+StringPosition := STRPOS(DateFilterText,'..');
+IF StringPosition = 0 THEN BEGIN
+  i := MakeDateFilter2(OK,Date1,Date2,DateFilterText);
+  IF i <> 0 THEN
+    EXIT(i);
+  IF OK THEN
+    IF Date1 = Date2 THEN
+      DateFilterText := FORMAT(Date1)
+    ELSE
+      DateFilterText := STRSUBSTNO('%1..%2',Date1,Date2);
+  EXIT(0);
+END;
+
+Text1 := COPYSTR(DateFilterText,1,StringPosition - 1);
+i := MakeDateFilter2(OK,Date1,Date2,Text1);
+IF i <> 0 THEN
+  EXIT(i);
+IF OK THEN
+  Text1 := FORMAT(Date1);
+
+ReadCharacter('.',DateFilterText,StringPosition,STRLEN(DateFilterText));
+
+Text2 := COPYSTR(DateFilterText,StringPosition);
+i := MakeDateFilter2(OK,Date1,Date2,Text2);
+IF i <> 0 THEN
+  EXIT(StringPosition + i - 1);
+IF OK THEN
+  Text2 := FORMAT(Date2);
+
+DateFilterText := Text1 + '..' + Text2;
+EXIT(0);
+
+MakeDateFilter2(VAR OK : Boolean;VAR Date1 : Date;VAR Date2 : Date;VAR DateFilterText : Text[250]) : Integer
+Position := 1;
+Length := STRLEN(DateFilterText);
+ReadCharacter(' ',DateFilterText,Position,Length);
+IF FindText(PartOfText,DateFilterText,Position,Length) THEN
+  CASE PartOfText OF
+    COPYSTR(Text008,1,STRLEN(PartOfText)):
+      BEGIN
+        OK := TRUE;
+        Position := Position + STRLEN(PartOfText);
+        EXIT(FindPeriod(Date1,Date2,FALSE,DateFilterText,Position,Length));
+      END;
+    COPYSTR(Text009,1,STRLEN(PartOfText)):
+      BEGIN
+        OK := TRUE;
+        Position := Position + STRLEN(PartOfText);
+        EXIT(FindPeriod(Date1,Date2,TRUE,DateFilterText,Position,Length));
+      END;
+    COPYSTR(Text005,1,STRLEN(PartOfText)):
+      BEGIN
+        OK := TRUE;
+        Position := Position + STRLEN(PartOfText);
+        ReadCharacter(' ',DateFilterText,Position,Length);
+        IF Position <= Length THEN
+          EXIT(Position);
+        Date1 := TODAY;
+        Date2 := Date1;
+        EXIT(0);
+      END;
+    COPYSTR(Text006,1,STRLEN(PartOfText)):
+      BEGIN
+        OK := TRUE;
+        Position := Position + STRLEN(PartOfText);
+        ReadCharacter(' ',DateFilterText,Position,Length);
+        IF Position <= Length THEN
+          EXIT(Position);
+        Date1 := WORKDATE;
+        Date2 := Date1;
+        EXIT(0);
+      END;
+  END;
+OK := FALSE;
+EXIT(0);
+
+FindPeriod(VAR Date1 : Date;VAR Date2 : Date;FindYear : Boolean;VAR DateFilterText : Text[250];VAR Position : Integer;Length : Integer
+ReadCharacter(' ',DateFilterText,Position,Length);
+IF FindYear THEN
+  AccountingPeriod.SETRANGE("New Fiscal Year",TRUE)
+ELSE
+  AccountingPeriod.SETRANGE("New Fiscal Year");
+Sign := '';
+IF ReadSymbol('+',DateFilterText,Position,Length) THEN
+  Sign := '+'
+ELSE
+  IF ReadSymbol('-',DateFilterText,Position,Length) THEN
+    Sign := '-';
+IF Sign = '' THEN
+  IF ReadNumeral(Numeral,DateFilterText,Position,Length) THEN BEGIN
+    IF FindYear THEN
+      AccountingPeriod.FINDFIRST
+    ELSE BEGIN
+      AccountingPeriod.SETRANGE("New Fiscal Year",TRUE);
+      AccountingPeriod."Starting Date" := WORKDATE;
+      AccountingPeriod.FIND('=<');
+      AccountingPeriod.SETRANGE("New Fiscal Year");
+    END;
+    AccountingPeriod.NEXT(Numeral - 1);
+  END ELSE BEGIN
+    AccountingPeriod."Starting Date" := WORKDATE;
+    AccountingPeriod.FIND('=<');
+  END
+ELSE BEGIN
+  IF NOT ReadNumeral(Numeral,DateFilterText,Position,Length) THEN
+    EXIT(Position);
+  IF Sign = '-' THEN
+    Numeral := -Numeral;
+  AccountingPeriod."Starting Date" := WORKDATE;
+  AccountingPeriod.FIND('=<');
+  AccountingPeriod.NEXT(Numeral);
+END;
+Date1 := AccountingPeriod."Starting Date";
+IF AccountingPeriod.NEXT = 0 THEN
+  Date2 := 31129999D
+ELSE
+  Date2 := AccountingPeriod."Starting Date" - 1;
+ReadCharacter(' ',DateFilterText,Position,Length);
+IF Position <= Length THEN
+  EXIT(Position);
+EXIT(0);
+
+FindText(VAR PartOfText : Text[250];VAR Text : Text[250];Position : Integer;Length : Integer) : Boolean
+Position2 := Position;
+ReadCharacter(Text010,Text,Position,Length);
+IF Position = Position2 THEN
+  EXIT(FALSE);
+PartOfText := UPPERCASE(COPYSTR(Text,Position2,Position - Position2));
+EXIT(TRUE);
+
+ReadSymbol(Token : Text[30];VAR Text : Text[250];VAR Position : Integer;Length : Integer) : Boolean
+IF Token <> COPYSTR(Text,Position,STRLEN(Token)) THEN
+  EXIT(FALSE);
+Position := Position + STRLEN(Token);
+ReadCharacter(' ',Text,Position,Length);
+EXIT(TRUE);
+
+ReadNumeral(VAR Numeral : Integer;VAR Text : Text[250];VAR Position : Integer;Length : Integer) : Boolean
+Position2 := Position;
+ReadCharacter('0123456789',Text,Position,Length);
+IF Position2 = Position THEN
+  EXIT(FALSE);
+Numeral := 0;
+FOR i := Position2 TO Position - 1 DO
+  IF Numeral < 1000 THEN
+    Numeral := Numeral * 10 + STRPOS('0123456789',COPYSTR(Text,i,1)) - 1;
+IF (Numeral < 1) OR (Numeral > 999) THEN
+  ERROR(Text011);
+EXIT(TRUE);
+
+ReadCharacter(Character : Text[50];VAR Text : Text[250];VAR Position : Integer;Length : Integer)
+WHILE (Position <= Length) AND (STRPOS(Character,UPPERCASE(COPYSTR(Text,Position,1))) <> 0) DO
+  Position := Position + 1;
+
+ReadUntilCharacter(Character : Text[50];VAR Text : Text[250];VAR Position : Integer;Length : Integer)
+WHILE (Position <= Length) AND (STRPOS(Character,UPPERCASE(COPYSTR(Text,Position,1))) = 0) DO
+  Position := Position + 1;
+
+AutoFormatTranslate(AutoFormatType : Integer;AutoFormatExpr : Text[80]) : Text[80]
+IF AutoFormatType = 0 THEN
+  EXIT('');
+
+IF NOT GLSetupRead THEN BEGIN
+  IF NOT GLSetup.GET THEN
+    EXIT('');
+  GLSetupRead := TRUE;
+END;
+
+CASE AutoFormatType OF
+  1: // Amount
+    IF AutoFormatExpr = '' THEN
+      EXIT(STRSUBSTNO(Text012,GLSetup."Amount Decimal Places"))
+    ELSE BEGIN
+      IF Currency.GET(AutoFormatExpr) AND (Currency."Amount Decimal Places" <> '') THEN
+        EXIT(STRSUBSTNO(Text012,Currency."Amount Decimal Places"))
+      ELSE
+        EXIT(STRSUBSTNO(Text012,GLSetup."Amount Decimal Places"));
+    END;
+
+  2: // Unit Amount
+    IF AutoFormatExpr = '' THEN
+      EXIT(STRSUBSTNO(Text012,GLSetup."Unit-Amount Decimal Places"))
+    ELSE BEGIN
+      IF Currency.GET(AutoFormatExpr) AND (Currency."Unit-Amount Decimal Places" <> '') THEN
+        EXIT(STRSUBSTNO(Text012,Currency."Unit-Amount Decimal Places"))
+      ELSE
+        EXIT(STRSUBSTNO(Text012,GLSetup."Unit-Amount Decimal Places"));
+    END;
+  10: EXIT('<Custom,' + AutoFormatExpr + '>');
+END;
+
+ReadRounding() Rounding : Decimal
+GLSetup.GET;
+EXIT(GLSetup."Amount Rounding Precision");
+
+CaptionClassTranslate(Language : Integer;CaptionExpr : Text[80]) : Text[80]
+CommaPosition := STRPOS(CaptionExpr,',');
+IF (CommaPosition > 0) THEN BEGIN
+  CaptionArea := COPYSTR(CaptionExpr,1,CommaPosition - 1);
+  CaptionRef := COPYSTR(CaptionExpr,CommaPosition + 1);
+  CASE CaptionArea OF
+    '1' : EXIT(DimCaptionClassTranslate(Language,CaptionRef));
+    '2' : EXIT(VATCaptionClassTranslate(Language,CaptionRef));
+    '3' : EXIT(CaptionRef);
+  END;
+END;
+EXIT('');
+
+DimCaptionClassTranslate(Language : Integer;CaptionExpr : Text[80]) : Text[80]
+IF NOT GLSetupRead THEN BEGIN
+  IF NOT GLSetup.GET THEN
+    EXIT('');
+  GLSetupRead := TRUE;
+END;
+
+CommaPosition := STRPOS(CaptionExpr,',');
+IF (CommaPosition > 0) THEN BEGIN
+  DimCaptionType := COPYSTR(CaptionExpr,1,CommaPosition - 1);
+  DimCaptionRef := COPYSTR(CaptionExpr,CommaPosition + 1);
+  CommaPosition := STRPOS(DimCaptionRef,',');
+  IF (CommaPosition > 0) THEN BEGIN
+    DimOptionalParam1 := COPYSTR(DimCaptionRef,CommaPosition + 1);
+    DimCaptionRef := COPYSTR(DimCaptionRef,1,CommaPosition - 1);
+    CommaPosition := STRPOS(DimOptionalParam1,',');
+    IF (CommaPosition > 0) THEN BEGIN
+      DimOptionalParam2 := COPYSTR(DimOptionalParam1,CommaPosition + 1);
+      DimOptionalParam1 := COPYSTR(DimOptionalParam1,1,CommaPosition - 1);
+    END ELSE BEGIN
+      DimOptionalParam2 := '';
+    END;
+  END ELSE BEGIN
+    DimOptionalParam1 := '';
+    DimOptionalParam2 := '';
+  END;
+  CASE DimCaptionType OF
+    '1':  // Code Caption - Global Dimension using No. as Reference
+      BEGIN
+        CASE DimCaptionRef OF
+          '1':
+            BEGIN
+              IF Dim.GET(GLSetup."Global Dimension 1 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Global Dimension 1 Code") +
+                  DimOptionalParam2);
+            END;
+          '2':
+            BEGIN
+              IF Dim.GET(GLSetup."Global Dimension 2 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Global Dimension 2 Code") +
+                  DimOptionalParam2);
+            END;
+        END;
+      END;
+    '2':  // Code Caption - Shortcut Dimension using No. as Reference
+      BEGIN
+        CASE DimCaptionRef OF
+          '1':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 1 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 1 Code") +
+                  DimOptionalParam2);
+            END;
+          '2':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 2 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 2 Code") +
+                  DimOptionalParam2);
+            END;
+          '3':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 3 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 3 Code") +
+                  DimOptionalParam2);
+            END;
+          '4':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 4 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 4 Code") +
+                  DimOptionalParam2);
+            END;
+          '5':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 5 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 5 Code") +
+                  DimOptionalParam2);
+            END;
+          '6':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 6 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 6 Code") +
+                  DimOptionalParam2);
+            END;
+          '7':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 7 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 7 Code") +
+                  DimOptionalParam2);
+            END;
+          '8':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 8 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 8 Code") +
+                  DimOptionalParam2);
+            END;
+        END;
+      END;
+    '3':  // Filter Caption - Global Dimension using No. as Reference
+      BEGIN
+        CASE DimCaptionRef OF
+          '1':
+            BEGIN
+              IF Dim.GET(GLSetup."Global Dimension 1 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Global Dimension 1 Filter") +
+                  DimOptionalParam2);
+            END;
+          '2':
+            BEGIN
+              IF Dim.GET(GLSetup."Global Dimension 2 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Global Dimension 2 Filter") +
+                  DimOptionalParam2);
+            END;
+        END;
+      END;
+    '4':  // Filter Caption - Shortcut Dimension using No. as Reference
+      BEGIN
+        CASE DimCaptionRef OF
+          '1':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 1 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 1 Code") +
+                  DimOptionalParam2);
+            END;
+          '2':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 2 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 2 Code") +
+                  DimOptionalParam2);
+            END;
+          '3':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 3 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 3 Code") +
+                  DimOptionalParam2);
+            END;
+          '4':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 4 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 4 Code") +
+                  DimOptionalParam2);
+            END;
+          '5':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 5 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 5 Code") +
+                  DimOptionalParam2);
+            END;
+          '6':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 6 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 6 Code") +
+                  DimOptionalParam2);
+            END;
+          '7':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 7 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 7 Code") +
+                  DimOptionalParam2);
+            END;
+          '8':
+            BEGIN
+              IF Dim.GET(GLSetup."Shortcut Dimension 8 Code") THEN
+                EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+              ELSE
+                EXIT(
+                  DimOptionalParam1 +
+                  GLSetup.FIELDCAPTION("Shortcut Dimension 8 Code") +
+                  DimOptionalParam2);
+            END;
+        END;
+      END;
+    '5':  // Code Caption - using Dimension Code as Reference
+      BEGIN
+        IF Dim.GET(DimCaptionRef) THEN
+          EXIT(DimOptionalParam1 + Dim.GetMLCodeCaption(Language) + DimOptionalParam2)
+        ELSE
+          EXIT(DimOptionalParam1);
+      END;
+    '6':  // Filter Caption - using Dimension Code as Reference
+      BEGIN
+        IF Dim.GET(DimCaptionRef) THEN
+          EXIT(DimOptionalParam1 + Dim.GetMLFilterCaption(Language) + DimOptionalParam2)
+        ELSE
+          EXIT(DimOptionalParam1);
+      END;
+  END;
+END;
+EXIT('');
+
+VATCaptionClassTranslate(Language : Integer;CaptionExpr : Text[80]) : Text[30]
+CommaPosition := STRPOS(CaptionExpr,',');
+IF (CommaPosition > 0) THEN BEGIN
+  VATCaptionType := COPYSTR(CaptionExpr,1,CommaPosition - 1);
+  VATCaptionRef := COPYSTR(CaptionExpr,CommaPosition + 1);
+  CASE VATCaptionType OF
+    '0' : EXIT(COPYSTR(STRSUBSTNO('%1 %2',VATCaptionRef,Text016),1,30));
+    '1' : EXIT(COPYSTR(STRSUBSTNO('%1 %2',VATCaptionRef,Text017),1,30));
+  END;
+END;
+EXIT('');
+
+SetGlobalLanguage()
+WITH Language DO BEGIN
+  SETRANGE("STX File Exist",TRUE);
+  SETRANGE("Globally Enabled",TRUE);
+  IF FINDSET THEN
+    REPEAT
+      TempLanguage := Language;
+      TempLanguage.INSERT;
+    UNTIL NEXT = 0;
+  IF GET(ApplicationLanguage) THEN BEGIN
+    TempLanguage := Language;
+    IF TempLanguage.INSERT THEN;
+  END;
+END;
+
+WITH TempLanguage DO BEGIN
+  SETCURRENTKEY(Name);
+  IF GET(GLOBALLANGUAGE) THEN;
+  FORM.RUN(FORM::"Application Languages",TempLanguage);
+END;
+
+NASHandler(NASID : Text[260])
+ParamStr := UPPERCASE(NASID);
+REPEAT
+  SepPosition := STRPOS(ParamStr,',');
+  IF SepPosition > 0 THEN
+    Parameter := COPYSTR(ParamStr,1,SepPosition - 1)
+  ELSE
+    Parameter := COPYSTR(ParamStr,1);
+    IF (COPYSTR(Parameter,1,2) = 'CG') THEN BEGIN
+      IF STRPOS(Parameter,' PORT=') > 0 THEN
+        IF EVALUATE(PortNumber,COPYSTR(Parameter,STRPOS(Parameter,'=') + 1)) THEN BEGIN
+          IF (PortNumber >= 1) AND (PortNumber <= 65535) THEN
+          BEGIN
+             BizTalkNASStartup.RUN;
+             IF BizTalkNASStartup.StartTcpListen(PortNumber) THEN
+               CGNASStartedinLoop := TRUE
+             ELSE
+               CGNASStartedinLoop := FALSE
+           END ELSE
+             CGNASStartedinLoop := FALSE;
+          END;
+          IF (STRLEN(Parameter) = 2) THEN BEGIN
+            BizTalkNASStartup.RUN;
+            IF BizTalkNASStartup.StartTcpListen(0) THEN
+              CGNASStartedinLoop := TRUE
+            ELSE
+              CGNASStartedinLoop := FALSE;
+          END;
+    END;
+  IF (COPYSTR(Parameter,1,4) = 'ADCS') THEN BEGIN
+    IF STRPOS(Parameter,' ADCSID=') > 0 THEN
+      IF EVALUATE(ADCSID,COPYSTR(Parameter,STRPOS(Parameter,'=') + 1)) THEN
+        ADCSNASStartup.SetNASID(ADCSID)
+      ELSE
+        ADCSNASStartup.SetNASID('NAS1');
+    ADCSNASStartup.RUN;
+    CGNASStartedinLoop := TRUE;
+  END;
+  IF (COPYSTR(Parameter,1,4) = 'NEP-') THEN BEGIN
+    EPNASSetup.GET(Parameter);
+    IF EPNASSetup."Front End Processing" THEN BEGIN
+      EmployeePortalApplSrv.SetNASID(Parameter);
+      EmployeePortalApplSrv.RUN;
+      CGNASStartedinLoop := TRUE;
+    END;
+    IF EPNASSetup."Handle Key Exchange" THEN BEGIN
+      EmployeePortalTrustNAS.SetNASID(Parameter);
+      EmployeePortalTrustNAS.RUN;
+      CGNASStartedinLoop := TRUE;
+    END;
+  END;
+  IF CGNASStartedinLoop = FALSE THEN
+    CASE Parameter OF
+      'OSYNCH','JOBQUEUE':
+        BEGIN
+          IF NOT JobQueueSetup.GET THEN BEGIN
+            JobQueueSetup.INIT;
+            JobQueueSetup.INSERT;
+          END;
+          IF NOT JobQueueSetup."Job Queue Active" THEN BEGIN
+            JobQueueSetup.VALIDATE("Job Queue Active",TRUE);
+            JobQueueSetup.MODIFY;
+          END;
+          CODEUNIT.RUN(CODEUNIT::"Job Queue Dispacher");
+        END;
+    END;
+  ParamStr := COPYSTR(ParamStr,SepPosition + 1);
+  CGNASStartedinLoop := FALSE;
+UNTIL SepPosition = 0;
+
+GetGlobalTableTriggerMask(TableID : Integer) : Integer
+EXIT(ChangeLogMgt.GetTableTriggerMask(TableID));
+
+OnGlobalInsert(RecRef : RecordRef)
+ChangLogMgt.LogInsertion(RecRef);
+
+OnGlobalModify(RecRef : RecordRef;xRecRef : RecordRef)
+ChangLogMgt.LogModification(RecRef,xRecRef);
+
+OnGlobalDelete(RecRef : RecordRef)
+ChangLogMgt.LogDeletion(RecRef);
+
+OnGlobalRename(RecRef : RecordRef;xRecRef : RecordRef)
+ChangLogMgt.LogRename(RecRef,xRecRef);
+
+LaunchApp(DataXML : Automation "'Microsoft XML, v4.0'.DOMDocument40";StylesheetID : GUID;ApplicationXML : Automation "'Microsoft XML, v
+EXIT(AppLaunchMgt.LaunchApp(DataXML,StylesheetID,ApplicationXML));
+
+SelectStyleSheet(ObjectType : Integer;ObjectID : Integer;VAR StyleSheetID : GUID) : Boolean
+EXIT(AppLaunchMgt.SelectStyleSheet(ObjectType,ObjectID,StyleSheetID));
+
+ManageStyleSheets(ObjectType : Integer;ObjectID : Integer)
+StyleSheets.SetObject(ObjectType,ObjectID);
+StyleSheets.RUN;
+
+GetUidOffset() : Integer
+EXIT(1140000);
