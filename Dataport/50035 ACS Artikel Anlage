@@ -61,7 +61,7 @@ IF excel_datensätze > 0 THEN
       klassifizierung := Quelle_Sheet.Range(Spalte_Quelle_Klass+Quelle_j).Value;
       artgruppe := Quelle_Sheet.Range(Spalte_Quelle_Artgruppe+Quelle_j).Value;
 
-      cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+      cell_part := FindRow(Artikelname,Spalte_PL_Part);
       IF cell_part <> '' THEN
         BEGIN
           cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
@@ -231,7 +231,7 @@ IF excel_datensätze > 0 THEN
               IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                 ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
 
-              cell_part := FindRow(Artikelname,Spalte_PL_MSRP);
+              cell_part := FindRow(Artikelname,Spalte_PL_Part);
               cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
               excel_msrp := 0;
               IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
@@ -316,7 +316,7 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
     Cell := Range1.Address;
     //Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
     IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'A'))
-    OR (STRPOS(Cell,Spalte) = 0) AND (Spalte = 'F') THEN
+    OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'F')) THEN
       BEGIN
         REPEAT
           Range1 := PL_Sheet.Rows.FindNext(Range1);
