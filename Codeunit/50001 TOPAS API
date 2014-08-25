@@ -1,0 +1,1229 @@
+
+Documentation()
+================================================================================================================
+SearchFolderBuildtoOrder
+- 2014-04-02 ST Das System scannt bei Status Offen und Board ini gleich leer die Quelldatei erneut auf Board ini
+                Erkennt Besonderheit bei Median 2600 - 1. Artikelschreibweise + 2. Master und Slave SN
+                optimierte Abfragen (die Automation Error verhindert) und Einbindung der neuen Fkt. trim_text()
+
+================================================================================================================
+trim_text
+- 2014-04-02 ST released as a new function to trim a text
+
+================================================================================================================
+
+OnRun()
+
+OpenMail(MessageID : Text[60])
+//öffnet eine Mail anhand der MessageID
+IF ISCLEAR(gw) THEN
+  CREATE(gw);
+
+staticEnvID := MessageID;
+getString := 'ItemOpen("' + staticEnvID + '")';
+run := gw.Execute(getString,sResult);
+IF sResult <> '' THEN MESSAGE('Unable to open message in GroupWise...%1',sResult);
+run := gw.Execute('FocusSet(10)',sResult);
+
+IF NOT ISCLEAR(gw) THEN
+  CLEAR(gw);
+
+NewMail(to_addr : Text[120];cc_addr : Text[120];bk_addr : Code[120];subject : Text[250];body : Text[1024];AttachmentPath : Text[250];At
+//Generiert eine neue Mail
+IF ISCLEAR(gw) THEN
+  CREATE(gw);
+
+getString := 'NewMail()';
+chr := 10;
+run := gw.Execute(getString,sResult);
+IF sResult <> '' THEN MESSAGE('Unable to open a new message in GroupWise...%1',sResult);
+run := gw.Execute('ItemSetText("X00";0;"'+to_addr+'")',sResult);
+run := gw.Execute('ItemSetText("X00";2;"'+cc_addr+'")',sResult);
+run := gw.Execute('ItemSetText("X00";3;"'+bk_addr+'")',sResult);
+run := gw.Execute('ItemSetText("X00";9;"'+subject+'")',sResult);
+
+run := gw.Execute('ItemSetText("X00";10;"'+body+'")',sResult);
+IF AttachmentFile <> '' THEN
+  run := gw.Execute('AttachmentAdd("' + AttachmentPath + AttachmentFile + '")',sResult);
+//  Set the focus to the body text field
+run := gw.Execute('FocusSet(10)', sResult);
+// Select all the text in the body text field
+run := gw.Execute('PosTextTop()', sResult);
+run := gw.Execute('SelectToEndText()', sResult);
+//   change the font size
+Fontname := 'Segoe UI';
+run := gw.Execute('FontSet("' + Fontname + '";-14;400)', sResult);
+run := gw.Execute('FontBold(0)',sResult);
+run := gw.Execute('PosToEndOfText()', sResult);
+
+SLEEP(500);
+
+IF NOT ISCLEAR(gw) THEN
+  CLEAR(gw);
+
+NewMailAddMoreBody(to_addr : Text[250];cc_addr : Text[250];bk_addr : Code[20];subject : Text[250];body : Text[1024];AttachmentPath : Te
+//Generiert eine neue Mail
+IF ISCLEAR(gw) THEN
+  CREATE(gw);
+
+IF new THEN
+  BEGIN
+
+    getString := 'NewMail()';
+    chr := 10;
+    run := gw.Execute(getString,sResult);
+    IF sResult <> '' THEN MESSAGE('Unable to open a new message in GroupWise...%1',sResult);
+    run := gw.Execute('ItemSetText("X00";0;"'+to_addr+'")',sResult);
+    run := gw.Execute('ItemSetText("X00";2;"'+cc_addr+'")',sResult);
+    run := gw.Execute('ItemSetText("X00";3;"'+bk_addr+'")',sResult);
+    run := gw.Execute('ItemSetText("X00";9;"'+subject+'")',sResult);
+
+    run := gw.Execute('ItemSetText("X00";10;"'+body+'";1)',sResult);
+    IF AttachmentFile <> '' THEN
+      run := gw.Execute('AttachmentAdd("' + AttachmentPath + AttachmentFile + '")',sResult);
+    //  Set the focus to the body text field
+    run := gw.Execute('FocusSet(10)', sResult);
+    // Select all the text in the body text field
+    run := gw.Execute('PosTextTop()', sResult);
+    run := gw.Execute('SelectToEndText()', sResult);
+    //   change the font size
+    Fontname := 'Segoe UI';
+    run := gw.Execute('FontSet("' + Fontname + '";-16;400)', sResult);
+    run := gw.Execute('FontBold(0)',sResult);
+    run := gw.Execute('PosTextTop()', sResult);
+  END
+ELSE
+  BEGIN
+    run := gw.Execute('ItemSetText("X00";10;"'+body+'";1)',sResult);
+    run := gw.Execute('PosToEndOfText()', sResult);
+
+    //  Set the focus to the body text field
+    run := gw.Execute('FocusSet(10)', sResult);
+    // Select all the text in the body text field
+    run := gw.Execute('PosTextTop()', sResult);
+    run := gw.Execute('SelectToEndText()', sResult);
+    //   change the font size
+    Fontname := 'Segoe UI';
+    run := gw.Execute('FontSet("' + Fontname + '";-16;400)', sResult);
+    run := gw.Execute('FontBold(0)',sResult);
+    run := gw.Execute('PosToEndOfText()', sResult);
+
+  END;
+
+SLEEP(500);
+
+//IF close THEN
+  IF NOT ISCLEAR(gw) THEN
+    CLEAR(gw);
+
+NewGWCalEntryWithWSHScript(gwAccID : Text[30];password : Text[30];Entry : Code[10];DateFrom : Date;DateTo : Date;Text : Text[1024])
+IF (gwAccID = '') OR (Entry = '') OR (DateFrom = 0D) THEN
+  ERROR('Kalender Eintrag wird abgebrochen, da ein Übergabewert leer ist.');
+
+IF ISCLEAR(WSHScript) THEN
+  CREATE(WSHScript);
+
+Files.TEXTMODE := TRUE;
+filename := 'R:\Scripte\GroupWise\GWCalEntry.vbs';
+
+Files.CREATE(filename);
+
+Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+
+IF gwAccID = 'Urlaub' THEN
+  //calender := 'urlaub Kalender'
+  calender := ''
+ELSE
+  calender := '';
+
+FOR i:=0 TO (DateTo-DateFrom) DO
+  BEGIN
+    new_dateFrom := CALCDATE(FORMAT(i)+'T',DateFrom);
+    IF (DATE2DWY(new_dateFrom,1) <> 6) AND (DATE2DWY(new_dateFrom,1) <> 7) THEN
+      BEGIN
+        //Files.WRITE('Set gwAppt = gwAccount.Calendar.Messages.Add("GW.MESSAGE.APPOINTMENT",3)'); //Als Entwurf
+        Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.APPOINTMENT")');   //Als Message
+        Files.WRITE('gwAppt.Subject = "'+ Entry + '"');
+        Files.WRITE('gwappt.StartDate = "' + FORMAT(new_dateFrom) + ' 00:00"');
+        //Files.WRITE('gwappt.BodyText = ""');
+        Files.WRITE('gwAppt.OnCalendar = "TRUE"');
+        Files.WRITE('gwAppt.Place = "'+calender+'"');
+        Files.WRITE('gwAppt.Recipients.AddByDisplayName(gwAccount.Owner.DisplayName)');
+        Files.WRITE('gwAppt.Send');
+        //Files.Write('Set gwAppt = nothing');
+      END;
+  END;
+
+Files.CLOSE;
+
+WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
+
+SearchMailsAndOpen(gwAccID : Text[30];password : Text[30];search : Text[80]) : Boolean
+IF ISCLEAR(gwApplication) THEN
+  CREATE(gwApplication);
+
+gwAccount := gwApplication.Login('','','',1);
+//gwAccount := gwApplication.MultiLogin(gwAccID,password,'',1);
+
+gwFolder:=gwAccount.MailBox;
+searchstring := '(Subject contains "'+search+'")';
+
+//gwmessages:=gwFolder.FindMessages(searchstring);
+//Findet alle Message Typen und sucht auch mit mehreren String, funktioniert wie die normale GroupWise Suche
+gwmessages := gwAccount.AllMessages.Find(searchstring);
+IF gwmessages.Count > 0 THEN
+  BEGIN
+    IF gwmessages.Count = 1 THEN
+      BEGIN
+        themessage := gwmessages.Item(1);
+        OpenMail(themessage.MessageID);
+      END;
+    IF gwmessages.Count >= 2 THEN
+      BEGIN
+        IF CONFIRM('Die Suche ergab mehr als 2 Treffer (%1). Sollen die ersten beiden Treffern angezeigt werden?',
+        TRUE,gwmessages.Count) THEN
+          BEGIN
+            FOR i := 1 TO 2 DO BEGIN
+              themessage := gwmessages.Item(i);
+              OpenMail(themessage.MessageID);
+            END;
+          END;
+      END;
+  END
+ELSE
+  MESSAGE('Es konnten keine Mails zu dieser Suchanfrage gefunden werden.');
+
+IF NOT ISCLEAR(gwApplication) THEN
+  CLEAR(gwApplication);
+
+SearchMailsAndCount(gwAccID : Text[30];password : Text[30];search : Text[80];body : Text[250]) : Boolean
+IF ISCLEAR(gwApplication) THEN
+  CREATE(gwApplication);
+
+//gwAccount := gwApplication.Login('','','',1);
+gwAccount := gwApplication.MultiLogin(gwAccID,password,'',1);
+
+gwFolder:=gwAccount.MailBox;
+mailbox_size := gwAccount.AccountProperty(6);
+//searchstring := '(BOX_TYPE = INCOMING) AND (Subject contains "'+search+'")';
+searchstring := '(BOX_TYPE = INCOMING) AND (Subject contains "'+search+'")';
+
+//gwmessages:=gwFolder.FindMessages(searchstring);
+//Findet alle Message Typen und sucht auch mit mehreren String, funktioniert wie die normale GroupWise Suche
+gwMessages := gwAccount.MailBox.FindMessages(searchstring);
+mail_counter_unsub := gwMessages.Count;
+
+searchstring := '(BOX_TYPE = INCOMING) AND (NOT READ)';
+gwMessages := gwAccount.MailBox.FindMessages(searchstring);
+mail_counter_unread := gwMessages.Count;
+
+searchstring := '(BOX_TYPE = INCOMING)';
+gwMessages := gwAccount.MailBox.FindMessages(searchstring);
+mail_counter_mailbox := gwMessages.Count;
+
+searchstring := '';
+gwMessages := gwAccount.AllMessages.Find('(MAIL AND BOX_TYPE = INCOMING)');
+mail_counter_all := gwMessages.Count;
+
+//MESSAGE('Anzahl Suchstring %1: %2'+'\'+'Anzahl ungelesen: %3',search,message_counter_unsub,message_counter_unread);
+
+IF NOT ISCLEAR(gwApplication) THEN
+  CLEAR(gwApplication);
+
+IF ISCLEAR(WSHScript) THEN
+  CREATE(WSHScript);
+
+Files.TEXTMODE := TRUE;
+filename := 'R:\Scripte\GroupWise\GWStastic.vbs';
+
+Files.CREATE(filename);
+
+Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+
+Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
+
+Files.WRITE('gwAppt.Subject = "GroupWise Account Statistik: ' +FORMAT(gwAccID) + '"');
+Files.WRITE('gwappt.BodyText = "'+
+            'Mailbox Statistik fuer: ' + gwAccID + '" & chr(10) & chr(10) & "'+
+            'Anzahl Mailbox: ' + FORMAT(mail_counter_mailbox) +  '" & chr(10) & "' +
+            'Anzahl unsubscribe: ' + FORMAT(mail_counter_unsub) +  '" & chr(10) & "' +
+            'Anazhl ungelesen: ' + FORMAT(mail_counter_unread) + '" & chr(10) & chr(10) & "'+
+            'Anzahl empfangene Mails: ' + FORMAT(mail_counter_all) + '" & chr(10) & "' +
+            'Mailbox Groesse: ' + mailbox_size + ' MB" & chr(10) & chr(10) & "'+
+            '' + body + '"');
+Files.WRITE('gwAppt.Recipients.Add("Administrativ@topas.de")');
+//Files.WRITE('gwAppt.Attachments.Add("hier Pfad zur Datei + Dateinamen")');
+Files.WRITE('gwAppt.Send');
+
+Files.CLOSE;
+
+WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
+
+SLEEP(500)
+
+SendMailWithFile(gwAccID : Text[30];password : Text[30];to_addr1 : Text[120];to_addr2 : Text[120];to_addr3 : Text[120];to_addr4 : Text[
+IF ISCLEAR(WSHScript) THEN
+  CREATE(WSHScript);
+
+Files.TEXTMODE := TRUE;
+filename := 'R:\Scripte\GroupWise\GWStastic.vbs';
+
+Files.CREATE(filename);
+
+Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+
+Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
+
+Files.WRITE('gwAppt.Subject = "Monatsjob Navision - demnaechst auslaufende Wartungsvertraege"');
+Files.WRITE('gwappt.BodyText = '+
+'"Automatisch von Navision generiert - anbei eine Uebersicht der demnaechst auslaufenden Wartungsvertraege." & chr(10) & "'+
+'Zeitraum: '+filter1+'"');
+Files.WRITE('gwAppt.Recipients.Add("'+to_addr1+'")');
+IF to_addr2 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr2+'")');
+IF to_addr3 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr3+'")');
+IF to_addr4 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr4+'")');
+Files.WRITE('gwAppt.Attachments.Add("F:\Daten NEU\Gemeinsame Ordner\Navision\EMailVersand\'+
+            'Ablaufende Wartungsvertraege - Uebersicht.xlsx")');
+Files.WRITE('gwAppt.Send');
+
+Files.CLOSE;
+
+WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
+
+SLEEP(1000);
+
+MESSAGE('50094 Versand abgeschlossen');
+
+SearchFolderBuildtoOrder(Path : Text[250])
+CLEAR(Quelle_Excel);
+CLEAR(Quelle_Sheet);
+CLEAR(Quelle_Book);
+CLEAR(Protokoll_Excel);
+
+excel_datensätze := 0;
+//Für Tests, wenn Ordner direkt angeben wird
+//Protokollpfaddatei := 'I:\DOKU\Audiocodes\Build to Order\NAV Protokoll' + Protokolldateiname + '2012' + '.xlsx';
+//Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren (insgesamt 3 Stellen zu bearbeiten)
+//Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + '2013' + '.xlsx';
+Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + FORMAT(DATE2DMY(TODAY,3)) + '.xlsx';
+
+//********************************************************************************************
+//                               Definiert die Protokolldatei
+//********************************************************************************************
+
+IF ISCLEAR(Protokoll_Excel) THEN
+  IF CREATE (Protokoll_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+
+IF NOT EXISTS(Protokollpfaddatei) THEN
+  BEGIN
+    Protokoll_Book := Protokoll_Excel.Workbooks.Add(-4167);                // legt neue datei in excel an
+    Protokoll_Sheet := Protokoll_Excel.ActiveSheet;                        // definiert aktives worksheet
+    Protokoll_j := '2';
+
+    Protokoll_Sheet.Range('A1').Value:= 'Artikelnr';                    // Überschriften der 2. Datei
+    Protokoll_Sheet.Range('A:A').ColumnWidth := 20;
+    Protokoll_Sheet.Range('B1').Value:= '	Seriennr.';
+    Protokoll_Sheet.Range('C1').Value:= 'Board ini';
+    Protokoll_Sheet.Range('D1').Value:= '	Fehler';
+    Protokoll_Sheet.Range('D:D').ColumnWidth := 25;
+    Protokoll_Sheet.Range('E1').Value:= '	Status';
+    Protokoll_Sheet.Range('F1').Value:= '	Dateiname';
+    Protokoll_Sheet.Range('F:F').ColumnWidth := 40;
+    Protokoll_Book.SaveAs(Protokollpfaddatei,51);
+  END
+ELSE
+  BEGIN
+    Protokoll_Book := Protokoll_Excel.Workbooks._Open(Protokollpfaddatei,0,FALSE);
+    Protokoll_Sheet := Protokoll_Book.Worksheets.Item(1);
+    //excel_datensätze := Protokoll_Sheet.UsedRange.Rows.Count;
+    Protokoll_j := '1';
+
+    //Syntax wird überprüft
+    Inhalt_Spalte_F := Protokoll_Sheet.Range('F1').Value;
+    IF STRPOS(Inhalt_Spalte_F,'Dateiname') = 0 THEN
+      BEGIN
+        Protokoll_Book.Close;
+        CLEAR(Protokoll_Excel);
+        ERROR('Der Export in Zieltabelle %1 wurde abgebrochen aufgrund fehlerhafter Syntax (Spalte F1 = %2 / '+
+              'Richtig: Dateiname).',Protokollpfaddatei,Inhalt_Spalte_F);
+      END;
+
+    //Bestimmt die Einfüge-Zeilennr., damit vorhandene Datensätze nicht überschrieben werden
+    REPEAT
+      Protokoll_j := INCSTR(Protokoll_j);
+      Inhalt_Spalte_F := FORMAT(Protokoll_Sheet.Range('F'+Protokoll_j).Value);
+      IF Inhalt_Spalte_F = ''  THEN
+        BEGIN END
+      ELSE
+        Letzte_Datei := FORMAT(Protokoll_Sheet.Range('F'+Protokoll_j).Value);
+    UNTIL (Inhalt_Spalte_F = '');// AND (leerzeilen > excel_datensätze);
+    //MESSAGE(Protokoll_j);
+  END;
+
+//Für Tests, wenn Ordner direkt angeben wird
+//File.SETRANGE(Path, Path);
+//Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren
+//File.SETRANGE(Path, Path+ '\2013');
+File.SETRANGE(Path, Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)));
+File.SETRANGE("Is a file", TRUE);
+//File.SETRANGE(Name,'*.xls');
+
+IF File.FINDSET THEN BEGIN
+
+  REPEAT
+
+    //neu
+    temp_Protokoll_j := '1';
+    eintrag_fehlt := TRUE;
+    EVALUATE(i,Protokoll_j);
+    FOR k := 1 TO i DO
+      BEGIN
+        IF (FORMAT(Protokoll_Sheet.Range('F'+temp_Protokoll_j).Value) = File.Name)
+        OR (STRPOS(File.Name,'~') <> 0) OR (STRPOS(File.Name,'.tmp') <> 0) THEN
+          eintrag_fehlt := FALSE;
+        temp_Protokoll_j := INCSTR(temp_Protokoll_j);
+      END;
+
+    //IF File.Name > Letzte_Datei THEN
+
+    //neu
+    IF eintrag_fehlt = TRUE THEN
+      BEGIN
+
+    //********************************************************************************************
+    //                               Excel Datei Definitionen
+    // *******************************************************************************************
+
+    // Definiert die zu importierende Datei
+    IF ISCLEAR(Quelle_Excel) THEN
+      IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+
+    //Für Tests, wenn Ordner direkt angeben wird
+    //Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ File.Name,0,TRUE);
+    //Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren
+    //Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\2013\'+ File.Name,0,TRUE);
+    Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)) + '\'+ File.Name,0,TRUE);
+
+
+    Quelle_j:='1';
+
+    //********************************************************************************************
+    //                                Import der Tabellenblätter
+    //********************************************************************************************
+
+    arbeitsblatt := 1;
+    Quelle_Sheet := Quelle_Book.Worksheets.Item(arbeitsblatt);
+
+    Spalte[1] := 'A';
+    Spalte[2] := 'B';
+    Spalte[3] := 'C';
+    Spalte[4] := 'D';
+    Spalte[5] := 'E';
+    Spalte[6] := 'F';
+    Spalte[7] := 'G';
+    Spalte[8] := 'H';
+    Spalte[9] := 'I';
+    Spalte[10] := 'J';
+
+    Spalte_Artikelnr := '';
+    Spalte_BoardIni := '';
+    Spalte_Seriennr := '';
+    Spalte_BoardIni_inhalt := '';
+    Quelle_j := '1';
+    max_leere_zeilen := 30;
+    fehler_in_syntax := FALSE;
+    nur_module := FALSE;
+    is_slave := FALSE;
+
+    temp_artikelnr := '';
+    temp_seriennr := '';
+    temp_fehler := '';
+    Board_ini := '';
+
+    REPEAT
+
+      //*********************************************************************************************
+      //                                    Spalten bestimmen
+      //*********************************************************************************************
+
+      IF Spalte_Artikelnr = '' THEN
+        BEGIN
+           FOR k := 1 TO 6 DO
+             BEGIN
+               IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) <= 40 THEN
+                 BEGIN
+                   //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
+                   IF LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur_module' THEN
+                     nur_module := TRUE;
+                   IF STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'slave') <> 0 THEN
+                     is_slave := TRUE;
+                   Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value));
+                   IF Artikel.FINDFIRST AND (Artikel."No." <> '') THEN
+                     BEGIN
+                       Spalte_Artikelnr := Spalte[k];
+                       //Kann sein, dass die Seriennr. nicht benachbart steht
+                       FOR i:= 1 TO 4 DO
+                         BEGIN
+                           IF (FORMAT(Quelle_Sheet.Range(Spalte[k+i]+Quelle_j).Value) <> '') AND 
+                           (STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k+i]+Quelle_j).Value)) <= 20) THEN
+                             BEGIN
+                               excel_test_seriennr := FORMAT(Quelle_Sheet.Range(
+                               Spalte[k+i]+Quelle_j).Value);   //temp Hilfe
+                               SystemPos.RESET;
+                               SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                               SystemPos.SETFILTER("Seriennr.",'%1',excel_test_seriennr);
+                               IF SystemPos.FINDFIRST THEN
+                                 Spalte_Seriennr := Spalte[k+i];
+                             END;
+                         END;
+                       //Ansonsten nimm die benachbarte Spalte, damit die Spalte gefüllt ist, Fehlermeldung wird dann später gesetzt
+                       IF Spalte_Seriennr = '' THEN
+                         IF (STRPOS(FORMAT(Quelle_Sheet.Range(Spalte[k+1]+Quelle_j).Value),'GTPM') = 0) THEN
+                           Spalte_Seriennr := Spalte[k+1]
+                         ELSE
+                           Spalte_Seriennr := Spalte[k+2];
+                     END;
+                 END;
+             END;
+        END;
+
+      IF Spalte_BoardIni = '' THEN
+        BEGIN
+          FOR k := 1 TO 10 DO
+            BEGIN
+               IF (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value))),'BOARD') <> 0) OR
+               (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value))),'BOARD:')  <> 0) THEN
+                BEGIN
+                  Spalte_BoardIni := Spalte[k];
+                  Spalte_BoardIni_inhalt := Spalte[k+1];
+                END;
+            END;
+        END;
+
+      //*********************************************************************************************
+      //                                    Inhalt auslesen
+      //*********************************************************************************************
+
+      IF (Spalte_Artikelnr <> '') AND (Spalte_Seriennr <> '') THEN
+        BEGIN
+
+          IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
+            BEGIN
+              Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+              IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+              OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT'))  THEN
+                BEGIN
+                  temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value);
+                  temp_seriennr := FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value);
+                  IF (FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value) <> temp_seriennr)
+                  AND (temp_artikelnr <> '') AND (temp_seriennr <> '') AND (Board_ini = '') THEN
+                    BEGIN
+                      Protokoll_Sheet.Range('A'+Protokoll_j).Value := temp_artikelnr;
+                      Protokoll_Sheet.Range('B'+Protokoll_j).Value := temp_seriennr;
+                      Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Board ini nicht gefunden';
+                      IF is_slave THEN
+                        BEGIN
+                          Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+                          Protokoll_Sheet.Range('G'+Protokoll_j).Value := 'slave';
+                        END
+                      ELSE
+                        Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'Offen';
+                      Protokoll_Sheet.Range('F'+Protokoll_j).Value := File.Name;
+                      Protokoll_j := INCSTR(Protokoll_j);
+                    END;
+                   excel_test_seriennr := FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value);
+                   SystemPos.RESET;
+                   SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                   SystemPos.SETFILTER("Seriennr.",'%1',excel_test_seriennr);
+                   IF SystemPos.FINDFIRST THEN
+                     BEGIN END
+                   ELSE
+                     BEGIN
+                       //Schaut nach, ob dies ein SOR Beleg ist und setzt die Position auf OK, da SOR Aufträge keine
+                       //Systemverträge werden
+                         SeriennrVerfolgung.SETRANGE("Entry Type",SeriennrVerfolgung."Entry Type" :: Sale);
+                         //Sonderfall Mediant 2600
+                         IF FORMAT(Protokoll_Sheet.Range('A'+Protokoll_j).Value) = 'M2600-11/100/Red/AC' THEN
+                           SeriennrVerfolgung.SETRANGE("Item No.",'M26-11/100/R/AC')
+                         ELSE
+                           SeriennrVerfolgung.SETRANGE("Item No.",FORMAT(Protokoll_Sheet.Range('A'+Protokoll_j).Value));
+                         SeriennrVerfolgung.SETRANGE("Serial No.",FORMAT(Protokoll_Sheet.Range('B'+Protokoll_j).Value));
+                         SeriennrVerfolgung.SETRANGE("Item Tracking",SeriennrVerfolgung."Item Tracking" :: "Serial No.");
+                         IF SeriennrVerfolgung.FINDLAST THEN
+                           BEGIN
+                             Lieferschein.SETRANGE("No.",SeriennrVerfolgung."Document No.");
+                             IF (Lieferschein.FINDFIRST) AND (STRPOS(Lieferschein."Payment Terms Code",'SOR') <> 0) THEN
+                               BEGIN
+                                 Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+                                 Protokoll_Sheet.Range('G'+Protokoll_j).Value := 'SOR';
+                               END
+                             ELSE
+                               temp_fehler := 'Systempos. noch nicht vorhanden';
+                           END
+                         ELSE
+                           temp_fehler := 'Systempos. noch nicht vorhanden'
+                     END;
+                END;
+            END;
+        END;
+
+      IF (Spalte_BoardIni <> '') THEN
+        BEGIN
+          IF (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD') <> 0) OR
+          (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD:') <> 0) THEN
+            BEGIN
+              IF (Spalte_Artikelnr = '') OR (Spalte_Seriennr = '') THEN
+                fehler_in_syntax := TRUE;
+
+              Protokoll_Sheet.Range('A'+Protokoll_j).Value := temp_artikelnr;
+              Protokoll_Sheet.Range('B'+Protokoll_j).Value := temp_seriennr;
+              Protokoll_Sheet.Range('F'+Protokoll_j).Value := File.Name;
+              EVALUATE(Board_ini,FORMAT(Quelle_Sheet.Range(Spalte_BoardIni_inhalt+Quelle_j).Value));
+              Board_ini := DELCHR(Board_ini,'=','.');
+
+              IF fehler_in_syntax = FALSE THEN
+                BEGIN
+                  SystemPos.RESET;
+                  SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                  SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                  //Sonderfall Mediant 2600
+                  IF temp_artikelnr = 'M2600-11/100/Red/AC' THEN temp_artikelnr := 'M26-11/100/R/AC';
+                  SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',temp_artikelnr);
+                  SystemPos.SETFILTER("Seriennr.",'%1',temp_seriennr);
+                  IF SystemPos.FINDLAST THEN
+                    BEGIN 
+                      IF SystemPos."Board ini" <> '' THEN
+                        Protokoll_Sheet.Range('G'+Protokoll_j).Value := 'Board ini bereits vorhanden';
+                      SystemPos."Board ini" := Board_ini;
+                      SystemPos.MODIFY;
+                      Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+                      IF SystemPos.COUNT > 1 THEN
+                        Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'SN mehrmals vorhanden ' + FORMAT(SystemPos.COUNT);
+                    END
+                  ELSE
+                    BEGIN
+                      IF temp_fehler = '' THEN
+                        Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Artikel lautet anders oder inaktiv';
+                      Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'Offen';
+                    END;
+
+                  IF Board_ini <> '' THEN
+                    Protokoll_Sheet.Range('C'+Protokoll_j).Value := Board_ini
+                  ELSE
+                    BEGIN
+                      temp_fehler := 'Board ini leer ' + temp_fehler;
+                      Protokoll_Sheet.Range('D'+Protokoll_j).Value := temp_fehler;
+                    END;
+                  Protokoll_Sheet.Range('D'+Protokoll_j).Value := temp_fehler;
+                  IF is_slave THEN
+                    BEGIN
+                      Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+                      Protokoll_Sheet.Range('G'+Protokoll_j).Value := 'slave';
+                      is_slave := FALSE;
+                    END
+                END
+              ELSE
+                BEGIN
+                  Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Syntaxfehler in Datei';
+                  Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'Offen';
+                END;
+              Protokoll_j := INCSTR(Protokoll_j);
+              temp_artikelnr := '';
+              temp_seriennr := '';
+              temp_fehler := '';
+              //MESSAGE('Seriennr.: %1, Board ini: %2',temp_seriennr,Board_ini);
+            END
+          ELSE
+            BEGIN
+              IF fehler_in_syntax = FALSE THEN
+                BEGIN
+                  IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
+                    BEGIN
+                      Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                      IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND 
+                      (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') THEN
+                        Board_ini := '';
+                    END;
+                END;
+            END;
+        END;
+
+      //*********************************************************************************************
+      //                                       Abbruchbedingung
+      //*********************************************************************************************
+
+      // Wenn in der Quelldatei 30 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+      IF (FORMAT(Quelle_Sheet.Range('A'+Quelle_j).Value) = '') AND
+      (FORMAT(Quelle_Sheet.Range('B'+Quelle_j).Value) = '') THEN // erkennt das Ende   der Excel Datei
+         BEGIN
+           leere_zeilen := leere_zeilen+1;
+         END
+         ELSE
+         BEGIN
+           leere_zeilen :=0;
+         END;
+
+      Quelle_j:=INCSTR(Quelle_j);                                    // nächste Zeile Importdatei
+
+      IF (leere_zeilen = max_leere_zeilen) AND ((Spalte_BoardIni = '')
+      OR ((temp_seriennr <> '') AND (temp_artikelnr <> '') AND (Board_ini = ''))) THEN
+        BEGIN
+          Protokoll_Sheet.Range('A'+Protokoll_j).Value := temp_artikelnr;
+          Protokoll_Sheet.Range('B'+Protokoll_j).Value := temp_seriennr;
+          IF nur_module THEN
+            BEGIN
+             Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Nur Module';
+             Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+            END
+          ELSE
+            BEGIN
+              Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Board ini nicht gefunden';
+              Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'Offen';
+            END;
+          Protokoll_Sheet.Range('F'+Protokoll_j).Value := File.Name;
+          Protokoll_j := INCSTR(Protokoll_j);
+        END;
+
+    UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = max_leere_zeilen);  // Nach 30 Zeilen ohne Daten ist Schluss
+
+  //Quelle_Excel.Visible(TRUE);
+  Quelle_Book.Close;
+
+  //*********************************************************************************************
+  //                Automation Server clearen, Laufzeitfehler unterbinden
+  //*********************************************************************************************
+
+    END;
+  UNTIL File.NEXT = 0;
+
+  IF NOT ISCLEAR(Quelle_Excel) THEN
+    CLEAR(Quelle_Excel);
+
+  //*********************************************************************************************
+  //                Durchlauf Protokoll Datei, um Status offen zu korrigieren
+  //                  Z.B. wenn Seriennr. erst viel später ausgebucht werden
+  //*********************************************************************************************
+
+  temp_artikelnr := '';
+  temp_Protokoll_j := '1';
+  EVALUATE(i,Protokoll_j);
+  FOR k := 1 TO i DO
+    BEGIN
+      IF FORMAT(Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value) = 'Offen' THEN
+        BEGIN
+          temp_artikelnr := FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value);
+          temp_seriennr  := FORMAT(Protokoll_Sheet.Range('B'+temp_Protokoll_j).Value);
+          //Sonderfall Mediant 2600
+          IF temp_artikelnr = 'M2600-11/100/Red/AC' THEN temp_artikelnr := 'M26-11/100/R/AC';
+          SystemPos.RESET;
+          SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+          SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+          SystemPos.SETFILTER("Artikelnr. 2",'%1', temp_artikelnr);
+          SystemPos.SETFILTER("Seriennr.",'%1', temp_seriennr);
+          IF (SystemPos.FINDLAST) AND (SystemPos."Seriennr." <> '') THEN
+            BEGIN 
+
+              //Sucht die Build ini in der Quelldatei neu!!!!!!!!!!!!!!!!!!
+              //****************** In Entwicklung**************************
+
+              IF FORMAT(Protokoll_Sheet.Range('C'+temp_Protokoll_j).Value) = '' THEN
+                BEGIN
+                  IF ISCLEAR(Quelle_Excel) THEN
+                    IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+                  Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)) + 
+                  '\'+ FORMAT(Protokoll_Sheet.Range('F'+temp_Protokoll_j).Value),0,TRUE);
+
+                  Quelle_j:='1';
+
+                  //********************************************************************************************
+                  //                                Import der Tabellenblätter
+                  //********************************************************************************************
+
+            
+                  arbeitsblatt := 1;
+                  Quelle_Sheet := Quelle_Book.Worksheets.Item(arbeitsblatt);
+
+                  Spalte[1] := 'A';
+                  Spalte[2] := 'B';
+                  Spalte[3] := 'C';
+                  Spalte[4] := 'D';
+                  Spalte[5] := 'E';
+                  Spalte[6] := 'F';
+                  Spalte[7] := 'G';
+                  Spalte[8] := 'H';
+                  Spalte[9] := 'I';
+                  Spalte[10] := 'J';
+
+                  Spalte_Artikelnr := '';
+                  Spalte_BoardIni := '';
+                  Spalte_Seriennr := '';
+                  Spalte_BoardIni_inhalt := '';
+                  Quelle_j := '1';
+                  max_leere_zeilen := 30;
+                  nur_module := FALSE;
+                  system_in_excel_gefunden := FALSE;
+
+                  Board_ini := '';
+
+                  REPEAT
+
+                    IF Spalte_Artikelnr = '' THEN
+                      BEGIN
+                         FOR k := 1 TO 6 DO
+                           BEGIN
+                             IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) <= 40 THEN
+                               BEGIN
+                                 //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
+                                 IF LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur_module' THEN
+                                   nur_module := TRUE;
+                                 Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value));
+                                 IF Artikel.FINDFIRST AND (Artikel."No." <> '') THEN
+                                   BEGIN
+                                     Spalte_Artikelnr := Spalte[k];
+                                     //Kann sein, dass die Seriennr. nicht benachbart steht
+                                     FOR i:= 1 TO 4 DO
+                                       BEGIN
+                                         IF (FORMAT(Quelle_Sheet.Range(Spalte[k+i]+Quelle_j).Value) <> '') AND 
+                                         (STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k+i]+Quelle_j).Value)) <= 20) THEN
+                                           BEGIN
+                                             excel_test_seriennr := FORMAT(Quelle_Sheet.Range(
+                                             Spalte[k+i]+Quelle_j).Value);   //temp Hilfe
+                                             SystemPos.RESET;
+                                             SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                                             SystemPos.SETFILTER("Seriennr.",'%1',excel_test_seriennr);
+                                             IF SystemPos.FINDFIRST THEN
+                                               Spalte_Seriennr := Spalte[k+i];
+                                           END;
+                                       END;
+                                     //Ansonsten nimm die benachbarte Spalte, damit die Spalte gefüllt ist,
+                                     //Fehlermeldung wird dann später gesetzt
+                                     IF Spalte_Seriennr = '' THEN
+                                       IF (STRPOS(FORMAT(Quelle_Sheet.Range(Spalte[k+1]+Quelle_j).Value),'GTPM') = 0) THEN
+                                         Spalte_Seriennr := Spalte[k+1]
+                                       ELSE
+                                         Spalte_Seriennr := Spalte[k+2];
+                                   END;
+                               END;
+                           END;
+                      END;
+
+                    IF Spalte_BoardIni = '' THEN
+                      BEGIN
+                        FOR k := 1 TO 10 DO
+                          BEGIN
+                             IF (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value))),'BOARD') <> 0) OR
+                             (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value))),'BOARD:')  <> 0) THEN
+                              BEGIN
+                                Spalte_BoardIni := Spalte[k];
+                                Spalte_BoardIni_inhalt := Spalte[k+1];
+                              END;
+                          END;
+                      END;
+
+                    //*********************************************************************************************
+                    //                                    Inhalt auslesen
+                    //*********************************************************************************************
+
+                    //Wenn die Spalten Artikelnr und Seriennr bestimmt wurden, kann mit dem Auslesen begonnen werden
+                    IF (Spalte_Artikelnr <> '') AND (Spalte_Seriennr <> '') THEN
+                      BEGIN
+
+                        IF (temp_artikelnr = FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) AND
+                         (temp_seriennr = FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value)) THEN
+                           BEGIN
+                             system_in_excel_gefunden := TRUE;
+                           END;
+
+                        IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
+                          BEGIN
+                            Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                            IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
+                              BEGIN
+                                IF (temp_artikelnr <> FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) OR
+                                 (temp_seriennr <> FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value)) THEN
+                                  system_in_excel_gefunden := FALSE;
+                              END;
+                          END;
+
+                        IF  (Spalte_BoardIni <> '') THEN
+                          BEGIN
+                            IF ((STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD') <> 0)
+                            OR (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD:') <> 0))
+                            AND (system_in_excel_gefunden) THEN
+                              BEGIN
+
+                                EVALUATE(Board_ini,FORMAT(Quelle_Sheet.Range(Spalte_BoardIni_inhalt+Quelle_j).Value));
+                                Board_ini := DELCHR(Board_ini,'=','.');
+
+                                IF Board_ini <> '' THEN
+                                  BEGIN
+                                    SystemPos.RESET;
+                                    SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                                    SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                    SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',temp_artikelnr);
+                                    SystemPos.SETFILTER("Seriennr.",'%1',temp_seriennr);
+                                    IF SystemPos.FINDLAST THEN
+                                      BEGIN 
+                                        IF SystemPos."Board ini" <> '' THEN
+                                          Protokoll_Sheet.Range('G'+temp_Protokoll_j).Value := 'Board ini bereits vorhanden';
+                                        SystemPos."Board ini" := Board_ini;
+                                        SystemPos.MODIFY(TRUE);
+                                        Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                                        IF SystemPos.COUNT > 1 THEN
+                                          Protokoll_Sheet.Range('J'+temp_Protokoll_j).Value := 'SN mehrmals vorhanden ' +
+                                          FORMAT(SystemPos.COUNT);
+                                      END;
+
+                                    IF Board_ini <> '' THEN
+                                      BEGIN
+                                        Protokoll_Sheet.Range('C'+temp_Protokoll_j).Value := Board_ini;
+                                        suchstring := 'Board ini leer';
+                                        IF STRPOS(FORMAT(Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value),suchstring) <> 0 THEN
+                                          BEGIN
+                                            Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := trim_text(
+                                            FORMAT(Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value),suchstring);
+                                          END;
+                                      END;
+                                  END;
+                                              
+                                temp_artikelnr := '';
+                                temp_seriennr := '';
+                                system_in_excel_gefunden := FALSE;   //wird zurückgesetzt
+                              END;
+                          END;
+
+                        IF nur_module THEN
+                          BEGIN
+                           Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := 'Nur Module';
+                           Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                          END
+
+                      END;
+
+                    //*********************************************************************************************
+                    //                                       Abbruchbedingung
+                    //*********************************************************************************************
+
+                    // Wenn in der Quelldatei 6 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+                    IF (FORMAT(Quelle_Sheet.Range('A'+Quelle_j).Value) = '') AND
+                    (FORMAT(Quelle_Sheet.Range('B'+Quelle_j).Value) = '') THEN // erkennt das Ende   der Excel Datei
+                       BEGIN
+                         leere_zeilen := leere_zeilen+1;
+                       END
+                       ELSE
+                       BEGIN
+                         leere_zeilen :=0;
+                       END;
+
+                    Quelle_j:=INCSTR(Quelle_j);                                    // nächste Zeile Importdatei
+
+                  UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = max_leere_zeilen);  // Nach 30 Zeilen ohne Daten ist Schluss
+
+                  Quelle_Book.Close;
+
+                  //IF NOT ISCLEAR(Quelle_Excel) THEN
+                  //  CLEAR(Quelle_Excel);
+
+                END
+              ELSE
+                //Trägt die bereits in der Protokoll-Datei vermerkte Board ini im System nach
+                BEGIN
+                  IF SystemPos."Board ini" <> '' THEN
+                    Protokoll_Sheet.Range('G'+temp_Protokoll_j).Value := 'Board ini bereits vorhanden';
+                  EVALUATE(Board_ini,FORMAT(Protokoll_Sheet.Range('C'+temp_Protokoll_j).Value));
+                  Board_ini := DELCHR(Board_ini,'=','.');
+                  IF Board_ini <> '' THEN
+                    BEGIN
+                      SystemPos."Board ini" := Board_ini;
+                      SystemPos.MODIFY;
+                      Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                    END;
+                  suchstring := 'Systempos. noch nicht vorhanden';
+                  IF STRPOS(FORMAT(Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value),suchstring) <> 0 THEN
+                    BEGIN
+                      Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value :=
+                      trim_text(FORMAT(Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value),suchstring);
+                    END;
+                END;
+            END
+          ELSE
+            //Schaut nach, ob dies ein SOR Beleg ist und setzt die Position auf OK, da SOR Aufträge keine Systemverträge werden
+            BEGIN
+              SeriennrVerfolgung.SETRANGE("Entry Type",SeriennrVerfolgung."Entry Type" :: Sale);
+              SeriennrVerfolgung.SETRANGE("Item No.",FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value));
+              SeriennrVerfolgung.SETRANGE("Serial No.",FORMAT(Protokoll_Sheet.Range('B'+temp_Protokoll_j).Value));
+              SeriennrVerfolgung.SETRANGE("Item Tracking",SeriennrVerfolgung."Item Tracking" :: "Serial No.");
+              IF SeriennrVerfolgung.FINDLAST THEN
+                BEGIN
+                  Lieferschein.SETRANGE("No.",SeriennrVerfolgung."Document No.");
+                  IF (Lieferschein.FINDFIRST) AND (STRPOS(Lieferschein."Payment Terms Code",'SOR') <> 0) THEN
+                    BEGIN
+                      Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                      Protokoll_Sheet.Range('G'+temp_Protokoll_j).Value := 'SOR';
+                    END;
+                END;
+            END;
+        END;
+      temp_Protokoll_j := INCSTR(temp_Protokoll_j);
+    END;
+
+  Protokoll_Book.Save;
+  //Protokoll_Excel.Visible(TRUE);
+  Protokoll_Book.Close;
+
+END;
+
+SearchFolderByFilename()
+
+DataLinkChecker()
+InfoFileF.TEXTMODE := TRUE;
+InfoFileF.CREATE('R:\Navision\Fehlerprotokolle\RecordLink Fehler.txt');
+
+chr := 10;
+//VerkTab.SETFILTER(Code,'%1','BP');
+IF VerkTab.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      bodytext[1] := '##### DIESE E-MAIL WURDE AUTOMATISCH AUS NAVISION ERZEUGT. #####' + FORMAT(chr) +
+      'Für bessere Lesbarkeit empfiehlt es sich die Mail zu maximieren.' + FORMAT(chr) +
+      'Bitte korrigiere die Dateipfade oder lösche ggf. den nachfolgendenden Link aus NAV. Hinweis: Zuerst steht immer der ' +
+      'Tabellen Datensatz, darunter dann der fehlerhafte Pfad. Links, die nicht aufgefunden werden konnten, bitte ' +
+      'zurückschicken.' + FORMAT(chr) +
+      'Tipp: Es kann sein, dass der Ordner umbenannt, komplett verschoben oder die Datei umbenannt / gelöscht wurde.' + FORMAT(chr)+
+      'Generell: Pfade wie C:\ oder D:\ sind ungeeignet. Benutze bitte immer die Tauschlaufwerke.' + FORMAT(chr) + FORMAT(chr);
+      bodytext[2] := FORMAT(chr) + '';
+      bodytext[3] := FORMAT(chr) + '';
+      bodytext[4] := FORMAT(chr) + '';
+      bodytext[5] := FORMAT(chr) + '';
+      fehler := FALSE;
+      k := 1;
+
+      DataLink.SETRANGE(DataLink."User ID",VerkTab.Code);
+      IF DataLink.FINDFIRST THEN
+        REPEAT
+          IF NOT EXISTS(DataLink.URL1) AND (STRPOS(DataLink.URL1,'www.') = 0) THEN
+            BEGIN
+              fehler := TRUE;
+              InfoFileF.WRITE(FORMAT(DataLink."Record ID") + ' Datei: ' + DataLink.URL1+ ' konnte nicht gefunden werden.');
+              //ERROR('%1 konnte nicht gefunden werden.',DataLink.URL1);
+              IF STRLEN(FORMAT(bodytext[k]) + FORMAT(DataLink."Record ID") + ' ' + zusatztext[1] + ' ,Datei: ' +
+              FORMAT(chr) + '    [' + DataLink.URL1 + zusatztext[2] + ']' + FORMAT(chr)) > 1024 THEN
+                k += 1;
+
+              zusatztext[1] := '';
+              zusatztext[2] := '';
+
+              IF STRPOS(FORMAT(DataLink."Record ID"),'Memozeile:') = 1 THEN
+                BEGIN
+                  Memokopf.SETFILTER("Memonr.",'%1',COPYSTR(FORMAT(DataLink."Record ID"),12,8));
+                  IF Memokopf.FINDFIRST THEN
+                    IF Memokopf."Mandantennr." <> '' THEN
+                      zusatztext[1] := 'Kontaktnr. ' + Memokopf."Mandantennr."
+                    ELSE
+                      IF Memokopf."Kampagnennr." <> '' THEN
+                        zusatztext[1] := 'Projektnr. ' + Memokopf."Kampagnennr.";
+                END;
+
+              IF STRPOS(FORMAT(DataLink."Record ID"),'Memokopf:') = 1 THEN
+                BEGIN
+                  Memokopf.SETFILTER("Memonr.",'%1',COPYSTR(FORMAT(DataLink."Record ID"),11,8));
+                  IF Memokopf.FINDFIRST THEN
+                    IF Memokopf."Mandantennr." <> '' THEN
+                      zusatztext[1] := 'Kontaktnr. '
+                    ELSE
+                      IF Memokopf."Kampagnennr." <> '' THEN
+                        zusatztext[1] := 'Projektnr. '
+                END;
+
+              IF  DataLink.URL1 = '' THEN
+                zusatztext[2] := '*Der DATEIPFAD ist LEER, bitte LÖSCHEN!!!';
+              bodytext[k] := bodytext[k] + FORMAT(DataLink."Record ID") + ' ' + zusatztext[1] +
+              ' ,Datei: ' + FORMAT(chr) + '    [' + DataLink.URL1 + zusatztext[2] + ']' + FORMAT(chr);
+            END;
+        UNTIL DataLink.NEXT = 0;
+
+        IF fehler THEN  BEGIN
+          IF bodytext[1] <> '' THEN
+            NewMailAddMoreBody(VerkTab."E-Mail",'','',
+            'Die Pfade folgender Links im Navision (Büroklammer Funktion) stimmen nicht mehr',bodytext[1],'','',TRUE,FALSE);
+          IF bodytext[2] <> '' THEN
+            NewMailAddMoreBody('','','','',bodytext[2],'','',FALSE,FALSE);
+          IF bodytext[3] <> '' THEN
+            NewMailAddMoreBody('','','','',bodytext[3],'','',FALSE,FALSE);
+        END;
+
+    UNTIL VerkTab.NEXT = 0;
+  END;
+
+InfoFileF.CLOSE;
+
+SalutationText(v_salutation : Code[10];v_language : Code[10];v_surname : Text[30]) : Text[80]
+SalutationFormula.SETFILTER("Salutation Code",v_salutation);
+SalutationFormula.SETFILTER("Language Code",v_language);
+SalutationFormula.SETFILTER("Salutation Type",'%1',SalutationFormula."Salutation Type" :: Formal);
+IF SalutationFormula.FINDFIRST THEN
+  BEGIN
+    IF (v_salutation ='MANDANT') OR (v_salutation ='') THEN
+      EXIT(SalutationFormula.Salutation)
+    ELSE
+      EXIT(DELCHR(SalutationFormula.Salutation,'=','%1') + v_surname +',');
+  END;
+
+CTICall("Mobile No." : Text[30];Name : Text[50];"Company Name" : Text[50])
+//25.02.2014-ST CTI Anbindung Kontakt Karte Hörer etc.
+timeout := 30;
+IF CONFIRM(Text100,TRUE,Name) THEN
+  BEGIN
+    CREATE(CTI);
+    CTI.Open(TRUE,timeout);
+    CTI.Dial("Mobile No.",Name,"Company Name",FALSE,TRUE,timeout);
+    CLEAR(CTI);
+  END;
+
+SaveToPDF(Object : Text[30];DocNo : Code[20];Path : Text[1000];ReportID : Integer;user_DefaultPrinter : Text[200])
+IF ISCLEAR(PDFCreator) THEN
+  BEGIN
+    CREATE(PDFCreator);
+    SLEEP(1000);
+  END;
+
+IF ISCLEAR(PDFCreatorError) THEN
+CREATE(PDFCreatorError);
+
+IF ISCLEAR(PDFCreatorOption) THEN
+  BEGIN
+    CREATE(PDFCreatorOption);
+    SLEEP(1000);
+  END;
+
+filename := DocNo;
+
+IF (Object = 'Auftrag') OR (Object = 'Angebot') THEN
+  BEGIN
+    SalesHeader.SETRANGE("No.",DocNo);
+    SalesHeader.FINDFIRST;
+  END;
+
+IF Object = 'Rechnung' THEN
+  BEGIN
+    Invoice.SETRANGE("No.",DocNo);
+    Invoice.FINDFIRST;
+  END;
+
+IF Object = 'Bestellung' THEN
+  BEGIN
+    PurchaseOrder.SETRANGE("No.",DocNo);
+    PurchaseOrder.FINDFIRST;
+  END;
+
+IF Object = 'Servicevertrag' THEN
+  BEGIN
+    ServiceContract.SETRANGE("Wartungsvertragsnr.",DocNo);
+    ServiceContract.FINDFIRST;
+  END;
+
+PDFCreatorError := PDFCreator.cError;
+
+Window.OPEN('generiere PDF zu Beleg...########1',filename);
+WindowIsOpen := TRUE;
+
+IF PDFCreator.cStart('/NoProcessingAtStartup',TRUE) = FALSE THEN
+ERROR('Status: Error[' + FORMAT(PDFCreatorError.Number) + ']: ' + PDFCreatorError.Description);
+filename :=CONVERTSTR(FORMAT(filename),'.','_');
+filename := CONVERTSTR(FORMAT(filename),'/','_');
+attach_location := Path+filename;
+
+PDFCreatorOption := PDFCreator.cOptions;
+PDFCreatorOption.AutosaveDirectory := Path;
+PDFCreatorOption.AutosaveFilename := filename;
+PDFCreatorOption.UseAutosave := 1;
+PDFCreatorOption.UseAutosaveDirectory := 1;
+PDFCreatorOption.AutosaveFormat := 0;
+PDFCreator.cOptions := PDFCreatorOption;
+PDFCreator.cClearCache();
+DefaultPrinter := user_DefaultPrinter;
+IF PDFCreator.cDefaultPrinter <> 'PDFCreator' THEN
+  PDFCreator.cDefaultPrinter := 'PDFCreator';
+PDFCreator.cPrinterStop := FALSE;
+
+IF (Object = 'Auftrag') OR (Object = 'Angebot') THEN
+  REPORT.RUNMODAL(ReportID,FALSE,TRUE,SalesHeader);
+
+IF Object = 'Rechnung' THEN
+  REPORT.RUNMODAL(ReportID,FALSE,TRUE,Invoice);
+
+IF Object = 'Bestellung' THEN
+  REPORT.RUNMODAL(ReportID,FALSE,TRUE,PurchaseOrder);
+
+IF Object = 'Servicevertrag' THEN
+  REPORT.RUNMODAL(ReportID,FALSE,TRUE,ServiceContract);
+
+REPEAT
+  SLEEP(1000);
+  WaitTime += 1000;
+  IF WaitTime = 15000 THEN
+  ERROR('Timeout error beim Warten auf PDFCreator.cIsConverted! Bitte die Navision Anwendung neustarten.');
+UNTIL PDFCreator.cIsConverted;
+
+//Wird später durch die Function PDFCreator::eReady() übernommen
+//PDFCreator.cDefaultPrinter := DefaultPrinter;
+
+trim_text(all_text : Text[1024];text_to_trim : Text[120]) : Text[1024]
+EXIT(COPYSTR(all_text,1,STRPOS(all_text,text_to_trim)-1) +
+COPYSTR(all_text,STRPOS(all_text,text_to_trim) + STRLEN(text_to_trim)));
+
+ConvertStrToNum(string : Text[250]) : Integer
+EVALUATE(num,DELCHR(string,'=',DELCHR(string,'=','0123456789')));
+EXIT(num);
+
+CalculateTimeDiff(Type : Code[10];Startdate : Date;Enddate : Date) : Integer
+IF (Startdate = 0D) OR (Enddate = 0D) THEN
+  EXIT(0);
+
+CASE Type OF
+//Ermittelt die Monatsdifferenz
+'M' :
+  diff :=  ABS((DATE2DMY(Enddate,3) - DATE2DMY(Startdate,3))*12 + DATE2DMY(Enddate,2)-
+  DATE2DMY(Startdate,2));
+END;
+
+EXIT(diff);
+
+PDFCreator::eReady()
+PDFCreator.cPrinterStop := TRUE;
+
+PDFCreatorOption.AutosaveDirectory := '';
+PDFCreatorOption.AutosaveFilename := '';
+PDFCreatorOption.UseAutosave := 0;
+PDFCreatorOption.UseAutosaveDirectory := 0;
+
+PDFCreator.cErrorClear;
+PDFCreator.cClearCache;
+PDFCreator.cDefaultPrinter := DefaultPrinter;
+
+PDFCreator.cClose;
+
+IF PDFCreator.cIsClosed THEN
+  MESSAGE('PDF Prozess möglicherweise nicht geschlossen');
+IF WindowIsOpen THEN
+  Window.CLOSE;
+WindowIsOpen := FALSE;
+
+CLEAR(PDFCreator);
+REPEAT
+UNTIL ISCLEAR(PDFCreator);
+CLEAR(PDFCreatorError);
+REPEAT
+UNTIL ISCLEAR(PDFCreatorError);
+CLEAR(PDFCreatorOption);
+REPEAT
+UNTIL ISCLEAR(PDFCreatorOption);
+
+PDFCreator::eError()
+ERROR('Status: Error[' + FORMAT(PDFCreatorError.Number) + ']: ' + PDFCreatorError.Description);
