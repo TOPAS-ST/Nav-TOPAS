@@ -2591,7 +2591,8 @@ IF (Ermittle_Servicegruppe.FINDFIRST) AND (Ermittle_Servicegruppe."Einordnung Se
                 PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: Service);
                 PrüfeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'>%1',WORKDATE);
                 PrüfeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',TempSystemTab."Wartungsvertragsnr.");
-                PrüfeLizenzTab.SETFILTER("Zu exportieren",'%1',TRUE);
+                //PrüfeLizenzTab.SETFILTER("Zu exportieren",'%1',TRUE);
+                PrüfeLizenzTab.SETFILTER(Basisgerät,'%1',TRUE);
                 PrüfeLizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
                 PrüfeLizenzTab.ASCENDING(FALSE);
                 IF PrüfeLizenzTab.FINDFIRST THEN
