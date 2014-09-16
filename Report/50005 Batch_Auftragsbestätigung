@@ -1,0 +1,263 @@
+
+Documentation()
+# 12-03-2014 ST Anpassung an PDFCreator API, so dass die Dokumente nicht mehr manuell gespeichert werden müssen
+
+Report - OnInitReport()
+AttachmentPath := 'F:\Daten NEU\Gemeinsame Ordner\Customer Service\EMailVersand\';
+
+CLEAR(DefaultPrinter);
+IF ISCLEAR(DefaultPrinter) THEN
+CREATE(DefaultPrinter);
+IF DefaultPrinter.cStart('/NoProcessingAtStartup',TRUE) = FALSE THEN
+  ERROR('Unbekannter PDF Creator Fehler - Programm wird abgebrochen.');
+user_DefaultPrinter := DefaultPrinter.cDefaultPrinter;
+//DefaultPrinter.cClearCache();
+DefaultPrinter.cClose;
+CLEAR(DefaultPrinter);
+REPEAT
+UNTIL ISCLEAR(DefaultPrinter);
+
+Änd_Best_PDF:=TRUE;
+Änd_Best_Druck:=TRUE;
+Best_PDF:=TRUE;
+Best_Druck:=TRUE;
+IF DATE2DWY(WORKDATE, 1) = 1 THEN
+  BEGIN
+    // letzter Arbeitstag war Freitag
+    Tagesdatum:=WORKDATE-3;
+  END
+  ELSE
+  BEGIN
+    Tagesdatum:=WORKDATE-1;
+  END;
+
+Report - OnPreReport()
+IF Best_Druck THEN
+  BEGIN
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',FALSE);
+    IF "sales header".FINDFIRST THEN
+       BEGIN
+//  Druckt auf Papier nur mit Logo rechts oben
+         REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
+
+//  Druckt auf Briefpapier mit Geschäftsführung, Adresse, Telefon, Moody-Logo am unteren Rand
+//         REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
+       END;
+  END;
+
+
+
+IF Änd_Best_Druck THEN
+  BEGIN
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',FALSE);
+    IF "sales header".FINDFIRST THEN
+       BEGIN
+//  Druckt auf Papier nur mit Logo rechts oben
+         REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
+//  Druckt auf Briefpapier mit Geschäftsführung, Adresse, Telefon, Moody-Logo am unteren Rand
+//       REPORT.RUNMODAL(50111,FALSE,FALSE,"sales header");
+       END;
+  END;
+
+
+
+
+IF Best_PDF THEN
+  BEGIN
+   // Druckt Seite 2 auf Papier
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+    IF "sales header".FINDFIRST THEN
+       BEGIN
+         REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
+ //    REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
+       END;
+
+    // Druck als PDF
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+
+    // Alten Stand sichern
+    "Printer selection".RESET;
+    "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+    "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50075);
+    IF "Printer selection".FINDFIRST() THEN
+      BEGIN
+        original_50075 := "Printer selection"."Printer Name";
+        "Printer selection"."Printer Name" := 'PDFCreator';
+        "Printer selection".MODIFY(TRUE);
+      END;
+
+     IF "sales header".FINDFIRST THEN
+       BEGIN
+         REPEAT
+            sales_header2.RESET;
+            sales_header2.SETFILTER(sales_header2."No.",'%1',"sales header"."No.");
+
+            IF sales_header2.FINDFIRST THEN 
+            //REPORT.RUNMODAL(50075,FALSE,FALSE,sales_header2);
+            PDFCreator.SaveToPDF('Auftrag',sales_header2."No.",AttachmentPath,50075,user_DefaultPrinter);
+            //MESSAGE('Auftragsnummer %1, E-Mail Adresse %2',"sales header"."No.","sales header"."AB via EMail-Adresse");
+            UNTIL "sales header".NEXT = 0
+       END;
+
+    // Alten Stand zurücksichern
+    "Printer selection".RESET;
+    "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+    "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50075);
+    IF "Printer selection".FINDFIRST() THEN
+      BEGIN
+        "Printer selection"."Printer Name" := original_50075;
+        "Printer selection".MODIFY(TRUE);
+      END;
+
+  END;
+
+
+
+IF Änd_Best_PDF THEN
+  BEGIN
+  // Druckt Seite 2 auf Papier
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+    IF "sales header".FINDFIRST THEN
+       BEGIN
+         REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
+       END;
+
+    // Druck als PDF
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+
+    // Alten Stand sichern
+    "Printer selection".RESET;
+    "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+    "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50098);
+    IF "Printer selection".FINDFIRST() THEN
+      BEGIN
+        original_50098 := "Printer selection"."Printer Name";
+        "Printer selection"."Printer Name" := 'PDFCreator';
+        "Printer selection".MODIFY(TRUE);
+      END;
+
+     IF "sales header".FINDFIRST THEN
+       BEGIN
+         REPEAT
+            sales_header2.RESET;
+            sales_header2.SETFILTER(sales_header2."No.",'%1',"sales header"."No.");
+
+            IF sales_header2.FINDFIRST THEN 
+            //REPORT.RUNMODAL(50098,FALSE,FALSE,sales_header2);
+            PDFCreator.SaveToPDF('Auftrag',sales_header2."No.",AttachmentPath,50098,user_DefaultPrinter);
+            //MESSAGE('Auftragsnummer %1, E-Mail Adresse %2',"sales header"."No.","sales header"."AB via EMail-Adresse");
+         UNTIL "sales header".NEXT = 0
+       END;
+
+    // Alten Stand zurücksichern
+    "Printer selection".RESET;
+    "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+    "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50098);
+    IF "Printer selection".FINDFIRST() THEN
+      BEGIN
+        "Printer selection"."Printer Name" := original_50098;
+        "Printer selection".MODIFY(TRUE);
+      END;
+
+  END;
+
+COMMIT;
+
+Report - OnPostReport()
+//Für Auftragsbesätigung
+IF Best_PDF THEN
+  BEGIN
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+    IF "sales header".FINDFIRST THEN
+      BEGIN
+        //IF CONFIRM('Auftragsbestätigung: Wurden alle PDFs vollständig abgelegt?',TRUE) THEN
+          //BEGIN
+            chr := 10;
+            REPEAT
+              IF "sales header"."Language Code" <> 'ENU' THEN
+                BEGIN
+                  body := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                          'vielen Dank für Ihre Bestellung. Anbei finden Sie Ihre Auftragsbestätigung.';
+                  subject := 'Auftragsbestätigung: ';
+                END
+              ELSE
+                BEGIN
+                  body := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                          'thank you for your order. Attached you will find your order confirmation.';
+                  subject := 'Order confirmation: ';
+                END;
+              TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
+              "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
+            UNTIL "sales header".NEXT = 0;
+          //END;
+      END;
+  END;
+
+//Für AB Änderung
+IF Änd_Best_PDF THEN
+  BEGIN
+    "sales header".RESET;
+    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+    "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
+    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+    IF "sales header".FINDFIRST THEN
+      BEGIN
+        //IF CONFIRM('Änderungs-ABs: Wurden alle PDFs vollständig abgelegt?',TRUE) THEN
+          //BEGIN
+            chr := 10;
+            REPEAT
+              IF "sales header"."Language Code" <> 'ENU' THEN
+                BEGIN
+                  body := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                          'anbei erhalten Sie die geänderte Auftragsbestätigung.';
+                  subject := 'Änderungs-Auftragsbestätigung: ';
+                END
+              ELSE
+                BEGIN
+                  body := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                          'attached you will find a change order confirmation.';
+                  subject := 'Change order confirmation: ';
+                END;
+              TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
+              "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
+            UNTIL "sales header".NEXT = 0;
+          //END;
+      END;
+  END;
+
+Report - OnCreateHyperlink(VAR URL : Text[1024])
+
+Report - OnHyperlink(URL : Text[1024])
