@@ -37,7 +37,7 @@ IF Best_Druck THEN
     "sales header".RESET;
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',FALSE);
     IF "sales header".FINDFIRST THEN
        BEGIN
@@ -57,7 +57,7 @@ IF Änd_Best_Druck THEN
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
     "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',FALSE);
     IF "sales header".FINDFIRST THEN
        BEGIN
@@ -77,7 +77,7 @@ IF Best_PDF THEN
     "sales header".RESET;
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
        BEGIN
@@ -89,7 +89,7 @@ IF Best_PDF THEN
     "sales header".RESET;
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
 
     // Alten Stand sichern
@@ -137,7 +137,7 @@ IF Änd_Best_PDF THEN
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
     "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
        BEGIN
@@ -149,7 +149,7 @@ IF Änd_Best_PDF THEN
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
     "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
 
     // Alten Stand sichern
@@ -197,7 +197,7 @@ IF Best_PDF THEN
     "sales header".RESET;
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
       BEGIN
@@ -231,7 +231,7 @@ IF Änd_Best_PDF THEN
     "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
     "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
     "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'<>%1','MUST');
+    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
       BEGIN
