@@ -4658,7 +4658,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             Artikel.SETFILTER("No.",'%1',AktBelegZeile."No.");
             IF Artikel.FINDFIRST THEN
               BEGIN
-                BesterVkPreis := FindMSRP(AktBelegZeile."No.",WORKDATE,AktBelegZeile."Currency Code",
+                BesterVkPreis := FindMSRP(AktBelegZeile."No.",WORKDATE,Währung,
                                           AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
                 IF BesterVkPreis <> 0 THEN
                   BEGIN
@@ -4727,11 +4727,12 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             Vkliefzeile.SETFILTER(Type,'%1',Vkliefzeile.Type :: Item);
             IF Vkliefzeile.FINDFIRST THEN
               BEGIN
+                Vkliefzeile.CALCFIELDS("Currency Code");
                 Artikel.RESET;
                 Artikel.SETFILTER("No.",'%1',Vkliefzeile."No.");
                 IF Artikel.FINDFIRST THEN
                   BEGIN
-                    BesterVkPreis := FindMSRP(Vkliefzeile."No.",WORKDATE,Vkliefzeile."Currency Code",
+                    BesterVkPreis := FindMSRP(Vkliefzeile."No.",WORKDATE,Währung,
                                               Vkliefzeile."Unit of Measure Code","SUP Artikelnr",ACTS);
                     IF BesterVkPreis <> 0 THEN
                       BEGIN
@@ -4805,7 +4806,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
            Artikel.SETFILTER("No.",'%1',"Basis Artikelnr");
            IF Artikel.FINDFIRST THEN
              BEGIN
-               BesterVkPreis := FindMSRP("Basis Artikelnr",WORKDATE,AktBelegZeile."Currency Code",
+               BesterVkPreis := FindMSRP("Basis Artikelnr",WORKDATE,Währung,
                                          AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
                IF BesterVkPreis <> 0 THEN
                  BEGIN
