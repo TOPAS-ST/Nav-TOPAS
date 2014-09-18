@@ -25,6 +25,8 @@ Form - OnNextRecord(Steps : Integer) : Integer
 Form - OnAfterGetRecord()
 KalkFehlerPrüfen;
 
+diff := TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum);
+
 Form - OnAfterGetCurrRecord()
 IF "Nachträgliche Service Order" = TRUE THEN
   CurrForm.btn_auswahl_sn.VISIBLE := TRUE
@@ -672,6 +674,9 @@ IF Rec.HASFILTER THEN
         AND (ChampRelaDoc."Menge kalk." > 1) THEN
           ERROR(Text001);
 
+        IF (ChampRelaDoc."Wartungsvertragsnr." <> '') AND (ChampRelaDoc."Vertragsnr. übernommen" <> '') THEN
+          ERROR(Text019);
+
         ChampRelaDoc.TESTFIELD(Laufzeit);
         ChampRelaDoc.TESTFIELD("Menge kalk.");
 
@@ -688,7 +693,7 @@ IF Rec.HASFILTER THEN
                 EVALUATE(v_laufzeit,COPYSTR(ChampRelaDoc.Laufzeit,1,STRPOS(ChampRelaDoc.Laufzeit,'M')-1));
                 champ_price_einzeln := "AU-Zeile".Gen_Service_VK(ChampRelaDoc."SUP Artikelnr.",
                 ChampRelaDoc."Geräte Artikelnr.",v_laufzeit,ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
-                ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz);
+                ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz,Belegzeile."Currency Code");
                 ChampRelaDoc."Service VK-Preis einzeln" := champ_price_einzeln;
                 ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
                 champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
@@ -713,11 +718,12 @@ IF Rec.HASFILTER THEN
                 "Lief-Zeile".SETFILTER("Manufacturer Code",'%1','59');
                 IF "Lief-Zeile".FINDFIRST THEN
                   BEGIN
+                    "Lief-Zeile".CALCFIELDS("Currency Code");
                     EVALUATE(v_laufzeit,COPYSTR(ChampRelaDoc.Laufzeit,1,STRPOS(ChampRelaDoc.Laufzeit,'M')-1));
                     //Funktion im Lieferschein einbauen???
                     champ_price_einzeln := "AU-Zeile".Gen_Service_VK(ChampRelaDoc."SUP Artikelnr.",
                     ChampRelaDoc."Geräte Artikelnr.",v_laufzeit,ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
-                    ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz);
+                    ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz,Belegzeile."Currency Code");
                     ChampRelaDoc."Service VK-Preis einzeln" := champ_price_einzeln;
                     ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
                     champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
@@ -740,7 +746,7 @@ IF Rec.HASFILTER THEN
             EVALUATE(v_laufzeit,COPYSTR(ChampRelaDoc.Laufzeit,1,STRPOS(ChampRelaDoc.Laufzeit,'M')-1));
             champ_price_einzeln := "AU-Zeile".Gen_Service_VK(ChampRelaDoc."SUP Artikelnr.",
             ChampRelaDoc."Geräte Artikelnr.",v_laufzeit,ChampRelaDoc."Nr.",ChampRelaDoc."Zeilennr.",
-            ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz);
+            ChampRelaDoc.Fremderwerb,ChampRelaDoc.Basisgerät,FALSE,kalk_prozentsatz,Belegzeile."Currency Code");
             ChampRelaDoc."Service VK-Preis einzeln" := champ_price_einzeln;
             ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
             champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
@@ -1140,18 +1146,18 @@ IF ChampRelaDoc.FINDFIRST THEN
     ServicePos.SETFILTER(Inaktiv,'%1',FALSE);
     IF ServicePos.FINDFIRST THEN
       BEGIN
+        text_array[1] := Sheet.Range('A2').Value;
+        IF STRPOS(text_array[1],ServicePos."Urspr. Lieferscheinnr.") = 0 THEN
+          IF STRPOS(text_array[1],'LS') > 0 THEN
+            text_array[1] := text_array[1] + ', ' + ServicePos."Urspr. Lieferscheinnr."
+          ELSE
+            text_array[1] := text_array[1] + ServicePos."Urspr. Lieferscheinnr.";
+        Sheet.Range('A2').Value := text_array[1];
+
+        k := 1;
+        text_array[3] := ChampRelaDoc."Geräte Artikelnr.";
+
         REPEAT
-
-          text_array[1] := Sheet.Range('A2').Value;
-          IF STRPOS(text_array[1],ServicePos."Urspr. Lieferscheinnr.") = 0 THEN
-            IF STRPOS(text_array[1],'LS') > 0 THEN
-              text_array[1] := text_array[1] + ', ' + ServicePos."Urspr. Lieferscheinnr."
-            ELSE
-              text_array[1] := text_array[1] + ServicePos."Urspr. Lieferscheinnr.";
-          Sheet.Range('A2').Value := text_array[1];
-
-          k := 1;
-          text_array[3] := ChampRelaDoc."Geräte Artikelnr.";
 
           IF STRLEN(text_array[3]) = STRLEN(ChampRelaDoc."Geräte Artikelnr.") THEN
             BEGIN
