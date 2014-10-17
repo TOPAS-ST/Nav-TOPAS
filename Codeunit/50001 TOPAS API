@@ -277,10 +277,20 @@ Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","
 
 Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
 
-Files.WRITE('gwAppt.Subject = "Monatsjob Navision - demnaechst auslaufende Wartungsvertraege"');
-Files.WRITE('gwappt.BodyText = '+
-'"Automatisch von Navision generiert - anbei eine Uebersicht der demnaechst auslaufenden Wartungsvertraege." & chr(10) & "'+
-'Zeitraum: '+filter1+'"');
+IF expired = TRUE THEN
+  BEGIN
+    Files.WRITE('gwAppt.Subject = "Monatsjob Navision - ausgelaufene Wartungsvertraege"');
+    Files.WRITE('gwappt.BodyText = '+
+    '"Automatisch von Navision generiert - anbei eine Uebersicht der ausgelaufenen Wartungsvertraege." & chr(10) & "'+
+    'Zeitraum: '+filter1+'"');
+  END
+ELSE
+  BEGIN
+    Files.WRITE('gwAppt.Subject = "Monatsjob Navision - demnaechst auslaufende Wartungsvertraege"');
+    Files.WRITE('gwappt.BodyText = '+
+    '"Automatisch von Navision generiert - anbei eine Uebersicht der demnaechst auslaufenden Wartungsvertraege." & chr(10) & "'+
+    'Zeitraum: '+filter1+'"');
+  END;
 Files.WRITE('gwAppt.Recipients.Add("'+to_addr1+'")');
 IF to_addr2 <> '' THEN
   Files.WRITE('gwAppt.Recipients.Add("'+to_addr2+'")');
@@ -288,8 +298,8 @@ IF to_addr3 <> '' THEN
   Files.WRITE('gwAppt.Recipients.Add("'+to_addr3+'")');
 IF to_addr4 <> '' THEN
   Files.WRITE('gwAppt.Recipients.Add("'+to_addr4+'")');
-Files.WRITE('gwAppt.Attachments.Add("F:\Daten NEU\Gemeinsame Ordner\Navision\EMailVersand\'+
-            'Ablaufende Wartungsvertraege - Uebersicht.xlsx")');
+
+Files.WRITE('gwAppt.Attachments.Add("'+AttPath+'")');
 Files.WRITE('gwAppt.Send');
 
 Files.CLOSE;
@@ -463,8 +473,10 @@ IF File.FINDSET THEN BEGIN
                      nur_module := TRUE;
                    IF STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'slave') <> 0 THEN
                      is_slave := TRUE;
-                   Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value));
-                   IF Artikel.FINDFIRST AND (Artikel."No." <> '') THEN
+                   temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
+                   //Sonderfall Mediant 2600
+                   Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
+                   IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                      BEGIN
                        Spalte_Artikelnr := Spalte[k];
                        //Kann sein, dass die Seriennr. nicht benachbart steht
@@ -719,6 +731,21 @@ IF File.FINDSET THEN BEGIN
         BEGIN
           temp_artikelnr := FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value);
           temp_seriennr  := FORMAT(Protokoll_Sheet.Range('B'+temp_Protokoll_j).Value);
+          //Schaut nach, ob dies ein SOR Beleg ist und setzt die Position auf OK, da SOR Aufträge keine Systemverträge werden
+          SeriennrVerfolgung.SETRANGE("Entry Type",SeriennrVerfolgung."Entry Type" :: Sale);
+          SeriennrVerfolgung.SETRANGE("Item No.",FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value));
+          SeriennrVerfolgung.SETRANGE("Serial No.",FORMAT(Protokoll_Sheet.Range('B'+temp_Protokoll_j).Value));
+          SeriennrVerfolgung.SETRANGE("Item Tracking",SeriennrVerfolgung."Item Tracking" :: "Serial No.");
+          IF SeriennrVerfolgung.FINDLAST THEN
+            BEGIN
+              Lieferschein.SETRANGE("No.",SeriennrVerfolgung."Document No.");
+              IF (Lieferschein.FINDFIRST) AND (STRPOS(Lieferschein."Payment Terms Code",'SOR') <> 0) THEN
+                BEGIN
+                  Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                  Protokoll_Sheet.Range('G'+temp_Protokoll_j).Value := 'SOR';
+                END;
+            END;
+
           //Sonderfall Mediant 2600
           IF temp_artikelnr = 'M2600-11/100/Red/AC' THEN temp_artikelnr := 'M26-11/100/R/AC';
           SystemPos.RESET;
@@ -727,7 +754,7 @@ IF File.FINDSET THEN BEGIN
           SystemPos.SETFILTER("Artikelnr. 2",'%1', temp_artikelnr);
           SystemPos.SETFILTER("Seriennr.",'%1', temp_seriennr);
           IF (SystemPos.FINDLAST) AND (SystemPos."Seriennr." <> '') THEN
-            BEGIN 
+            BEGIN
 
               //Sucht die Build ini in der Quelldatei neu!!!!!!!!!!!!!!!!!!
               //****************** In Entwicklung**************************
@@ -782,8 +809,10 @@ IF File.FINDSET THEN BEGIN
                                  //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
                                  IF LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur_module' THEN
                                    nur_module := TRUE;
-                                 Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value));
-                                 IF Artikel.FINDFIRST AND (Artikel."No." <> '') THEN
+                                 temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
+                                 //Sonderfall Mediant 2600
+                                 Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
+                                 IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                                    BEGIN
                                      Spalte_Artikelnr := Spalte[k];
                                      //Kann sein, dass die Seriennr. nicht benachbart steht
@@ -866,7 +895,9 @@ IF File.FINDSET THEN BEGIN
                                     SystemPos.RESET;
                                     SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
                                     SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
-                                    SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',temp_artikelnr);
+                                    //Sonderfall M2600
+                                    IF temp_artikelnr <> 'M2600' THEN
+                                      SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',temp_artikelnr);
                                     SystemPos.SETFILTER("Seriennr.",'%1',temp_seriennr);
                                     IF SystemPos.FINDLAST THEN
                                       BEGIN 
@@ -951,27 +982,10 @@ IF File.FINDSET THEN BEGIN
                       trim_text(FORMAT(Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value),suchstring);
                     END;
                 END;
-            END
-          ELSE
-            //Schaut nach, ob dies ein SOR Beleg ist und setzt die Position auf OK, da SOR Aufträge keine Systemverträge werden
-            BEGIN
-              SeriennrVerfolgung.SETRANGE("Entry Type",SeriennrVerfolgung."Entry Type" :: Sale);
-              SeriennrVerfolgung.SETRANGE("Item No.",FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value));
-              SeriennrVerfolgung.SETRANGE("Serial No.",FORMAT(Protokoll_Sheet.Range('B'+temp_Protokoll_j).Value));
-              SeriennrVerfolgung.SETRANGE("Item Tracking",SeriennrVerfolgung."Item Tracking" :: "Serial No.");
-              IF SeriennrVerfolgung.FINDLAST THEN
-                BEGIN
-                  Lieferschein.SETRANGE("No.",SeriennrVerfolgung."Document No.");
-                  IF (Lieferschein.FINDFIRST) AND (STRPOS(Lieferschein."Payment Terms Code",'SOR') <> 0) THEN
-                    BEGIN
-                      Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
-                      Protokoll_Sheet.Range('G'+temp_Protokoll_j).Value := 'SOR';
-                    END;
-                END;
             END;
-        END;
-      temp_Protokoll_j := INCSTR(temp_Protokoll_j);
-    END;
+          END;
+        temp_Protokoll_j := INCSTR(temp_Protokoll_j);
+      END;
 
   Protokoll_Book.Save;
   //Protokoll_Excel.Visible(TRUE);
