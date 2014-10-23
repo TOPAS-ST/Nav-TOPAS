@@ -89,7 +89,8 @@ AND (Lizenzdatum <> 0D)THEN
   BEGIN
     Benutzername := Benutzername_generieren("Artikelnr.","SUP Artikelnr.","Seriennr.","Urspr. Lieferscheinnr.",
     "Urspr. Lieferscheinzeilennr.");
-    Passwort := Passwort_generieren("Artikelnr.",Benutzername,"Seriennr.",Lizenzdatum);
+    IF Benutzername <> '' THEN
+      Passwort := Passwort_generieren("Artikelnr.",Benutzername,"Seriennr.",Lizenzdatum);
   END;
 
 Artikelnr. - OnLookup()
