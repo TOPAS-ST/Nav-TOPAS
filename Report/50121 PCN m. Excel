@@ -1,0 +1,948 @@
+
+Documentation()
+####TOPAS 10.07.2012-ST
+PCN Datenaufbereitung
+
+Schnittstelle zum BulkMailer
+Feld [User1] = PCN Betreff (Excel User1)
+Feld [User2] = Linie (Excel User2)
+Feld [User5] = Artikelnr. + Deb. Artikelnr. im HTML Format (Excel User5) ca. 30.000 Zeichen möglich im BulkMailer
+
+Report - OnInitReport()
+
+Report - OnPreReport()
+//IF Speicherort = '' THEN
+//  ERROR('Report kann noch nicht ohne Liste gefahren werden. Versuchen Sie es später erneut.');
+
+IF Speicherort <> '' THEN
+  BEGIN
+
+    IF such_algorith = such_algorith :: " " THEN
+      ERROR('Bitte geben Sie den Such Algorithmus an.');
+
+    // Definiert die zu importierende Datei
+    CREATE (Excel);
+    Book := Excel.Workbooks._Open(Speicherort,0,TRUE);
+    Sheet := Excel.ActiveSheet;
+    j:='1';
+    Window.OPEN(Text003);
+
+    REPEAT
+      IF FORMAT(Sheet.Range(Spalte_Artikel+j).Value) <> '' THEN
+        BEGIN
+          PCN_Abgleich.INIT;
+          PCN_Abgleich.Tabelle := 'PCN';
+          //PCN_Abgleich.Index := Sheet.Range(Spalte_Artikel+j).Value;
+          PCN_Abgleich.Index := j;
+          artikel_temp := Sheet.Range(Spalte_Artikel+j).Value;
+          Artikel.RESET;
+          Artikel.SETRANGE("No. 2",'IDT'+artikel_temp);
+          IF Artikel.FINDFIRST THEN
+            PCN_Abgleich."Feld 3" := Artikel."No. 2"
+          ELSE
+            Artikel.SETRANGE("No. 2",'ICS'+artikel_temp);
+            IF Artikel.FINDFIRST THEN
+              PCN_Abgleich."Feld 3" := Artikel."No. 2"
+            ELSE
+              PCN_Abgleich."Feld 3" := Sheet.Range(Spalte_Artikel+j).Value;
+          PCN_Abgleich.Uhrzeit := CURRENTDATETIME;
+          PCN_Abgleich.User := USERID;
+          Window.UPDATE(1,PCN_Abgleich."Feld 3");
+          PCN_Abgleich.INSERT;
+        END;
+
+       //*********************************************************************************************
+       // Abbruchbedingung
+       // Wenn in der Quelldatei 2 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+       IF FORMAT(Sheet.Range(Spalte_Artikel+j).Value) = '' THEN                         // erkennt das Ende der Excel Datei
+          BEGIN
+            anzahl_zeilen := anzahl_zeilen+1;
+          END
+          ELSE
+          BEGIN
+            anzahl_zeilen :=0;
+          END;
+
+      j:=INCSTR(j);                                                 // nächste Zeile Importdatei
+
+    UNTIL (anzahl_zeilen = 2);  // Nach 2 Zeilen ohne Artikel ist Schluss
+
+    //COMMIT;
+
+//    Excel.Quit;
+    CLEAR(Excel);
+    Window.CLOSE;
+  END;
+
+
+CREATE (Excel);                                              //erzeugt excel
+Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+Sheet.Range('A1').Value := 'Kunden-Nr';                          // definiert die beschriftung der überschriftszeile
+Sheet.Range('B1').Value := 'Debitor';
+Sheet.Range('C1').Value := 'Debitor2';
+Sheet.Range('D1').Value := 'Strasse';
+Sheet.Range('E1').Value := 'Strasse2';
+Sheet.Range('F1').Value := 'PLZ';
+Sheet.Range('G1').Value := 'Ort';
+Sheet.Range('H1').Value := 'Artikel';
+Sheet.Range('I1').Value := 'Debitor Artikelnr.';
+Sheet.Range('J1').Value := 'Belegnr';
+Sheet.Range('K1').Value := 'Belegdatum';
+Sheet.Range('L1').Value := 'Lieferdatum';
+Sheet.Range('M1').Value := 'Email-Adresse';
+Sheet.Range('N1').Value := 'User1';
+Sheet.Range('O1').Value := 'User2';
+Sheet.Range('P1').Value := 'User5';
+Sheet.Range('R1').Value := 'Mail Text';
+Sheet.Range('R:R').ColumnWidth := 50;
+
+
+j := '1';                                                    // <- Import in excel ab Zeile 2
+
+Report - OnPostReport()
+Excel.Visible (TRUE);
+
+IF Speicherort = '' THEN
+  PCN_Ausgabe_ohne_Liste
+ELSE
+  PCN_Ausgabe_mit_Liste;
+
+Report - OnCreateHyperlink(VAR URL : Text[1024])
+
+Report - OnHyperlink(URL : Text[1024])
+
+PCN_Ausgabe_ohne_Liste()
+
+InvHeader.RESET;
+InvHeader.SETCURRENTKEY("Sell-to Customer No.","No.");
+InvHeader.SETFILTER(InvHeader."Sell-to Customer No.","Deb-Nr");
+//InvHeader.SETFILTER(InvHeader."Sell-to Customer No.",'%1|%2|%3','921102','921360','921361');
+InvHeader.SETFILTER(InvHeader."Betreuer Innendienst",Betreuer);
+InvHeader.SETFILTER(InvHeader."Salesperson Code",Verkcode);
+InvHeader.SETFILTER(InvHeader."Territory Code",Gebcode);
+IF (PstDateFrom <> 0D) AND (PstDateTo = 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'>=%1',PstDateFrom);
+IF (PstDateFrom = 0D) AND (PstDateTo <> 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'<=%1',PstDateTo);
+IF (PstDateFrom <> 0D) AND (PstDateTo <> 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'>=%1&<=%2',PstDateFrom,PstDateTo);
+IF InvHeader.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      InvLine.RESET;
+      InvLine.SETFILTER(Type,'%1',InvLine.Type :: Item);
+      IF keine_muster THEN
+        InvLine.SETFILTER("Location Code",'<>%1','MUST');
+      InvLine.SETFILTER("Document No.",'%1',InvHeader."No.");
+      InvLine.SETFILTER("Manufacturer Code",Herstellercode);
+      InvLine.SETFILTER("No.",Artikelnr);
+      InvLine.SETFILTER(Quantity,'>%1',0);
+      IF InvLine.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            IF (InvLine.Quantity > 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss) = 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss2) = 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss3) = 0) THEN
+              BEGIN
+                IF debnr <> InvHeader."Sell-to Customer No." THEN
+                  BEGIN
+
+                    j := INCSTR (j);
+
+                    //***************************************************************************
+                    //     Feld für Artikelnr. und Deb. Artikelnr. Andruck im HTML Schreiben
+                    //***************************************************************************
+
+                    deb_artnr := '';
+                    ArtRef.RESET;
+                    ArtRef.SETFILTER("Item No.",'%1',InvLine."No.");
+                    ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                    ArtRef.SETFILTER("Cross-Reference Type No.",'%1',InvHeader."Sell-to Customer No.");
+                    IF ArtRef.FINDFIRST THEN
+                      REPEAT
+                        IF ArtRef."Cross-Reference No." <> '' THEN
+                          BEGIN
+                            IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                              deb_artnr := 'DIVERSE'
+                            ELSE
+                              deb_artnr := ArtRef."Cross-Reference No.";
+                          END;
+                      UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                    test_user5 := InvLine."No.";
+
+                    Sheet.Range('A'+j).Value := InvHeader."Sell-to Customer No.";
+                    Sheet.Range('B'+j).Value := InvHeader."Sell-to Customer Name";
+                    Sheet.Range('C'+j).Value := InvHeader."Sell-to Customer Name 2";
+                    Sheet.Range('D'+j).Value := InvHeader."Sell-to Address";
+                    Sheet.Range('E'+j).Value := InvHeader."Sell-to Address 2";
+                    Sheet.Range('F'+j).Value := InvHeader."Sell-to Post Code";
+                    Sheet.Range('G'+j).Value := InvHeader."Sell-to City";
+                    Sheet.Range('H'+j).Value := InvLine."Artikelnr. 2";
+                    Sheet.Range('I'+j).Value := deb_artnr;
+                    Sheet.Range('J'+j).Value := InvLine."Document No.";
+                    IF (InvLine."Posting Date" <> 0D)  AND (InvLine."Posting Date" > 010100D)
+                       THEN Sheet.Range('K'+j).Value := InvLine."Posting Date";
+                    IF (InvLine."Shipment Date" <> 0D) AND (InvLine."Shipment Date" > 010100D) THEN
+                      Sheet.Range('L'+j).Value := InvLine."Shipment Date";
+
+                    email:='';
+                    ContRela.SETFILTER(ContRela."No.",InvLine."Sell-to Customer No.");
+                    IF ContRela.FINDFIRST THEN BEGIN
+                      Cont.SETFILTER(Cont."Company No.",ContRela."Contact No.");
+                      Cont.SETFILTER("Unternehmen verlassen",'%1',FALSE);
+                      IF Cont.FINDFIRST THEN 
+                        BEGIN
+                          REPEAT
+                            pcn.RESET;
+                            pcn.SETFILTER(pcn."Contact No.",'=%1',Cont."No.");
+                            pcn.SETFILTER(pcn."Job Responsibility Code",'=%1','PCN-EOL');
+                            IF pcn.FINDFIRST THEN
+                              REPEAT
+                                IF email = '' THEN
+                                  email := Cont."E-Mail"
+                                ELSE
+                                  IF STRPOS(email,Cont."E-Mail") = 0 THEN
+                                    email := email + '; ' + Cont."E-Mail";
+                              UNTIL pcn.NEXT = 0;
+                              IF email <> '' THEN
+                                Sheet.Range('M'+j).Value := email;
+                          UNTIL (Cont.NEXT = 0) OR (email <> '');
+                        END;
+                      END;
+                    Sheet.Range('N'+j).Value := PCN_text;
+                    Sheet.Range('O'+j).Value := Linie;
+                    Sheet.Range('P'+j).Value := user5[1];
+
+                    debnr := InvHeader."Sell-to Customer No.";
+                  END
+                ELSE
+                  BEGIN
+                    IF STRPOS(test_user5,InvLine."Artikelnr. 2") = 0 THEN
+                      BEGIN
+
+                        deb_artnr := '';
+                        ArtRef.RESET;
+                        ArtRef.SETFILTER("Item No.",'%1',InvLine."No.");
+                        ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                        ArtRef.SETFILTER("Cross-Reference Type No.",'%1',InvHeader."Sell-to Customer No.");
+                        IF ArtRef.FINDFIRST THEN
+                          REPEAT
+                            IF ArtRef."Cross-Reference No." <> '' THEN
+                              BEGIN
+                                IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                  deb_artnr := 'DIVERSE'
+                                ELSE
+                                  deb_artnr := ArtRef."Cross-Reference No."
+                              END;
+                          UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                        test_user5 := test_user5 + InvLine."Artikelnr. 2";
+                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + InvLine."Artikelnr. 2";
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+
+                      END;
+                  END;
+              END;
+          UNTIL InvLine.NEXT = 0;
+        END;
+    UNTIL InvHeader.NEXT = 0;
+  END;
+
+debnr := '';
+
+SalesHeader.RESET;
+SalesHeader.SETCURRENTKEY("Sell-to Customer No.","Order Date");
+SalesHeader.SETFILTER(SalesHeader."Document Type",'%1|%2',SalesHeader."Document Type" :: Order,
+                      SalesHeader."Document Type" :: "Blanket Order");
+SalesHeader.SETFILTER(SalesHeader."Sell-to Customer No.","Deb-Nr");
+//SalesHeader.SETFILTER(SalesHeader."Sell-to Customer No.",'%1|%2|%3','100367','100760','710760');
+SalesHeader.SETFILTER(SalesHeader."Betreuer Innendienst",Betreuer);
+SalesHeader.SETFILTER(SalesHeader."Salesperson Code",Verkcode);
+SalesHeader.SETFILTER(SalesHeader."Territory Code",Gebcode);
+IF (PstDateFrom <> 0D) AND (PstDateTo = 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1',PstDateFrom);
+IF (PstDateFrom = 0D) AND (PstDateTo <> 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'<=%1',PstDateTo);
+IF (PstDateFrom <> 0D) AND (PstDateTo <> 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1&<=%2',PstDateFrom,PstDateTo);
+IF SalesHeader.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      SalesLine.RESET;
+      SalesLine.SETFILTER(Type,'%1',SalesLine.Type :: Item);
+      IF keine_muster THEN
+        SalesLine.SETFILTER("Location Code",'<>%1','MUST');
+      SalesLine.SETFILTER("Document No.",'%1',SalesHeader."No.");
+      SalesLine.SETFILTER("Manufacturer Code",Herstellercode);
+      SalesLine.SETFILTER("No.",Artikelnr);
+      SalesLine.SETFILTER(Quantity,'>%1',0);
+      IF SalesLine.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            IF (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss) = 0)
+            AND (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss2) = 0)
+            AND (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss3) = 0) THEN
+
+              BEGIN
+            IF debnr <> SalesHeader."Sell-to Customer No." THEN
+              BEGIN
+
+                t := '1';
+                zeile_gefunden := FALSE;
+                REPEAT
+                  hilfs_debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
+                  IF hilfs_debnr = SalesHeader."Sell-to Customer No." THEN
+                    BEGIN
+                      test_user5 := DELCHR(FORMAT(Sheet.Range('H'+t).Value),'=',',');
+                      zeile_gefunden := TRUE;
+                    END
+                  ELSE
+                    t := INCSTR(t);
+                UNTIL (FORMAT(Sheet.Range('A'+t).Value) = '') OR (zeile_gefunden = TRUE);
+
+                IF zeile_gefunden = FALSE THEN
+                  BEGIN
+
+                    j := INCSTR (j);
+
+                    //***************************************************************************
+                    //     Feld für Artikelnr. und Deb. Artikelnr. Andruck im HTML Schreiben
+                    //***************************************************************************
+
+                    deb_artnr := '';
+                    ArtRef.RESET;
+                    ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                    ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                    ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                    IF ArtRef.FINDFIRST THEN
+                      REPEAT
+                        IF ArtRef."Cross-Reference No." <> '' THEN
+                          BEGIN
+                            IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                              deb_artnr := 'DIVERSE'
+                            ELSE
+                              deb_artnr := ArtRef."Cross-Reference No."
+                          END;
+                      UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                    test_user5 := SalesLine."Artikelnr. 2";
+
+                    Sheet.Range('A'+j).Value := SalesHeader."Sell-to Customer No.";
+                    Sheet.Range('B'+j).Value := SalesHeader."Sell-to Customer Name";
+                    Sheet.Range('C'+j).Value := SalesHeader."Sell-to Customer Name 2";
+                    Sheet.Range('D'+j).Value := SalesHeader."Sell-to Address";
+                    Sheet.Range('E'+j).Value := SalesHeader."Sell-to Address 2";
+                    Sheet.Range('F'+j).Value := SalesHeader."Sell-to Post Code";
+                    Sheet.Range('G'+j).Value := SalesHeader."Sell-to City";
+                    Sheet.Range('H'+j).Value := SalesLine."Artikelnr. 2";
+                    Sheet.Range('I'+j).Value := deb_artnr;
+                    Sheet.Range('J'+j).Value := SalesLine."Document No.";
+                    //IF (SalesLine."Posting Date" <> 0D)  AND (SalesLine."Posting Date" > 010100D)
+                    //   THEN Sheet.Range('K'+j).Value := SalesLine."Posting Date";
+                    //IF (SalesLine."Shipment Date" <> 0D) AND (SalesLine."Shipment Date" > 010100D) THEN
+                    //  Sheet.Range('L'+j).Value := SalesLine."Shipment Date";
+
+                    email:='';
+                    ContRela.SETFILTER(ContRela."No.",SalesLine."Sell-to Customer No.");
+                    IF ContRela.FINDFIRST THEN BEGIN
+                      Cont.SETFILTER(Cont."Company No.",ContRela."Contact No.");
+                      Cont.SETFILTER("Unternehmen verlassen",'%1',FALSE);
+                      IF Cont.FINDFIRST THEN 
+                        BEGIN
+                          REPEAT
+                            pcn.RESET;
+                            pcn.SETFILTER(pcn."Contact No.",'=%1',Cont."No.");
+                            pcn.SETFILTER(pcn."Job Responsibility Code",'=%1','PCN-EOL');
+                            IF pcn.FINDFIRST THEN
+                              REPEAT
+                                IF email = '' THEN
+                                  email := Cont."E-Mail"
+                                ELSE
+                                  IF STRPOS(email,Cont."E-Mail") = 0 THEN
+                                    email := email + '; ' + Cont."E-Mail";
+                              UNTIL pcn.NEXT = 0;
+                              IF email <> '' THEN
+                                Sheet.Range('M'+j).Value := email;
+                          UNTIL (Cont.NEXT = 0) OR (email <> '');
+                        END;
+                      END;
+                    Sheet.Range('N'+j).Value := PCN_text;
+                    Sheet.Range('O'+j).Value := Linie;
+                  END
+                ELSE
+                  BEGIN
+                    IF STRPOS(test_user5,SalesLine."Artikelnr. 2") = 0 THEN
+                      BEGIN
+                        deb_artnr := '';
+                        ArtRef.RESET;
+                        ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                        ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                        ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                        IF ArtRef.FINDFIRST THEN
+                          REPEAT
+                            IF ArtRef."Cross-Reference No." <> '' THEN
+                              BEGIN
+                                IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                  deb_artnr := 'DIVERSE'
+                                ELSE
+                                  deb_artnr := ArtRef."Cross-Reference No."
+                              END;
+                          UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                        test_user5 := test_user5 + SalesLine."Artikelnr. 2";
+                        Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                      END;
+                  END;
+                debnr := SalesHeader."Sell-to Customer No.";
+              END
+            ELSE
+              BEGIN
+                IF STRPOS(test_user5,SalesLine."Artikelnr. 2") = 0 THEN
+                  BEGIN
+                    deb_artnr := '';
+                    ArtRef.RESET;
+                    ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                    ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                    ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                    IF ArtRef.FINDFIRST THEN
+                      REPEAT
+                        IF ArtRef."Cross-Reference No." <> '' THEN
+                          BEGIN
+                            IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                              deb_artnr := 'DIVERSE'
+                            ELSE
+                              deb_artnr := ArtRef."Cross-Reference No."
+                          END;
+                      UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                    test_user5 := test_user5 + SalesLine."Artikelnr. 2";
+                    IF zeile_gefunden = FALSE THEN
+                      BEGIN
+                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+                        convert_test_user5 := FORMAT(Sheet.Range('H'+j).Value);
+                      END
+                    ELSE
+                      BEGIN
+                        Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                        convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+                      END;
+                  END;
+              END;
+            END;
+          UNTIL SalesLine.NEXT = 0;
+        END;
+    UNTIL SalesHeader.NEXT = 0;
+  END;
+
+t := '1';
+chr := 10; //Line feed
+REPEAT
+  convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+  debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
+  IF (convert_test_user5 <> '') AND (convert_test_user5 <> 'Artikel') THEN
+    BEGIN
+      FOR k:= 1 TO 4 DO
+        user5[k] := '';
+
+      k := 1;
+      mail_text := '';
+
+      REPEAT
+        IF STRPOS(convert_test_user5,',') <> 0 THEN
+          hilfs_artikelnr := COPYSTR(convert_test_user5,1,STRPOS(convert_test_user5,',')-1)
+        ELSE
+          BEGIN
+            hilfs_artikelnr := COPYSTR(convert_test_user5,1);
+            convert_test_user5 := '';
+          END;
+        deb_artnr := '';
+
+        Artikel.RESET;
+        Artikel.SETFILTER("No. 2",'%1',hilfs_artikelnr);
+        IF Artikel.FINDFIRST THEN
+          BEGIN
+            ArtRef.RESET;
+            ArtRef.SETFILTER("Item No.",'%1',Artikel."No.");
+            ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+            ArtRef.SETFILTER("Cross-Reference Type No.",'%1',debnr);
+            IF ArtRef.FINDFIRST THEN
+              REPEAT
+                IF ArtRef."Cross-Reference No." <> '' THEN
+                  BEGIN
+                    IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                      deb_artnr := 'DIVERSE'
+                    ELSE
+                      deb_artnr := ArtRef."Cross-Reference No."
+                  END;
+              UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+          END;
+
+        IF (STRLEN(user5[k] + '<tr><td>' + hilfs_artikelnr + '</td><td>' + deb_artnr +
+        '</td></tr>') > 1000) THEN
+          k += 1;
+        user5[k] := user5[k] + '<tr><td>' + hilfs_artikelnr + '</td><td>' + deb_artnr +
+        '</td></tr>';
+
+        IF mail_text = '' THEN
+          mail_text := hilfs_artikelnr + ' - ' + deb_artnr
+        ELSE
+          mail_text := mail_text + FORMAT(chr) + hilfs_artikelnr + ' - ' + deb_artnr;
+
+        IF STRPOS(convert_test_user5,',') <> 0 THEN
+          convert_test_user5 := COPYSTR(convert_test_user5,STRPOS(convert_test_user5,',')+1)
+
+      UNTIL convert_test_user5 = '';
+      Sheet.Range('P'+t).Value := user5[1] + user5[2];
+      Sheet.Range('Q'+t).Value := user5[3] + user5[4];
+      Sheet.Range('R'+t).Value := mail_text;
+    END;
+  t := INCSTR(t);
+UNTIL FORMAT(Sheet.Range('A'+t).Value) = '';
+
+CLEARALL;
+
+PCN_Ausgabe_mit_Liste()
+
+InvHeader.RESET;
+InvHeader.SETCURRENTKEY("Sell-to Customer No.","No.");
+InvHeader.SETFILTER(InvHeader."Sell-to Customer No.","Deb-Nr");
+//InvHeader.SETFILTER(InvHeader."Sell-to Customer No.",'%1|%2|%3','100367','100760','710760');
+InvHeader.SETFILTER(InvHeader."Betreuer Innendienst",Betreuer);
+InvHeader.SETFILTER(InvHeader."Salesperson Code",Verkcode);
+InvHeader.SETFILTER(InvHeader."Territory Code",Gebcode);
+IF (PstDateFrom <> 0D) AND (PstDateTo = 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'>=%1',PstDateFrom);
+IF (PstDateFrom = 0D) AND (PstDateTo <> 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'<=%1',PstDateTo);
+IF (PstDateFrom <> 0D) AND (PstDateTo <> 0D) THEN
+  InvHeader.SETFILTER(InvHeader."Posting Date",'>=%1&<=%2',PstDateFrom,PstDateTo);
+IF InvHeader.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      InvLine.RESET;
+      InvLine.SETFILTER(Type,'%1',InvLine.Type :: Item);
+      IF keine_muster THEN
+        InvLine.SETFILTER("Location Code",'<>%1','MUST');
+      InvLine.SETFILTER("Document No.",'%1',InvHeader."No.");
+      InvLine.SETFILTER("Manufacturer Code",Herstellercode);
+      InvLine.SETFILTER(Quantity,'>%1',0);
+      IF InvLine.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            PCN_Abgleich.RESET;
+            PCN_Abgleich.SETFILTER(Tabelle,'%1','PCN');
+            IF such_algorith = such_algorith :: exakt THEN
+              PCN_Abgleich.SETFILTER(PCN_Abgleich."Feld 3",'%1',InvLine."Artikelnr. 2");
+            IF PCN_Abgleich.FINDFIRST THEN
+              REPEAT
+            IF (InvLine.Quantity > 0) AND (STRPOS(InvLine."Artikelnr. 2",PCN_Abgleich."Feld 3") <> 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss) = 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss2) = 0)
+            AND (STRPOS(InvLine."Artikelnr. 2",artikel_ausschluss3) = 0) THEN
+              BEGIN
+                IF debnr <> InvHeader."Sell-to Customer No." THEN
+                  BEGIN
+
+                    j := INCSTR (j);
+
+                    //***************************************************************************
+                    //     Feld für Artikelnr. und Deb. Artikelnr. Andruck im HTML Schreiben
+                    //***************************************************************************
+
+                    deb_artnr := '';
+                    ArtRef.RESET;
+                    ArtRef.SETFILTER("Item No.",'%1',InvLine."No.");
+                    ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                    ArtRef.SETFILTER("Cross-Reference Type No.",'%1',InvHeader."Sell-to Customer No.");
+                    IF ArtRef.FINDFIRST THEN
+                      REPEAT
+                        IF ArtRef."Cross-Reference No." <> '' THEN
+                          BEGIN
+                            IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                              deb_artnr := 'DIVERSE'
+                            ELSE
+                              deb_artnr := ArtRef."Cross-Reference No."
+                          END;
+                      UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                    test_user5 := InvLine."Artikelnr. 2";
+
+                    Sheet.Range('A'+j).Value := InvHeader."Sell-to Customer No.";
+                    Sheet.Range('B'+j).Value := InvHeader."Sell-to Customer Name";
+                    Sheet.Range('C'+j).Value := InvHeader."Sell-to Customer Name 2";
+                    Sheet.Range('D'+j).Value := InvHeader."Sell-to Address";
+                    Sheet.Range('E'+j).Value := InvHeader."Sell-to Address 2";
+                    Sheet.Range('F'+j).Value := InvHeader."Sell-to Post Code";
+                    Sheet.Range('G'+j).Value := InvHeader."Sell-to City";
+                    Sheet.Range('H'+j).Value := InvLine."Artikelnr. 2";
+                    Sheet.Range('I'+j).Value := deb_artnr;
+                    Sheet.Range('J'+j).Value := InvLine."Document No.";
+                    IF (InvLine."Posting Date" <> 0D)  AND (InvLine."Posting Date" > 010100D)
+                       THEN Sheet.Range('K'+j).Value := InvLine."Posting Date";
+                    IF (InvLine."Shipment Date" <> 0D) AND (InvLine."Shipment Date" > 010100D) THEN
+                      Sheet.Range('L'+j).Value := InvLine."Shipment Date";
+
+                    email:='';
+                    ContRela.SETFILTER(ContRela."No.",InvLine."Sell-to Customer No.");
+                    IF ContRela.FINDFIRST THEN BEGIN
+                      Cont.SETFILTER(Cont."Company No.",ContRela."Contact No.");
+                      Cont.SETFILTER("Unternehmen verlassen",'%1',FALSE);
+                      IF Cont.FINDFIRST THEN 
+                        BEGIN
+                          REPEAT
+                            pcn.RESET;
+                            pcn.SETFILTER(pcn."Contact No.",'=%1',Cont."No.");
+                            pcn.SETFILTER(pcn."Job Responsibility Code",'=%1','PCN-EOL');
+                            IF pcn.FINDFIRST THEN
+                              REPEAT
+                                IF email = '' THEN
+                                  email := Cont."E-Mail"
+                                ELSE
+                                  IF STRPOS(email,Cont."E-Mail") = 0 THEN
+                                    email := email + '; ' + Cont."E-Mail";
+                              UNTIL pcn.NEXT = 0;
+                              IF email <> '' THEN
+                                Sheet.Range('M'+j).Value := email;
+                          UNTIL (Cont.NEXT = 0) OR (email <> '');
+                        END;
+                      END;
+                    Sheet.Range('N'+j).Value := PCN_text;
+                    Sheet.Range('O'+j).Value := Linie;
+
+                    debnr := InvHeader."Sell-to Customer No.";
+                  END
+                ELSE
+                  BEGIN
+                    IF STRPOS(test_user5,InvLine."Artikelnr. 2") = 0 THEN
+                      BEGIN
+
+                        deb_artnr := '';
+                        ArtRef.RESET;
+                        ArtRef.SETFILTER("Item No.",'%1',InvLine."No.");
+                        ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                        ArtRef.SETFILTER("Cross-Reference Type No.",'%1',InvHeader."Sell-to Customer No.");
+                        IF ArtRef.FINDFIRST THEN
+                          REPEAT
+                            IF ArtRef."Cross-Reference No." <> '' THEN
+                              BEGIN
+                                IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                  deb_artnr := 'DIVERSE'
+                                ELSE
+                                  deb_artnr := ArtRef."Cross-Reference No."
+                              END;
+                          UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                        test_user5 := test_user5 + InvLine."Artikelnr. 2";
+                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + InvLine."Artikelnr. 2";
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+                      END;
+                  END;
+              END;
+            UNTIL PCN_Abgleich.NEXT = 0;
+          UNTIL InvLine.NEXT = 0;
+        END
+    UNTIL InvHeader.NEXT = 0;
+  END;
+
+debnr := '';
+
+SalesHeader.RESET;
+SalesHeader.SETCURRENTKEY("Sell-to Customer No.","Order Date");
+SalesHeader.SETFILTER(SalesHeader."Document Type",'%1|%2',SalesHeader."Document Type" :: Order,
+                      SalesHeader."Document Type" :: "Blanket Order");
+SalesHeader.SETFILTER(SalesHeader."Sell-to Customer No.","Deb-Nr");
+//SalesHeader.SETFILTER(SalesHeader."Sell-to Customer No.",'%1|%2|%3','100367','100760','710760');
+SalesHeader.SETFILTER(SalesHeader."Betreuer Innendienst",Betreuer);
+SalesHeader.SETFILTER(SalesHeader."Salesperson Code",Verkcode);
+SalesHeader.SETFILTER(SalesHeader."Territory Code",Gebcode);
+IF (PstDateFrom <> 0D) AND (PstDateTo = 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1',PstDateFrom);
+IF (PstDateFrom = 0D) AND (PstDateTo <> 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'<=%1',PstDateTo);
+IF (PstDateFrom <> 0D) AND (PstDateTo <> 0D) THEN
+  SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1&<=%2',PstDateFrom,PstDateTo);
+IF SalesHeader.FINDFIRST THEN
+  BEGIN
+    REPEAT
+      SalesLine.RESET;
+      SalesLine.SETFILTER(Type,'%1',SalesLine.Type :: Item);
+      IF keine_muster THEN
+        SalesLine.SETFILTER("Location Code",'<>%1','MUST');
+      SalesLine.SETFILTER("Document No.",'%1',SalesHeader."No.");
+      SalesLine.SETFILTER("Manufacturer Code",Herstellercode);
+      SalesLine.SETFILTER(Quantity,'>%1',0);
+      IF SalesLine.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            PCN_Abgleich.RESET;
+            PCN_Abgleich.SETFILTER(Tabelle,'%1','PCN');
+            IF such_algorith = such_algorith :: exakt THEN
+              PCN_Abgleich.SETFILTER(PCN_Abgleich."Feld 3",'%1',SalesLine."Artikelnr. 2");
+            IF PCN_Abgleich.FINDFIRST THEN
+              REPEAT
+                IF (SalesLine.Quantity > 0) AND (STRPOS(SalesLine."Artikelnr. 2",PCN_Abgleich."Feld 3") <> 0)
+                AND (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss) = 0) 
+                AND (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss2) = 0)
+                AND (STRPOS(SalesLine."Artikelnr. 2",artikel_ausschluss3) = 0) THEN
+                  BEGIN
+                    IF debnr <> SalesHeader."Sell-to Customer No." THEN
+                      BEGIN
+
+                        t := '1';
+                        zeile_gefunden := FALSE;
+                        REPEAT
+                          hilfs_debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
+                          IF hilfs_debnr = SalesHeader."Sell-to Customer No." THEN
+                            BEGIN
+                              test_user5 := DELCHR(FORMAT(Sheet.Range('H'+t).Value),'=',',');
+                              zeile_gefunden := TRUE;
+                            END
+                          ELSE
+                            t := INCSTR(t);
+                        UNTIL (FORMAT(Sheet.Range('A'+t).Value) = '') OR (zeile_gefunden = TRUE);
+
+                        IF zeile_gefunden = FALSE THEN
+                          BEGIN
+
+                            j := INCSTR (j);
+
+                            //***************************************************************************
+                            //     Feld für Artikelnr. und Deb. Artikelnr. Andruck im HTML Schreiben
+                            //***************************************************************************
+
+                            deb_artnr := '';
+                            ArtRef.RESET;
+                            ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                            ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                            ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                            IF ArtRef.FINDFIRST THEN
+                              REPEAT
+                                IF ArtRef."Cross-Reference No." <> '' THEN
+                                  BEGIN
+                                    IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                      deb_artnr := 'DIVERSE'
+                                    ELSE
+                                      deb_artnr := ArtRef."Cross-Reference No."
+                                  END;
+                              UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                            test_user5 := SalesLine."Artikelnr. 2";
+
+                            Sheet.Range('A'+j).Value := SalesHeader."Sell-to Customer No.";
+                            Sheet.Range('B'+j).Value := SalesHeader."Sell-to Customer Name";
+                            Sheet.Range('C'+j).Value := SalesHeader."Sell-to Customer Name 2";
+                            Sheet.Range('D'+j).Value := SalesHeader."Sell-to Address";
+                            Sheet.Range('E'+j).Value := SalesHeader."Sell-to Address 2";
+                            Sheet.Range('F'+j).Value := SalesHeader."Sell-to Post Code";
+                            Sheet.Range('G'+j).Value := SalesHeader."Sell-to City";
+                            Sheet.Range('H'+j).Value := SalesLine."Artikelnr. 2";
+                            Sheet.Range('I'+j).Value := deb_artnr;
+                            Sheet.Range('J'+j).Value := SalesLine."Document No.";
+                            //IF (SalesLine."Posting Date" <> 0D)  AND (SalesLine."Posting Date" > 010100D)
+                            //   THEN Sheet.Range('K'+j).Value := SalesLine."Posting Date";
+                            //IF (SalesLine."Shipment Date" <> 0D) AND (SalesLine."Shipment Date" > 010100D) THEN
+                            //  Sheet.Range('L'+j).Value := SalesLine."Shipment Date";
+
+                            email:='';
+                            ContRela.SETFILTER(ContRela."No.",SalesLine."Sell-to Customer No.");
+                            IF ContRela.FINDFIRST THEN BEGIN
+                              Cont.SETFILTER(Cont."Company No.",ContRela."Contact No.");
+                              Cont.SETFILTER("Unternehmen verlassen",'%1',FALSE);
+                              IF Cont.FINDFIRST THEN 
+                                BEGIN
+                                  REPEAT
+                                    pcn.RESET;
+                                    pcn.SETFILTER(pcn."Contact No.",'=%1',Cont."No.");
+                                    pcn.SETFILTER(pcn."Job Responsibility Code",'=%1','PCN-EOL');
+                                    IF pcn.FINDFIRST THEN
+                                      REPEAT
+                                        IF email = '' THEN
+                                          email := Cont."E-Mail"
+                                        ELSE
+                                          IF STRPOS(email,Cont."E-Mail") = 0 THEN
+                                            email := email + '; ' + Cont."E-Mail";
+                                      UNTIL pcn.NEXT = 0;
+                                      IF email <> '' THEN
+                                        Sheet.Range('M'+j).Value := email;
+                                  UNTIL (Cont.NEXT = 0) OR (email <> '');
+                                END;
+                              END;
+                            Sheet.Range('N'+j).Value := PCN_text;
+                            Sheet.Range('O'+j).Value := Linie;
+                          END
+                        ELSE
+                          BEGIN
+                            IF STRPOS(test_user5,SalesLine."Artikelnr. 2") = 0 THEN
+                              BEGIN
+                                deb_artnr := '';
+                                ArtRef.RESET;
+                                ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                                ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                                ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                                IF ArtRef.FINDFIRST THEN
+                                  REPEAT
+                                    IF ArtRef."Cross-Reference No." <> '' THEN
+                                      BEGIN
+                                        IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                          deb_artnr := 'DIVERSE'
+                                        ELSE
+                                          deb_artnr := ArtRef."Cross-Reference No."
+                                      END;
+                                  UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                                test_user5 := test_user5 + SalesLine."Artikelnr. 2";
+                                Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                              END;
+                          END;
+                        debnr := SalesHeader."Sell-to Customer No.";
+                      END
+                    ELSE
+                      BEGIN
+                        IF STRPOS(test_user5,SalesLine."Artikelnr. 2") = 0 THEN
+                          BEGIN
+                            deb_artnr := '';
+                            ArtRef.RESET;
+                            ArtRef.SETFILTER("Item No.",'%1',SalesLine."No.");
+                            ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+                            ArtRef.SETFILTER("Cross-Reference Type No.",'%1',SalesHeader."Sell-to Customer No.");
+                            IF ArtRef.FINDFIRST THEN
+                              REPEAT
+                                IF ArtRef."Cross-Reference No." <> '' THEN
+                                  BEGIN
+                                    IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                                      deb_artnr := 'DIVERSE'
+                                    ELSE
+                                      deb_artnr := ArtRef."Cross-Reference No."
+                                  END;
+                              UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+                            test_user5 := test_user5 + SalesLine."Artikelnr. 2";
+                            IF zeile_gefunden = FALSE THEN
+                              BEGIN
+                                Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+                                convert_test_user5 := FORMAT(Sheet.Range('H'+j).Value);
+                              END
+                            ELSE
+                              BEGIN
+                                Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                                convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+                              END;
+                          END;
+                      END;
+                  END;
+              UNTIL PCN_Abgleich.NEXT = 0;
+          UNTIL SalesLine.NEXT = 0;
+        END;
+    UNTIL SalesHeader.NEXT = 0;
+  END;
+
+t := '1';
+chr := 10; //Line feed
+REPEAT
+  convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+  debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
+  IF (convert_test_user5 <> '') AND (convert_test_user5 <> 'Artikel') THEN
+    BEGIN
+      FOR k:= 1 TO 4 DO
+        user5[k] := '';
+
+      k := 1;
+      mail_text := '';
+
+      REPEAT
+        IF STRPOS(convert_test_user5,',') <> 0 THEN
+          hilfs_artikelnr := COPYSTR(convert_test_user5,1,STRPOS(convert_test_user5,',')-1)
+        ELSE
+          BEGIN
+            hilfs_artikelnr := COPYSTR(convert_test_user5,1);
+            convert_test_user5 := '';
+          END;
+        deb_artnr := '';
+
+        Artikel.RESET;
+        Artikel.SETFILTER("No. 2",'%1',hilfs_artikelnr);
+        Artikel.FINDFIRST;
+
+        ArtRef.RESET;
+        ArtRef.SETFILTER("Item No.",'%1',Artikel."No.");
+        ArtRef.SETFILTER("Cross-Reference Type",'%1',ArtRef."Cross-Reference Type" :: Customer);
+        ArtRef.SETFILTER("Cross-Reference Type No.",'%1',debnr);
+        IF ArtRef.FINDFIRST THEN
+          REPEAT
+            IF ArtRef."Cross-Reference No." <> '' THEN
+              BEGIN
+                IF (deb_artnr <> '') AND (deb_artnr <> ArtRef."Cross-Reference No.") THEN
+                  deb_artnr := 'DIVERSE'
+                ELSE
+                  deb_artnr := ArtRef."Cross-Reference No."
+              END;
+          UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
+
+        IF (STRLEN(user5[k] + '<tr><td>' + hilfs_artikelnr + '</td><td>' + deb_artnr +
+        '</td></tr>') > 1000) THEN
+          k += 1;
+        user5[k] := user5[k] + '<tr><td>' + hilfs_artikelnr + '</td><td>' + deb_artnr +
+        '</td></tr>';
+
+        IF mail_text = '' THEN
+          mail_text := hilfs_artikelnr + ' - ' + deb_artnr
+        ELSE
+          mail_text := mail_text + FORMAT(chr) + hilfs_artikelnr + ' - ' + deb_artnr;
+
+        IF STRPOS(convert_test_user5,',') <> 0 THEN
+          convert_test_user5 := COPYSTR(convert_test_user5,STRPOS(convert_test_user5,',')+1)
+
+      UNTIL convert_test_user5 = '';
+      Sheet.Range('P'+t).Value := user5[1] + user5[2];
+      Sheet.Range('Q'+t).Value := user5[3] + user5[4];
+      Sheet.Range('R'+t).Value := mail_text;
+    END;
+  t := INCSTR(t);
+UNTIL FORMAT(Sheet.Range('A'+t).Value) = '';
+
+CLEARALL;
+
+IF PCN_Abgleich.TABLECAPTION = 'Berichtstabelle' THEN
+  BEGIN
+    PCN_Abgleich.RESET;
+    PCN_Abgleich.SETFILTER(User,'%1',USERID);
+    PCN_Abgleich.DELETEALL;
+  END
+ELSE
+  MESSAGE('Sicherheitssperre:\Die Tabelle %1 konnte nicht geleert werden,'+
+  ' stellen Sie sicher, dass die Tabellenbeschriftung richtig ist.',
+  PCN_Abgleich.TABLECAPTION);
+
+Open_WinApplct(VAR field : Text[180])
+CREATE(WinApplct);
+Filename := field;
+IF NOT EXISTS(Filename) THEN
+  ERROR(Text001,Filename);
+
+WinApplct.Open(Filename);
+
+Save_FileLocation()
+Speicherort:=
+  DialogMgt.OpenFile(
+   'Dokument auswählen',
+   Speicherort,
+   DialogDefaultFileType::Custom,
+   'Alle Dateien (*.*)|*.*',
+   DialogAction::Save);
+
+IF (STRPOS((Speicherort),'A:\') >0 ) OR (STRPOS((Speicherort),'B:\') >0 ) OR (STRPOS((Speicherort),'C:\') > 0)
+OR (STRPOS((Speicherort),'D:\') >0) OR (STRPOS((Speicherort),'E:\') >0) OR (STRPOS((Speicherort),'L:\') >0) THEN
+  BEGIN
+    Speicherort := '';
+    ERROR(Text000);
+  END;
