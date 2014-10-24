@@ -86,17 +86,19 @@ Sheet.Range('D1').Value := 'Strasse';
 Sheet.Range('E1').Value := 'Strasse2';
 Sheet.Range('F1').Value := 'PLZ';
 Sheet.Range('G1').Value := 'Ort';
-Sheet.Range('H1').Value := 'Artikel';
-Sheet.Range('I1').Value := 'Debitor Artikelnr.';
-Sheet.Range('J1').Value := 'Belegnr';
-Sheet.Range('K1').Value := 'Belegdatum';
-Sheet.Range('L1').Value := 'Lieferdatum';
-Sheet.Range('M1').Value := 'Email-Adresse';
-Sheet.Range('N1').Value := 'User1';
-Sheet.Range('O1').Value := 'User2';
-Sheet.Range('P1').Value := 'User5';
-Sheet.Range('R1').Value := 'Mail Text';
-Sheet.Range('R:R').ColumnWidth := 50;
+Sheet.Range('H1').Value := 'Betreuer Innendienst';
+Sheet.Range('I1').Value := 'Artikel';
+Sheet.Range('J1').Value := 'Debitor Artikelnr.';
+Sheet.Range('K1').Value := 'Belegnr';
+Sheet.Range('L1').Value := 'Belegdatum';
+Sheet.Range('M1').Value := 'Lieferdatum';
+Sheet.Range('N1').Value := 'Email-Adresse';
+Sheet.Range('O1').Value := 'User1';
+Sheet.Range('P1').Value := 'User2';
+Sheet.Range('Q1').Value := 'User5';
+Sheet.Range('S1').Value := 'Mail Text';
+Sheet.Range('S:S').ColumnWidth := 50;
+
 
 
 j := '1';                                                    // <- Import in excel ab Zeile 2
@@ -181,13 +183,14 @@ IF InvHeader.FINDFIRST THEN
                     Sheet.Range('E'+j).Value := InvHeader."Sell-to Address 2";
                     Sheet.Range('F'+j).Value := InvHeader."Sell-to Post Code";
                     Sheet.Range('G'+j).Value := InvHeader."Sell-to City";
-                    Sheet.Range('H'+j).Value := InvLine."Artikelnr. 2";
-                    Sheet.Range('I'+j).Value := deb_artnr;
-                    Sheet.Range('J'+j).Value := InvLine."Document No.";
+                    Sheet.Range('H'+j).Value := InvHeader."Betreuer Innendienst";
+                    Sheet.Range('I'+j).Value := InvLine."Artikelnr. 2";
+                    Sheet.Range('J'+j).Value := deb_artnr;
+                    Sheet.Range('K'+j).Value := InvLine."Document No.";
                     IF (InvLine."Posting Date" <> 0D)  AND (InvLine."Posting Date" > 010100D)
-                       THEN Sheet.Range('K'+j).Value := InvLine."Posting Date";
+                       THEN Sheet.Range('L'+j).Value := InvLine."Posting Date";
                     IF (InvLine."Shipment Date" <> 0D) AND (InvLine."Shipment Date" > 010100D) THEN
-                      Sheet.Range('L'+j).Value := InvLine."Shipment Date";
+                      Sheet.Range('M'+j).Value := InvLine."Shipment Date";
 
                     email:='';
                     ContRela.SETFILTER(ContRela."No.",InvLine."Sell-to Customer No.");
@@ -209,13 +212,13 @@ IF InvHeader.FINDFIRST THEN
                                     email := email + '; ' + Cont."E-Mail";
                               UNTIL pcn.NEXT = 0;
                               IF email <> '' THEN
-                                Sheet.Range('M'+j).Value := email;
+                                Sheet.Range('N'+j).Value := email;
                           UNTIL (Cont.NEXT = 0) OR (email <> '');
                         END;
                       END;
-                    Sheet.Range('N'+j).Value := PCN_text;
-                    Sheet.Range('O'+j).Value := Linie;
-                    Sheet.Range('P'+j).Value := user5[1];
+                    Sheet.Range('O'+j).Value := PCN_text;
+                    Sheet.Range('P'+j).Value := Linie;
+                    Sheet.Range('Q'+j).Value := user5[1];
 
                     debnr := InvHeader."Sell-to Customer No.";
                   END
@@ -241,8 +244,8 @@ IF InvHeader.FINDFIRST THEN
                           UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
 
                         test_user5 := test_user5 + InvLine."Artikelnr. 2";
-                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + InvLine."Artikelnr. 2";
-                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + InvLine."Artikelnr. 2";
+                        Sheet.Range('J'+j).Value := FORMAT(Sheet.Range('J'+j).Value) + ',' + deb_artnr;
 
                       END;
                   END;
@@ -297,7 +300,7 @@ IF SalesHeader.FINDFIRST THEN
                   hilfs_debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
                   IF hilfs_debnr = SalesHeader."Sell-to Customer No." THEN
                     BEGIN
-                      test_user5 := DELCHR(FORMAT(Sheet.Range('H'+t).Value),'=',',');
+                      test_user5 := DELCHR(FORMAT(Sheet.Range('I'+t).Value),'=',',');
                       zeile_gefunden := TRUE;
                     END
                   ELSE
@@ -338,13 +341,14 @@ IF SalesHeader.FINDFIRST THEN
                     Sheet.Range('E'+j).Value := SalesHeader."Sell-to Address 2";
                     Sheet.Range('F'+j).Value := SalesHeader."Sell-to Post Code";
                     Sheet.Range('G'+j).Value := SalesHeader."Sell-to City";
-                    Sheet.Range('H'+j).Value := SalesLine."Artikelnr. 2";
-                    Sheet.Range('I'+j).Value := deb_artnr;
-                    Sheet.Range('J'+j).Value := SalesLine."Document No.";
+                    Sheet.Range('H'+j).Value := SalesHeader."Betreuer Innendienst";
+                    Sheet.Range('I'+j).Value := SalesLine."Artikelnr. 2";
+                    Sheet.Range('J'+j).Value := deb_artnr;
+                    Sheet.Range('K'+j).Value := SalesLine."Document No.";
                     //IF (SalesLine."Posting Date" <> 0D)  AND (SalesLine."Posting Date" > 010100D)
-                    //   THEN Sheet.Range('K'+j).Value := SalesLine."Posting Date";
+                    //   THEN Sheet.Range('L'+j).Value := SalesLine."Posting Date";
                     //IF (SalesLine."Shipment Date" <> 0D) AND (SalesLine."Shipment Date" > 010100D) THEN
-                    //  Sheet.Range('L'+j).Value := SalesLine."Shipment Date";
+                    //  Sheet.Range('M'+j).Value := SalesLine."Shipment Date";
 
                     email:='';
                     ContRela.SETFILTER(ContRela."No.",SalesLine."Sell-to Customer No.");
@@ -366,12 +370,12 @@ IF SalesHeader.FINDFIRST THEN
                                     email := email + '; ' + Cont."E-Mail";
                               UNTIL pcn.NEXT = 0;
                               IF email <> '' THEN
-                                Sheet.Range('M'+j).Value := email;
+                                Sheet.Range('N'+j).Value := email;
                           UNTIL (Cont.NEXT = 0) OR (email <> '');
                         END;
                       END;
-                    Sheet.Range('N'+j).Value := PCN_text;
-                    Sheet.Range('O'+j).Value := Linie;
+                    Sheet.Range('O'+j).Value := PCN_text;
+                    Sheet.Range('P'+j).Value := Linie;
                   END
                 ELSE
                   BEGIN
@@ -394,8 +398,8 @@ IF SalesHeader.FINDFIRST THEN
                           UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
 
                         test_user5 := test_user5 + SalesLine."Artikelnr. 2";
-                        Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
-                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('J'+t).Value := FORMAT(Sheet.Range('J'+t).Value) + ',' + deb_artnr;
                       END;
                   END;
                 debnr := SalesHeader."Sell-to Customer No.";
@@ -423,15 +427,15 @@ IF SalesHeader.FINDFIRST THEN
                     test_user5 := test_user5 + SalesLine."Artikelnr. 2";
                     IF zeile_gefunden = FALSE THEN
                       BEGIN
-                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + SalesLine."Artikelnr. 2";
-                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
-                        convert_test_user5 := FORMAT(Sheet.Range('H'+j).Value);
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('J'+j).Value := FORMAT(Sheet.Range('J'+j).Value) + ',' + deb_artnr;
+                        convert_test_user5 := FORMAT(Sheet.Range('I'+j).Value);
                       END
                     ELSE
                       BEGIN
-                        Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
-                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
-                        convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+                        Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                        Sheet.Range('J'+t).Value := FORMAT(Sheet.Range('J'+t).Value) + ',' + deb_artnr;
+                        convert_test_user5 := FORMAT(Sheet.Range('I'+t).Value);
                       END;
                   END;
               END;
@@ -444,7 +448,7 @@ IF SalesHeader.FINDFIRST THEN
 t := '1';
 chr := 10; //Line feed
 REPEAT
-  convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+  convert_test_user5 := FORMAT(Sheet.Range('I'+t).Value);
   debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
   IF (convert_test_user5 <> '') AND (convert_test_user5 <> 'Artikel') THEN
     BEGIN
@@ -499,9 +503,9 @@ REPEAT
           convert_test_user5 := COPYSTR(convert_test_user5,STRPOS(convert_test_user5,',')+1)
 
       UNTIL convert_test_user5 = '';
-      Sheet.Range('P'+t).Value := user5[1] + user5[2];
-      Sheet.Range('Q'+t).Value := user5[3] + user5[4];
-      Sheet.Range('R'+t).Value := mail_text;
+      Sheet.Range('Q'+t).Value := user5[1] + user5[2];
+      Sheet.Range('R'+t).Value := user5[3] + user5[4];
+      Sheet.Range('S'+t).Value := mail_text;
     END;
   t := INCSTR(t);
 UNTIL FORMAT(Sheet.Range('A'+t).Value) = '';
@@ -581,13 +585,14 @@ IF InvHeader.FINDFIRST THEN
                     Sheet.Range('E'+j).Value := InvHeader."Sell-to Address 2";
                     Sheet.Range('F'+j).Value := InvHeader."Sell-to Post Code";
                     Sheet.Range('G'+j).Value := InvHeader."Sell-to City";
-                    Sheet.Range('H'+j).Value := InvLine."Artikelnr. 2";
-                    Sheet.Range('I'+j).Value := deb_artnr;
-                    Sheet.Range('J'+j).Value := InvLine."Document No.";
+                    Sheet.Range('H'+j).Value := InvHeader."Betreuer Innendienst";
+                    Sheet.Range('I'+j).Value := InvLine."Artikelnr. 2";
+                    Sheet.Range('J'+j).Value := deb_artnr;
+                    Sheet.Range('K'+j).Value := InvLine."Document No.";
                     IF (InvLine."Posting Date" <> 0D)  AND (InvLine."Posting Date" > 010100D)
-                       THEN Sheet.Range('K'+j).Value := InvLine."Posting Date";
+                       THEN Sheet.Range('L'+j).Value := InvLine."Posting Date";
                     IF (InvLine."Shipment Date" <> 0D) AND (InvLine."Shipment Date" > 010100D) THEN
-                      Sheet.Range('L'+j).Value := InvLine."Shipment Date";
+                      Sheet.Range('M'+j).Value := InvLine."Shipment Date";
 
                     email:='';
                     ContRela.SETFILTER(ContRela."No.",InvLine."Sell-to Customer No.");
@@ -609,12 +614,12 @@ IF InvHeader.FINDFIRST THEN
                                     email := email + '; ' + Cont."E-Mail";
                               UNTIL pcn.NEXT = 0;
                               IF email <> '' THEN
-                                Sheet.Range('M'+j).Value := email;
+                                Sheet.Range('N'+j).Value := email;
                           UNTIL (Cont.NEXT = 0) OR (email <> '');
                         END;
                       END;
-                    Sheet.Range('N'+j).Value := PCN_text;
-                    Sheet.Range('O'+j).Value := Linie;
+                    Sheet.Range('O'+j).Value := PCN_text;
+                    Sheet.Range('P'+j).Value := Linie;
 
                     debnr := InvHeader."Sell-to Customer No.";
                   END
@@ -640,8 +645,8 @@ IF InvHeader.FINDFIRST THEN
                           UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
 
                         test_user5 := test_user5 + InvLine."Artikelnr. 2";
-                        Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + InvLine."Artikelnr. 2";
-                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
+                        Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + InvLine."Artikelnr. 2";
+                        Sheet.Range('J'+j).Value := FORMAT(Sheet.Range('J'+j).Value) + ',' + deb_artnr;
                       END;
                   END;
               END;
@@ -701,7 +706,7 @@ IF SalesHeader.FINDFIRST THEN
                           hilfs_debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
                           IF hilfs_debnr = SalesHeader."Sell-to Customer No." THEN
                             BEGIN
-                              test_user5 := DELCHR(FORMAT(Sheet.Range('H'+t).Value),'=',',');
+                              test_user5 := DELCHR(FORMAT(Sheet.Range('I'+t).Value),'=',',');
                               zeile_gefunden := TRUE;
                             END
                           ELSE
@@ -742,13 +747,14 @@ IF SalesHeader.FINDFIRST THEN
                             Sheet.Range('E'+j).Value := SalesHeader."Sell-to Address 2";
                             Sheet.Range('F'+j).Value := SalesHeader."Sell-to Post Code";
                             Sheet.Range('G'+j).Value := SalesHeader."Sell-to City";
-                            Sheet.Range('H'+j).Value := SalesLine."Artikelnr. 2";
-                            Sheet.Range('I'+j).Value := deb_artnr;
-                            Sheet.Range('J'+j).Value := SalesLine."Document No.";
+                            Sheet.Range('H'+j).Value := SalesHeader."Betreuer Innendienst";
+                            Sheet.Range('I'+j).Value := SalesLine."Artikelnr. 2";
+                            Sheet.Range('J'+j).Value := deb_artnr;
+                            Sheet.Range('K'+j).Value := SalesLine."Document No.";
                             //IF (SalesLine."Posting Date" <> 0D)  AND (SalesLine."Posting Date" > 010100D)
-                            //   THEN Sheet.Range('K'+j).Value := SalesLine."Posting Date";
+                            //   THEN Sheet.Range('L'+j).Value := SalesLine."Posting Date";
                             //IF (SalesLine."Shipment Date" <> 0D) AND (SalesLine."Shipment Date" > 010100D) THEN
-                            //  Sheet.Range('L'+j).Value := SalesLine."Shipment Date";
+                            //  Sheet.Range('M'+j).Value := SalesLine."Shipment Date";
 
                             email:='';
                             ContRela.SETFILTER(ContRela."No.",SalesLine."Sell-to Customer No.");
@@ -770,12 +776,12 @@ IF SalesHeader.FINDFIRST THEN
                                             email := email + '; ' + Cont."E-Mail";
                                       UNTIL pcn.NEXT = 0;
                                       IF email <> '' THEN
-                                        Sheet.Range('M'+j).Value := email;
+                                        Sheet.Range('N'+j).Value := email;
                                   UNTIL (Cont.NEXT = 0) OR (email <> '');
                                 END;
                               END;
-                            Sheet.Range('N'+j).Value := PCN_text;
-                            Sheet.Range('O'+j).Value := Linie;
+                            Sheet.Range('O'+j).Value := PCN_text;
+                            Sheet.Range('P'+j).Value := Linie;
                           END
                         ELSE
                           BEGIN
@@ -798,8 +804,8 @@ IF SalesHeader.FINDFIRST THEN
                                   UNTIL (ArtRef.NEXT = 0) OR (deb_artnr = 'DIVERSE');
 
                                 test_user5 := test_user5 + SalesLine."Artikelnr. 2";
-                                Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
-                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
+                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('J'+t).Value := FORMAT(Sheet.Range('J'+t).Value) + ',' + deb_artnr;
                               END;
                           END;
                         debnr := SalesHeader."Sell-to Customer No.";
@@ -827,15 +833,15 @@ IF SalesHeader.FINDFIRST THEN
                             test_user5 := test_user5 + SalesLine."Artikelnr. 2";
                             IF zeile_gefunden = FALSE THEN
                               BEGIN
-                                Sheet.Range('H'+j).Value := FORMAT(Sheet.Range('H'+j).Value) + ',' + SalesLine."Artikelnr. 2";
-                                Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + deb_artnr;
-                                convert_test_user5 := FORMAT(Sheet.Range('H'+j).Value);
+                                Sheet.Range('I'+j).Value := FORMAT(Sheet.Range('I'+j).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('J'+j).Value := FORMAT(Sheet.Range('J'+j).Value) + ',' + deb_artnr;
+                                convert_test_user5 := FORMAT(Sheet.Range('I'+j).Value);
                               END
                             ELSE
                               BEGIN
-                                Sheet.Range('H'+t).Value := FORMAT(Sheet.Range('H'+t).Value) + ',' + SalesLine."Artikelnr. 2";
-                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + deb_artnr;
-                                convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+                                Sheet.Range('I'+t).Value := FORMAT(Sheet.Range('I'+t).Value) + ',' + SalesLine."Artikelnr. 2";
+                                Sheet.Range('J'+t).Value := FORMAT(Sheet.Range('J'+t).Value) + ',' + deb_artnr;
+                                convert_test_user5 := FORMAT(Sheet.Range('I'+t).Value);
                               END;
                           END;
                       END;
@@ -849,7 +855,7 @@ IF SalesHeader.FINDFIRST THEN
 t := '1';
 chr := 10; //Line feed
 REPEAT
-  convert_test_user5 := FORMAT(Sheet.Range('H'+t).Value);
+  convert_test_user5 := FORMAT(Sheet.Range('I'+t).Value);
   debnr := DELCHR(FORMAT(Sheet.Range('A'+t).Value),'=','.');
   IF (convert_test_user5 <> '') AND (convert_test_user5 <> 'Artikel') THEN
     BEGIN
@@ -903,9 +909,9 @@ REPEAT
           convert_test_user5 := COPYSTR(convert_test_user5,STRPOS(convert_test_user5,',')+1)
 
       UNTIL convert_test_user5 = '';
-      Sheet.Range('P'+t).Value := user5[1] + user5[2];
-      Sheet.Range('Q'+t).Value := user5[3] + user5[4];
-      Sheet.Range('R'+t).Value := mail_text;
+      Sheet.Range('Q'+t).Value := user5[1] + user5[2];
+      Sheet.Range('R'+t).Value := user5[3] + user5[4];
+      Sheet.Range('S'+t).Value := mail_text;
     END;
   t := INCSTR(t);
 UNTIL FORMAT(Sheet.Range('A'+t).Value) = '';
