@@ -642,8 +642,8 @@ IF VKliefkopf.FINDLAST THEN
          REPEAT
            Artikel.GET(Vkliefzeile."No.");
            IF ((Artikel."Manufacturer Code" = '52') OR (Artikel."Manufacturer Code" = '53') 
-           OR (Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '96')
-           OR (Artikel."Manufacturer Code" = '99'))
+           OR (Artikel."Manufacturer Code" = '57') OR(Artikel."Manufacturer Code" = '5710')
+           OR (Artikel."Manufacturer Code" = '96') OR (Artikel."Manufacturer Code" = '99'))
            OR ((Artikel."Manufacturer Code" = '59') AND ((Artikel.Serviceklassifizierung = 'SOFTWARE')
            OR (Artikel.Serviceklassifizierung = 'LIZENZEN'))) THEN
              BEGIN
@@ -668,6 +668,7 @@ IF VKliefkopf.FINDLAST THEN
                        IF Artikel.FINDFIRST THEN
                          Packkontrolle.Verpackungsmenge:=Artikel.Verpackungsmenge;
                        Packkontrolle.Debitorenbuchungsgruppe := VKliefkopf."Customer Posting Group";
+                       Packkontrolle.Versandart := Packkontrolle.Versandart :: DPD;
                        Packkontrolle.INSERT;
                      END;
                  END;
