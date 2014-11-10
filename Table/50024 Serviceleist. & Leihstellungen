@@ -604,7 +604,8 @@ Inaktiv - OnLookup()
 
 Gruppierung - OnValidate()
 IF ("SUP Artikelnr." <> '') AND (Lizenzdatum <> 0D) THEN
-  Gruppierung := "SUP Artikelnr." + '_' + FORMAT(Lizenzdatum);
+  Gruppierung := FORMAT(DATE2DMY(Lizenzdatum,3)) + '_' + FORMAT(DATE2DMY(Lizenzdatum,2)) + '_' + FORMAT(DATE2DMY(Lizenzdatum,1))
+                 + '_' + FORMAT(DATE2DMY(Lizenzdatum,1)) + '_' + "SUP Artikelnr.";
 
 Gruppierung - OnLookup()
 
@@ -2970,6 +2971,7 @@ IF CopyRec.Reklamiert = FALSE THEN
     NewRec."Urspr. Seriennr." := AlteSN;
     NewRec.Ersatzverfahren := TRUE;
     NewRec."Ersatz für Lfd. Nr." := CopyRec."Lfd. Nr.";
+    NewRec."Board ini" := '';
     IF KundenPool THEN
       BEGIN
         PrüfeSystemPos.RESET;
