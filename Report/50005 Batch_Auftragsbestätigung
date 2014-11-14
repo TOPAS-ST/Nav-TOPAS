@@ -113,7 +113,26 @@ IF Best_PDF THEN
             //REPORT.RUNMODAL(50075,FALSE,FALSE,sales_header2);
             PDFCreator.SaveToPDF('Auftrag',sales_header2."No.",AttachmentPath,50075,user_DefaultPrinter);
             //MESSAGE('Auftragsnummer %1, E-Mail Adresse %2',"sales header"."No.","sales header"."AB via EMail-Adresse");
-            UNTIL "sales header".NEXT = 0
+            UNTIL "sales header".NEXT = 0;
+
+            //2014-11-14 ST Rahmenauftrag hinzu, wenn im Rahmen kein Haken im Feld "keine Rahmen-AB via Email" gesetzt ist
+            sales_line.RESET;
+            sales_line.SETFILTER(Type,'%1',sales_line.Type :: Item);
+            sales_line.SETFILTER("Document No.",'%1',sales_header2."No.");
+            sales_line.SETFILTER("Blanket Order No.",'<>%1','');
+            IF sales_line.FINDFIRST THEN
+              REPEAT
+                rahmen.RESET;
+                rahmen.SETFILTER("No.",'%1',sales_line."Blanket Order No.");
+                IF (rahmen.FINDFIRST) AND (rahmen."Document Date" = sales_header2."Document Date")
+                AND (rahmen."keine Rahmen-AB via Email" = FALSE) THEN
+                  IF STRPOS(belege,rahmen."No."+'.pdf') = 0 THEN
+                    BEGIN
+                      belege := belege + ',' + rahmen."No."+'.pdf';
+                      PDFCreator.SaveToPDF('Rahmenauftrag',rahmen."No.",AttachmentPath,50115,user_DefaultPrinter);
+                    END;
+              UNTIL sales_line.NEXT = 0;
+
        END;
 
     // Alten Stand zurücksichern
@@ -173,7 +192,26 @@ IF Änd_Best_PDF THEN
             //REPORT.RUNMODAL(50098,FALSE,FALSE,sales_header2);
             PDFCreator.SaveToPDF('Auftrag',sales_header2."No.",AttachmentPath,50098,user_DefaultPrinter);
             //MESSAGE('Auftragsnummer %1, E-Mail Adresse %2',"sales header"."No.","sales header"."AB via EMail-Adresse");
-         UNTIL "sales header".NEXT = 0
+
+            //2014-11-14 ST Rahmenauftrag hinzu, wenn im Rahmen kein Haken im Feld "keine Rahmen-AB via Email" gesetzt ist
+            sales_line.RESET;
+            sales_line.SETFILTER(Type,'%1',sales_line.Type :: Item);
+            sales_line.SETFILTER("Document No.",'%1',sales_header2."No.");
+            sales_line.SETFILTER("Blanket Order No.",'<>%1','');
+            IF sales_line.FINDFIRST THEN
+              REPEAT
+                rahmen.RESET;
+                rahmen.SETFILTER("No.",'%1',sales_line."Blanket Order No.");
+                IF (rahmen.FINDFIRST) AND (rahmen."Document Date" = sales_header2."Document Date")
+                AND (rahmen."keine Rahmen-AB via Email" = FALSE) THEN
+                  IF STRPOS(belege,rahmen."No."+'.pdf') = 0 THEN
+                    BEGIN
+                      belege := belege + ',' + rahmen."No."+'.pdf';
+                      PDFCreator.SaveToPDF('Rahmenauftrag',rahmen."No.",AttachmentPath,50115,user_DefaultPrinter);
+                    END;
+              UNTIL sales_line.NEXT = 0;
+            
+         UNTIL "sales header".NEXT = 0;
        END;
 
     // Alten Stand zurücksichern
@@ -217,6 +255,24 @@ IF Best_PDF THEN
                           'thank you for your order. Attached you will find your order confirmation.';
                   subject := 'Order confirmation: ';
                 END;
+
+              belege := "sales header"."No."+'.pdf';
+
+              //2014-11-14 ST Rahmenauftrag hinzu, wenn im Rahmen kein Haken im Feld "keine Rahmen-AB via Email" gesetzt ist
+              sales_line.RESET;
+              sales_line.SETFILTER(Type,'%1',sales_line.Type :: Item);
+              sales_line.SETFILTER("Document No.",'%1',"sales header"."No.");
+              sales_line.SETFILTER("Blanket Order No.",'<>%1','');
+              IF sales_line.FINDFIRST THEN 
+                REPEAT
+                  rahmen.RESET;
+                  rahmen.SETFILTER("No.",'%1',sales_line."Blanket Order No.");
+                  IF (rahmen.FINDFIRST) AND (rahmen."Document Date" = "sales header"."Document Date")
+                  AND (rahmen."keine Rahmen-AB via Email" = FALSE) THEN
+                    IF STRPOS(belege,rahmen."No."+'.pdf') = 0 THEN
+                      belege := belege + ',' + rahmen."No."+'.pdf';
+                UNTIL sales_line.NEXT = 0;
+
               TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
               "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
             UNTIL "sales header".NEXT = 0;
@@ -251,6 +307,24 @@ IF Änd_Best_PDF THEN
                           'attached you will find a change order confirmation.';
                   subject := 'Change order confirmation: ';
                 END;
+
+              belege := "sales header"."No."+'.pdf';
+
+              //2014-11-14 ST Rahmenauftrag hinzu, wenn im Rahmen kein Haken im Feld "keine Rahmen-AB via Email" gesetzt ist
+              sales_line.RESET;
+              sales_line.SETFILTER(Type,'%1',sales_line.Type :: Item);
+              sales_line.SETFILTER("Document No.",'%1',"sales header"."No.");
+              sales_line.SETFILTER("Blanket Order No.",'<>%1','');
+              IF sales_line.FINDFIRST THEN 
+                REPEAT
+                  rahmen.RESET;
+                  rahmen.SETFILTER("No.",'%1',sales_line."Blanket Order No.");
+                  IF (rahmen.FINDFIRST) AND (rahmen."Document Date" = "sales header"."Document Date")
+                  AND (rahmen."keine Rahmen-AB via Email" = FALSE) THEN
+                    IF STRPOS(belege,rahmen."No."+'.pdf') = 0 THEN
+                      belege := belege + ',' + rahmen."No."+'.pdf';
+                UNTIL sales_line.NEXT = 0;
+
               TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
               "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
             UNTIL "sales header".NEXT = 0;
