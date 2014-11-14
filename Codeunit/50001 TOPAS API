@@ -44,7 +44,18 @@ run := gw.Execute('ItemSetText("X00";9;"'+subject+'")',sResult);
 
 run := gw.Execute('ItemSetText("X00";10;"'+body+'")',sResult);
 IF AttachmentFile <> '' THEN
-  run := gw.Execute('AttachmentAdd("' + AttachmentPath + AttachmentFile + '")',sResult);
+  BEGIN
+    temp_attachmentFile := AttachmentFile;
+    FOR i:= 1 TO STRLEN(DELCHR(AttachmentFile,'=',DELCHR(AttachmentFile,'=',',')))+1 DO
+      BEGIN
+        IF STRPOS(temp_attachmentFile,',') <> 0 THEN
+          send_attachmentFile := DELCHR(COPYSTR(temp_attachmentFile,1,STRPOS(temp_attachmentFile,',')),'=',',')
+        ELSE
+          send_attachmentFile := COPYSTR(temp_attachmentFile,1);
+        run := gw.Execute('AttachmentAdd("' + AttachmentPath + send_attachmentFile + '")',sResult);
+        temp_attachmentFile := COPYSTR(temp_attachmentFile,STRPOS(temp_attachmentFile,',')+1);
+      END;
+  END;
 //  Set the focus to the body text field
 run := gw.Execute('FocusSet(10)', sResult);
 // Select all the text in the body text field
@@ -129,7 +140,7 @@ filename := 'R:\Scripte\GroupWise\GWCalEntry.vbs';
 Files.CREATE(filename);
 
 Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
-Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","","'+password+'",1)');
 
 IF gwAccID = 'Urlaub' THEN
   //calender := 'urlaub Kalender'
@@ -164,7 +175,7 @@ IF ISCLEAR(gwApplication) THEN
   CREATE(gwApplication);
 
 gwAccount := gwApplication.Login('','','',1);
-//gwAccount := gwApplication.MultiLogin(gwAccID,password,'',1);
+//gwAccount := gwApplication.MultiLogin(gwAccID,'',password,1);
 
 gwFolder:=gwAccount.MailBox;
 searchstring := '(Subject contains "'+search+'")';
@@ -202,7 +213,7 @@ IF ISCLEAR(gwApplication) THEN
   CREATE(gwApplication);
 
 //gwAccount := gwApplication.Login('','','',1);
-gwAccount := gwApplication.MultiLogin(gwAccID,password,'',1);
+gwAccount := gwApplication.MultiLogin(gwAccID,'',password,1);
 
 gwFolder:=gwAccount.MailBox;
 mailbox_size := gwAccount.AccountProperty(6);
@@ -240,7 +251,7 @@ filename := 'R:\Scripte\GroupWise\GWStastic.vbs';
 Files.CREATE(filename);
 
 Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
-Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","","'+password+'",1)');
 
 Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
 
@@ -273,7 +284,7 @@ filename := 'R:\Scripte\GroupWise\GWStastic.vbs';
 Files.CREATE(filename);
 
 Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
-Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","'+password+'","",1)');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","","'+password+'",1)');
 
 Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
 
@@ -309,6 +320,43 @@ WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
 SLEEP(1000);
 
 MESSAGE('50094 Versand abgeschlossen');
+
+SendTypo3AccCheckMail(gwAccID : Text[30];password : Text[30];to_addr1 : Text[120];to_addr2 : Text[120];to_addr3 : Text[120];to_addr4 : 
+IF ISCLEAR(WSHScript) THEN
+  CREATE(WSHScript);
+
+Files.TEXTMODE := TRUE;
+filename := 'R:\Scripte\GroupWise\GWStastic.vbs';
+
+Files.CREATE(filename);
+
+Files.WRITE('Set gwSession = CreateObject("NovellGroupWareSession")');
+Files.WRITE('Set gwAccount = gwSession.multilogin("'+gwAccID+'","","'+password+'",1)');
+
+Files.WRITE('Set gwAppt = gwAccount.workfolder.Messages.Add("GW.MESSAGE.MAIL")');   //Als Message
+Files.WRITE('gwAppt.Subject = "Monatsjob Navision - Uberpruefung Typo3 Accounts"');
+Files.WRITE('gwappt.BodyText = '+
+'"Automatischer Navision Job zum Abgleich der Typo3 User Accounts mit den Vertragsdaten aus Navision." & chr(10) & "'+
+'Datum: '+filter1+'"');
+
+Files.WRITE('gwAppt.Recipients.Add("'+to_addr1+'")');
+IF to_addr2 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr2+'")');
+IF to_addr3 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr3+'")');
+IF to_addr4 <> '' THEN
+  Files.WRITE('gwAppt.Recipients.Add("'+to_addr4+'")');
+
+Files.WRITE('gwAppt.Attachments.Add("'+AttPath+'")');
+Files.WRITE('gwAppt.Send');
+
+Files.CLOSE;
+
+WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
+
+SLEEP(1000);
+
+MESSAGE('50122 Versand abgeschlossen');
 
 SearchFolderBuildtoOrder(Path : Text[250])
 CLEAR(Quelle_Excel);
