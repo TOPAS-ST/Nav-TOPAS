@@ -4558,6 +4558,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Champs."Update letzte Preisliste" = FALSE THEN
           MESSAGE(Text120,"Basis Artikelnr",Champs.Preisliste,Champs."Letzte Aktualisierung");
 
+        //CHAMPS EK Konditionen
         v_service_laufzeit := Laufzeit DIV 12;
         CASE v_service_laufzeit OF
           0..1 : champs_discount := 1;
@@ -4567,14 +4568,27 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
           5..100 : champs_discount := 0.8; // -20%
         END;
 
-        IF (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')  THEN
-          EXIT((ROUND((((Champs.MSRP*0.72)*Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))*(champs_discount),rundgs_faktor))
-          *spezial_discount)
-        ELSE
-          IF (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS') THEN
-            EXIT((ROUND(((Champs.MSRP*0.8)*Champs."Laufzeit in Jahren")*(Laufzeit/v_laufzeit),rundgs_faktor))
-            *spezial_discount);
+        //ACTS EK Konditionen
+        v_service_laufzeit := Laufzeit DIV 12;
+        CASE v_service_laufzeit OF
+          0..1 : acts_discount := 1;
+          2 : acts_discount := 0.95; // -5%
+          3 : acts_discount := 0.88; // -12%
+          4 : acts_discount := 0.84; // -16%
+          5..100 : acts_discount := 0.8; // -20%
+        END;
 
+        IF (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')  THEN
+          EXIT((ROUND((((Champs.MSRP * 0.72) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+          * (champs_discount),rundgs_faktor)) * spezial_discount)
+        ELSE
+          IF (Artikel.Artikelgruppe = 'ACHAT') THEN
+            EXIT((ROUND(((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit),
+            rundgs_faktor)) * spezial_discount)
+          ELSE
+            IF (Artikel.Artikelgruppe = 'ACTS') THEN
+              EXIT((ROUND((((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+              * (acts_discount),rundgs_faktor)) * spezial_discount);
       END
     ELSE
       BEGIN
@@ -4609,6 +4623,7 @@ Gen_Service_VK("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit 
 
 achat_marge := 1;
 achat_discount := 1;
+acts_discount := 1;
 
 IF Runden THEN
   rundgs_faktor := 1
@@ -4634,7 +4649,6 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       ACHAT := TRUE
     ELSE
       ACHAT := FALSE;
-
 
     //***************************************************************************************************
     //                Angabe der Positionsnr. bezieht sich auf eine Auftrags Position
@@ -4701,11 +4715,20 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                         ELSE
                           //ACTS
                           BEGIN
+                            v_service_laufzeit := Laufzeit DIV 12;
+                            CASE v_service_laufzeit OF
+                              0..1 : acts_discount := 1;
+                              2 : acts_discount := 0.95; // -5%
+                              3 : acts_discount := 0.88; // -12%
+                              4 : acts_discount := 0.84; // -16%
+                              5..100 : acts_discount := 0.8; // -20%
+                            END;
                             v_prozentsatz := 100 - Kalk_Prozentsatz
                           END;
 
-                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
-                            ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount*acts_discount/100)
+                        * (Laufzeit/v_laufzeit)) + ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+
                       END
                     ELSE
                       ERROR(Text123,"SUP Artikelnr",AktBelegZeile."No.");
@@ -4775,10 +4798,19 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                             ELSE
                               //ACTS
                               BEGIN
+                                v_service_laufzeit := Laufzeit DIV 12;
+                                CASE v_service_laufzeit OF
+                                  0..1 : acts_discount := 1;
+                                  2 : acts_discount := 0.95; // -5%
+                                  3 : acts_discount := 0.88; // -12%
+                                  4 : acts_discount := 0.84; // -16%
+                                  5..100 : acts_discount := 0.8; // -20%
+                                END;
                                 v_prozentsatz := 100-Kalk_Prozentsatz;
                               END;
-                            EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
-                                ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+                            EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount*acts_discount/100) *
+                            (Laufzeit/v_laufzeit)) + ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
+
                           END
                         ELSE
                           ERROR(Text123,"SUP Artikelnr",Vkliefzeile."No.");
@@ -4846,10 +4878,19 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                              END;
                          END
                        ELSE
+                         //ACTS
                          BEGIN
+                           v_service_laufzeit := Laufzeit DIV 12;
+                           CASE v_service_laufzeit OF
+                             0..1 : acts_discount := 1;
+                             2 : acts_discount := 0.95; // -5%
+                             3 : acts_discount := 0.88; // -12%
+                             4 : acts_discount := 0.84; // -16%
+                             5..100 : acts_discount := 0.8; // -20%
+                           END;
                            v_prozentsatz := 100-Kalk_Prozentsatz;
                          END;
-                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount/100) * (Laufzeit/v_laufzeit)) +
+                        EXIT(ROUND((((((BesterVkPreis * v_prozentsatz))*achat_discount*acts_discount/100) * (Laufzeit/v_laufzeit)) +
                             ((Laufzeit/v_laufzeit) * (basissatz))),rundgs_faktor) / achat_marge);
                      END
                    ELSE
