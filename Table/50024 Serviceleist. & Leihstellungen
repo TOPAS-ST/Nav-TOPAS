@@ -3062,6 +3062,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       BEGIN
         IF Feld = 'DC' THEN
           BEGIN
+
+            //CHAMPS EK Konditionen
             v_service_laufzeit := kalk_laufzeit DIV 12;
             CASE v_service_laufzeit OF
               0..1 : champs_discount := 1;
@@ -3071,14 +3073,27 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
               5..100 : champs_discount := 0.8; // -20%
             END;
 
+            //ACTS EK Konditionen
+            v_service_laufzeit := kalk_laufzeit DIV 12;
+            CASE v_service_laufzeit OF
+              0..1 : acts_discount := 1;
+              2 : acts_discount := 0.95; // -5%
+              3 : acts_discount := 0.88; // -12%
+              4 : acts_discount := 0.84; // -16%
+              5..100 : acts_discount := 0.8; // -20%
+            END;
+
             IF (ACTS = FALSE) AND (ACHAT = FALSE) THEN
-              EXIT((ROUND((((Champs.MSRP*0.72)*Champs."Laufzeit in Jahren")*(kalk_laufzeit / v_laufzeit))
-              * (champs_discount),rundgs_faktor))
-                    *spezial_discount)
+              EXIT((ROUND((((Champs.MSRP * 0.72) * Champs."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
+              * (champs_discount),rundgs_faktor)) * spezial_discount)
             ELSE
-              IF (ACHAT = TRUE) OR (ACTS = TRUE) THEN
-                EXIT((ROUND(((Champs.MSRP*0.8)*Champs."Laufzeit in Jahren")*(kalk_laufzeit / v_laufzeit),rundgs_faktor))
-                      *spezial_discount);
+              IF (ACHAT = TRUE) THEN
+                EXIT((ROUND((((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit)),
+                rundgs_faktor)) * spezial_discount)
+              ELSE
+                IF (ACTS = TRUE) THEN
+                  EXIT((ROUND((((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
+                  * (acts_discount),rundgs_faktor)) * spezial_discount)
           END;
 
         IF Feld = 'MSRP' THEN
