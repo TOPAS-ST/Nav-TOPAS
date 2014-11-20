@@ -1,0 +1,258 @@
+
+Documentation()
+
+OnInsert()
+
+OnModify()
+
+OnDelete()
+ChampsLizenzTab.RESET;
+ChampsLizenzTab.SETFILTER(Art,'%1',ChampsLizenzTab.Art :: Temporär);
+ChampsLizenzTab.SETFILTER("Nr.",'%1',"Belegnr.");
+ChampsLizenzTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+ChampsLizenzTab.SETFILTER("Auftragsnr.",'%1',"Nr.");
+ChampsLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Zeilennr.");
+IF ChampsLizenzTab.FINDFIRST THEN
+  ChampsLizenzTab.DELETEALL;
+
+OnRename()
+
+Art - OnValidate()
+
+Art - OnLookup()
+
+Nr. - OnValidate()
+
+Nr. - OnLookup()
+
+Zeilennr. - OnValidate()
+
+Zeilennr. - OnLookup()
+
+SUP Artikelnr. - OnValidate()
+
+SUP Artikelnr. - OnLookup()
+
+Geräte Artikelnr. - OnValidate()
+IF Art = Art :: "SUP-AU" THEN
+  BEGIN
+
+    //Prüfung: Bei Fremderwerb müssen für ein und derselben Pseudo Belegnr. + Zeilennr. die Artikelnummern identisch sein
+    IF Fremderwerb = TRUE THEN
+      BEGIN
+        ChampZuordnungBeleg.RESET;
+        ChampZuordnungBeleg.SETFILTER(Art,'%1',ChampZuordnungBeleg.Art :: "SUP-AU");
+        ChampZuordnungBeleg.SETFILTER("Belegnr.",'%1',"Belegnr.");
+        ChampZuordnungBeleg.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+        IF ChampZuordnungBeleg.FINDFIRST THEN
+          REPEAT 
+            IF ((ChampZuordnungBeleg."Nr." <> "Nr.") OR (ChampZuordnungBeleg."Zeilennr." <> "Zeilennr."))
+            AND (ChampZuordnungBeleg."Geräte Artikelnr." <> "Geräte Artikelnr.") THEN
+              ERROR(Text004,FIELDCAPTION("Belegnr."),ChampZuordnungBeleg."Belegnr.",FIELDCAPTION("Belegzeilennr."),
+                    ChampZuordnungBeleg."Belegzeilennr.",FIELDCAPTION("Geräte Artikelnr."),ChampZuordnungBeleg."Geräte Artikelnr.");
+          UNTIL ChampZuordnungBeleg.NEXT = 0;
+      END;
+
+    Artikel.GET("Geräte Artikelnr.");
+    IF Artikel.Serviceklassifizierung = '' THEN ERROR(Text000,"Geräte Artikelnr.");
+    IF (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+    OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') THEN
+      Basisgerät := TRUE
+    ELSE
+      Basisgerät := FALSE;
+
+    "Service VK-Preis einzeln" := 0;
+    "Service VK-Preis Zeilenbetrag" := 0;
+    "Service DC einzeln" := 0;
+    "Service DC Gesamt" := 0;
+    "MSRP Service" := 0;
+
+    IF (("Belegnr." <> '') AND ("Belegzeilennr." <> 0)) THEN
+      Gruppierung := Gruppieren("Belegnr.","Belegzeilennr.",Basisgerät);
+  END;
+
+Geräte Artikelnr. - OnLookup()
+
+Abw. Geräte Artikelnr. - OnValidate()
+
+Abw. Geräte Artikelnr. - OnLookup()
+
+Basisgerät - OnValidate()
+
+Basisgerät - OnLookup()
+
+Belegnr. - OnValidate()
+Gruppierung := Gruppieren("Belegnr.","Belegzeilennr.",Basisgerät)
+
+Belegnr. - OnLookup()
+
+Belegzeilennr. - OnValidate()
+Gruppierung := Gruppieren("Belegnr.","Belegzeilennr.",Basisgerät)
+
+Belegzeilennr. - OnLookup()
+
+Debitornr. - OnValidate()
+
+Debitornr. - OnLookup()
+
+Wartungsvertragsnr. - OnValidate()
+
+Wartungsvertragsnr. - OnLookup()
+
+Vertragsnr. übernommen - OnValidate()
+
+Vertragsnr. übernommen - OnLookup()
+
+Service VK-Preis einzeln - OnValidate()
+
+Service VK-Preis einzeln - OnLookup()
+
+Service VK-Preis Zeilenbetrag - OnValidate()
+
+Service VK-Preis Zeilenbetrag - OnLookup()
+
+Menge kalk. - OnValidate()
+IF xRec."Menge kalk." <> "Menge kalk." THEN
+  BEGIN
+    "Service VK-Preis Zeilenbetrag" := 0;
+    "Service DC Gesamt" := 0;
+  END;
+
+Menge kalk. - OnLookup()
+
+Laufzeit - OnValidate()
+IF STRPOS(Laufzeit,'M') = 0 THEN
+  ERROR('Im Feld %1 muss auch immer die Angabe M (Monate) enthalten sein.',FIELDCAPTION(Laufzeit));
+
+IF xRec.Laufzeit <> Laufzeit THEN
+  BEGIN
+    "Service VK-Preis einzeln" := 0;
+    "Service VK-Preis Zeilenbetrag" := 0;  
+    "Service DC einzeln" := 0;
+    "Service DC Gesamt" := 0;
+  END;
+
+VALIDATE(Startdatum);
+
+Laufzeit - OnLookup()
+
+Startdatum - OnValidate()
+IF "SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN ERROR(Text005);
+
+ChampZuordnungBeleg.RESET;
+ChampZuordnungBeleg.SETRANGE(Art,ChampZuordnungBeleg.Art :: "SUP-AU");
+ChampZuordnungBeleg.SETRANGE("Nr.","Nr.");
+ChampZuordnungBeleg.SETRANGE("Zeilennr.","Zeilennr.");
+ChampZuordnungBeleg.SETRANGE(Startdatum,Startdatum);
+IF NOT ChampZuordnungBeleg.FINDFIRST THEN
+  BEGIN
+    IF (Startdatum < WORKDATE) AND (Startdatum <> 0D) THEN
+      IF NOT CONFIRM(Text002,TRUE,FIELDCAPTION(Startdatum)) THEN
+        BEGIN
+          Startdatum := xRec.Startdatum;
+          EXIT;
+        END;
+  END;
+
+VALIDATE(Ablaufdatum);
+
+Startdatum - OnLookup()
+
+Ablaufdatum - OnValidate()
+IF "SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN ERROR(Text005);
+
+IF (Ablaufdatum < WORKDATE) AND (Ablaufdatum <> 0D) THEN
+  ERROR(Text003,FIELDCAPTION(Ablaufdatum));
+
+//IF (xRec.Startdatum <> 0D) AND (Ablaufdatum = 0D) THEN
+//  Startdatum := 0D;
+
+//IF (Laufzeit <> '') AND (Startdatum <> 0D) THEN
+//  Ablaufdatum := CALCDATE(Laufzeit,Startdatum);
+
+IF Startdatum = 0D THEN
+  Ablaufdatum := 0D;
+
+Ablaufdatum - OnLookup()
+
+Nachträgliche Service Order - OnValidate()
+
+Nachträgliche Service Order - OnLookup()
+
+Fremderwerb - OnValidate()
+
+Fremderwerb - OnLookup()
+
+Service DC einzeln - OnValidate()
+
+Service DC einzeln - OnLookup()
+
+Service DC Gesamt - OnValidate()
+
+Service DC Gesamt - OnLookup()
+
+MSRP Service - OnValidate()
+
+MSRP Service - OnLookup()
+
+Service DC Währungscode - OnValidate()
+
+Service DC Währungscode - OnLookup()
+
+ACTS Rabatt - OnValidate()
+
+ACTS Rabatt - OnLookup()
+
+Gruppierung - OnValidate()
+
+Gruppierung - OnLookup()
+
+PseudoBelegNrErmitteln(auftragsnr : Code[20];auzeilennr : Integer) : Code[20]
+PrüfeChampRelaDoc.RESET;
+PrüfeChampRelaDoc.SETFILTER(Art,'%1',PrüfeChampRelaDoc.Art :: "SUP-AU");
+PrüfeChampRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
+PrüfeChampRelaDoc.SETFILTER("Zeilennr.",'%1',auzeilennr);
+PrüfeChampRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+IF PrüfeChampRelaDoc.FINDFIRST THEN
+  BEGIN
+    EXIT(PrüfeChampRelaDoc."Belegnr.");
+  END
+ELSE
+  BEGIN
+    // Prüfe, ob im Beleg eine andere Kalkulation mit Pseudo Belegnr. besteht und wenn ja biete diese an
+    PrüfeChampRelaDoc.RESET;
+    PrüfeChampRelaDoc.SETFILTER(Art,'%1',PrüfeChampRelaDoc.Art :: "SUP-AU");
+    PrüfeChampRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
+    //PrüfeChampRelaDoc.SETFILTER(Basisgerät,'%1',TRUE);
+    PrüfeChampRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+    IF PrüfeChampRelaDoc.FINDLAST THEN
+      IF CONFIRM(Text001,TRUE,PrüfeChampRelaDoc."Zeilennr.",PrüfeChampRelaDoc."SUP Artikelnr.",PrüfeChampRelaDoc."Belegnr.") THEN
+        EXIT(PrüfeChampRelaDoc."Belegnr.");
+
+    ok := EVALUATE(eingabe,'TOPAS-PSEU');
+    laufende_nummer:='';
+    NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
+    EXIT('LS_' + laufende_nummer);
+  END;
+
+Gruppieren(Belegnr : Code[20];Belegzeile : Integer;Basisgerät : Boolean) : Text[50]
+IF (Belegnr = '') OR (Belegzeile = 0) THEN
+  EXIT;
+
+IF Basisgerät = TRUE THEN
+  Teil_string_a := 'B_'
+ELSE
+  Teil_string_a := 'M_';
+
+//Damit 6 stellige Zeilennr. auch nach unten sortiert werden
+zusatz_belegzeile := '';
+IF STRLEN(FORMAT(Belegzeile)) >=6 THEN
+  zusatz_belegzeile := '6ST_';
+
+IF (STRPOS(Belegnr,'AU') <> 0) OR (STRPOS(Belegnr,'PSEU') <> 0) THEN
+  //Ein X_ damit Auftrags- oder Pseudo Positionen nach unten sortiert werden
+  Teil_string_b := 'X_' + zusatz_belegzeile + Belegnr + '_' + FORMAT(Belegzeile)
+ELSE
+  Teil_string_b := zusatz_belegzeile + Belegnr + '_' + FORMAT(Belegzeile);
+
+EXIT(Teil_string_a + Teil_string_b);
