@@ -1166,7 +1166,7 @@ IF ISCLEAR(PDFCreatorOption) THEN
 
 filename := DocNo;
 
-IF (Object = 'Auftrag') OR (Object = 'Angebot') THEN
+IF (Object = 'Auftrag') OR (Object = 'Angebot') OR (Object = 'Rahmenauftrag') THEN
   BEGIN
     SalesHeader.SETRANGE("No.",DocNo);
     SalesHeader.FINDFIRST;
@@ -1214,7 +1214,7 @@ IF PDFCreator.cDefaultPrinter <> 'PDFCreator' THEN
   PDFCreator.cDefaultPrinter := 'PDFCreator';
 PDFCreator.cPrinterStop := FALSE;
 
-IF (Object = 'Auftrag') OR (Object = 'Angebot') THEN
+IF (Object = 'Auftrag') OR (Object = 'Angebot') OR (Object = 'Rahmenauftrag') THEN
   REPORT.RUNMODAL(ReportID,FALSE,TRUE,SalesHeader);
 
 IF Object = 'Rechnung' THEN
