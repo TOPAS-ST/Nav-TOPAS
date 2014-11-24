@@ -81,7 +81,7 @@ IF Best_PDF THEN
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
        BEGIN
-         REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
+         //REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
  //    REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
        END;
 
@@ -160,7 +160,7 @@ IF Änd_Best_PDF THEN
     "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
     IF "sales header".FINDFIRST THEN
        BEGIN
-         REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
+         //REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
        END;
 
     // Druck als PDF
@@ -274,7 +274,7 @@ IF Best_PDF THEN
                 UNTIL sales_line.NEXT = 0;
 
               TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
-              "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
+              "sales header"."External Document No.",body,AttachmentPath,belege);
             UNTIL "sales header".NEXT = 0;
           //END;
       END;
@@ -326,7 +326,7 @@ IF Änd_Best_PDF THEN
                 UNTIL sales_line.NEXT = 0;
 
               TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
-              "sales header"."External Document No.",body,AttachmentPath,"sales header"."No."+'.pdf');
+              "sales header"."External Document No.",body,AttachmentPath,belege);
             UNTIL "sales header".NEXT = 0;
           //END;
       END;
