@@ -45,7 +45,7 @@ IF Best_Druck THEN
          REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
 
 //  Druckt auf Briefpapier mit Geschäftsführung, Adresse, Telefon, Moody-Logo am unteren Rand
-//         REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
+         //REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
        END;
   END;
 
@@ -64,26 +64,27 @@ IF Änd_Best_Druck THEN
 //  Druckt auf Papier nur mit Logo rechts oben
          REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
 //  Druckt auf Briefpapier mit Geschäftsführung, Adresse, Telefon, Moody-Logo am unteren Rand
-//       REPORT.RUNMODAL(50111,FALSE,FALSE,"sales header");
+         //REPORT.RUNMODAL(50111,FALSE,FALSE,"sales header");
        END;
   END;
 
 
-
-
 IF Best_PDF THEN
   BEGIN
-   // Druckt Seite 2 auf Papier
-    "sales header".RESET;
-    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
-    "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
-    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
-    IF "sales header".FINDFIRST THEN
-       BEGIN
-         //REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
- //    REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
-       END;
+  // Druckt Seite 2 auf Papier
+   IF interne_AB_nicht_drucken = FALSE THEN
+     BEGIN
+        "sales header".RESET;
+        "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+        "sales header".SETFILTER("sales header"."Order Date",'%1',Tagesdatum);
+        "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
+        "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+        IF "sales header".FINDFIRST THEN
+           BEGIN
+             REPORT.RUNMODAL(50075,FALSE,FALSE,"sales header");
+             //REPORT.RUNMODAL(50110,FALSE,FALSE,"sales header");
+           END;
+      END;
 
     // Druck als PDF
     "sales header".RESET;
@@ -152,16 +153,19 @@ IF Best_PDF THEN
 IF Änd_Best_PDF THEN
   BEGIN
   // Druckt Seite 2 auf Papier
-    "sales header".RESET;
-    "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
-    "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
-    "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
-    "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
-    IF "sales header".FINDFIRST THEN
-       BEGIN
-         //REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
-       END;
+    IF interne_AB_nicht_drucken = FALSE THEN
+      BEGIN
+        "sales header".RESET;
+        "sales header".SETFILTER("sales header"."Document Type",'%1',"sales header"."Document Type"::Order);
+        "sales header".SETFILTER("sales header"."Document Date",'%1',Tagesdatum);
+        "sales header".SETFILTER("sales header"."Posting Date",'<>%1',Tagesdatum);
+        "sales header".SETFILTER("sales header"."Location Code",'%1|%2','ZENT','KONSI');
+        "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+        IF "sales header".FINDFIRST THEN
+           BEGIN
+             REPORT.RUNMODAL(50098,FALSE,FALSE,"sales header");
+           END;
+      END;
 
     // Druck als PDF
     "sales header".RESET;
