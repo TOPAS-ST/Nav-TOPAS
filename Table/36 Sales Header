@@ -2355,6 +2355,10 @@ Endkunde E-Mail - OnValidate()
 
 Endkunde E-Mail - OnLookup()
 
+keine Rahmen-AB via Email - OnValidate()
+
+keine Rahmen-AB via Email - OnLookup()
+
 keine Rahmen-AB an Kunden - OnValidate()
 
 keine Rahmen-AB an Kunden - OnLookup()
@@ -3672,6 +3676,7 @@ IF AUzeile.FINDFIRST THEN
                     ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
                     ServiceZuordnungBeleg.SETFILTER("Nr.",'%1',AUnr);
                     ServiceZuordnungBeleg.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+                    ServiceZuordnungBeleg.SETFILTER(Basisgerät,'%1',TRUE);
                     IF ServiceZuordnungBeleg.FINDFIRST THEN
                       REPEAT
                         PrüfeServicePos.RESET;
@@ -3698,7 +3703,8 @@ IF AUzeile.FINDFIRST THEN
                                     IF PrüfeServicePos.Art = PrüfeServicePos.Art :: Service THEN
                                       BEGIN
                                         IF PrüfeServicePos."Urspr. Lieferscheinnr." <> ChampZuordnungHolen."Belegnr." THEN
-                                          ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                          ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
+                                          ChampZuordnungHolen."Zeilennr.")
                                         ELSE
                                           basisgerät_kollision_ok := TRUE;
                                       END
@@ -3706,7 +3712,8 @@ IF AUzeile.FINDFIRST THEN
                                       BEGIN
                                         IF PrüfeServicePos.Art = PrüfeServicePos.Art :: System THEN
                                           IF PrüfeServicePos."Nr." <> ChampZuordnungHolen."Belegnr." THEN
-                                            ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                            ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
+                                            ChampZuordnungHolen."Zeilennr.")
                                           ELSE
                                             basisgerät_kollision_ok := TRUE;
                                       END;
@@ -3857,6 +3864,7 @@ IF AUzeile.FINDFIRST THEN
     REPEAT
       service_dc_einzeln_neu := 0;
       service_dc_gesamt_neu := 0;
+      kein_service_dc := FALSE;
       Artikel.GET(AUzeile."No.");
       IF Artikel."Software Upgrade Protection" = TRUE THEN
         BEGIN
@@ -3876,21 +3884,26 @@ IF AUzeile.FINDFIRST THEN
               //      er den Aktualisierungsvorgang komplett ab, so dass nicht der korrekte DC geändert wird
               //***************************************************************************************************
 
-              IF  service_dc_einzeln_neu = 0 THEN EXIT;
+              IF  service_dc_einzeln_neu = 0 THEN 
+                kein_service_dc := TRUE;
 
               // Jetzt wird der DC neu berechnet
-              service_dc_gesamt_neu := service_dc_gesamt_neu + (service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.");
-              ServiceZuordnungHolen."Service DC einzeln" := service_dc_einzeln_neu;
-              ServiceZuordnungHolen."Service DC Gesamt" := service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.";
-              ServiceZuordnungHolen.MODIFY;
+              IF kein_service_dc = FALSE THEN
+                BEGIN
+                  service_dc_gesamt_neu := service_dc_gesamt_neu + (service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.");
+                  ServiceZuordnungHolen."Service DC einzeln" := service_dc_einzeln_neu;
+                  ServiceZuordnungHolen."Service DC Gesamt" := service_dc_einzeln_neu * ServiceZuordnungHolen."Menge kalk.";
+                  ServiceZuordnungHolen.MODIFY;
+                END;
 
-            UNTIL ServiceZuordnungHolen.NEXT = 0;
+            UNTIL (ServiceZuordnungHolen.NEXT = 0) OR (kein_service_dc = TRUE);
 
           //***************************************************************************************************
           // Vergleicht Gesamt DC aus Kalkulation und Beleg DC, führt bei Abweichung eine Aktualisierung durch
           //***************************************************************************************************
 
-          IF (AUzeile."DC-Preis (EKW)" <> service_dc_gesamt_neu) AND (Artikel."Software Upgrade Protection" = TRUE) THEN
+          IF (AUzeile."DC-Preis (EKW)" <> service_dc_gesamt_neu) AND (kein_service_dc = FALSE)
+          AND (Artikel."Software Upgrade Protection" = TRUE) THEN
             BEGIN
               IF CONFIRM(Text135,TRUE,AUzeile."No.",AUzeile."Line No.") THEN
                 BEGIN
