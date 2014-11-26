@@ -901,7 +901,10 @@ IF Artikelposten.FINDFIRST THEN
           LizenzTab."Debitornr." := Debnr;
           LizenzTab.VALIDATE("Artikelnr.",Artikelposten."Item No.");
           LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
-          LizenzTab.Menge := Artikelposten.Quantity * (-1);
+          IF Artikelposten."Item Tracking" = Artikelposten."Item Tracking" :: "Serial No." THEN
+            LizenzTab.Menge := Artikelposten.Quantity * (-1)
+          ELSE
+            LizenzTab.Menge := "Lizenz Anzahl";
           LizenzTab."Seriennr." := zupruefende_seriennr;
           IF urspr_seriennr <> '' THEN BEGIN
             LizenzTab."Urspr. Seriennr." := urspr_seriennr;
@@ -2038,7 +2041,8 @@ IF Vkliefkopf.FINDLAST THEN
                                                    (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
                                                      LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                                    ELSE
-                                                     LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                                     IF LizenzTab.Verlängerung = TRUE THEN
+                                                       LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                                    LizenzTab.VALIDATE("Dauer Serviceleistung");
                                                    IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
                                                      BEGIN
@@ -2218,7 +2222,8 @@ IF Vkliefkopf.FINDLAST THEN
                                             IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
                                               LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                             ELSE
-                                              LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                              IF LizenzTab.Verlängerung = TRUE THEN
+                                                LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
                                             IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
                                               BEGIN
@@ -2408,7 +2413,8 @@ IF Vkliefkopf.FINDLAST THEN
                                             IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
                                               LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                             ELSE
-                                              LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                              IF LizenzTab.Verlängerung = TRUE THEN
+                                                LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
                                             IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
                                               BEGIN
@@ -2890,7 +2896,12 @@ IF Wartungsnr <> '' THEN
     PrüfeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',Wartungsnr);
     PrüfeLizenzTab.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     IF PrüfeLizenzTab.FINDFIRST THEN
-      EXIT(PrüfeLizenzTab.Lizenzdatum)
+      BEGIN
+        IF PrüfeLizenzTab.Lizenzdatum > Buchungsdatum THEN
+          EXIT(PrüfeLizenzTab.Lizenzdatum)
+        ELSE
+          EXIT(Buchungsdatum);
+      END
     ELSE
       EXIT(Buchungsdatum);
   END
