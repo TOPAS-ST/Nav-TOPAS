@@ -2701,21 +2701,23 @@ IF Wartungsvertrag.FINDFIRST THEN
     Servicepositionen.SETRANGE(Art,Servicepositionen.Art :: Service);
     Servicepositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
     //Servicepositionen.SETRANGE(Basisgerät,TRUE);
-    Servicepositionen.SETRANGE(Verlängerung,TRUE);
+    //Servicepositionen.SETRANGE(Verlängerung,TRUE);
     Servicepositionen.SETRANGE(Inaktiv,FALSE);
     IF Servicepositionen.FINDFIRST THEN
       BEGIN
         REPEAT
-          IF Servicepositionen.Benutzername <> '' THEN
+          IF (Servicepositionen.Benutzername <> '') AND (Servicepositionen.Verlängerung = TRUE) THEN
             BEGIN
               IF Servicepositionen."Ablaufdatum Serviceleistung" <> temp_ablaufdatum THEN
                 BEGIN
                   Wartungsvertrag.Verlängerungen += 1;
-                  Wartungsvertrag.MODIFY;
                 END;
             END;
             temp_ablaufdatum := Servicepositionen."Ablaufdatum Serviceleistung";
         UNTIL Servicepositionen.NEXT = 0;
+
+        Wartungsvertrag.MODIFY;
+
       END;
   END;
 
