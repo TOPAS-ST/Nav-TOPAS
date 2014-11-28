@@ -3,19 +3,20 @@ Documentation()
 
 OnRun()
 
-Zähle_Service_verlängerungen(Klasse : 'Einzelgerät,Mehrgeräte')
+Zähle_Service_verlängerungen(Klasse : 'Einzelgerät,Mehrgeräte';Export : Boolean)
 //***************************************************************************************************
 //    Zählt verschiedene Statistiken zu den Wartungsverträgen z.B. wieviele velängert wurden etc.
 //***************************************************************************************************
 
-{
-InfoFileF.TEXTMODE := TRUE;
-InfoFileF.CREATE('C:\Temp\Service_Verlängerungen_alle.txt');
-InfoFileF2.TEXTMODE := TRUE;
-InfoFileF2.CREATE('C:\Temp\Service_Verlängerungen_mehrmals.txt');
-InfoFileF.OPEN('C:\Temp\Service_Verlängerungen.txt');
-"CR+LF"[2]:=10;
-}
+IF Export THEN
+  BEGIN
+    InfoFileF.TEXTMODE := TRUE;
+    InfoFileF.CREATE('C:\Temp\Service_Verlängerungen_alle.txt');
+    InfoFileF2.TEXTMODE := TRUE;
+    InfoFileF2.CREATE('C:\Temp\Service_Verlängerungen_mehrmals.txt');
+    InfoFileF.OPEN('C:\Temp\Service_Verlängerungen.txt');
+    "CR+LF"[2]:=10;
+  END;
 
 Window.OPEN('Wartungsvertrag #1######');
 Wartungsvertrag.RESET;
@@ -30,6 +31,7 @@ IF Wartungsvertrag.FINDFIRST THEN
   REPEAT
     Window.UPDATE(1,Wartungsvertrag."Wartungsvertragsnr.");
     temp_sup_artikelnr := '';
+    v_verlängerung := 0;
 
     IF Klasse = Klasse :: Einzelgerät THEN
       BEGIN
@@ -84,57 +86,65 @@ IF Wartungsvertrag.FINDFIRST THEN
     ServicePositionen.SETRANGE(Art,ServicePositionen.Art :: Service);
     ServicePositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
     ServicePositionen.SETRANGE(Basisgerät,TRUE);
-    ServicePositionen.SETRANGE(Verlängerung,TRUE);
+    //ServicePositionen.SETRANGE(Verlängerung,TRUE);
     ServicePositionen.SETRANGE(Inaktiv,FALSE);
     IF ServicePositionen.FINDFIRST THEN
       BEGIN
         REPEAT
-          IF ServicePositionen.Benutzername <> '' THEN
+          IF (ServicePositionen.Benutzername <> '') AND (ServicePositionen.Verlängerung = TRUE) THEN
             BEGIN
-              IF ServicePositionen."Wartungsvertragsnr." <> temp_vertragsnr THEN
+              IF (ServicePositionen."Wartungsvertragsnr." <> temp_vertragsnr) THEN
                 BEGIN
                   zähler += 1;
-                  Wartungsvertrag.Verlängerungen := 1;
-                  Wartungsvertrag.MODIFY;
+                  v_verlängerung += 1;
                   IF (ServicePositionen.Belegdatum >= CALCDATE('-1W',TODAY))
                   AND (ServicePositionen."Ablaufdatum Serviceleistung" > TODAY) THEN
                     zähler5 += 1;
-                  {
-                  InfoFileF.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
-                  FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
-                  }
+                  IF Export THEN
+                    BEGIN
+                      InfoFileF.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
+                      FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
+                    END;
                   temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
                 END;
-            END;
-          temp_vertragsnr := ServicePositionen."Wartungsvertragsnr.";
 
-          IF ServicePositionen.Benutzername <> '' THEN
-            BEGIN
               IF ServicePositionen."Ablaufdatum Serviceleistung" <> temp_ablaufdatum THEN
                 BEGIN
                   zähler2 += 1;
-                  Wartungsvertrag.Verlängerungen += 1;
-                  Wartungsvertrag.MODIFY;
-                  {
-                  InfoFileF2.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
-                  FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
-                  }
+                  v_verlängerung += 1;
+                  IF Export THEN
+                    BEGIN
+                      InfoFileF2.WRITE(ServicePositionen."Lfd. Nr."+ ',' + ServicePositionen."Wartungsvertragsnr."  + ',' +
+                      FORMAT(ServicePositionen."Ablaufdatum Serviceleistung") +"CR+LF");
+                    END;
                 END;
+
+              temp_vertragsnr := ServicePositionen."Wartungsvertragsnr.";
+
             END;
-            temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
+
+          temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
 
         UNTIL ServicePositionen.NEXT = 0;
+
+        //Korrigiert fehlerhafte Vertragsablaufdaten im Wartungskopf, kann bei manuellen Anpassungen/Löschungen geschehen
         IF (temp_ablaufdatum <> Wartungsvertrag.Vertragsablaufdatum) //AND (Wartungsvertrag."Wartungsvertragsnr." <> 'SV100000')
         AND (ServicePositionen.Benutzername <> '') THEN
           BEGIN
             //Window.CLOSE;
-            {
-            InfoFileF.CLOSE;
-            InfoFileF2.CLOSE;
-            }
-            MESSAGE('Fehler in Wartungsvertrag %1, Vertragsablaufdatum nicht korrekt.',Wartungsvertrag."Wartungsvertragsnr.");
+            IF Export THEN
+              BEGIN
+                InfoFileF.CLOSE;
+                InfoFileF2.CLOSE;
+              END;
+            Wartungsvertrag.Vertragsablaufdatum := temp_ablaufdatum;
+            MESSAGE('Fehler in Wartungsvertrag %1, Vertragsablaufdatum nicht korrekt. Dieser Fehler wurde korrigiert.',
+            Wartungsvertrag."Wartungsvertragsnr.");
           END;
       END;
+
+     Wartungsvertrag.Verlängerungen := v_verlängerung;
+     Wartungsvertrag.MODIFY;
 
       IF Wartungsvertrag.Vertragsablaufdatum < WORKDATE THEN
         zähler3 += 1;
@@ -155,15 +165,16 @@ IF Klasse = Klasse :: Mehrgeräte THEN
 
 MESSAGE('Statistik %1:\\Es wurden insgesamt %2 Verträge verlängert.\(umfasst aktive & abgelaufene)'+
 '\%3 von %2 wurden mehr als 1x verlängert\(umfasst aktive & abgelaufene)\\Abgelaufene Verträge: %4\\'+
-'Letzte 7 Tage verlängert: %6\Letzte 7 Tage abgelaufen: %7\\Wartungsverträge gesamt: %5\davon AHR / EXTD: %8'+
+'Letzte 7 Tage verlängert: %6\Letzte 7 Tage abgelaufen: %7\\Wartungsverträge gesamt (in- & aktiv): %5\davon AHR / EXTD: %8'+
 '\davon 1YR Service Artikel: %9\davon 3YR Service Artikel: %10',
 statistik_header,zähler,zähler2,zähler3,zähler4,zähler5,zähler6,zähler7,zähler8,zähler9);
 
 Window.CLOSE;
-{
-InfoFileF.CLOSE;
-InfoFileF2.CLOSE;
-}
+IF Export THEN
+  BEGIN
+    InfoFileF.CLOSE;
+    InfoFileF2.CLOSE;
+  END;
 
 GetUserStatistics(UserID : Code[20];Criteria : Text[30]) : Text[1024]
 chr := 10;
@@ -198,14 +209,12 @@ CASE Criteria OF
            IF Urlaubskartei.Art=Urlaubskartei.Art::Zugang THEN 
              BEGIN
                v_abgr_urlaub:=v_abgr_urlaub+Urlaubskartei.Urlaubstage;
-               v_Art:='Zugang';
-               IF (DATE2DMY(Urlaubskartei.Datum,1) = 1) AND (DATE2DMY(Urlaubskartei.Datum,2) = 1) THEN
-                 v_urlaub_gesamt := Urlaubskartei.Urlaubstage;
+//               IF (DATE2DMY(Urlaubskartei.Datum,1) = 1) AND (DATE2DMY(Urlaubskartei.Datum,2) = 1) THEN
+                 v_urlaub_gesamt := v_urlaub_gesamt+Urlaubskartei.Urlaubstage;
              END 
            ELSE 
              BEGIN
                v_abgr_urlaub:=v_abgr_urlaub-Urlaubskartei.Urlaubstage;
-               v_Art:='Abgang';
              END;
          END;
     UNTIL Urlaubskartei.NEXT=0;
@@ -269,6 +278,9 @@ CASE Criteria OF
   BEGIN
     Aufgaben.RESET;
     Aufgaben.SETFILTER("Salesperson Code",'%1',UserID);
+    Aufgaben.SETFILTER("System To-do Type",'%1|%2',
+                       Aufgaben."System To-do Type"::Organizer,
+                       Aufgaben."System To-do Type"::"Salesperson Attendee");
     Aufgaben.SETFILTER(Closed,'%1',FALSE);
     IF Aufgaben.FINDFIRST THEN
       v_aufgaben := Aufgaben.COUNT;
