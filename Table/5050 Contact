@@ -1,3 +1,4 @@
+
 Documentation()
 TOPAS-080304: - Neue Felder 50030..50031
               - TOPAS Felder in Synchronisierung
@@ -1003,7 +1004,8 @@ UN verlassen am - OnValidate()
 UN verlassen am - OnLookup()
 
 Gesperrt - OnValidate()
-IF Type = Type :: Person THEN ERROR('%1 kann nur bei einem Mandanten gesetzt werden.',FIELDCAPTION(Gesperrt));
+IF (xRec.Gesperrt = FALSE) AND (Type = Type :: Person) THEN
+  ERROR('%1 kann nur bei einem Mandanten gesetzt werden.',FIELDCAPTION(Gesperrt));
 
 Gesperrt - OnLookup()
 
@@ -1388,6 +1390,8 @@ UpdateCustVendBank.UpdateCustomer(ContComp,ContBusRel);
 
 Cust.GET(ContBusRel."No.");
 Cust.VALIDATE(Name,"Company Name");
+//TOPAS 2014-12-01 ST
+Cust."AB via EMail" := TRUE;
 Cust.MODIFY;
 
 IF CustTemplate.Code <> '' THEN BEGIN
