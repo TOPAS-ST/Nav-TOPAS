@@ -2,8 +2,8 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
 {
   OBJECT-PROPERTIES
   {
-    Date=27.10.14;
-    Time=11:07:03;
+    Date=03.12.14;
+    Time=15:57:56;
     Modified=Yes;
     Version List=fertig;
   }
@@ -22,6 +22,11 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
       {
         DataItemTable=Table50011;
         DataItemTableView=WHERE(Status=FILTER(<>ACTS));
+        OnPreDataItem=BEGIN
+                        Firmendaten.GET;
+                        Firmendaten.CALCFIELDS("ISO Logo");
+                      END;
+
         OnAfterGetRecord=BEGIN
                            CurrReport.NEWPAGE;
                          END;
@@ -238,7 +243,6 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
           }
           CONTROLS
           {
-            { 1140010;Image     ;9321 ;2696 ;3100 ;2000 ;Bitmap=F:\Daten NEU\Gemeinsame Ordner\LOGOs\ISO_Zertifikat\ISO_Zertifikat.bmp }
             { 1140016;Image     ;12676;1333 ;5250 ;1269 ;Bitmap=f:\daten neu\gemeinsame ordner\logo`s\topas\top_gelb.bmp }
             { 1140042;Shape     ;7678 ;10400;10622;1400  }
             { 1140043;Label     ;7931 ;10600;2000 ;423  ;FontSize=8;
@@ -391,6 +395,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
                                                          FontBold=Yes;
                                                          CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
                                                                     ENU=WEEE-Reg.-Nr.: DE 69202523] }
+            { 1140010;PictureBox;9321 ;2696 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
           }
            }
         { PROPERTIES
@@ -643,6 +648,17 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
 
                            IF STRPOS(seriennr,'S/N:') = 1 THEN
                              seriennr := COPYSTR(seriennr,STRLEN('S/N:')+1);
+
+                           board_ini_text := '';
+                           IF Basisger„t = TRUE THEN
+                             BEGIN
+                               Systempositionen.SETRANGE(Art,Systempositionen.Art :: System);
+                               Systempositionen.SETRANGE("Wartungsvertragsnr.","Wartungsvertragsnr.");
+                               Systempositionen.SETRANGE("Artikelnr.","Artikelnr.");
+                               Systempositionen.SETRANGE("Seriennr.","Seriennr.");
+                               IF Systempositionen.FINDFIRST THEN
+                                 board_ini_text := 'Board ini: ' + Systempositionen."Board ini";
+                             END
                          END;
 
           }
@@ -657,6 +673,8 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
             { 1140011;TextBox   ;1130 ;0    ;544  ;423  ;FontSize=8;
                                                          DecimalPlaces=0:0;
                                                          SourceExpr="Serviceleist. & Leihstellungen".Menge }
+            { 1140020;TextBox   ;12400;0    ;4200 ;423  ;FontSize=8;
+                                                         SourceExpr=board_ini_text }
           }
            }
       }
@@ -707,6 +725,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
       ZugangsdatenAndruck@1140027 : Record 50024;
       KopfdatenAndruck@1140029 : Record 50024;
       LetzteServicePos@1140001 : Record 50024;
+      Systempositionen@1140024 : Record 50024;
       Shipment@1140023 : Record 110;
       SalesHeader@1140018 : Record 36;
       ArchHeader@1140014 : Record 5107;
@@ -733,6 +752,8 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
       benutzer@1140020 : Text[50];
       pw@1140021 : Text[50];
       seriennr@1140002 : Code[20];
+      board_ini_text@1140004 : Text[50];
+      Firmendaten@1140003 : Record 79;
 
     BEGIN
     END.
