@@ -3,7 +3,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
   OBJECT-PROPERTIES
   {
     Date=03.12.14;
-    Time=09:37:05;
+    Time=14:03:35;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -269,7 +269,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          FontSize=9;
                                                          FontBold=No;
                                                          CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
-                                                                    ENU="TOPAS electronic Vetriebsgesellschaft mbH   "] }
+                                                                    ENU=TOPAS electronic Vertriebsgesellschaft mbH,] }
             { 1140011;Label     ;62   ;2170 ;2700 ;400  ;FontName=Arial;
                                                          FontSize=7;
                                                          FontBold=No;
@@ -1030,7 +1030,33 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           {
             SectionType=Body;
             SectionWidth=19000;
-            SectionHeight=7200;
+            SectionHeight=6900;
+            OnPreSection=BEGIN
+                           //2014-12-03 ST wenn Lief. Adressen nicht gepflegt dann TOPAS Adresse andrucken
+                           IF (LieferAnAdr[1] <> '') AND (LieferAnAdr[3] = '') THEN
+                             BEGIN
+                               ship_to[1] := 'TOPAS electronic Vertriebsgesellschaft mbH';
+                               ship_to[2] := 'Grosser Kolonnenweg 18C3';
+                               ship_to[3] := '30163 Hannover';
+                               ship_to[4] := 'Germany';
+                               ship_to[5] := '';
+                               ship_to[6] := '';
+                               ship_to[7] := '';
+                               ship_to[8] := '';
+                             END
+                           ELSE
+                             BEGIN
+                               ship_to[1] := LieferAnAdr[1];
+                               ship_to[2] := LieferAnAdr[2];
+                               ship_to[3] := LieferAnAdr[3];
+                               ship_to[4] := LieferAnAdr[4];
+                               ship_to[5] := LieferAnAdr[5];
+                               ship_to[6] := LieferAnAdr[6];
+                               ship_to[7] := LieferAnAdr[7];
+                               ship_to[8] := LieferAnAdr[8];
+                             END
+                         END;
+
           }
           CONTROLS
           {
@@ -1042,32 +1068,54 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          CaptionML=DEU=than 12 months for customer orders without written approval from TOPAS! }
             { 34  ;Label        ;0    ;1800 ;10800;500  ;FontSize=9;
                                                          CaptionML=DEU=Please advise delivery schedule if you don't ship on time! }
-            { 35  ;Label        ;0    ;2800 ;10000;500  ;FontSize=9;
-                                                         CaptionML=DEU=Please do not put transport insurance on our shipments and use our }
-            { 37  ;Label        ;0    ;4100 ;7400 ;500  ;FontSize=9;
+            { 37  ;Label        ;0    ;2800 ;7400 ;500  ;FontSize=9;
                                                          CaptionML=DEU=Bill to: }
-            { 38  ;Label        ;0    ;4600 ;7400 ;400  ;FontSize=9;
+            { 38  ;Label        ;0    ;3300 ;7400 ;400  ;FontSize=9;
                                                          CaptionML=DEU=TOPAS electronic Vertriebsgesellschaft mbH }
-            { 42  ;Label        ;0    ;5000 ;7400 ;400  ;FontSize=9;
+            { 42  ;Label        ;0    ;3700 ;7400 ;400  ;FontSize=9;
                                                          CaptionML=DEU=Grosser Kolonnenweg 18C3 }
-            { 46  ;Label        ;9500 ;4100 ;7400 ;500  ;FontSize=9;
+            { 46  ;Label        ;9500 ;2800 ;7400 ;500  ;FontSize=9;
                                                          CaptionML=DEU=Ship to: }
-            { 47  ;Label        ;0    ;5400 ;7400 ;400  ;FontSize=9;
+            { 47  ;Label        ;0    ;4100 ;7400 ;400  ;FontSize=9;
                                                          CaptionML=DEU=30163 Hannover }
-            { 48  ;Label        ;0    ;5800 ;7400 ;400  ;FontSize=9;
-                                                         CaptionML=DEU=Germany }
-            { 49  ;Label        ;9500 ;4600 ;7400 ;400  ;FontSize=9;
-                                                         CaptionML=DEU=TOPAS electronic Vertriebsgesellschaft mbH }
-            { 52  ;Label        ;9500 ;5000 ;7400 ;400  ;FontSize=9;
-                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3 }
-            { 55  ;Label        ;9500 ;5400 ;7400 ;400  ;FontSize=9;
-                                                         CaptionML=DEU=30163 Hannover }
-            { 58  ;Label        ;9500 ;5800 ;7400 ;400  ;FontSize=9;
+            { 48  ;Label        ;0    ;4500 ;7400 ;400  ;FontSize=9;
                                                          CaptionML=DEU=Germany }
             { 1140000;TextBox   ;2900 ;0    ;13600;400  ;FontSize=9;
                                                          SourceExpr=ZlgBed.Description }
-            { 1140002;TextBox   ;10000;2800 ;8700 ;500  ;FontSize=9;
+            { 1140018;TextBox   ;9500 ;6261 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[8] }
+            { 1140019;TextBox   ;9500 ;5838 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[7] }
+            { 1140020;TextBox   ;9500 ;5415 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[6] }
+            { 1140021;TextBox   ;9500 ;4992 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[5] }
+            { 1140022;TextBox   ;9500 ;4569 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[4] }
+            { 1140023;TextBox   ;9500 ;4146 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[3] }
+            { 1140024;TextBox   ;9500 ;3723 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[2] }
+            { 1140025;TextBox   ;9500 ;3300 ;7400 ;423  ;FontSize=9;
+                                                         SourceExpr=ship_to[1] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=1200;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Purchase Header"."Shipment Method Code" <> 'LEER');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140002;TextBox   ;10000;300  ;8700 ;500  ;FontSize=9;
                                                          SourceExpr=LieferBed.Description }
+            { 35  ;Label        ;0    ;300  ;10000;500  ;FontSize=9;
+                                                         CaptionML=DEU=Please do not put transport insurance on our shipments and use our }
           }
            }
       }
@@ -1104,30 +1152,6 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
       }
       SECTIONS
       {
-        { PROPERTIES
-          {
-            SectionType=Body;
-            SectionWidth=19000;
-            SectionHeight=0;
-          }
-          CONTROLS
-          {
-          }
-           }
-        { PROPERTIES
-          {
-            SectionType=Body;
-            SectionWidth=19000;
-            SectionHeight=0;
-            OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT := "Purchase Header"."Sell-to Customer No." <> '';
-                         END;
-
-          }
-          CONTROLS
-          {
-          }
-           }
         { PROPERTIES
           {
             SectionType=Body;
@@ -1187,6 +1211,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
       artikel@1140025 : Record 27;
       TotalDruck@1140026 : Integer;
       w„hrung@1140027 : Code[10];
+      ship_to@1140028 : ARRAY [8] OF Text[50];
 
     BEGIN
     {
