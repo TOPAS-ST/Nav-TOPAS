@@ -2,8 +2,8 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
 {
   OBJECT-PROPERTIES
   {
-    Date=28.11.14;
-    Time=13:24:47;
+    Date=03.12.14;
+    Time=09:37:05;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -33,7 +33,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
         OnPreDataItem=BEGIN
                         Firmendaten.GET;
                         FormatAdr.Company(FirmaAdr,Firmendaten);
-                        Firmendaten.CALCFIELDS(ISO);
+                        Firmendaten.CALCFIELDS("ISO Logo");
                       END;
 
         OnAfterGetRecord=BEGIN
@@ -280,7 +280,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          FontBold=No;
                                                          CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
                                                                     ENU="Phone +49 511- 9 68 64-0  "] }
-            { 1140017;PictureBox;9317 ;3470 ;3100 ;2000 ;SourceExpr=Firmendaten.ISO }
+            { 1140017;PictureBox;9317 ;3470 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
           }
            }
         { PROPERTIES
@@ -330,18 +330,19 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                         MWSTBetragZeile.DELETEALL;
                         MehrZeilen := EinkZeile.FIND('+');
                         WHILE MehrZeilen AND (EinkZeile.Description = '') AND
-                              (EinkZeile."No." = '') AND (EinkZeile.Quantity = 0) AND
-                              (EinkZeile.Amount = 0) DO
+                              (EinkZeile."No." = '') AND (EinkZeile."Outstanding Quantity" = 0) AND
+                              (EinkZeile."Outstanding Amount" = 0) DO
                           MehrZeilen := EinkZeile.NEXT(-1) <> 0;
                         IF NOT MehrZeilen THEN
                           CurrReport.BREAK;
 
-                        //EinkZeile.SETRANGE("Line No.",0,EinkZeile."Line No.");
-                        //2014-11-28 ST Bestellbetrag stimmt jetzt auch wenn Positionen bereits geliefert wurden
-                        EinkZeile.SETFILTER("Line No.",'%1..%2',0,EinkZeile."Line No.");
-                        EinkZeile.SETFILTER("Outstanding Quantity",'>%1',0);
+                        EinkZeile.SETRANGE("Line No.",0,EinkZeile."Line No.");
+                        //2014-11-28 ST Bestellbetrag stimmt jetzt auch wenn Positionen bereits geliefert wurden,
+                        //wieder deaktiviert sonst keine Bemerkungen zu sehen
+                        //EinkZeile.SETFILTER("Line No.",'%1..%2',0,EinkZeile."Line No.");
+                        //EinkZeile.SETFILTER("Outstanding Quantity",'>%1',0);
                         SETRANGE(Number,1,EinkZeile.COUNT);
-                        CurrReport.CREATETOTALS(EinkZeile.Amount,EinkZeile."Amount Including VAT",EinkZeile."Inv. Discount Amount");
+                        CurrReport.CREATETOTALS(EinkZeile."Outstanding Amount",EinkZeile."Amount Including VAT",EinkZeile."Inv. Discount Amount");
                       END;
 
         OnAfterGetRecord=BEGIN
@@ -448,10 +449,10 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           {
             { 54  ;TextBox      ;15900;0    ;2300 ;423  ;FontSize=9;
                                                          CaptionML=DEU=Fortsetzung;
-                                                         SourceExpr=EinkZeile.Amount+EinkZeile."Inv. Discount Amount";
+                                                         SourceExpr=EinkZeile."Outstanding Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
-            { 53  ;Label        ;11400;0    ;3600 ;423  ;ParentControl=54;
+            { 53  ;Label        ;11400;0    ;3300 ;423  ;ParentControl=54;
                                                          FontSize=9;
                                                          LeaderDots=Yes;
                                                          CaptionML=ENG=countinue }
@@ -477,7 +478,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          SourceExpr="Purchase Line"."No." }
             { 57  ;TextBox      ;8900 ;100  ;1700 ;423  ;FontSize=9;
                                                          BlankZero=Yes;
-                                                         SourceExpr="Purchase Line".Quantity }
+                                                         SourceExpr="Purchase Line"."Outstanding Quantity" }
             { 59  ;TextBox      ;12000;100  ;1700 ;423  ;FontSize=9;
                                                          BlankZero=Yes;
                                                          SourceExpr="Purchase Line"."Direct Unit Cost";
@@ -490,7 +491,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
             { 61  ;TextBox      ;16300;100  ;1900 ;423  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          BlankZero=Yes;
-                                                         SourceExpr="Purchase Line".Amount+"Purchase Line"."Inv. Discount Amount";
+                                                         SourceExpr="Purchase Line"."Outstanding Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
             { 30  ;Label        ;10800;100  ;1000 ;423  ;FontSize=9;
@@ -513,39 +514,39 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           }
           CONTROLS
           {
-            { 62  ;TextBox      ;0    ;100  ;1106 ;423  ;HorzAlign=Center;
+            { 62  ;TextBox      ;0    ;78   ;1106 ;423  ;HorzAlign=Center;
                                                          FontSize=9;
                                                          CaptionML=DEU=feld1;
                                                          SourceExpr="Purchase Line"."Line No." }
             { 63  ;TextBox      ;1127 ;78   ;6500 ;423  ;HorzAlign=Left;
                                                          FontSize=9;
                                                          SourceExpr="Purchase Line"."Artikelnr. 2" }
-            { 64  ;TextBox      ;8900 ;100  ;1700 ;423  ;FontSize=9;
+            { 64  ;TextBox      ;8900 ;78   ;1700 ;423  ;FontSize=9;
                                                          BlankZero=Yes;
-                                                         SourceExpr="Purchase Line".Quantity }
-            { 66  ;TextBox      ;12000;100  ;1700 ;423  ;FontSize=9;
+                                                         SourceExpr="Purchase Line"."Outstanding Quantity" }
+            { 66  ;TextBox      ;12000;78   ;1700 ;423  ;FontSize=9;
                                                          BlankZero=No;
                                                          SourceExpr="Purchase Line"."Direct Unit Cost";
                                                          AutoFormatType=2;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
-            { 67  ;TextBox      ;13900;100  ;1700 ;423  ;HorzAlign=Center;
+            { 67  ;TextBox      ;13900;78   ;1700 ;423  ;HorzAlign=Center;
                                                          FontSize=9;
                                                          CaptionML=DEU=Rabatt %;
                                                          BlankZero=Yes;
                                                          SourceExpr="Purchase Line"."Requested Receipt Date" }
-            { 68  ;TextBox      ;16300;100  ;1900 ;423  ;HorzAlign=Right;
+            { 68  ;TextBox      ;16300;78   ;1900 ;423  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          CaptionML=DEU=Betrag;
                                                          BlankZero=No;
-                                                         SourceExpr="Purchase Line".Amount+"Purchase Line"."Inv. Discount Amount";
+                                                         SourceExpr="Purchase Line"."Outstanding Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
-            { 24  ;TextBox      ;5700 ;100  ;3185 ;400  ;HorzAlign=Right;
+            { 24  ;TextBox      ;5700 ;78   ;3185 ;400  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          SourceExpr="Purchase Line".Description }
-            { 25  ;Label        ;10800;100  ;1000 ;423  ;FontSize=9;
+            { 25  ;Label        ;10800;78   ;1000 ;423  ;FontSize=9;
                                                          CaptionML=DEU=pcs. }
-            { 1140014;TextBox   ;15600;100  ;900  ;423  ;FontSize=9;
+            { 1140014;TextBox   ;15600;78   ;900  ;423  ;FontSize=9;
                                                          FontBold=No;
                                                          SourceExpr=w„hrung }
           }
@@ -779,17 +780,17 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           }
           CONTROLS
           {
-            { 77  ;TextBox      ;15600;400  ;2400 ;423  ;HorzAlign=Right;
+            { 77  ;TextBox      ;15700;400  ;2400 ;423  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          CaptionML=DEU=Fortsetzung;
-                                                         SourceExpr=EinkZeile.Amount+EinkZeile."Inv. Discount Amount";
+                                                         SourceExpr=EinkZeile."Outstanding Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
-            { 76  ;Label        ;11100;400  ;3600 ;423  ;ParentControl=77;
+            { 76  ;Label        ;11200;400  ;3400 ;423  ;ParentControl=77;
                                                          FontSize=9;
                                                          LeaderDots=Yes;
                                                          CaptionML=ENG=continue }
-            { 1140016;TextBox   ;14600;400  ;1000 ;423  ;FontSize=9;
+            { 1140016;TextBox   ;14700;400  ;1000 ;423  ;FontSize=9;
                                                          FontBold=No;
                                                          SourceExpr=w„hrung }
           }
@@ -838,7 +839,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
             { 81  ;TextBox      ;15400;500  ;2700 ;423  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          FontBold=Yes;
-                                                         SourceExpr=EinkZeile.Amount;
+                                                         SourceExpr=EinkZeile."Outstanding Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
           }
