@@ -1,0 +1,753 @@
+OBJECT Report 50176 TOPAS Servicevertrag
+{
+  OBJECT-PROPERTIES
+  {
+    Date=27.10.14;
+    Time=11:05:33;
+    Modified=Yes;
+    Version List=fertig;
+  }
+  PROPERTIES
+  {
+    TopMargin=400;
+    BottomMargin=150;
+    LeftMargin=1700;
+    RightMargin=50;
+    PaperSize=A4 210 x 297 mm;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50011;
+        DataItemTableView=WHERE(Status=FILTER(<>ACTS));
+        ReqFilterFields=Wartungsvertragsnr.;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50024;
+        DataItemTableView=SORTING(Gruppierung,Basisger„t)
+                          ORDER(Descending)
+                          WHERE(Art=FILTER(Service),
+                                Inaktiv=FILTER(No),
+                                SUP Artikelnr.=FILTER(<>CHAMPS-RE_INSTATE#01&<>RE_INSTATEMENT_FEE));
+        OnPreDataItem=BEGIN
+                        CurrReport.PAPERSOURCE(3);
+
+                        Nummer := 0;
+                        vkkopf_text := '';
+                        status_text := '';
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           IF Shipment.GET("Serviceleist. & Leihstellungen"."Nr.") THEN
+                             BEGIN
+                               IF (Shipment."Sell-to Country/Region Code" <> 'DE') THEN
+                               //AND(Shipment."Sell-to Country/Region Code" <>'AT')
+                               //AND (Shipment."Sell-to Country/Region Code" <>'CH')) THEN
+                                 BEGIN
+                                   CurrReport.LANGUAGE(1033); // Englischer L„ndercode  (ENU Englisch(USA))
+                                 END
+                               ELSE
+                                 BEGIN
+                                   CurrReport.LANGUAGE(1031); // Deutscher L„ndercode
+                                 END;
+                             END;
+
+                           //Suche nach 1. Basisger„t zum Andruck des Benuters + PW
+                           ZugangsdatenAndruck.RESET;
+                           ZugangsdatenAndruck.SETFILTER(Art,'%1',ZugangsdatenAndruck.Art :: Service);
+                           ZugangsdatenAndruck.SETFILTER(Inaktiv,'%1',FALSE);
+                           ZugangsdatenAndruck.SETFILTER(Basisger„t,'%1',TRUE);
+                           ZugangsdatenAndruck.SETFILTER("SUP Artikelnr.",'%1',"Serviceleist. & Leihstellungen"."SUP Artikelnr.");
+                           ZugangsdatenAndruck.SETFILTER("Wartungsvertragsnr.",'%1',"Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
+                           IF ZugangsdatenAndruck.FINDFIRST THEN
+                             BEGIN
+                               benutzer := ZugangsdatenAndruck.Benutzername;
+                               pw := ZugangsdatenAndruck.Passwort;
+                             END
+                           ELSE
+                             //Wartungsvertrag verfgt ber kein Basisger„t
+                             BEGIN
+                               ZugangsdatenAndruck.RESET;
+                               ZugangsdatenAndruck.SETFILTER(Art,'%1',ZugangsdatenAndruck.Art :: Service);
+                               ZugangsdatenAndruck.SETFILTER(Inaktiv,'%1',FALSE);
+                               ZugangsdatenAndruck.SETFILTER("SUP Artikelnr.",'%1',"Serviceleist. & Leihstellungen"."SUP Artikelnr.");
+                               ZugangsdatenAndruck.SETFILTER("Wartungsvertragsnr.",'%1',"Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
+                               IF ZugangsdatenAndruck.FINDFIRST THEN
+                                 BEGIN
+                                   benutzer := ZugangsdatenAndruck.Benutzername;
+                                   pw := ZugangsdatenAndruck.Passwort;
+                                 END
+                               ELSE
+                                BEGIN
+                                  benutzer := "Serviceleist. & Leihstellungen".Benutzername;
+                                  pw := "Serviceleist. & Leihstellungen".Passwort;
+                                END;
+                             END;
+
+                           sup_artikelnr := "Serviceleist. & Leihstellungen"."SUP Artikelnr.";
+                           Artikel.GET("SUP Artikelnr.");
+                           sup_artikelnr_lang := Artikel."No. 2";
+
+                           IF ((STRPOS(sup_artikelnr_lang,'HW') <> 0) OR (STRPOS(sup_artikelnr_lang,'SW') = 0)
+                           OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR' ) OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0))
+                           AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)
+                           AND (STRPOS(sup_artikelnr_lang,'ENH-SUPP-PROG') = 0) THEN
+                             BEGIN
+                               benutzer := '-';
+                               pw := '-';
+                             END;
+                         END;
+
+        GroupTotalFields=Gruppierung;
+        DataItemLink=Wartungsvertragsnr.=FIELD(Wartungsvertragsnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18500;
+            SectionHeight=13030;
+            KeepWithNext=No;
+            OnPreSection=BEGIN
+                           LetzteServicePos.RESET;
+                           LetzteServicePos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           LetzteServicePos.SETFILTER(Art,'%1',LetzteServicePos.Art :: Service);
+                           IF LetzteServicePos.FINDLAST THEN
+                             BEGIN
+                               IF STRPOS(LetzteServicePos."SUP Artikelnr.",'CHAMPS') <> 0 THEN
+                                 BEGIN
+                                   andruck_champs := TRUE;
+                                   IF CurrReport.LANGUAGE = 1031 THEN
+                                     vkkopf_text := 'Champs Servicevertrag'
+                                   ELSE
+                                     vkkopf_text := 'Champs Service Agreement';
+                                 END
+                               ELSE
+                                 BEGIN
+                                   IF STRPOS(LetzteServicePos."SUP Artikelnr.",'ACHAT') <> 0 THEN
+                                     BEGIN
+                                       andruck_champs := TRUE;
+                                       IF CurrReport.LANGUAGE = 1031 THEN
+                                         vkkopf_text := 'ACHAT Servicevertrag'
+                                       ELSE
+                                         vkkopf_text := 'ACHAT Service Agreement';
+                                     END
+                                   ELSE
+                                     BEGIN
+                                       andruck_champs := FALSE;
+                                       vkkopf_text := 'Software Upgrade Protection';
+                                     END;
+                                 END;
+                             END;
+
+                           KopfdatenAndruck.RESET;
+                           KopfdatenAndruck.SETFILTER(Art,'%1',KopfdatenAndruck.Art :: Service);
+                           KopfdatenAndruck.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           KopfdatenAndruck.SETFILTER(Inaktiv,'%1',FALSE);
+                           IF KopfdatenAndruck.FINDLAST THEN
+                             BEGIN
+                             END;
+
+                           auftragsnr := KopfdatenAndruck."Auftragsnr.";
+                           debitornr := KopfdatenAndruck."Debitornr.";
+                           datum := KopfdatenAndruck.Belegdatum;
+
+                           ihre_ref := '';
+                           ansp_telefon := '';
+                           ansp_fax:= '';
+                           ansp_anrede := '';
+                           ansp_name := '';
+                           ansp_email := '';
+
+                           ArchHeader.RESET;
+                           ArchHeader.SETFILTER(ArchHeader."No.",'%1',KopfdatenAndruck."Auftragsnr.");
+                           IF ArchHeader.FINDFIRST THEN
+                             BEGIN
+                               IF ArchHeader."External Document No." <> '' THEN ihre_ref := ArchHeader."External Document No."+' ';
+                               IF ArchHeader."Your Reference"  <> '' THEN ihre_ref := ihre_ref + ArchHeader."Your Reference";
+
+                               Land_Region.GET(ArchHeader."Sell-to Country/Region Code");
+
+                               IF Verk„ufer.GET(ArchHeader."Betreuer Innendienst") THEN
+                                 BEGIN
+                                    IF  CurrReport.LANGUAGE = 1031 THEN
+                                      BEGIN
+                                        ansp_fax := Verk„ufer."Fax no.";
+                                        ansp_anrede := Verk„ufer.Ansprech;
+                                        ansp_telefon := Verk„ufer."Phone No.";
+                                      END
+                                    ELSE
+                                      BEGIN
+                                        ansp_fax := Verk„ufer.Fax_international;
+                                        ansp_anrede := Verk„ufer.Ansprech_eng;
+                                        ansp_telefon := Verk„ufer.Tel_international;
+                                      END;
+                                    ansp_name := Verk„ufer."first name" + ' ' + Verk„ufer.Name;
+                                    ansp_email := Verk„ufer."E-Mail";
+                                 END;
+                             END
+                           ELSE
+                             BEGIN
+                               SalesHeader.RESET;
+                               SalesHeader.SETFILTER(SalesHeader."No.",'%1',KopfdatenAndruck."Auftragsnr.");
+                               IF SalesHeader.FINDFIRST THEN
+                                 BEGIN
+                                   IF SalesHeader."External Document No." <> '' THEN ihre_ref := SalesHeader."External Document No."+' ';
+                                   IF SalesHeader."Your Reference"  <> '' THEN ihre_ref := ihre_ref + SalesHeader."Your Reference";
+
+                                   Land_Region.GET(SalesHeader."Sell-to Country/Region Code");
+
+                                   IF Verk„ufer.GET(SalesHeader."Betreuer Innendienst") THEN
+                                     BEGIN
+                                       IF  CurrReport.LANGUAGE = 1031 THEN
+                                         BEGIN
+                                           ansp_fax := Verk„ufer."Fax no.";
+                                           ansp_anrede := Verk„ufer.Ansprech;
+                                           ansp_telefon := Verk„ufer."Phone No.";
+                                         END
+                                       ELSE
+                                         BEGIN
+                                           ansp_fax := Verk„ufer.Fax_international;
+                                           ansp_anrede := Verk„ufer.Ansprech_eng;
+                                           ansp_telefon := Verk„ufer.Tel_international;
+                                         END;
+                                       ansp_name := Verk„ufer."first name" + ' ' + Verk„ufer.Name;
+                                       ansp_email := Verk„ufer."E-Mail";
+                                     END;
+                                 END;
+                             END;
+
+                           FormatAddr.FormatAddr(AndruckFeld,KopfdatenAndruck.Debitorname,KopfdatenAndruck."Name 2",KopfdatenAndruck.Kontakt,
+                           KopfdatenAndruck.Adresse,KopfdatenAndruck."Adresse 2",KopfdatenAndruck.Ort,KopfdatenAndruck."PLZ-Code",'',Land_Region.Code);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140039;Shape     ;7678 ;11422;10622;1400  }
+            { 1140040;Label     ;7931 ;11622;2000 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Vertragsnr.;
+                                                                    ENU=Our Reference] }
+            { 1140041;Label     ;13300;11622;2600 ;423  ;Name=Ihre Konto-Nr.;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Ihre Kunden-Nr.;
+                                                                    ENU=Your Account No.] }
+            { 1140042;Label     ;16400;11622;1262 ;423  ;Name=Datum;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Datum;
+                                                                    ENU=Date] }
+            { 1140043;TextBox   ;7930 ;12222;2000 ;423  ;FontSize=8;
+                                                         SourceExpr=Wartungsvertrag."Wartungsvertragsnr." }
+            { 1140044;TextBox   ;16400;12222;1600 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=datum }
+            { 1140045;TextBox   ;13300;12222;2600 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=debitornr }
+            { 1140055;TextBox   ;2100 ;8477 ;10300;926  ;HorzAlign=Center;
+                                                         FontSize=22;
+                                                         FontBold=No;
+                                                         SourceExpr=vkkopf_text }
+            { 1140102;Label     ;10700;11622;2200 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Auftragsnr.;
+                                                                    ENU=Order No.] }
+            { 1140103;TextBox   ;10700;12221;2200 ;423  ;FontSize=8;
+                                                         SourceExpr=auftragsnr }
+            { 1140051;Label     ;0    ;12019;3560 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Ihre Angaben;
+                                                                    ENU=Customer Ref.] }
+            { 1140057;TextBox   ;1500 ;12396;6024 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=ihre_ref }
+            { 1140060;Label     ;0    ;12396;1500 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Referenz:;
+                                                                    ENU=Reference:] }
+            { 1140061;TextBox   ;14006;9281 ;4200 ;300  ;SourceExpr=ansp_anrede }
+            { 1140062;TextBox   ;14006;9581 ;4200 ;300  ;SourceExpr=ansp_name }
+            { 1140063;TextBox   ;14806;9881 ;3400 ;300  ;SourceExpr=ansp_telefon }
+            { 1140064;Label     ;14006;9881 ;800  ;300  ;CaptionML=[DEU=Tel. :;
+                                                                    ENU=Phone:] }
+            { 1140065;TextBox   ;14806;10181;3400 ;300  ;SourceExpr=ansp_fax }
+            { 1140066;Label     ;14006;10181;800  ;300  ;CaptionML=[DEU=Fax :;
+                                                                    ENU=Fax :] }
+            { 1140067;TextBox   ;14006;10481;4200 ;300  ;SourceExpr=ansp_email }
+            { 1140053;Image     ;9553 ;2853 ;2800 ;1600 ;Bitmap=F:\Daten NEU\Gemeinsame Ordner\LOGOs\ISO_Zertifikat\ISO_Zertifikat.bmp }
+            { 1140077;Label     ;325  ;3470 ;4200 ;300  ;Name=[TOPAS electronic GmbH, ];
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=TOPAS electronic GmbH, }
+            { 1140078;Label     ;3225 ;3470 ;2300 ;300  ;Name=Postfach 11 04 11,;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Postfach 11 04 11, }
+            { 1140079;Label     ;5425 ;3470 ;3672 ;300  ;Name=30100 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=" 30100 Hannover";
+                                                                    ENU=" 30100 Hannover, Germany"] }
+            { 1140006;TextBox   ;302  ;4251 ;8500 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[1] }
+            { 1140027;TextBox   ;302  ;4651 ;8506 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[2] }
+            { 1140081;TextBox   ;302  ;5051 ;8504 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[3] }
+            { 1140082;TextBox   ;302  ;5451 ;8506 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[4] }
+            { 1140083;TextBox   ;302  ;5850 ;8494 ;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=AndruckFeld[5] }
+            { 1140084;TextBox   ;302  ;6253 ;8510 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[6] }
+            { 1140085;TextBox   ;302  ;6658 ;8500 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[7] }
+            { 1140086;TextBox   ;302  ;7016 ;8500 ;400  ;FontSize=9;
+                                                         SourceExpr=AndruckFeld[8] }
+            { 1140007;Label     ;0    ;995  ;6600 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vetriebsgesellschaft mbH   "] }
+            { 1140008;Label     ;19   ;1453 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 1140010;Label     ;19   ;1853 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 1140011;Label     ;2855 ;1453 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 1140012;Label     ;2856 ;1832 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140029;Label     ;6583 ;1029 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 1140087;Label     ;9885 ;1027 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 1140054;Label     ;13997;3067 ;4200 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140058;Label     ;13997;3367 ;4200 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR- und USD-Konto: }
+            { 1140068;Label     ;13997;3667 ;4200 ;300  ;Name=SWIFT-BIC.: DEUTDE2HXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140069;Label     ;13997;3967 ;4200 ;300  ;Name=IBAN: DE62250700700030561500;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140070;Label     ;13997;5067 ;4200 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 1140072;Label     ;13997;5367 ;4200 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR-, USD- und JPY-Konto: }
+            { 1140076;Label     ;13997;5667 ;4200 ;300  ;Name=SWIFT-BIC.: DRESDEFF250;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140088;Label     ;13997;5967 ;4200 ;300  ;Name=IBAN: DE30250800200770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140089;Label     ;13997;7067 ;4200 ;300  ;Name=Steuer-Nr.:   25/202/35327;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Steuer-Nr.:   25/202/35327;
+                                                                    ENU=TAX No.:   25/202/35327] }
+            { 1140090;Label     ;13997;7367 ;4200 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=USt.-ID.-Nr.: DE115651057;
+                                                                    ENU=VAT Reg.No.: DE115651057] }
+            { 1140091;Label     ;13997;7667 ;4200 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-Nr.: DE 69202523] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18500;
+            SectionHeight=1600;
+            KeepWithNext=No;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(andruck_champs = TRUE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140030;Label     ;0    ;0    ;13000;1600 ;HorzAlign=General;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Sehr geehrte Damen und Herren,\ \bitte entnehmen Sie der Aufstellung unten die einzelnen Positionen Ihrer \Serviceleistungen sowie die Seriennummern der dazugeh”rigen Ger„te.;
+                                                                    ENU=To whom it may concern,\ \your services are delivered for the duration of the agreement.\Contract period and applicable serial numbers are listed below.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18500;
+            SectionHeight=2400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(andruck_champs = FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140035;Label     ;0    ;0    ;13000;2400 ;HorzAlign=General;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Sehr geehrte Damen und Herren,\ \Sie k”nnen nun Software-Updates fr Ihre AudioCodes Hardware ber die Website www.topas-systems.de herunterladen. Ihre Zugriffsberechtigung fr den MyTopas Zugang entnehmen Sie bitte der jeweiligen Position.;
+                                                                    ENU=To whom it may concern,\ \your services are delivered for the duration of the agreement.\Contract period and applicable serial numbers are listed below. Access Authorization is used to allow access to download the AudioCodes software updates at www.topas-systems.de only with given \special usernames and passwords.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18500;
+            SectionHeight=1500;
+          }
+          CONTROLS
+          {
+            { 1140031;Shape     ;0    ;100  ;18300;1200  }
+            { 1140049;Label     ;1100 ;300  ;1800 ;500  ;VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Artikelnr.;
+                                                                    ENU=Part-No.] }
+            { 1140050;Label     ;100  ;300  ;821  ;500  ;VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Pos.;
+                                                                    ENU=Item] }
+            { 1140059;Label     ;8300 ;300  ;2100 ;500  ;HorzAlign=General;
+                                                         VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Laufzeit;
+                                                                    ENU=Runtime] }
+            { 1140074;Label     ;7700 ;800  ;800  ;418  ;FontSize=8;
+                                                         CaptionML=[DEU=vom;
+                                                                    ENU=from] }
+            { 1140075;Label     ;9800 ;800  ;800  ;418  ;FontSize=8;
+                                                         CaptionML=[DEU=bis;
+                                                                    ENU=to] }
+            { 1140036;Label     ;11200;200  ;7000 ;500  ;HorzAlign=Center;
+                                                         VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=MyTopas Zugangsdaten;
+                                                                    ENU=MyTopas Authorization] }
+            { 1140037;Label     ;11200;818  ;3400 ;400  ;VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Benutzername;
+                                                                    ENU=Username] }
+            { 1140038;Label     ;16100;818  ;1700 ;400  ;HorzAlign=Left;
+                                                         VertAlign=Top;
+                                                         FontSize=8;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Passwort;
+                                                                    ENU=Password] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=GroupHeader;
+            SectionWidth=18500;
+            SectionHeight=1200;
+            OnPreSection=BEGIN
+                           Nummer += 1;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140000;TextBox   ;700  ;200  ;6600 ;423  ;FontSize=8;
+                                                         SourceExpr=sup_artikelnr_lang }
+            { 1140005;TextBox   ;100  ;200  ;644  ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Nummer }
+            { 1140001;TextBox   ;1100 ;700  ;1800 ;423  ;FontSize=8;
+                                                         SourceExpr="Auftragsnr." }
+            { 1140071;TextBox   ;7400 ;200  ;1753 ;423  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr="Serviceleist. & Leihstellungen".Lizenzdatum }
+            { 1140073;TextBox   ;9200 ;200  ;1753 ;423  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Ablaufdatum Serviceleistung" }
+            { 1140002;TextBox   ;11200;200  ;5000 ;423  ;FontSize=8;
+                                                         SourceExpr=benutzer }
+            { 1140003;TextBox   ;16200;200  ;2000 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=pw }
+            { 1140034;TextBox   ;4900 ;700  ;6100 ;423  ;FontSize=8;
+                                                         SourceExpr="System Projektinfos" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=GroupFooter;
+            SectionWidth=18500;
+            SectionHeight=1000;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((STRPOS(sup_artikelnr_lang,'SW') <> 0) AND (STRPOS(sup_artikelnr_lang,'CHAMPS') <> 0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140047;Label     ;628  ;200  ;16600;800  ;HorzAlign=General;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=8;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Zugriff auf die aktuellsten Software-Updates fr die genannten AudioCodes Produkte erhalten Sie ber die Website\www.topas-systems.de. Es gelten die AudioCodes Software-Lizenz Bestimmungen.;
+                                                                    ENU=Access Authorization is used to allow access to download the AudioCodes software updates at www.topas-systems.de only with given \special usernames and passwords.AudioCodes software updates are covered under a valid software license.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=Yes;
+            PlaceInBottom=Yes;
+            SectionWidth=18500;
+            SectionHeight=1100;
+          }
+          CONTROLS
+          {
+            { 1140046;Label     ;0    ;238  ;18500;600  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=www.topas.de }
+            { 1140048;Shape     ;0    ;538  ;18500;423  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table111;
+        DataItemTableView=SORTING(Document No.,Line No.)
+                          WHERE(Type=FILTER(' '));
+        DataItemLink=Document No.=FIELD(Nr.),
+                     Attached to Line No.=FIELD(Belegzeilennr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18500;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(sup_artikelnr <> Servicepositionen."SUP Artikelnr.");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140028;TextBox   ;1100 ;0    ;11400;423  ;SourceExpr=Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18500;
+            SectionHeight=200;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(sup_artikelnr <> Servicepositionen."SUP Artikelnr.");
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50023;
+        DataItemTableView=SORTING(Nr.,Art,Artikelnr.,Zeilennr.)
+                          WHERE(Art=FILTER(Leihstellung),
+                                Andruck=FILTER(Text oben));
+        DataItemVarName=TOPAS Bemerkungen oben;
+        DataItemLink=Nr.=FIELD(Lfd. Nr.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50024;
+        DataItemTableView=SORTING(Lfd. Nr.,Art,Nr.);
+        DataItemVarName=Servicepositionen;
+        DataItemLink=Lfd. Nr.=FIELD(Lfd. Nr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18500;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           seriennr := "Seriennr.";
+
+                           IF STRPOS(seriennr,'S/N: ') = 1 THEN
+                             seriennr := COPYSTR(seriennr,STRLEN('S/N: ')+1);
+
+                           IF STRPOS(seriennr,'S/N:') = 1 THEN
+                             seriennr := COPYSTR(seriennr,STRLEN('S/N:')+1);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140080;TextBox   ;2200 ;0    ;3700 ;423  ;FontSize=8;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Artikelnr. 2" }
+            { 1140009;Label     ;6600 ;0    ;600  ;423  ;FontSize=8;
+                                                         CaptionML=DEU=SN: }
+            { 1140052;TextBox   ;7200 ;0    ;5000 ;423  ;FontSize=8;
+                                                         SourceExpr=seriennr }
+            { 1140004;TextBox   ;1130 ;0    ;544  ;423  ;FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Serviceleist. & Leihstellungen".Menge }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50023;
+        DataItemTableView=SORTING(Nr.,Art,Artikelnr.,Zeilennr.)
+                          WHERE(Art=FILTER(Leihstellung),
+                                Andruck=FILTER(Text unten));
+        DataItemVarName=TOPAS Bemerkungen unten;
+        DataItemLink=Nr.=FIELD(Lfd. Nr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18500;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140056;TextBox   ;2000 ;0    ;11856;423  ;FontSize=8;
+                                                         SourceExpr=Bemerkung }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9020;
+      Height=3410;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      Debitor@1140007 : Record 18;
+      Artikel@1140008 : Record 27;
+      ZugangsdatenAndruck@1140027 : Record 50024;
+      KopfdatenAndruck@1140032 : Record 50024;
+      LetzteServicePos@1140001 : Record 50024;
+      Shipment@1140023 : Record 110;
+      SalesHeader@1140018 : Record 36;
+      ArchHeader@1140014 : Record 5107;
+      Land_Region@1140024 : Record 9;
+      Verk„ufer@1140015 : Record 13;
+      FormatAddr@1140031 : Codeunit 365;
+      vkkopf_text@1140000 : Text[50];
+      SUP_Art_Beschr@1140009 : Text[70];
+      AndruckFeld@1140033 : ARRAY [8] OF Text[50];
+      Nummer@1140005 : Integer;
+      status_text@1140006 : Text[100];
+      ihre_ref@1140013 : Text[100];
+      ansp_name@1140016 : Text[100];
+      ansp_anrede@1140012 : Text[50];
+      ansp_telefon@1140011 : Text[50];
+      ansp_fax@1140010 : Text[50];
+      ansp_email@1140017 : Text[80];
+      sup_artikelnr@1140019 : Code[20];
+      sup_artikelnr_lang@1140022 : Code[40];
+      andruck_champs@1140026 : Boolean;
+      auftragsnr@1140030 : Code[20];
+      debitornr@1140029 : Code[20];
+      datum@1140028 : Date;
+      benutzer@1140020 : Text[50];
+      pw@1140021 : Text[50];
+      seriennr@1140002 : Code[20];
+
+    BEGIN
+    END.
+  }
+}
+
