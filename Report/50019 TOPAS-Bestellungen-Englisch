@@ -1,0 +1,1203 @@
+OBJECT Report 50019 TOPAS-Bestellungen Englisch
+{
+  OBJECT-PROPERTIES
+  {
+    Date=28.11.14;
+    Time=13:24:47;
+    Modified=Yes;
+    Version List=Topas Bericht;
+  }
+  PROPERTIES
+  {
+    TopMargin=250;
+    BottomMargin=100;
+    LeftMargin=2000;
+    RightMargin=100;
+    OnInitReport=BEGIN
+                   FIBUEinrichtung.GET;
+                 END;
+
+    PaperSize=A4 210 x 297 mm;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table38;
+        DataItemTableView=SORTING(Document Type,No.)
+                          WHERE(Document Type=CONST(Order));
+        NewPagePerRecord=Yes;
+        ReqFilterHeadingML=DEU=Einkaufsbestellung;
+        OnPreDataItem=BEGIN
+                        Firmendaten.GET;
+                        FormatAdr.Company(FirmaAdr,Firmendaten);
+                        Firmendaten.CALCFIELDS(ISO);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           IF "Purchaser Code" = '' THEN BEGIN
+                             VerkEinkPerson.INIT;
+                             Eink„uferText := '';
+                           END ELSE BEGIN
+                             VerkEinkPerson.GET("Purchaser Code");
+                             Eink„uferText := 'Eink„ufer'
+                           END;
+                           IF "Your Reference" = '' THEN
+                             ReferenzText := ''
+                           ELSE
+                             ReferenzText := FIELDNAME("Your Reference");
+                           IF "VAT Registration No." = '' THEN
+                             MWStNrText := ''
+                           ELSE
+                             MWStNrText := FIELDNAME("VAT Registration No.");
+                           IF "Currency Code" = '' THEN BEGIN
+                             w„hrung := 'EURO';
+                             FIBUEinrichtung.TESTFIELD("LCY Code");
+                             TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                             TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',FIBUEinrichtung."LCY Code");
+                           END ELSE BEGIN
+                             w„hrung := "Purchase Header"."Currency Code";
+                             TotalText := STRSUBSTNO('Total %1',"Currency Code");
+                             TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',"Currency Code");
+                           END;
+
+                           FormatAdr.PurchHeaderBuyFrom(EinkVonAdr,"Purchase Header");
+                           IF ("Purchase Header"."Buy-from Vendor No." <> "Purchase Header"."Pay-to Vendor No.") THEN
+                             FormatAdr.PurchHeaderPayTo(KredAdr,"Purchase Header");
+                           IF "Payment Terms Code" = '' THEN
+                             ZlgBed.INIT
+                           ELSE
+                             ZlgBed.GET("Payment Terms Code");
+                           IF "Shipment Method Code" = '' THEN
+                             LieferBed.INIT
+                           ELSE
+                             LieferBed.GET("Shipment Method Code");
+
+                           FormatAdr.PurchHeaderShipTo(LieferAnAdr,"Purchase Header");
+
+                             TotalDruck :=0;
+                         END;
+
+        ReqFilterFields=No.,Buy-from Vendor No.,No. Printed;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        NewPagePerRecord=Yes;
+        DataItemVarName=KopieSchleife;
+        OnPreDataItem=BEGIN
+                        AnzSchleifen := ABS(AnzKopien) + 1;
+                        KopieText := '';
+                        SETRANGE(Number,1,AnzSchleifen);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           CLEAR(EinkZeile);
+                           CLEAR(EinkBuchen);
+                           EinkBuchen.GetPurchLines("Purchase Header",EinkZeile,0);
+
+                           IF Number > 1 THEN
+                             KopieText := 'KOPIE';
+                           CurrReport.PAGENO := 1;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         IF NOT CurrReport.PREVIEW THEN
+                           EinkDruckZ„hler.RUN("Purchase Header");
+                       END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=19000;
+            SectionHeight=11200;
+          }
+          CONTROLS
+          {
+            { 5   ;Shape        ;9900 ;9600 ;8400 ;1400  }
+            { 2   ;TextBox      ;16600;8633 ;1680 ;400  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         SourceExpr=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO)) }
+            { 28  ;TextBox      ;16400;10400;1500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Header"."Document Date" }
+            { 36  ;TextBox      ;10100;10400;2300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Header"."No." }
+            { 115 ;TextBox      ;13300;10400;2300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Header"."Buy-from Vendor No." }
+            { 90  ;TextBox      ;0    ;5200 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[1] }
+            { 91  ;TextBox      ;0    ;5623 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[2] }
+            { 92  ;TextBox      ;0    ;6046 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[3] }
+            { 93  ;TextBox      ;0    ;6469 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[4] }
+            { 125 ;TextBox      ;0    ;6892 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[5] }
+            { 126 ;TextBox      ;0    ;7315 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[6] }
+            { 127 ;TextBox      ;0    ;7738 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[7] }
+            { 128 ;TextBox      ;0    ;8161 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[8] }
+            { 71  ;Label        ;0    ;4400 ;1680 ;423  ;Name=TOPAS electronic;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 72  ;Label        ;1470 ;4400 ;2400 ;423  ;Name=Vertriebsgesellschaft mbH;
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=Vertriebsgesellschaft mbH, }
+            { 73  ;Label        ;3900 ;4400 ;2800 ;423  ;Name=[  Grosser Kolonnenweg 18C3,];
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3, }
+            { 74  ;Label        ;6400 ;4400 ;1800 ;423  ;Name=30179 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=" 30163 Hannover" }
+            { 75  ;Image        ;13173;1270 ;5250 ;1269 ;Bitmap=f:\daten neu\gemeinsame ordner\logo`s\topas\top_gelb.bmp }
+            { 84  ;Label        ;13204;3900 ;5250 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 89  ;Label        ;13204;4200 ;5250 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=EUR-Kto 0770566900 BLZ 25080020 }
+            { 97  ;Label        ;13204;4500 ;5250 ;300  ;Name=UDS-Kto 0770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 105 ;Label        ;13204;5000 ;5250 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 129 ;Label        ;13204;5300 ;5250 ;300  ;Name=DM-Kto 0305615 BLZ 25070070;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=EUR-Kto 0305615 BLZ 25070070 }
+            { 131 ;Label        ;13204;5600 ;5250 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 133 ;Label        ;13204;6100 ;5250 ;300  ;Name=Stadtsparkasse Barsinghausen;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 135 ;Label        ;13204;6400 ;5250 ;300  ;Name=Kto 106054  BLZ 25151270;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 137 ;Label        ;13204;6900 ;5250 ;300  ;Name=Postbank Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 138 ;Label        ;13204;7200 ;5250 ;300  ;Name=Kto 379307301 BLZ 25010030;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 141 ;Label        ;13204;7800 ;5250 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1   ;Label        ;6400 ;8000 ;5400 ;900  ;FontSize=20;
+                                                         CaptionML=DEU=Purchase Order }
+            { 7   ;Label        ;10100;9800 ;2310 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=Ordernumber }
+            { 9   ;Label        ;9900 ;9200 ;8400 ;423  ;HorzAlign=Center;
+                                                         CaptionML=DEU=Please confirm with our PO-No. }
+            { 13  ;Label        ;13300;9800 ;2310 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=your Account No. }
+            { 19  ;Label        ;16400;9800 ;1050 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=Date }
+            { 1140004;Label     ;13209;8086 ;4200 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-Nr.: DE 69202523] }
+            { 1140006;Label     ;9928 ;1344 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 1140007;Label     ;2898 ;1770 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 1140008;Label     ;6626 ;1346 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 1140009;Label     ;2898 ;2170 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140010;Label     ;43   ;1312 ;6600 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vetriebsgesellschaft mbH   "] }
+            { 1140011;Label     ;62   ;2170 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 1140012;Label     ;62   ;1770 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 1140017;PictureBox;9317 ;3470 ;3100 ;2000 ;SourceExpr=Firmendaten.ISO }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=Yes;
+            PlaceInBottom=Yes;
+            SectionWidth=19000;
+            SectionHeight=1100;
+          }
+          CONTROLS
+          {
+            { 18  ;Shape        ;100  ;300  ;18900;423  ;ShapeStyle=HorzLine }
+            { 21  ;Label        ;100  ;500  ;18500;600  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=www.topas.de }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table39;
+        DataItemTableView=SORTING(Document Type,Document No.,Line No.);
+        OnPreDataItem=BEGIN
+                        CurrReport.BREAK;
+                      END;
+
+        DataItemLinkReference=Purchase Header;
+        DataItemLink=Document Type=FIELD(Document Type),
+                     Document No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=RundungsRahmen;
+        PrintOnlyIfDetail=No;
+        OnPreDataItem=BEGIN
+                        MWSTBetragZeile.DELETEALL;
+                        MehrZeilen := EinkZeile.FIND('+');
+                        WHILE MehrZeilen AND (EinkZeile.Description = '') AND
+                              (EinkZeile."No." = '') AND (EinkZeile.Quantity = 0) AND
+                              (EinkZeile.Amount = 0) DO
+                          MehrZeilen := EinkZeile.NEXT(-1) <> 0;
+                        IF NOT MehrZeilen THEN
+                          CurrReport.BREAK;
+
+                        //EinkZeile.SETRANGE("Line No.",0,EinkZeile."Line No.");
+                        //2014-11-28 ST Bestellbetrag stimmt jetzt auch wenn Positionen bereits geliefert wurden
+                        EinkZeile.SETFILTER("Line No.",'%1..%2',0,EinkZeile."Line No.");
+                        EinkZeile.SETFILTER("Outstanding Quantity",'>%1',0);
+                        SETRANGE(Number,1,EinkZeile.COUNT);
+                        CurrReport.CREATETOTALS(EinkZeile.Amount,EinkZeile."Amount Including VAT",EinkZeile."Inv. Discount Amount");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           IF Number = 1 THEN
+                             EinkZeile.FIND('-')
+                           ELSE
+                             EinkZeile.NEXT;
+                           "Purchase Line" := EinkZeile;
+
+                           MWSTBetragZeile.INIT;
+                           MWSTBetragZeile."VAT %" := "Purchase Line"."VAT %";
+                           MWSTBetragZeile."VAT Base" := "Purchase Line".Amount;
+                           MWSTBetragZeile."Amount Including VAT" := "Purchase Line"."Amount Including VAT";
+                           MWSTBetragZeile.InsertLine;
+
+                           //Quote Hersteller
+                           quote := '';
+                           // TOPAS Zoll Warentarifnummer
+                           warennummer:='';
+
+                           IF ((EinkZeile.Type = EinkZeile.Type::Item) AND (EinkZeile."No." <>'')) THEN
+                             BEGIN
+                               artikel.GET("Purchase Line"."No.");
+                               //MESSAGE(Einkaufszeile."Nr.");
+                               IF ("Purchase Line"."No." = artikel."No.") AND (artikel."Tariff No." <> '') THEN
+                                 BEGIN
+                                     warennummer:=artikel."Tariff No.";
+                                     //MESSAGE(warennummer);
+                                 END;
+                               IF EinkZeile."Quotenr. Hersteller" <> '' THEN
+                                 quote:= 'Quote: ' + EinkZeile."Quotenr. Hersteller";
+                               END;
+                           // TOPAS
+                             IF "Purchase Line"."Outstanding Quantity"=0 THEN
+                             TotalDruck:=101;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         EinkZeile.DELETEALL;
+                       END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=19000;
+            SectionHeight=800;
+          }
+          CONTROLS
+          {
+            { 29  ;Shape        ;0    ;100  ;18400;600   }
+            { 39  ;Label        ;100  ;200  ;900  ;400  ;ParentControl=62;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Item }
+            { 40  ;Label        ;1127 ;200  ;7320 ;400  ;ParentControl=63;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Partnumber }
+            { 41  ;Label        ;9300 ;200  ;1300 ;400  ;ParentControl=64;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=ENG=Quantity }
+            { 43  ;Label        ;12000;200  ;1700 ;400  ;ParentControl=66;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=ENG=Unit Price }
+            { 44  ;Label        ;13900;200  ;1800 ;400  ;ParentControl=67;
+                                                         HorzAlign=Center;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Req. Date }
+            { 45  ;Label        ;15900;200  ;2500 ;400  ;ParentControl=68;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU="Total " }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=19000;
+            SectionHeight=700;
+          }
+          CONTROLS
+          {
+            { 54  ;TextBox      ;15900;0    ;2300 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=EinkZeile.Amount+EinkZeile."Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 53  ;Label        ;11400;0    ;3600 ;423  ;ParentControl=54;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes;
+                                                         CaptionML=ENG=countinue }
+            { 1140015;TextBox   ;14900;0    ;1000 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=w„hrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=523;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(EinkZeile.Type = EinkZeile.Type::"G/L Account");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 56  ;TextBox      ;1106 ;100  ;6500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line"."No." }
+            { 57  ;TextBox      ;8900 ;100  ;1700 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line".Quantity }
+            { 59  ;TextBox      ;12000;100  ;1700 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line"."Direct Unit Cost";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 60  ;TextBox      ;13900;100  ;1700 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line"."Requested Receipt Date" }
+            { 61  ;TextBox      ;16300;100  ;1900 ;423  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line".Amount+"Purchase Line"."Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 30  ;Label        ;10800;100  ;1000 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=pcs. }
+            { 1140013;TextBox   ;15600;100  ;900  ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=w„hrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=523;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(((EinkZeile.Type = EinkZeile.Type::Item) AND (EinkZeile."Outstanding Quantity"<>0))
+                                        OR ((EinkZeile.Type = EinkZeile.Type::"Fixed Asset") AND (EinkZeile."Outstanding Quantity"<>0)) );
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 62  ;TextBox      ;0    ;100  ;1106 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=feld1;
+                                                         SourceExpr="Purchase Line"."Line No." }
+            { 63  ;TextBox      ;1127 ;78   ;6500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line"."Artikelnr. 2" }
+            { 64  ;TextBox      ;8900 ;100  ;1700 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line".Quantity }
+            { 66  ;TextBox      ;12000;100  ;1700 ;423  ;FontSize=9;
+                                                         BlankZero=No;
+                                                         SourceExpr="Purchase Line"."Direct Unit Cost";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 67  ;TextBox      ;13900;100  ;1700 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=Rabatt %;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Purchase Line"."Requested Receipt Date" }
+            { 68  ;TextBox      ;16300;100  ;1900 ;423  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=Betrag;
+                                                         BlankZero=No;
+                                                         SourceExpr="Purchase Line".Amount+"Purchase Line"."Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 24  ;TextBox      ;5700 ;100  ;3185 ;400  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line".Description }
+            { 25  ;Label        ;10800;100  ;1000 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=pcs. }
+            { 1140014;TextBox   ;15600;100  ;900  ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=w„hrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           IF artikel."Vendor Item No." = '' THEN CurrReport.SHOWOUTPUT(FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 10  ;Label        ;1148 ;21   ;2800 ;430  ;HorzAlign=Left;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=ENG=Your Partnumber: }
+            { 11  ;TextBox      ;4000 ;0    ;5700 ;430  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=[artikel."Vendor Item No." ] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((EinkZeile."Description 2" <> '') AND (EinkZeile."Outstanding Quantity"<>0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 4   ;TextBox      ;1149 ;0    ;7937 ;400  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line"."Description 2" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((EinkZeile.Type = EinkZeile.Type::" ")AND (EinkZeile."Outstanding Quantity" = 0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 22  ;TextBox      ;1148 ;0    ;16300;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line".Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((warennummer <> '') AND (EinkZeile."Outstanding Quantity"<>0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 6   ;TextBox      ;2948 ;0    ;13800;400  ;FontSize=9;
+                                                         SourceExpr=warennummer }
+            { 8   ;Label        ;1148 ;0    ;1700 ;400  ;HorzAlign=Left;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Tariff code;
+                                                                    ENG=Tariff code] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           //Auskommentiert am 27.03.08 A
+                           //CurrReport.SHOWOUTPUT
+                           //((((EinkZeile.Type = EinkZeile.Type::Item) AND (EinkZeile."Outstanding Quantity"<>0))
+                           // OR (EinkZeile.Type = EinkZeile.Type::"Fixed Asset"))
+                           // AND (EinkZeile."Outstanding Quantity"<>0)
+                           // AND (EinkZeile."Quotenr. Hersteller" <> '')) ;
+                           //Wrong Expression
+
+                           //IF EinkZeile."Quotenr. Hersteller" <> '' THEN
+                           //BEGIN
+                           //quote:= 'Quotenummer: ' + EinkZeile."Quotenr. Hersteller";
+                           //END;
+                           //Auskommentiert am 27.03.08 E
+
+                           CurrReport.SHOWOUTPUT((quote <> '') AND (EinkZeile."Outstanding Quantity"<>0));
+                         END;
+
+            OnPostSection=BEGIN
+                            //quote:='';
+                          END;
+
+          }
+          CONTROLS
+          {
+            { 14  ;TextBox      ;1190 ;0    ;16300;400  ;FontSize=9;
+                                                         SourceExpr=quote }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Prod. Order No." <> '') AND (EinkZeile."Outstanding Quantity"<>0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 16  ;TextBox      ;1190 ;0    ;11100;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Purchase Line"."Prod. Order No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=600;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Outstanding Quantity"<>0)AND(artikel."C of C"=TRUE)AND(artikel.Abzugstest=TRUE)
+                                                  AND("Purchase Line".Type="Purchase Line".Type::Item));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 12  ;Label        ;1190 ;0    ;17100;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=HALO must provide a Certificate of Compliance and Peel strengh Test data for each of these parts at shipment. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=740;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Outstanding Quantity"<>0)AND(artikel."C of C"=TRUE)AND(artikel.Abzugstest=FALSE)
+                                                  AND("Purchase Line".Type="Purchase Line".Type::Item));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 15  ;Label        ;1212 ;0    ;17100;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=HALO must provide a Certificate of Compliance for each of these parts at shipment. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=740;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Outstanding Quantity"<>0) AND (artikel.Chargenrein=TRUE)
+                                                  AND ("Purchase Line".Type="Purchase Line".Type::Item));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140003;Label     ;1212 ;0    ;17100;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=The reel should contain one lot only. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=741;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Outstanding Quantity"<>0) AND (artikel."Spezielle Folie" = TRUE)
+                                                  AND ("Purchase Line".Type="Purchase Line".Type::Item));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140001;Label     ;1233 ;0    ;17100;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Please use thicker cover tape. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=700;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Purchase Line"."Outstanding Quantity"<>0) AND ("Purchase Line".Type="Purchase Line".Type::Item)
+                           AND (("Purchase Line"."No." = 'TG110-ESV03N6') OR ("Purchase Line"."No." = 'TD22-SV55H12')));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140005;Label     ;1300 ;0    ;17100;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=One date code per tube. Partial tubes are acceptable. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=19000;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 77  ;TextBox      ;15600;400  ;2400 ;423  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=EinkZeile.Amount+EinkZeile."Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+            { 76  ;Label        ;11100;400  ;3600 ;423  ;ParentControl=77;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes;
+                                                         CaptionML=ENG=continue }
+            { 1140016;TextBox   ;14600;400  ;1000 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=w„hrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=19000;
+            SectionHeight=500;
+          }
+          CONTROLS
+          {
+            { 23  ;Shape        ;0    ;400  ;18300;50   ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=19000;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(EinkZeile."Inv. Discount Amount" <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=No;
+            SectionWidth=19000;
+            SectionHeight=1500;
+            OnPreSection=BEGIN
+                            //  CurrReport.SHOWOUTPUT(TotalDruck=0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 51  ;TextBox      ;13100;500  ;2200 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=TotalText }
+            { 81  ;TextBox      ;15400;500  ;2700 ;423  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=EinkZeile.Amount;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Line"."Currency Code" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table36;
+        DataItemLinkReference=Purchase Line;
+        DataItemLink=No.=FIELD(Sales Order No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=MWStZ„hler;
+        OnPreDataItem=BEGIN
+                        IF MWSTBetragZeile.COUNT <= 1 THEN
+                          CurrReport.BREAK;
+                        SETRANGE(Number,1,MWSTBetragZeile.COUNT);
+                        CurrReport.CREATETOTALS(MWSTBetragZeile."VAT Base",MWSTBetragZeile."VAT Amount");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           MWSTBetragZeile.GetLine(Number);
+                         END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=19000;
+            SectionHeight=2115;
+          }
+          CONTROLS
+          {
+            { 86  ;Label        ;0    ;846  ;2100 ;846  ;ParentControl=98;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 87  ;Label        ;2310 ;846  ;2520 ;846  ;ParentControl=99;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 88  ;Label        ;5040 ;846  ;2520 ;846  ;ParentControl=100;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 31  ;Label        ;0    ;0    ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=MwSt. Betrag Spezifikation }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=19000;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 94  ;Label        ;0    ;0    ;2100 ;423  ;ParentControl=95;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 95  ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+            { 96  ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 98  ;TextBox      ;0    ;0    ;2100 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt %;
+                                                         SourceExpr=MWSTBetragZeile."VAT %" }
+            { 99  ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Bemessungsgrundlage;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+            { 100 ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Betrag;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=19000;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 102 ;Label        ;0    ;423  ;2100 ;423  ;ParentControl=103;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 103 ;TextBox      ;2310 ;423  ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+            { 104 ;TextBox      ;5040 ;423  ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=19000;
+            SectionHeight=1100;
+          }
+          CONTROLS
+          {
+            { 106 ;Label        ;0    ;423  ;2100 ;423  ;ParentControl=107;
+                                                         FontSize=9;
+                                                         FontBold=Yes }
+            { 107 ;TextBox      ;2310 ;423  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Total;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+            { 108 ;TextBox      ;5040 ;423  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Purchase Header"."Currency Code" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(LieferBed.Description <>'');
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=7200;
+          }
+          CONTROLS
+          {
+            { 110 ;Label        ;0    ;0    ;2900 ;423  ;FontSize=9;
+                                                         CaptionML=DEU="Terms of Payment: " }
+            { 32  ;Label        ;0    ;800  ;10800;500  ;FontSize=9;
+                                                         CaptionML=DEU=Please do not ship parts older than 6 months for stock and parts older }
+            { 33  ;Label        ;0    ;1300 ;10800;500  ;FontSize=9;
+                                                         CaptionML=DEU=than 12 months for customer orders without written approval from TOPAS! }
+            { 34  ;Label        ;0    ;1800 ;10800;500  ;FontSize=9;
+                                                         CaptionML=DEU=Please advise delivery schedule if you don't ship on time! }
+            { 35  ;Label        ;0    ;2800 ;10000;500  ;FontSize=9;
+                                                         CaptionML=DEU=Please do not put transport insurance on our shipments and use our }
+            { 37  ;Label        ;0    ;4100 ;7400 ;500  ;FontSize=9;
+                                                         CaptionML=DEU=Bill to: }
+            { 38  ;Label        ;0    ;4600 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=TOPAS electronic Vertriebsgesellschaft mbH }
+            { 42  ;Label        ;0    ;5000 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3 }
+            { 46  ;Label        ;9500 ;4100 ;7400 ;500  ;FontSize=9;
+                                                         CaptionML=DEU=Ship to: }
+            { 47  ;Label        ;0    ;5400 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=30163 Hannover }
+            { 48  ;Label        ;0    ;5800 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Germany }
+            { 49  ;Label        ;9500 ;4600 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=TOPAS electronic Vertriebsgesellschaft mbH }
+            { 52  ;Label        ;9500 ;5000 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3 }
+            { 55  ;Label        ;9500 ;5400 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=30163 Hannover }
+            { 58  ;Label        ;9500 ;5800 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Germany }
+            { 1140000;TextBox   ;2900 ;0    ;13600;400  ;FontSize=9;
+                                                         SourceExpr=ZlgBed.Description }
+            { 1140002;TextBox   ;10000;2800 ;8700 ;500  ;FontSize=9;
+                                                         SourceExpr=LieferBed.Description }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total2;
+        OnPreDataItem=BEGIN
+                        IF "Purchase Header"."Buy-from Vendor No." = "Purchase Header"."Pay-to Vendor No." THEN
+                          CurrReport.BREAK;
+                      END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total3;
+        OnPreDataItem=BEGIN
+                        IF ("Purchase Header"."Sell-to Customer No." = '') AND (LieferAnAdr[1] = '') THEN
+                          CurrReport.BREAK;
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT := "Purchase Header"."Sell-to Customer No." <> '';
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19000;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=5060;
+      Height=440;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+      { 1   ;TextBox      ;3410 ;0    ;1650 ;440  ;CaptionML=DEU=Anzahl Kopien;
+                                                   SourceExpr=AnzKopien }
+      { 21  ;Label        ;0    ;0    ;3300 ;440  ;ParentControl=1 }
+    }
+  }
+  CODE
+  {
+    VAR
+      quote@1140000 : Text[50];
+      FIBUEinrichtung@1140001 : Record 98;
+      Firmendaten@1140002 : Record 79;
+      LieferBed@1140003 : Record 10;
+      ZlgBed@1140004 : Record 3;
+      VerkEinkPerson@1140005 : Record 13;
+      MWSTBetragZeile@1140006 : TEMPORARY Record 290;
+      EinkZeile@1140007 : TEMPORARY Record 39;
+      EinkDruckZ„hler@1140008 : Codeunit 317;
+      FormatAdr@1140009 : Codeunit 365;
+      EinkBuchen@1140010 : Codeunit 90;
+      KredAdr@1140011 : ARRAY [8] OF Text[50];
+      LieferAnAdr@1140012 : ARRAY [8] OF Text[50];
+      FirmaAdr@1140013 : ARRAY [8] OF Text[50];
+      EinkVonAdr@1140014 : ARRAY [8] OF Text[50];
+      Eink„uferText@1140015 : Text[30];
+      MWStNrText@1140016 : Text[30];
+      ReferenzText@1140017 : Text[30];
+      TotalText@1140018 : Text[50];
+      TotalInklMWStText@1140019 : Text[50];
+      MehrZeilen@1140020 : Boolean;
+      AnzKopien@1140021 : Integer;
+      AnzSchleifen@1140022 : Integer;
+      KopieText@1140023 : Text[30];
+      warennummer@1140024 : Text[30];
+      artikel@1140025 : Record 27;
+      TotalDruck@1140026 : Integer;
+      w„hrung@1140027 : Code[10];
+
+    BEGIN
+    {
+      Žnderung am Standard 2.01 Lederer Systemhaus: Ulrich Gepp
+      Erstellt am : 23.06.99
+      -----------------------------------------------------------------------------------------
+      Adressfeld auf Fensterkurvert-Norm gesetzt.
+
+      Zeilennummernformatierung:
+      FORMAT("Purchase Line"."Line No."/10000,0,0)
+    }
+    END.
+  }
+}
+
