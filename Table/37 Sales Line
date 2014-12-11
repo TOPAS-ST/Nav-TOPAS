@@ -4503,8 +4503,10 @@ IF ("Blanket Order No." <> '') AND ("Blanket Order Line No." <> 0)  THEN
 
 Gen_Service_DC("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Runden : Boolean;Währung : Code[20]) : Decimal
 //***************************************************************************************************
-//              TOPAS 26.07.2011-ST  Generiert den DC für den jeweiligen Champ Artikel
-//              TOPAS 10.01.2014-ST  Nun auch für ACTS und ACHAT
+//              TOPAS 2011-07-26 ST  Generiert den DC für den jeweiligen Champ Artikel
+//              TOPAS 2014-01-10 ST  Nun auch für ACTS und ACHAT
+//              TOPAS 2014-06-18 ST Nun auch für Misch ACTS/ACHAT
+//              TOPAS 2014-12-09 ST  ACTS Schaeffler Projekt
 //***************************************************************************************************
 
 IF Runden = TRUE THEN
@@ -4512,18 +4514,34 @@ IF Runden = TRUE THEN
 ELSE
   rundgs_faktor := 0.01;
 
+spezial_discount := 1;
+champs_discount := 1;
+acts_discount := 1;
+
 Artikel.GET("SUP Artikelnr");
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
-    IF Artikel.Artikelgruppe = 'ACHAT' THEN
-      spezial_discount := 1 / 0.8 * 0.58 //für ACHAT > = 1 / * 0,8 (Zurückrechnung Champs DC auf 100% MSRP) *0,58  EK ACHAT
+    ACTS := FALSE;
+    ACHAT := FALSE;
+    ACTS_SCHAEFFLER := FALSE;
+
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
+      ACTS := TRUE
     ELSE
-      spezial_discount := 1;
+      IF Artikel.Artikelgruppe = 'ACHAT' THEN
+        ACHAT := TRUE
+      ELSE
+        IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
+          ACTS_SCHAEFFLER := TRUE
+        ELSE
+          IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+            CHAMPS := TRUE;
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
     AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
     Opt_laufzeit.RESET;
@@ -4535,13 +4553,12 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ELSE
       ERROR(Text124,"SUP Artikelnr","Basis Artikelnr");
 
-    Champs.RESET;
-    Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
-    OR (Artikel.Artikelgruppe = 'ACHAT') THEN
-      Champs.SETFILTER(Art,'%1',Champs.Art :: ACTS)
+    Service_PL.RESET;
+    Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
+      Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
-      Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
+      Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
       //Manuelle Artikel Filter erspart separate ACHAT Preisliste
       IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
         "SUP Artikelnr" := 'ACTS-SUPP-24X7/SO#01';
@@ -4549,46 +4566,71 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
       IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
          "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
-    Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
-    Champs.SETFILTER("Artikelnr.",'%1',"Basis Artikelnr");
-    Champs.SETFILTER(Währungscode,'%1',Währung);
-    IF Champs.FINDFIRST THEN
+    Service_PL.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
+    Service_PL.SETFILTER("Artikelnr.",'%1',"Basis Artikelnr");
+    Service_PL.SETFILTER(Währungscode,'%1',Währung);
+    IF Service_PL.FINDFIRST THEN
       BEGIN
 
-        IF Champs."Update letzte Preisliste" = FALSE THEN
-          MESSAGE(Text120,"Basis Artikelnr",Champs.Preisliste,Champs."Letzte Aktualisierung");
+        IF Service_PL."Update letzte Preisliste" = FALSE THEN
+          MESSAGE(Text120,"Basis Artikelnr",Service_PL.Preisliste,Service_PL."Letzte Aktualisierung");
 
         //CHAMPS EK Konditionen
-        v_service_laufzeit := Laufzeit DIV 12;
-        CASE v_service_laufzeit OF
-          0..1 : champs_discount := 1;
-          2 : champs_discount := 0.95; // -5%
-          3 : champs_discount := 0.88; // -12%
-          4 : champs_discount := 0.84; // -16%
-          5..100 : champs_discount := 0.8; // -20%
-        END;
+        IF CHAMPS = TRUE THEN
+          BEGIN
+            v_service_laufzeit := Laufzeit DIV 12;
+            CASE v_service_laufzeit OF
+              0..1 : champs_discount := 1;
+              2 : champs_discount := 0.95; // -5%
+              3 : champs_discount := 0.88; // -12%
+              4 : champs_discount := 0.84; // -16%
+              5..100 : champs_discount := 0.8; // -20%
+            END;
+          END;
 
         //ACTS EK Konditionen
-        v_service_laufzeit := Laufzeit DIV 12;
-        CASE v_service_laufzeit OF
-          0..1 : acts_discount := 1;
-          2 : acts_discount := 0.95; // -5%
-          3 : acts_discount := 0.88; // -12%
-          4 : acts_discount := 0.84; // -16%
-          5..100 : acts_discount := 0.8; // -20%
-        END;
+        IF ACTS = TRUE THEN
+          BEGIN
+            v_service_laufzeit := Laufzeit DIV 12;
+            CASE v_service_laufzeit OF
+              0..1 : acts_discount := 1;
+              2 : acts_discount := 0.95; // -5%
+              3 : acts_discount := 0.88; // -12%
+              4 : acts_discount := 0.84; // -16%
+              5..100 : acts_discount := 0.8; // -20%
+            END;
+          END;
 
-        IF (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')  THEN
-          EXIT((ROUND((((Champs.MSRP * 0.72) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+        //ACHAT EK Konditionen
+        IF ACHAT = TRUE THEN
+          BEGIN
+            spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (Zurückrechnung Champ DC auf 100 % MSRP) * 0.58 EK ACHAT
+          END;
+
+        //ACTS Schaeffler EK Konditionen
+        IF ACTS_SCHAEFFLER = TRUE THEN
+          BEGIN
+            v_service_laufzeit := Laufzeit DIV 12;
+            CASE v_service_laufzeit OF
+              0..100 : acts_discount := 0.5 // -50 %;
+            END;
+          END;
+
+        IF (CHAMPS = TRUE) THEN
+          EXIT((ROUND((((Service_PL.MSRP * 0.72) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
           * (champs_discount),rundgs_faktor)) * spezial_discount)
         ELSE
-          IF (Artikel.Artikelgruppe = 'ACHAT') THEN
-            EXIT((ROUND(((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit),
+          IF (ACHAT = TRUE) THEN
+            EXIT((ROUND(((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit),
             rundgs_faktor)) * spezial_discount)
           ELSE
-            IF (Artikel.Artikelgruppe = 'ACTS') THEN
-              EXIT((ROUND((((Champs.MSRP * 0.8) * Champs."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
-              * (acts_discount),rundgs_faktor)) * spezial_discount);
+            IF (ACTS = TRUE) THEN
+              EXIT((ROUND((((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+              * (acts_discount),rundgs_faktor)) * spezial_discount)
+            ELSE
+              IF (ACTS_SCHAEFFLER = TRUE) THEN
+                EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+                * (acts_discount),rundgs_faktor)) * spezial_discount);
       END
     ELSE
       BEGIN
@@ -4637,18 +4679,18 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
     AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
     ELSE
-      ACTS := FALSE;
-
-    IF Artikel.Artikelgruppe = 'ACHAT' THEN
-      ACHAT := TRUE
-    ELSE
-      ACHAT := FALSE;
+      IF Artikel.Artikelgruppe = 'ACHAT' THEN
+        ACHAT := TRUE
+      ELSE
+        IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
+          ACTS_SCHAEFFLER := TRUE;
 
     //***************************************************************************************************
     //                Angabe der Positionsnr. bezieht sich auf eine Auftrags Position
@@ -4673,7 +4715,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             IF Artikel.FINDFIRST THEN
               BEGIN
                 BesterVkPreis := FindMSRP(AktBelegZeile."No.",WORKDATE,Währung,
-                                          AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+                                          AktBelegZeile."Unit of Measure Code","SUP Artikelnr");
                 IF BesterVkPreis <> 0 THEN
                   BEGIN
                     Opt_laufzeit.RESET;
@@ -4688,21 +4730,29 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                           BEGIN
                             IF ACHAT = FALSE THEN
                               BEGIN
-                                //CHAMPS
-                                Opt_proz.RESET;
-                                Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
-                                Opt_proz.SETFILTER("Feld ID",'%1',5);
-                                Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
-                                IF Opt_proz.FINDFIRST THEN
+                                IF ACTS_SCHAEFFLER = FALSE THEN
                                   BEGIN
-                                    v_prozentsatz := Opt_proz.Prozentsatz;
-                                    IF Basisgerät = TRUE THEN
-                                      basissatz := Opt_proz.Werte
+                                    //CHAMPS
+                                    Opt_proz.RESET;
+                                    Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                                    Opt_proz.SETFILTER("Feld ID",'%1',5);
+                                    Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                                    IF Opt_proz.FINDFIRST THEN
+                                      BEGIN
+                                        v_prozentsatz := Opt_proz.Prozentsatz;
+                                        IF Basisgerät = TRUE THEN
+                                          basissatz := Opt_proz.Werte
+                                        ELSE
+                                          basissatz := 0;
+                                      END
                                     ELSE
-                                      basissatz := 0;
+                                      ERROR(Text113,"SUP Artikelnr",AktBelegZeile."No.");
                                   END
                                 ELSE
-                                  ERROR(Text113,"SUP Artikelnr",AktBelegZeile."No.");
+                                  //ACTS_SCHAEFFLER
+                                  BEGIN
+                                    v_prozentsatz := 100 - Kalk_Prozentsatz;
+                                  END;
                               END
                             ELSE
                               //ACHAT
@@ -4756,7 +4806,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 IF Artikel.FINDFIRST THEN
                   BEGIN
                     BesterVkPreis := FindMSRP(Vkliefzeile."No.",WORKDATE,Währung,
-                                              Vkliefzeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+                                              Vkliefzeile."Unit of Measure Code","SUP Artikelnr");
                     IF BesterVkPreis <> 0 THEN
                       BEGIN
                         Opt_laufzeit.RESET;
@@ -4771,21 +4821,29 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                               BEGIN
                                 IF ACHAT = FALSE THEN
                                   BEGIN
-                                    //CHAMPS
-                                    Opt_proz.RESET;
-                                    Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
-                                    Opt_proz.SETFILTER("Feld ID",'%1',5);
-                                    Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
-                                    IF Opt_proz.FINDFIRST THEN
+                                    IF ACTS_SCHAEFFLER = FALSE THEN
                                       BEGIN
-                                        v_prozentsatz := Opt_proz.Prozentsatz;
-                                        IF Basisgerät = TRUE THEN
-                                          basissatz := Opt_proz.Werte
+                                        //CHAMPS
+                                        Opt_proz.RESET;
+                                        Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                                        Opt_proz.SETFILTER("Feld ID",'%1',5);
+                                        Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                                        IF Opt_proz.FINDFIRST THEN
+                                          BEGIN
+                                            v_prozentsatz := Opt_proz.Prozentsatz;
+                                            IF Basisgerät = TRUE THEN
+                                              basissatz := Opt_proz.Werte
+                                            ELSE
+                                              basissatz := 0;
+                                          END
                                         ELSE
-                                          basissatz := 0;
+                                          ERROR(Text113,"SUP Artikelnr",Vkliefzeile."No.")
                                       END
                                     ELSE
-                                      ERROR(Text113,"SUP Artikelnr",Vkliefzeile."No.");
+                                      //ACTS_SCHAEFFLER
+                                      BEGIN
+                                        v_prozentsatz := 100 - Kalk_Prozentsatz;
+                                      END;
                                   END
                                 ELSE
                                   //ACHAT
@@ -4839,7 +4897,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
            IF Artikel.FINDFIRST THEN
              BEGIN
                BesterVkPreis := FindMSRP("Basis Artikelnr",WORKDATE,Währung,
-                                         AktBelegZeile."Unit of Measure Code","SUP Artikelnr",ACTS);
+                                         AktBelegZeile."Unit of Measure Code","SUP Artikelnr");
                IF BesterVkPreis <> 0 THEN
                  BEGIN
                    Opt_laufzeit.RESET;
@@ -4854,20 +4912,28 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                          BEGIN
                            IF ACHAT = FALSE THEN
                              BEGIN
-                               Opt_proz.RESET;
-                               Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
-                               Opt_proz.SETFILTER("Feld ID",'%1',5);
-                               Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
-                               IF Opt_proz.FINDFIRST THEN
+                               IF ACTS_SCHAEFFLER = FALSE THEN
                                  BEGIN
-                                   v_prozentsatz := Opt_proz.Prozentsatz;
-                                   IF Basisgerät = TRUE THEN
-                                     basissatz := Opt_proz.Werte
+                                   Opt_proz.RESET;
+                                   Opt_proz.SETFILTER("Tabellen ID",'%1',50024);
+                                   Opt_proz.SETFILTER("Feld ID",'%1',5);
+                                   Opt_proz.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+                                   IF Opt_proz.FINDFIRST THEN
+                                     BEGIN
+                                       v_prozentsatz := Opt_proz.Prozentsatz;
+                                       IF Basisgerät = TRUE THEN
+                                         basissatz := Opt_proz.Werte
+                                       ELSE
+                                         basissatz := 0;
+                                     END
                                    ELSE
-                                     basissatz := 0;
+                                     ERROR(Text113,"SUP Artikelnr","Basis Artikelnr");
                                  END
                                ELSE
-                                 ERROR(Text113,"SUP Artikelnr","Basis Artikelnr");
+                                 //ACTS_SCHAEFFLER
+                                 BEGIN
+                                   v_prozentsatz := 100 - Kalk_Prozentsatz;
+                                 END;
                              END
                            ELSE
                              //ACHAT
@@ -4904,7 +4970,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
   END;
 
-FindMSRP(Artikelnr : Code[20];Startdatum : Date;Wäh : Code[10];Stkcode : Code[10];SUP_Artikelnr : Code[20];ACTS : Boolean) : Decimal
+FindMSRP(Artikelnr : Code[20];Startdatum : Date;Wäh : Code[10];Stkcode : Code[10];SUP_Artikelnr : Code[20]) : Decimal
 //***************************************************************************************************
 //        TOPAS 01.03.2011 ST Findet den aktuellen VK-Preis des Gerätes, sprich MSRP-Preis
 //        TOPAS 09.01.2014 ST Für ACTS und ACHAT den entsprechenden ACTS MSRP
@@ -4913,12 +4979,22 @@ FindMSRP(Artikelnr : Code[20];Startdatum : Date;Wäh : Code[10];Stkcode : Code[1
 IF Artikelnr = '' THEN EXIT;
 
 Artikel.GET(SUP_Artikelnr);
-IF Artikel.Artikelgruppe = 'ACHAT' THEN
-  ACHAT := TRUE
+IF Artikel.Artikelgruppe = 'ACTS' THEN
+  ACTS := TRUE
 ELSE
-  ACHAT := FALSE;
+  IF Artikel.Artikelgruppe = 'ACHAT' THEN
+    ACHAT := TRUE
+  ELSE
+    IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
+      ACTS_SCHAEFFLER := TRUE
+    ELSE
+      IF Artikel.Artikelgruppe = 'ACTS/ACHAT' THEN
+        ACTS_ACHAT := TRUE
+      ELSE
+        IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+          CHAMPS := TRUE;
 
-IF (ACTS = FALSE) AND (ACHAT = FALSE) THEN
+IF (CHAMPS = TRUE) OR (ACTS_ACHAT = TRUE) THEN
   BEGIN
     WITH FindSalesPrice DO BEGIN
       IF (Artikelnr = 'M1KB-CH') THEN
@@ -4955,10 +5031,10 @@ IF (ACTS = FALSE) AND (ACHAT = FALSE) THEN
   END;
 
 //***************************************************************************************************
-//                                     ACTS und ACHAT Berechnung
+//                                     ACTS und ACHAT  Berechnung
 //***************************************************************************************************
 
-IF (ACTS = TRUE) OR (ACHAT = TRUE) THEN
+IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
   BEGIN
     WITH FindMSRPPrice DO BEGIN
       SETRANGE("Artikelnr.",Artikelnr);
@@ -4973,19 +5049,11 @@ IF (ACTS = TRUE) OR (ACHAT = TRUE) THEN
       SETRANGE(Währungscode,Wäh);
       SETRANGE(Art,Art:: ACTS);
       SETRANGE("Zuordnung obsolete",FALSE);
-
       IF FINDFIRST THEN
         BEGIN
          IF "Update letzte Preisliste" = FALSE THEN
            MESSAGE(Text120,FORMAT(Art),Artikelnr);
-           Artikel.GET(SUP_Artikelnr);
-           IF Artikel.Artikelgruppe = 'ACTS' THEN
-             EXIT(FindMSRPPrice.MSRP * FindMSRPPrice."Laufzeit in Jahren")
-           ELSE
-             IF Artikel.Artikelgruppe = 'ACHAT' THEN
-               EXIT(0.58 * ((FindMSRPPrice.MSRP * FindMSRPPrice."Laufzeit in Jahren")))
-             ELSE
-               ERROR(Text126);
+         EXIT(FindMSRPPrice.MSRP * FindMSRPPrice."Laufzeit in Jahren")
         END
       ELSE
         ERROR(Text127,Artikelnr);
