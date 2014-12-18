@@ -1,0 +1,572 @@
+OBJECT Report 50186 Wartungsvertrag - Debitor
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04.09.14;
+    Time=15:13:41;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    TopMargin=1000;
+    LeftMargin=1500;
+    OnPreReport=BEGIN
+                  EVALUATE(filter_startdatum,Wartungsvertrag.GETFILTER(Startdatum));
+                  EVALUATE(filter_ablaufdatum,Wartungsvertrag.GETFILTER(Vertragsablaufdatum));
+
+                  filter := Wartungsvertrag.GETFILTERS;
+
+                  IF PrintToExcel THEN
+                    ExcelKopf;
+                END;
+
+    OnPostReport=BEGIN
+                   IF PrintToExcel THEN
+                     BEGIN
+                       Excel.Visible(TRUE);
+                       CLEAR(Excel);
+                       REPEAT
+                       UNTIL ISCLEAR(Excel);
+                     END;
+                 END;
+
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table18;
+        OnAfterGetRecord=BEGIN
+                           IF show_only_hw_repl THEN
+                             BEGIN
+                               hw_repl := FALSE;
+                               ServicePos.RESET;
+                               ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
+                               ServicePos.SETFILTER(Inaktiv,'%1',FALSE);
+                               ServicePos.SETFILTER("Debitornr.",'%1',"No.");
+                               IF ServicePos.FINDFIRST THEN
+                                 BEGIN
+                                   REPEAT
+                                     IF STRPOS(ServicePos."Service Artikelnr.",'AHR') <> 0 THEN
+                                       hw_repl := TRUE;
+                                   UNTIL ServicePos.NEXT = 0;
+                                 END;
+
+                               IF hw_repl = FALSE THEN
+                                 CurrReport.SKIP;
+                             END;
+
+                           TempWartungsvertrag.RESET;
+                           TempWartungsvertrag.SETFILTER(TempWartungsvertrag.Status,'%1',TempWartungsvertrag.Status :: Auftrag);
+                           TempWartungsvertrag.SETFILTER(TempWartungsvertrag."Debitornr.",'%1',"No.");
+                           TempWartungsvertrag.SETFILTER(TempWartungsvertrag.Startdatum,filter_startdatum);
+                           TempWartungsvertrag.SETFILTER(TempWartungsvertrag.Vertragsablaufdatum,filter_ablaufdatum);
+                           IF NOT TempWartungsvertrag.FINDFIRST THEN
+                             CurrReport.SKIP;
+
+                           IF PrintToExcel THEN
+                             BEGIN
+                               j := INCSTR(j);
+                               Sheet.Range('A'+j).Value := 'Wartungsvertrags-šbersicht';
+                               Sheet.Range('B'+j).Value := Customer.Name;
+                               Sheet.Range('A'+j+':B'+j).Font.Bold := TRUE;
+                               j := INCSTR(j);
+                             END;
+                         END;
+
+        ReqFilterFields=No.,AC_Solutionpartner;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=20550;
+            SectionHeight=1269;
+          }
+          CONTROLS
+          {
+            { 1140012;Label     ;150  ;0    ;9600 ;846  ;FontSize=16;
+                                                         CaptionML=DEU=šbersicht der Wartungsvertr„ge: }
+            { 1140031;TextBox   ;150  ;846  ;18300;423  ;SourceExpr=filter }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=1269;
+          }
+          CONTROLS
+          {
+            { 1140000;TextBox   ;1650 ;423  ;9300 ;423  ;FontSize=10;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Name }
+            { 1140002;TextBox   ;1650 ;846  ;9300 ;423  ;FontSize=10;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Name 2" }
+            { 1140004;TextBox   ;0    ;423  ;1500 ;423  ;HorzAlign=Left;
+                                                         FontSize=10;
+                                                         FontBold=Yes;
+                                                         SourceExpr="No." }
+            { 1140001;Shape     ;0    ;0    ;18750;423  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50011;
+        DataItemTableView=SORTING(Debitornr.,Vertragsablaufdatum,Wartungsvertragsnr.)
+                          WHERE(Status=FILTER(Auftrag|ACTS|ACHAT));
+        OnAfterGetRecord=BEGIN
+                           IF show_only_hw_repl THEN
+                             BEGIN
+                               hw_repl := FALSE;
+                               ServicePos.RESET;
+                               ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
+                               ServicePos.SETFILTER(Inaktiv,'%1',FALSE);
+                               ServicePos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                               IF ServicePos.FINDFIRST THEN
+                                 BEGIN
+                                   REPEAT
+                                     IF STRPOS(ServicePos."Service Artikelnr.",'AHR') <> 0 THEN
+                                       hw_repl := TRUE;
+                                   UNTIL ServicePos.NEXT = 0;
+                                 END;
+
+                               IF hw_repl = FALSE THEN
+                                 CurrReport.SKIP;
+                             END;
+
+                           IF PrintToExcel THEN
+                             BEGIN
+                               j := INCSTR(j);
+                               Sheet.Range('A'+j).Value := 'Vertragsnr.';
+                               Sheet.Range('B'+j).Value := 'Auftragsnr.';
+                               Sheet.Range('C'+j).Value := 'Startdatum';
+                               Sheet.Range('D'+j).Value := 'Ablaufdatum';
+                               Sheet.Range('E'+j).Value := 'Endkunde';
+                               Sheet.Range('A'+j+':E'+j).Font.Bold := TRUE;
+                               j := INCSTR(j);
+                               Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                               Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
+                               Sheet.Range('C'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
+                               Sheet.Range('D'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                               Sheet.Range('E'+j).Value := Wartungsvertrag.Endkunde;
+                               j := INCSTR(j);
+                             END;
+                         END;
+
+        ReqFilterFields=Startdatum,Vertragsablaufdatum,Inaktiv;
+        DataItemLink=Debitornr.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=20550;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140008;Label     ;600  ;0    ;2550 ;423  ;ParentControl=1140007;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140010;Label     ;3300 ;0    ;1950 ;423  ;ParentControl=1140009;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=2259;
+          }
+          CONTROLS
+          {
+            { 1140007;TextBox   ;900  ;423  ;2250 ;423  ;SourceExpr="Wartungsvertragsnr." }
+            { 1140009;TextBox   ;3300 ;423  ;1950 ;423  ;SourceExpr="Auftragsnr." }
+            { 1140013;TextBox   ;11550;423  ;6750 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Endkunde }
+            { 1140014;Label     ;8400 ;423  ;3000 ;423  ;ParentControl=1140013;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140015;TextBox   ;11550;846  ;6750 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Endkunde Adresse" }
+            { 1140017;TextBox   ;11550;1269 ;1500 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Endkunde PLZ-Code" }
+            { 1140019;TextBox   ;13050;1269 ;5250 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Endkunde Ort" }
+            { 1140021;TextBox   ;11550;1692 ;4500 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Endkunde Land" }
+            { 1140023;TextBox   ;2400 ;846  ;3750 ;423  ;SourceExpr=Status }
+            { 1140024;Label     ;900  ;846  ;1050 ;423  ;ParentControl=1140023;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140025;TextBox   ;2400 ;1269 ;2250 ;423  ;SourceExpr=Startdatum }
+            { 1140026;Label     ;900  ;1269 ;1350 ;423  ;ParentControl=1140025;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140027;TextBox   ;2400 ;1692 ;2250 ;423  ;SourceExpr=Vertragsablaufdatum }
+            { 1140028;Label     ;900  ;1692 ;1350 ;423  ;ParentControl=1140027;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Enddatum }
+            { 1140006;Shape     ;0    ;0    ;18600;423  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50024;
+        DataItemTableView=SORTING(Lfd. Nr.,Art,Nr.)
+                          WHERE(Art=FILTER(Service));
+        OnPreDataItem=BEGIN
+                        IF show_only_hw_repl THEN
+                          "Serviceleist. & Leihstellungen".SETFILTER("Service Artikelnr.",'AHR*');
+
+                        IF PrintToExcel THEN
+                          BEGIN
+                            Sheet.Range('A'+j).Value := 'Artikelnr.';
+                            Sheet.Range('B'+j).Value := 'Seriennr.';
+                            Sheet.Range('C'+j).Value := 'Serviceleistung';
+                            Sheet.Range('D'+j).Value := 'Startdatum';
+                            Sheet.Range('E'+j).Value := 'Ablaufdatum';
+                            Sheet.Range('F'+j).Value := 'Board ini';
+                            Sheet.Range('G'+j).Value := 'HW Lieferung';
+                            Sheet.Range('H'+j).Value := 'Position';
+                            Sheet.Range('I'+j).Value := 'Ihre Referenz';
+                            Sheet.Range('J'+j).Value := 'Projektinfos';
+                            Sheet.Range('A'+j+':J'+j).Font.Bold := TRUE;
+                            j := INCSTR(j);
+                          END;
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           champs_lieferscheinkopf.RESET;
+                           champs_lieferscheinkopf.SETFILTER(champs_lieferscheinkopf."No.",'%1',"Serviceleist. & Leihstellungen"."Nr.");
+                           IF champs_lieferscheinkopf.FINDFIRST THEN
+                             BEGIN
+                               "ext-referenz":=champs_lieferscheinkopf."External Document No.";
+                             END
+                             ELSE
+                             BEGIN
+                               "ext-referenz":='';
+                             END;
+
+                           lieferscheinzeile.RESET;
+                           lieferscheinzeile.SETFILTER(lieferscheinzeile."Document No.",'%1',"Serviceleist. & Leihstellungen"."Nr.");
+                           lieferscheinzeile.SETFILTER(lieferscheinzeile."Line No.",'%1',"Serviceleist. & Leihstellungen"."Belegzeilennr.");
+                           IF lieferscheinzeile.FINDFIRST THEN
+                             BEGIN
+                               artikel2:=lieferscheinzeile."Artikelnr. 2";
+                               IF Wartungsvertrag.Endkunde = '' THEN
+                                 BEGIN
+                                   endkundezeile := lieferscheinzeile."ACS Projektinfos";
+                                 END
+                                 ELSE
+                                 BEGIN
+                                   endkundezeile :='';
+                                 END;
+                             END
+                             ELSE
+                             BEGIN
+                               artikel2:='';
+                               endkundezeile:='';
+                             END;
+
+                           IF PrintToExcel THEN
+                             BEGIN
+                                Sheet.Range('A'+j).Value := "Serviceleist. & Leihstellungen"."Artikelnr. 2";
+                                Sheet.Range('B'+j).Value := "Serviceleist. & Leihstellungen"."Seriennr.";
+                                Sheet.Range('C'+j).Value := "Serviceleist. & Leihstellungen"."SUP Artikelnr.";
+                                Sheet.Range('D'+j).Value := FORMAT("Serviceleist. & Leihstellungen".Lizenzdatum);
+                                Sheet.Range('E'+j).Value := FORMAT("Serviceleist. & Leihstellungen"."Ablaufdatum Serviceleistung");
+                                SystemPos.RESET;
+                                SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                                SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',"Serviceleist. & Leihstellungen"."Artikelnr. 2");
+                                SystemPos.SETFILTER("Seriennr.",'%1',"Serviceleist. & Leihstellungen"."Seriennr.");
+                                IF SystemPos.FINDLAST THEN
+                                  Sheet.Range('F'+j).Value := SystemPos."Board ini";
+                                Sheet.Range('G'+j).Value := "Serviceleist. & Leihstellungen"."Urspr. Lieferscheinnr.";
+                                Sheet.Range('H'+j).Value := "Serviceleist. & Leihstellungen"."Urspr. Lieferscheinzeilennr.";
+                                Sheet.Range('I'+j).Value := "ext-referenz";
+                                Sheet.Range('J'+j).Value := endkundezeile;
+                                j := INCSTR(j);
+                             END;
+                         END;
+
+        DataItemLink=Wartungsvertragsnr.=FIELD(Wartungsvertragsnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140033;Shape     ;1950 ;0    ;14400;423  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(endkundezeile <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140029;Label     ;1950 ;0    ;2400 ;423  ;VertAlign=Center;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Projektinformation: }
+            { 1140011;TextBox   ;4350 ;0    ;11965;423  ;SourceExpr=endkundezeile }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           "show_ext-referenz":=TRUE;
+                           IF "ext-referenz" = '' THEN "show_ext-referenz":=FALSE;
+                           IF "ext-referenz" = 'VIA EMAIL' THEN "show_ext-referenz":=FALSE;
+                           IF "ext-referenz" = 'VIA FAX' THEN "show_ext-referenz":=FALSE;
+                           CurrReport.SHOWOUTPUT("show_ext-referenz");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140037;Label     ;1950 ;0    ;1800 ;423  ;VertAlign=Center;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Ihre Referenz: }
+            { 1140038;TextBox   ;3900 ;0    ;12444;423  ;FontSize=8;
+                                                         SourceExpr="ext-referenz" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 1140005;TextBox   ;900  ;0    ;544  ;423  ;FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Serviceleist. & Leihstellungen".Menge }
+            { 1140016;TextBox   ;1970 ;0    ;3700 ;423  ;FontSize=8;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Artikelnr. 2" }
+            { 1140018;Label     ;5850 ;0    ;600  ;423  ;FontSize=8;
+                                                         CaptionML=DEU=SN: }
+            { 1140022;TextBox   ;6450 ;0    ;2141 ;423  ;FontSize=8;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Seriennr." }
+            { 1140020;TextBox   ;13500;0    ;1200 ;423  ;SourceExpr=Lizenzdatum }
+            { 1140034;TextBox   ;15150;0    ;1200 ;423  ;SourceExpr="Ablaufdatum Serviceleistung" }
+            { 1140003;TextBox   ;8700 ;0    ;4650 ;423  ;SourceExpr=artikel2 }
+            { 1140030;TextBox   ;8161 ;423  ;1559 ;423  ;SourceExpr="Urspr. Lieferscheinnr." }
+            { 1140032;TextBox   ;11400;423  ;1050 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Urspr. Lieferscheinzeilennr." }
+            { 1140035;Label     ;6300 ;423  ;1878 ;423  ;FontSize=7;
+                                                         CaptionML=DEU=HW Lieferung }
+            { 1140036;Label     ;9900 ;423  ;1200 ;423  ;FontSize=7;
+                                                         CaptionML=DEU=Position }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           board_ini := '';
+                           SystemPos.RESET;
+                           SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                           SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                           SystemPos.SETFILTER(SystemPos."Artikelnr. 2",'%1',"Artikelnr. 2");
+                           SystemPos.SETFILTER("Seriennr.",'%1',"Seriennr.");
+                           IF SystemPos.FINDLAST THEN
+                             board_ini := SystemPos."Board ini";
+                           CurrReport.SHOWOUTPUT(board_ini <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140039;Label     ;5870 ;0    ;1438 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=Board ini: }
+            { 1140040;TextBox   ;7310 ;0    ;1950 ;423  ;FontSize=8;
+                                                         SourceExpr=board_ini }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=20550;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=4840;
+      Height=1650;
+    }
+    CONTROLS
+    {
+      { 1140000;Label     ;220  ;220  ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Export nach Excel }
+      { 1140001;CheckBox  ;3630 ;220  ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=PrintToExcel }
+      { 1140002;CheckBox  ;3630 ;880  ;440  ;440  ;ShowCaption=No;
+                                                   SourceExpr=show_only_hw_repl }
+      { 1140003;Label     ;220  ;880  ;3300 ;440  ;CaptionML=DEU=Nur Hardware Replacement }
+    }
+  }
+  CODE
+  {
+    VAR
+      Excel@1140017 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140016 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140015 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140014 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      j@1140013 : Text[30];
+      PrintToExcel@1140012 : Boolean;
+      TempWartungsvertrag@1140003 : Record 50011;
+      lieferscheinzeile@1140000 : Record 111;
+      artikel2@1140001 : Code[60];
+      endkundezeile@1140002 : Text[80];
+      filter_startdatum@1140004 : Text[30];
+      filter_ablaufdatum@1140005 : Text[30];
+      filter@1140006 : Text[180];
+      champs_lieferscheinkopf@1140007 : Record 110;
+      "ext-referenz"@1140008 : Text[80];
+      "show_ext-referenz"@1140009 : Boolean;
+      SystemPos@1140010 : Record 50024;
+      ServicePos@1140018 : Record 50024;
+      board_ini@1140011 : Code[20];
+      show_only_hw_repl@1140020 : Boolean;
+      hw_repl@1140019 : Boolean;
+
+    PROCEDURE ExcelKopf@1140002();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+      Sheet.StandardWidth := 16;
+      Sheet.Range('A:A').ColumnWidth := 30;
+      Sheet.Range('B:B').ColumnWidth := 30;
+
+         // definiert die beschriftung der berschriftszeile
+
+      j := '1';                                                    // <- Export in excel ab Zeile 2
+    END;
+
+    EVENT Sheet@1140014::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140016::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
