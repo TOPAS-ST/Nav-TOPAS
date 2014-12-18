@@ -2,8 +2,8 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
 {
   OBJECT-PROPERTIES
   {
-    Date=04.09.14;
-    Time=15:13:41;
+    Date=18.12.14;
+    Time=16:42:49;
     Modified=Yes;
     Version List=;
   }
@@ -72,6 +72,9 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                Sheet.Range('B'+j).Value := Customer.Name;
                                Sheet.Range('A'+j+':B'+j).Font.Bold := TRUE;
                                j := INCSTR(j);
+
+                               IF excel_layout = excel_layout :: filter THEN
+                                 j := INCSTR(j);
                              END;
                          END;
 
@@ -143,20 +146,23 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
 
                            IF PrintToExcel THEN
                              BEGIN
-                               j := INCSTR(j);
-                               Sheet.Range('A'+j).Value := 'Vertragsnr.';
-                               Sheet.Range('B'+j).Value := 'Auftragsnr.';
-                               Sheet.Range('C'+j).Value := 'Startdatum';
-                               Sheet.Range('D'+j).Value := 'Ablaufdatum';
-                               Sheet.Range('E'+j).Value := 'Endkunde';
-                               Sheet.Range('A'+j+':E'+j).Font.Bold := TRUE;
-                               j := INCSTR(j);
-                               Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
-                               Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
-                               Sheet.Range('C'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
-                               Sheet.Range('D'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
-                               Sheet.Range('E'+j).Value := Wartungsvertrag.Endkunde;
-                               j := INCSTR(j);
+                               IF excel_layout = excel_layout :: klassisch THEN
+                                 BEGIN
+                                   j := INCSTR(j);
+                                   Sheet.Range('A'+j).Value := 'Vertragsnr.';
+                                   Sheet.Range('B'+j).Value := 'Auftragsnr.';
+                                   Sheet.Range('C'+j).Value := 'Startdatum';
+                                   Sheet.Range('D'+j).Value := 'Ablaufdatum';
+                                   Sheet.Range('E'+j).Value := 'Endkunde';
+                                   Sheet.Range('A'+j+':E'+j).Font.Bold := TRUE;
+                                   j := INCSTR(j);
+                                   Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                                   Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
+                                   Sheet.Range('C'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
+                                   Sheet.Range('D'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                                   Sheet.Range('E'+j).Value := Wartungsvertrag.Endkunde;
+                                   j := INCSTR(j);
+                                END;
                              END;
                          END;
 
@@ -242,18 +248,21 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
 
                         IF PrintToExcel THEN
                           BEGIN
-                            Sheet.Range('A'+j).Value := 'Artikelnr.';
-                            Sheet.Range('B'+j).Value := 'Seriennr.';
-                            Sheet.Range('C'+j).Value := 'Serviceleistung';
-                            Sheet.Range('D'+j).Value := 'Startdatum';
-                            Sheet.Range('E'+j).Value := 'Ablaufdatum';
-                            Sheet.Range('F'+j).Value := 'Board ini';
-                            Sheet.Range('G'+j).Value := 'HW Lieferung';
-                            Sheet.Range('H'+j).Value := 'Position';
-                            Sheet.Range('I'+j).Value := 'Ihre Referenz';
-                            Sheet.Range('J'+j).Value := 'Projektinfos';
-                            Sheet.Range('A'+j+':J'+j).Font.Bold := TRUE;
-                            j := INCSTR(j);
+                            IF excel_layout = excel_layout :: klassisch THEN
+                              BEGIN
+                                Sheet.Range('A'+j).Value := 'Artikelnr.';
+                                Sheet.Range('B'+j).Value := 'Seriennr.';
+                                Sheet.Range('C'+j).Value := 'Serviceleistung';
+                                Sheet.Range('D'+j).Value := 'Startdatum';
+                                Sheet.Range('E'+j).Value := 'Ablaufdatum';
+                                Sheet.Range('F'+j).Value := 'Board ini';
+                                Sheet.Range('G'+j).Value := 'HW Lieferung';
+                                Sheet.Range('H'+j).Value := 'Position';
+                                Sheet.Range('I'+j).Value := 'Ihre Referenz';
+                                Sheet.Range('J'+j).Value := 'Projektinfos';
+                                Sheet.Range('A'+j+':O'+j).Font.Bold := TRUE;
+                                j := INCSTR(j);
+                              END;
                           END;
                       END;
 
@@ -308,6 +317,15 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                 Sheet.Range('H'+j).Value := "Serviceleist. & Leihstellungen"."Urspr. Lieferscheinzeilennr.";
                                 Sheet.Range('I'+j).Value := "ext-referenz";
                                 Sheet.Range('J'+j).Value := endkundezeile;
+                                IF excel_layout = excel_layout :: filter THEN
+                                  BEGIN
+                                    Sheet.Range('K'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                                    Sheet.Range('L'+j).Value := Wartungsvertrag."Auftragsnr. Service";
+                                    Sheet.Range('M'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
+                                    Sheet.Range('N'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                                    Sheet.Range('O'+j).Value := Wartungsvertrag.Endkunde;
+                                  END;
+
                                 j := INCSTR(j);
                              END;
                          END;
@@ -442,8 +460,8 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
   {
     PROPERTIES
     {
-      Width=4840;
-      Height=1650;
+      Width=8800;
+      Height=2530;
     }
     CONTROLS
     {
@@ -452,9 +470,19 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
       { 1140001;CheckBox  ;3630 ;220  ;440  ;440  ;InPage=-1;
                                                    ShowCaption=No;
                                                    SourceExpr=PrintToExcel }
-      { 1140002;CheckBox  ;3630 ;880  ;440  ;440  ;ShowCaption=No;
+      { 1140002;CheckBox  ;3630 ;1760 ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
                                                    SourceExpr=show_only_hw_repl }
-      { 1140003;Label     ;220  ;880  ;3300 ;440  ;CaptionML=DEU=Nur Hardware Replacement }
+      { 1140003;Label     ;220  ;1760 ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Nur Hardware Replacement }
+      { 1140004;OptionButton;4620;220 ;3740 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Filter Ansicht;
+                                                   SourceExpr=excel_layout;
+                                                   OptionValue=filter }
+      { 1140005;OptionButton;4620;880 ;3740 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Klassische Ansicht;
+                                                   SourceExpr=excel_layout;
+                                                   OptionValue=klassisch }
     }
   }
   CODE
@@ -481,6 +509,7 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
       board_ini@1140011 : Code[20];
       show_only_hw_repl@1140020 : Boolean;
       hw_repl@1140019 : Boolean;
+      excel_layout@1140021 : 'filter,klassisch';
 
     PROCEDURE ExcelKopf@1140002();
     BEGIN
@@ -495,6 +524,27 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
          // definiert die beschriftung der berschriftszeile
 
       j := '1';                                                    // <- Export in excel ab Zeile 2
+
+      //Fr neue Ansicht
+      IF excel_layout = excel_layout :: filter THEN
+        BEGIN
+          Sheet.Range('A3').Value := 'Artikelnr.';
+          Sheet.Range('B3').Value := 'Seriennr.';
+          Sheet.Range('C3').Value := 'Serviceleistung';
+          Sheet.Range('D3').Value := 'Startdatum';
+          Sheet.Range('E3').Value := 'Ablaufdatum';
+          Sheet.Range('F3').Value := 'Board ini';
+          Sheet.Range('G3').Value := 'HW Lieferung';
+          Sheet.Range('H3').Value := 'Position';
+          Sheet.Range('I3').Value := 'Ihre Referenz';
+          Sheet.Range('J3').Value := 'Projektinfos';
+          Sheet.Range('K3').Value := 'Vertragsnr.';
+          Sheet.Range('L3').Value := 'Auftragsnr.';
+          Sheet.Range('M3').Value := 'Startdatum';
+          Sheet.Range('N3').Value := 'Ablaufdatum';
+          Sheet.Range('O3').Value := 'Endkunde';
+          Sheet.Range('A3:O3').Font.Bold := TRUE;
+        END;
     END;
 
     EVENT Sheet@1140014::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
