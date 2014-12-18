@@ -127,9 +127,13 @@ SLEEP(500);
   IF NOT ISCLEAR(gw) THEN
     CLEAR(gw);
 
-NewGWCalEntryWithWSHScript(gwAccID : Text[30];password : Text[30];Entry : Code[10];DateFrom : Date;DateTo : Date;Text : Text[1024])
+NewGWCalEntryWithWSHScript(gwAccID : Text[30];password : Text[30];Entry : Code[10];DateFrom : Date;DateTo : Date;Text : Text[1024];Tage
 IF (gwAccID = '') OR (Entry = '') OR (DateFrom = 0D) THEN
   ERROR('Kalender Eintrag wird abgebrochen, da ein Übergabewert leer ist.');
+
+// <> also ungleich geht nicht, da z.B. auch 0,5 Tage gebucht werden müssen
+IF Tage > CalcWorkdays(DateFrom,DateTo) THEN
+  ERROR('Die Anzahl der Urlaubstage stimmt nicht mit dem Zeitraum überein!');
 
 IF ISCLEAR(WSHScript) THEN
   CREATE(WSHScript);
@@ -169,6 +173,17 @@ FOR i:=0 TO (DateTo-DateFrom) DO
 Files.CLOSE;
 
 WSHScript.Exec('C:\WINDOWS\system32\wscript.exe ' + filename);
+
+CalcWorkdays(StartDate : Date;EndDate : Date) : Integer
+v_startdate := StartDate;
+REPEAT
+  CASE DATE2DWY(v_startdate,1) OF
+    0..5 : werktage += 1;
+  END;
+  v_startdate := CALCDATE('+1T',v_startdate);
+UNTIL v_startdate > EndDate;
+
+EXIT(werktage);
 
 SearchMailsAndOpen(gwAccID : Text[30];password : Text[30];search : Text[80]) : Boolean
 IF ISCLEAR(gwApplication) THEN
@@ -762,8 +777,8 @@ IF File.FINDSET THEN BEGIN
     END;
   UNTIL File.NEXT = 0;
 
-  IF NOT ISCLEAR(Quelle_Excel) THEN
-    CLEAR(Quelle_Excel);
+IF NOT ISCLEAR(Quelle_Excel) THEN
+  CLEAR(Quelle_Excel);
 
   //*********************************************************************************************
   //                Durchlauf Protokoll Datei, um Status offen zu korrigieren
@@ -773,8 +788,14 @@ IF File.FINDSET THEN BEGIN
   temp_artikelnr := '';
   temp_Protokoll_j := '1';
   EVALUATE(i,Protokoll_j);
-  FOR k := 1 TO i DO
+  FOR t := 1 TO i DO
     BEGIN
+
+      IF temp_Protokoll_j = '196' THEN
+      BEGIN 
+        temp_Protokoll_j := temp_Protokoll_j;
+      END;
+
       IF FORMAT(Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value) = 'Offen' THEN
         BEGIN
           temp_artikelnr := FORMAT(Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value);
