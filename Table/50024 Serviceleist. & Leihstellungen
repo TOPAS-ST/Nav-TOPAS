@@ -2067,7 +2067,8 @@ IF Vkliefkopf.FINDLAST THEN
 
                                                IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '')
                                                AND ((LizenzTab.Benutzername <> '')
-                                               OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')) THEN
+                                               OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
+                                               OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
                                                  BEGIN
                                                    Wartung.Status := Wartung.Status :: Auftrag;
                                                    IF ACTS THEN
@@ -2247,7 +2248,8 @@ IF Vkliefkopf.FINDLAST THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
 
                                         IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
-                                        OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')) THEN
+                                        OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
+                                        OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
                                           BEGIN
                                             Wartung.Status := Wartung.Status :: Auftrag;
                                             IF ACTS THEN
@@ -2438,7 +2440,8 @@ IF Vkliefkopf.FINDLAST THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
 
                                         IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
-                                        OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')) THEN
+                                        OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
+                                        OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
                                           BEGIN
                                             Wartung.Status := Wartung.Status :: Auftrag;
                                             IF ACTS THEN
