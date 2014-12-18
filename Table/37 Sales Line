@@ -4992,9 +4992,11 @@ ELSE
         ACTS_ACHAT := TRUE
       ELSE
         IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-          CHAMPS := TRUE;
+          CHAMPS := TRUE
+        ELSE
+          SUP := TRUE;
 
-IF (CHAMPS = TRUE) OR (ACTS_ACHAT = TRUE) THEN
+IF (CHAMPS = TRUE) OR (ACTS_ACHAT = TRUE) OR (SUP = TRUE) THEN
   BEGIN
     WITH FindSalesPrice DO BEGIN
       IF (Artikelnr = 'M1KB-CH') THEN
