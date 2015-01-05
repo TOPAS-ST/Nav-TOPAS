@@ -380,11 +380,13 @@ CLEAR(Quelle_Book);
 CLEAR(Protokoll_Excel);
 
 excel_datensätze := 0;
+Jahrgang := DATE2DMY(TODAY,3);
+
 //Für Tests, wenn Ordner direkt angeben wird
 //Protokollpfaddatei := 'I:\DOKU\Audiocodes\Build to Order\NAV Protokoll' + Protokolldateiname + '2012' + '.xlsx';
 //Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren (insgesamt 3 Stellen zu bearbeiten)
 //Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + '2013' + '.xlsx';
-Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + FORMAT(DATE2DMY(TODAY,3)) + '.xlsx';
+Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + FORMAT(Jahrgang)  + '.xlsx';
 
 //********************************************************************************************
 //                               Definiert die Protokolldatei
@@ -439,11 +441,18 @@ ELSE
     //MESSAGE(Protokoll_j);
   END;
 
+
+//Erstellt einen neuen Ordner für den Build to Order Jahrgang, ansonsten kommt es zu einem Fehler ff.
+IF ISCLEAR(WSH) THEN
+  CREATE(WSH);
+IF NOT WSH.FolderExists(Path+ '\'+ FORMAT(Jahrgang)) THEN
+  WSH.CreateFolder(Path+ '\'+ FORMAT(Jahrgang));
+
 //Für Tests, wenn Ordner direkt angeben wird
 //File.SETRANGE(Path, Path);
 //Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren
 //File.SETRANGE(Path, Path+ '\2013');
-File.SETRANGE(Path, Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)));
+File.SETRANGE(Path, Path+ '\'+ FORMAT(Jahrgang));
 File.SETRANGE("Is a file", TRUE);
 //File.SETRANGE(Name,'*.xls');
 
@@ -481,7 +490,7 @@ IF File.FINDSET THEN BEGIN
     //Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ File.Name,0,TRUE);
     //Für festes Jahr nachfolgende Zeile ausführen und darauffolgende auskommentieren
     //Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\2013\'+ File.Name,0,TRUE);
-    Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)) + '\'+ File.Name,0,TRUE);
+    Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(Jahrgang) + '\'+ File.Name,0,TRUE);
 
 
     Quelle_j:='1';
@@ -832,7 +841,7 @@ IF NOT ISCLEAR(Quelle_Excel) THEN
                 BEGIN
                   IF ISCLEAR(Quelle_Excel) THEN
                     IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
-                  Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(DATE2DMY(TODAY,3)) + 
+                  Quelle_Book := Quelle_Excel.Workbooks._Open(Path+ '\'+ FORMAT(Jahrgang) +
                   '\'+ FORMAT(Protokoll_Sheet.Range('F'+temp_Protokoll_j).Value),0,TRUE);
 
                   Quelle_j:='1';
