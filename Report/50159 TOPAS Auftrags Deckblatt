@@ -1,0 +1,368 @@
+OBJECT Report 50159 TOPAS Auftrags Deckblatt
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.01.15;
+    Time=10:18:53;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table36;
+        DataItemTableView=SORTING(Document Type,No.)
+                          WHERE(Document Type=FILTER(Order));
+        OnPreDataItem=BEGIN
+                        LastFieldNo := FIELDNO("Document Type");
+                      END;
+
+        ReqFilterFields=No.;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18300;
+            SectionHeight=3384;
+            OnPreSection=BEGIN
+                           IF STRPOS("Sales Header"."Payment Terms Code",'SOR') <> 0 THEN
+                             SOR_Hinweis := "Sales Header"."Payment Terms Code"
+                           ELSE
+                             SOR_Hinweis := '';
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140001;Label     ;0    ;0    ;7500 ;423  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Verkaufskopf;
+                                                                    ENU=Sales Header] }
+            { 1140002;TextBox   ;15000;0    ;3150 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+            { 1140003;TextBox   ;0    ;423  ;7500 ;423  ;SourceExpr=COMPANYNAME }
+            { 1140004;TextBox   ;17700;423  ;450  ;423  ;CaptionML=DEU=Seite;
+                                                         SourceExpr=CurrReport.PAGENO }
+            { 1140005;Label     ;16950;423  ;750  ;423  ;ParentControl=1140004 }
+            { 1140006;TextBox   ;15900;846  ;2250 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=USERID }
+            { 1140000;Label     ;0    ;1692 ;6900 ;846  ;FontSize=20;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftrags Deckblatt }
+            { 1140028;TextBox   ;11049;1692 ;4129 ;846  ;FontSize=18;
+                                                         FontBold=Yes;
+                                                         SourceExpr=SOR_Hinweis }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18300;
+            SectionHeight=4653;
+          }
+          CONTROLS
+          {
+            { 1140011;TextBox   ;3300 ;370  ;1500 ;423  ;FontSize=8;
+                                                         SourceExpr="No." }
+            { 1140014;TextBox   ;3300 ;793  ;2100 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Order Date" }
+            { 1140020;TextBox   ;3274 ;1428 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Sell-to Customer Name" }
+            { 1140026;TextBox   ;3274 ;2274 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Sell-to Address" }
+            { 1140012;Label     ;150  ;370  ;3000 ;423  ;ParentControl=1140011;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Auftragsnr. }
+            { 1140015;Label     ;150  ;793  ;3000 ;423  ;ParentControl=1140014;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140027;Label     ;124  ;2274 ;3000 ;423  ;ParentControl=1140026;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140032;Label     ;124  ;3120 ;3000 ;423  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Verk. an PLZ / Ort }
+            { 1140029;Label     ;124  ;1851 ;3000 ;423  ;ParentControl=1140044;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Verk. an Name 2 }
+            { 1140044;TextBox   ;3274 ;1851 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Sell-to Customer Name 2" }
+            { 1140046;Label     ;124  ;1428 ;3000 ;423  ;ParentControl=1140020;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Verk. an Name }
+            { 1140047;TextBox   ;4544 ;3120 ;3230 ;423  ;FontSize=8;
+                                                         SourceExpr="Sell-to City" }
+            { 1140048;TextBox   ;3274 ;2697 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Sell-to Address 2" }
+            { 1140049;Label     ;124  ;2697 ;3000 ;423  ;ParentControl=1140048;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Verk. an Adresse 2 }
+            { 1140051;TextBox   ;12124;2697 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Ship-to Address 2" }
+            { 1140052;TextBox   ;12124;2274 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Ship-to Address" }
+            { 1140053;TextBox   ;12124;1851 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Ship-to Name 2" }
+            { 1140054;TextBox   ;12124;1428 ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr="Ship-to Name" }
+            { 1140055;Label     ;8974 ;2274 ;3000 ;423  ;ParentControl=1140052;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140056;Label     ;8974 ;3120 ;3000 ;423  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Lief. an PLZ / Ort }
+            { 1140057;Label     ;8974 ;1851 ;3000 ;423  ;ParentControl=1140053;
+                                                         FontSize=8;
+                                                         FontBold=Yes }
+            { 1140058;Label     ;8974 ;1428 ;3000 ;423  ;ParentControl=1140054;
+                                                         FontSize=8;
+                                                         FontBold=Yes }
+            { 1140059;Label     ;8974 ;2697 ;3000 ;423  ;ParentControl=1140051;
+                                                         FontSize=8;
+                                                         FontBold=Yes }
+            { 1140064;TextBox   ;3281 ;3122 ;1299 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sell-to Post Code" }
+            { 1140065;TextBox   ;13381;3122 ;3248 ;423  ;FontSize=8;
+                                                         SourceExpr="Ship-to City" }
+            { 1140066;TextBox   ;12118;3124 ;1299 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Ship-to Post Code" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table37;
+        DataItemTableView=SORTING(Document Type,Document No.,Line No.)
+                          WHERE(Type=FILTER(Item|' '),
+                                No.=FILTER(<>''));
+        DataItemLink=Document No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18300;
+            SectionHeight=1269;
+          }
+          CONTROLS
+          {
+            { 1140035;Shape     ;0    ;0    ;18150;1005  }
+            { 1140009;Label     ;1482 ;0    ;4650 ;846  ;ParentControl=1140008;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140013;Label     ;6282 ;0    ;1350 ;846  ;ParentControl=1140010;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140019;Label     ;7862 ;0    ;1632 ;846  ;ParentControl=1140016;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140023;Label     ;9874 ;0    ;1650 ;846  ;ParentControl=1140022;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140025;Label     ;12229;0    ;4500 ;846  ;ParentControl=1140024;
+                                                         HorzAlign=General;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140043;Label     ;150  ;0    ;1236 ;846  ;ParentControl=1140042;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18300;
+            SectionHeight=714;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Line".Type = "Sales Line".Type :: Item));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140008;TextBox   ;1420 ;105  ;4800 ;423  ;FontSize=8;
+                                                         SourceExpr="No." }
+            { 1140010;TextBox   ;6343 ;106  ;1350 ;423  ;FontSize=8;
+                                                         SourceExpr=Quantity }
+            { 1140016;TextBox   ;7844 ;106  ;1765 ;423  ;FontSize=8;
+                                                         SourceExpr="DC-Preis (EKW)" }
+            { 1140022;TextBox   ;9865 ;106  ;1887 ;423  ;FontSize=8;
+                                                         SourceExpr="Requested Delivery Date" }
+            { 1140024;TextBox   ;12256;53   ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr=Endkunde }
+            { 1140040;Shape     ;0    ;0    ;18150;100  ;ShapeStyle=HorzLine }
+            { 1140042;TextBox   ;202  ;79   ;1050 ;423  ;FontSize=8;
+                                                         SourceExpr="Line No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18300;
+            SectionHeight=678;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Line"."No." = 'KUNDENINFO'));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140039;TextBox   ;1526 ;105  ;9750 ;423  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         FontItalic=Yes;
+                                                         SourceExpr=Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18300;
+            SectionHeight=2647;
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50014;
+        DataItemTableView=SORTING(Quotenr.);
+        DataItemLink=Quotenr.=FIELD(Quotenr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18300;
+            SectionHeight=1216;
+          }
+          CONTROLS
+          {
+            { 1140017;TextBox   ;3494 ;0    ;1500 ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr="Quotenr." }
+            { 1140018;Label     ;578  ;0    ;2823 ;423  ;ParentControl=1140017;
+                                                         HorzAlign=Left;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140034;TextBox   ;3494 ;397  ;1500 ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Quotenr. Hersteller" }
+            { 1140036;Label     ;578  ;397  ;2832 ;423  ;ParentControl=1140034;
+                                                         HorzAlign=Left;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140037;TextBox   ;3494 ;793  ;1518 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=Gltigkeitsdatum }
+            { 1140038;Label     ;578  ;793  ;2824 ;423  ;ParentControl=1140037;
+                                                         HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table44;
+        DataItemTableView=SORTING(Document Type,No.,Line No.);
+        DataItemLink=Document Type=FIELD(Document Type),
+                     No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18300;
+            SectionHeight=688;
+          }
+          CONTROLS
+          {
+            { 1140030;Label     ;124  ;106  ;3300 ;423  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         FontItalic=No;
+                                                         CaptionML=DEU=Interne Bemerkungen }
+            { 1140045;Shape     ;0    ;0    ;18150;100  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18300;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140007;TextBox   ;150  ;0    ;18000;423  ;FontSize=8;
+                                                         SourceExpr=Comment }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9020;
+      Height=3410;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      LastFieldNo@1140000 : Integer;
+      FooterPrinted@1140001 : Boolean;
+      SOR_Hinweis@1140002 : Text[30];
+
+    BEGIN
+    END.
+  }
+}
+
