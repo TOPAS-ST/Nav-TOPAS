@@ -1,0 +1,323 @@
+OBJECT Report 50094 Auslaufende Vertr„ge
+{
+  OBJECT-PROPERTIES
+  {
+    Date=15.01.15;
+    Time=09:33:23;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    TopMargin=1000;
+    LeftMargin=1500;
+    OnPreReport=BEGIN
+                  //Startdatum eigentlich nicht ben”tigt
+                  EVALUATE(filter_startdatum,Wartungsvertrag.GETFILTER(Startdatum));
+                  EVALUATE(filter_ablaufdatum,Wartungsvertrag.GETFILTER(Vertragsablaufdatum));
+                  EVALUATE(monat_ablaufdatum_ab,COPYSTR(filter_ablaufdatum,4,2));
+                  EVALUATE(vertragsablaufdatum_ab,COPYSTR(filter_ablaufdatum,1,8));
+                  jahr_ablaufdatum_ab := DATE2DMY(vertragsablaufdatum_ab,3);
+
+                  IF vertragsablaufdatum_ab < WORKDATE THEN
+                    vertraege_abgelaufen := TRUE
+                  ELSE
+                    vertraege_abgelaufen := FALSE;
+
+                  filter := Wartungsvertrag.GETFILTERS;
+
+                  //IF PrintToExcel THEN
+                    ExcelKopf;
+                END;
+
+    OnPostReport=BEGIN
+                   IF vertraege_abgelaufen = TRUE THEN
+                     Sheet.Range('A2').Value := 'Gesamt ausgelaufene Vertr„ge:'
+                   ELSE
+                     Sheet.Range('A2').Value := 'Gesamt auslaufende Vertr„ge:';
+                   Sheet.Range('C2').Value := FORMAT(Wartungsvertrag.COUNT);
+                   Sheet.Range('C2').Font.Color := 255;
+
+                   Book.Save;
+                   Book.Close;
+
+                   CLEAR(Excel);
+                   REPEAT
+                   UNTIL ISCLEAR(Excel);
+
+                   TOPAS_API.SendMailWithFile('Administrativ','','ml@topas.de','if@topas.de','rl@topas.de','','',
+                   Wartungsvertrag.GETFILTER(Vertragsablaufdatum),Protokollpfaddatei,vertraege_abgelaufen);
+
+                   //Fr Testzwecke
+                   //TOPAS_API.SendMailWithFile('Administrativ','','Administrativ@topas.de','','','','',
+                   //Wartungsvertrag.GETFILTER(Vertragsablaufdatum),Protokollpfaddatei,vertraege_abgelaufen);
+                 END;
+
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50011;
+        DataItemTableView=SORTING(Debitornr.,Vertragsablaufdatum,Wartungsvertragsnr.)
+                          WHERE(Status=FILTER(Auftrag|ACTS|ACHAT));
+        OnAfterGetRecord=BEGIN
+                           Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                           Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
+                           Sheet.Range('C'+j).Value := Wartungsvertrag."Debitornr.";
+                           Sheet.Range('D'+j).Value := Wartungsvertrag.Debitorname;
+                           Sheet.Range('E'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
+                           Sheet.Range('F'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                           Sheet.Range('F'+j).Font.Color := 255;
+                           Sheet.Range('G'+j).Value := Wartungsvertrag.Endkunde;
+                           SystemPos.RESET;
+                           SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                           SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                           SystemPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           SystemPos.SETFILTER("Artikelnr.",'%1',Basisger„t);
+                           SystemPos.SETFILTER(Basisger„t,'%1',TRUE);
+                           IF SystemPos.FINDLAST THEN
+                             BEGIN
+                               Sheet.Range('H'+j).Value := SystemPos."Artikelnr. 2";
+                               Sheet.Range('I'+j).Value := SystemPos."Seriennr.";
+                               Sheet.Range('J'+j).Value := SystemPos."Board ini";
+                               Sheet.Range('K'+j).Value := SystemPos."Nr.";
+                             END;
+
+                           j := INCSTR(j);
+                         END;
+
+        ReqFilterFields=Vertragsablaufdatum,Inaktiv,Debitornr.;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=20550;
+            SectionHeight=1692;
+          }
+          CONTROLS
+          {
+            { 1140008;Label     ;150  ;1269 ;2550 ;423  ;ParentControl=1140007;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140010;Label     ;2850 ;1269 ;1950 ;423  ;ParentControl=1140009;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140012;Label     ;0    ;0    ;20257;846  ;FontSize=14;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=šbersicht der demn„chst auslaufenden / abgelaufenen Wartungsvertr„ge: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=20550;
+            SectionHeight=1269;
+          }
+          CONTROLS
+          {
+            { 1140007;TextBox   ;450  ;423  ;2250 ;423  ;SourceExpr="Wartungsvertragsnr." }
+            { 1140009;TextBox   ;2850 ;423  ;1950 ;423  ;SourceExpr="Auftragsnr." }
+            { 1140013;TextBox   ;14250;423  ;6000 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Endkunde }
+            { 1140014;Label     ;11850;423  ;2250 ;423  ;ParentControl=1140013;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140023;TextBox   ;1950 ;846  ;3750 ;423  ;SourceExpr=Status }
+            { 1140024;Label     ;450  ;846  ;1050 ;423  ;ParentControl=1140023;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140025;TextBox   ;8250 ;846  ;2250 ;423  ;SourceExpr=Startdatum }
+            { 1140026;Label     ;6750 ;846  ;1350 ;423  ;ParentControl=1140025;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 1140027;TextBox   ;12300;846  ;2250 ;423  ;SourceExpr=Vertragsablaufdatum }
+            { 1140028;Label     ;10800;846  ;1350 ;423  ;ParentControl=1140027;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Enddatum }
+            { 1140006;Shape     ;0    ;0    ;20250;423  ;ShapeStyle=HorzLine }
+            { 1140000;TextBox   ;6600 ;423  ;5100 ;423  ;SourceExpr=Debitorname }
+            { 1140002;TextBox   ;5100 ;423  ;1500 ;423  ;SourceExpr="Debitornr." }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=4840;
+      Height=1100;
+    }
+    CONTROLS
+    {
+      { 1140000;Label     ;220  ;220  ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Export nach Excel }
+      { 1140001;CheckBox  ;3630 ;220  ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=PrintToExcel }
+    }
+  }
+  CODE
+  {
+    VAR
+      TOPAS_API@1140019 : Codeunit 50001;
+      Excel@1140017 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140016 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140015 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140014 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      j@1140013 : Text[30];
+      PrintToExcel@1140012 : Boolean;
+      TempWartungsvertrag@1140003 : Record 50011;
+      lieferscheinzeile@1140000 : Record 111;
+      artikel2@1140001 : Code[60];
+      endkundezeile@1140002 : Text[80];
+      filter_startdatum@1140004 : Text[30];
+      filter_ablaufdatum@1140005 : Text[30];
+      filter@1140006 : Text[180];
+      champs_lieferscheinkopf@1140007 : Record 110;
+      "ext-referenz"@1140008 : Text[80];
+      "show_ext-referenz"@1140009 : Boolean;
+      Protokollpfaddatei@1140018 : Text[250];
+      SystemPos@1140010 : Record 50024;
+      board_ini@1140011 : Code[20];
+      monat_ablaufdatum_ab@1140020 : Integer;
+      jahr_ablaufdatum_ab@1140022 : Integer;
+      vertragsablaufdatum_ab@1140023 : Date;
+      vertraege_abgelaufen@1140021 : Boolean;
+
+    PROCEDURE ExcelKopf@1140002();
+    BEGIN
+      IF vertraege_abgelaufen =TRUE THEN
+        Protokollpfaddatei := 'F:\Daten NEU\Gemeinsame Ordner\Navision\EMailVersand\Ausgelaufene Wartungsvertraege - Uebersicht.xlsx'
+      ELSE
+        Protokollpfaddatei := 'F:\Daten NEU\Gemeinsame Ordner\Navision\EMailVersand\Auslaufende Wartungsvertraege - Uebersicht.xlsx';
+
+      //********************************************************************************************
+      //                               Definiert die Protokolldatei
+      //********************************************************************************************
+
+      IF ISCLEAR(Excel) THEN
+        IF CREATE (Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+
+      IF EXISTS(Protokollpfaddatei) THEN
+        ERASE(Protokollpfaddatei);
+
+      Book := Excel.Workbooks.Add(-4167);                // legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                        // definiert aktives worksheet
+
+      Sheet.StandardWidth := 16;
+      Sheet.Range('D:D').ColumnWidth := 30;
+
+      // definiert die beschriftung der berschriftszeile
+
+      j := '5';                                                    // <- Export in excel ab Zeile 2
+
+      IF vertraege_abgelaufen = TRUE THEN
+        Sheet.Range('A1').Value := 'Ausgelaufene Vertr„ge im Zeitraum:'
+      ELSE
+        Sheet.Range('A1').Value := 'Auslaufende Vertr„ge im Zeitraum:';
+      Sheet.Range('C1').Value := Wartungsvertrag.GETFILTER(Vertragsablaufdatum);
+      Sheet.Range('C1').Font.Color := 255;
+      Sheet.Range('A1:C2').Font.Bold := TRUE;
+
+      Sheet.Range('A4').Value := 'Vertragsnr.';
+      Sheet.Range('B4').Value := 'Auftragsnr.';
+      Sheet.Range('C4').Value := 'Debitornr.';
+      Sheet.Range('D4').Value := 'Debitorname';
+      Sheet.Range('E4').Value := 'Startdatum';
+      Sheet.Range('F4').Value := 'Ablaufdatum';
+      Sheet.Range('G4').Value := 'Endkunde';
+      Sheet.Range('H4').Value := 'Artikelnr';
+      Sheet.Range('I4').Value := 'SN Chassis';
+      Sheet.Range('J4').Value := 'Board ini';
+      Sheet.Range('K4').Value := 'Lieferscheinnr. Chassis';
+      Sheet.Range('A4:K4').Font.Bold := TRUE;
+      Book.SaveAs(Protokollpfaddatei,51);
+    END;
+
+    EVENT Sheet@1140014::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140014::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140016::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140016::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Book@1140016::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
