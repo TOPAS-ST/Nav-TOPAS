@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=11.12.14;
-    Time=14:52:20;
+    Date=16.01.15;
+    Time=09:16:28;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -1630,110 +1630,123 @@ OBJECT Form 50023 Kalkulationsblatt
     PROCEDURE InfosExcelExport@1140000();
     VAR
       ChampRelaDoc@1140014 : Record 50027;
-      Lieferung@1140016 : Record 111;
       Wartungsvertrag@1140015 : Record 50011;
-      PruefeLizenzTab@1140002 : Record 50024;
+      SystemPos@1140003 : Record 50024;
       ServicePos@1140005 : Record 50024;
       text_array@1140000 : ARRAY [5] OF Text[255];
+      v_wartungsnr@1140002 : Code[20];
       k@1140001 : Integer;
     BEGIN
       // Definiert die zu importierende Datei
       IF (wartungsnr = '') AND ("Vertragsnr. bernommen" = '') THEN
         ERROR(Text013,Wartungsvertrag.FIELDCAPTION("Wartungsvertragsnr."));
 
-      CLEAR(Excel);
-
-      CREATE (Excel);
-      Book := Excel.Workbooks.Add(-4167);           //legt neue datei in excel an
-      Sheet := Excel.ActiveSheet;                   //definiert aktives worksheet
+      IF "Vertragsnr. bernommen" <> '' THEN
+        v_wartungsnr := "Vertragsnr. bernommen"
+      ELSE
+        v_wartungsnr := wartungsnr;
 
       //array 1 = Lieferschein Nr.
       //array 2 = Vertragsablaufdatum
       //array 3 = Ger„te Artikelnr.
 
-      //Feste Werte
-      Sheet.Range('A1').Value := 'Serviceverl„ngerung fr folgendes System:';
-      Sheet.Range('A2').Value := 'Lieferscheinnr.: ';
-      Sheet.Range('A3').Value := 'Ende der Vertragslaufzeit: ';
-      Wartungsvertrag.GET(wartungsnr);
-      IF Wartungsvertrag.Endkunde = '' THEN
-        j := '6'
-      ELSE
-        j := '7';
-
-
       ChampRelaDoc.RESET;
       ChampRelaDoc.SETFILTER(Art,'%1',ChampRelaDoc.Art::"SUP-AU");
       ChampRelaDoc.SETFILTER("Nr.",'%1',"Nr.");
       ChampRelaDoc.SETFILTER("Zeilennr.",'%1',"Zeilennr.");
-      ChampRelaDoc.SETFILTER(Fremderwerb,'%1',FALSE);
+      //ChampRelaDoc.SETFILTER(Fremderwerb,'%1',FALSE);
       IF ChampRelaDoc.FINDFIRST THEN
-        REPEAT
+        BEGIN
 
-          ServicePos.RESET;
-          ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
-          IF wartungsnr <> '' THEN
-            ServicePos.SETFILTER("Wartungsvertragsnr.",wartungsnr)
+          Wartungsvertrag.GET(v_wartungsnr);
+          IF Wartungsvertrag.Endkunde = '' THEN
+            j := '6'
           ELSE
-            ServicePos.SETFILTER("Wartungsvertragsnr.",'%1',"Vertragsnr. bernommen");
-          ServicePos.SETFILTER("Urspr. Lieferscheinnr.",'%1',ChampRelaDoc."Belegnr.");
-          ServicePos.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',ChampRelaDoc."Belegzeilennr.");
-          ServicePos.SETFILTER(Lizenzdatum,'<>%1',0D);
-          ServicePos.SETFILTER(Inaktiv,'%1',FALSE);
-          IF ServicePos.FINDFIRST THEN
-            BEGIN
-              text_array[1] := Sheet.Range('A2').Value;
-              IF STRPOS(text_array[1],ServicePos."Urspr. Lieferscheinnr.") = 0 THEN
-                IF STRPOS(text_array[1],'LS') > 0 THEN
-                  text_array[1] := text_array[1] + ', ' + ServicePos."Urspr. Lieferscheinnr."
-                ELSE
-                  text_array[1] := text_array[1] + ServicePos."Urspr. Lieferscheinnr.";
-              Sheet.Range('A2').Value := text_array[1];
+            j := '7';
 
-              k := 1;
-              text_array[3] := ChampRelaDoc."Ger„te Artikelnr.";
+          CLEAR(Excel);
 
-              REPEAT
+          CREATE (Excel);
+          Book := Excel.Workbooks.Add(-4167);           //legt neue datei in excel an
+          Sheet := Excel.ActiveSheet;                   //definiert aktives worksheet
 
-                IF STRLEN(text_array[3]) = STRLEN(ChampRelaDoc."Ger„te Artikelnr.") THEN
+          //Feste Werte
+          Sheet.Range('A1').Value := 'Serviceverl„ngerung fr folgendes System:';
+          Sheet.Range('A2').Value := 'Lieferscheinnr.: ';
+          Sheet.Range('A3').Value := 'Ende der Vertragslaufzeit: ';
+
+          REPEAT
+
+            ServicePos.RESET;
+            ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
+            ServicePos.SETFILTER("Wartungsvertragsnr.",'%1',v_wartungsnr);
+            ServicePos.SETFILTER("Urspr. Lieferscheinnr.",'%1',ChampRelaDoc."Belegnr.");
+            ServicePos.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',ChampRelaDoc."Belegzeilennr.");
+            ServicePos.SETFILTER(Lizenzdatum,'<>%1',0D);
+            ServicePos.SETFILTER(Inaktiv,'%1',FALSE);
+            IF ServicePos.FINDFIRST THEN
+              BEGIN
+                IF ChampRelaDoc.Fremderwerb = FALSE THEN
                   BEGIN
-                    Lieferung.GET(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.");
-                    text_array[3] := FORMAT(ChampRelaDoc."Menge kalk.") + 'x ' + text_array[3];
+                    text_array[1] := Sheet.Range('A2').Value;
+
+                    IF STRPOS(text_array[1],ServicePos."Urspr. Lieferscheinnr.") = 0 THEN
+                      IF STRPOS(text_array[1],'LS') > 0 THEN
+                        text_array[1] := text_array[1] + ', ' + ServicePos."Urspr. Lieferscheinnr."
+                      ELSE
+                        text_array[1] := text_array[1] + ServicePos."Urspr. Lieferscheinnr.";
+                    Sheet.Range('A2').Value := text_array[1];
                   END;
-                IF STRPOS(text_array[3],ServicePos."Seriennr.") = 0 THEN
-                  BEGIN
-                    IF k = 1 THEN
-                      text_array[3] := text_array[3] + '  ' + ServicePos."Seriennr."
-                    ELSE
-                      text_array[3] := text_array[3] + ', ' + ServicePos."Seriennr.";
-                    k += 1;
-                  END;
-              UNTIL ServicePos.NEXT = 0;
 
-              Sheet.Range('A'+j).Value := text_array[3];
-              j := INCSTR(j);
+                k := 1;
+                text_array[3] := ChampRelaDoc."Ger„te Artikelnr.";
 
-            END;
+                REPEAT
 
-          IF ChampRelaDoc.Basisger„t = TRUE THEN
-            BEGIN
-              PruefeLizenzTab.RESET;
-              PruefeLizenzTab.SETFILTER(Art,'%1',PruefeLizenzTab.Art :: Service);
-              PruefeLizenzTab.SETFILTER("Artikelnr.",'%1',ChampRelaDoc."Ger„te Artikelnr.");
-              PruefeLizenzTab.SETFILTER("Seriennr.",'%1',ServicePos."Seriennr.");
-              IF PruefeLizenzTab.FINDFIRST THEN
-                Wartungsvertrag.GET(PruefeLizenzTab."Wartungsvertragsnr.");
-                text_array[2] := Sheet.Range('A3').Value;
-                text_array[2] := text_array[2] + FORMAT(Wartungsvertrag.Vertragsablaufdatum);
-                Sheet.Range('A3').Value := text_array[2];
-                Sheet.Range('A4').Value := 'Vertragsnr.: ' + Wartungsvertrag."Wartungsvertragsnr.";
-                IF Wartungsvertrag.Endkunde <> '' THEN
-                  Sheet.Range('A5').Value := 'Endkunde: ' + Wartungsvertrag.Endkunde;
-            END;
+                  IF STRLEN(text_array[3]) = STRLEN(ChampRelaDoc."Ger„te Artikelnr.") THEN
+                    BEGIN
+                      text_array[3] := FORMAT(ChampRelaDoc."Menge kalk.") + 'x ' + text_array[3]
+                    END;
+                  IF STRPOS(text_array[3],ServicePos."Seriennr.") = 0 THEN
+                    BEGIN
+                      IF k = 1 THEN
+                        text_array[3] := text_array[3] + '  ' + ServicePos."Seriennr."
+                      ELSE
+                        text_array[3] := text_array[3] + ', ' + ServicePos."Seriennr.";
+                      k += 1;
+                    END;
 
-        UNTIL ChampRelaDoc.NEXT = 0;
+                UNTIL ServicePos.NEXT = 0;
 
-      Excel.Visible(TRUE);
+                Sheet.Range('A'+j).Value := text_array[3];
+
+                j := INCSTR(j);
+
+              END;
+
+             IF ChampRelaDoc.Basisger„t = TRUE THEN
+               BEGIN
+                 Wartungsvertrag.GET(v_wartungsnr);
+                 text_array[2] := Sheet.Range('A3').Value;
+                 text_array[2] := text_array[2] + FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                 Sheet.Range('A3').Value := text_array[2];
+                 Sheet.Range('A4').Value := 'Vertragsnr.: ' + Wartungsvertrag."Wartungsvertragsnr.";
+                 IF Wartungsvertrag.Endkunde <> '' THEN
+                   Sheet.Range('A5').Value := 'Endkunde: ' + Wartungsvertrag.Endkunde;
+                 SystemPos.RESET;
+                 SystemPos.SETRANGE(Basisger„t,TRUE);
+                 SystemPos.SETRANGE("Artikelnr.",ChampRelaDoc."Ger„te Artikelnr.");
+                 SystemPos.SETRANGE("Nr.",ChampRelaDoc."Belegnr.");
+                 SystemPos.SETRANGE("Seriennr.",ServicePos."Seriennr.");
+                 SystemPos.SETRANGE("Belegzeilennr.",ChampRelaDoc."Belegzeilennr.");
+                 IF SystemPos.FINDFIRST THEN
+                   Sheet.Range('A4').Value := FORMAT(Sheet.Range('A4').Value) + ' / Board ini: ' + SystemPos."Board ini";
+               END;
+
+          UNTIL ChampRelaDoc.NEXT = 0;
+
+          Excel.Visible(TRUE);
+        END;
 
       CLEAR(Excel);
     END;
