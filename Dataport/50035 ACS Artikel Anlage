@@ -35,52 +35,94 @@ IF excel_datensätze > 0 THEN
 
     excel_msrp := 0;
     dc := 0;
-    ek_system_währung := 'USD';
 
     Quelle_j := '1';
-    excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
 
     REPEAT
 
       dc := 0;
       excel_msrp := 0;
-
-
-      PL_Book := PL_Excel.Workbooks._Open(PL_USD_Pfad,0,TRUE);
-      PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
-      IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
-        ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
-
-      cell_services := FindRow('Service',Spalte_PL_PGroup);
+      sonderartikel_schaeffler := FALSE;
+      Kred := '880072';
+      ek_system_währung := 'USD';
 
       Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
       IF Artikelname <> '' THEN
-        PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
+        BEGIN
+          IF COPYSTR(Artikelname,STRLEN(Artikelname)) =  '.' THEN
+            BEGIN
+              sonderartikel_schaeffler := TRUE;
+              Artikelname := COPYSTR(Artikelname,1,STRLEN(Artikelname)-1);
+            END;
+          PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
+        END;
       IF FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value) <> '' THEN
         startdatum := Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value;
       klassifizierung := Quelle_Sheet.Range(Spalte_Quelle_Klass+Quelle_j).Value;
       artgruppe := Quelle_Sheet.Range(Spalte_Quelle_Artgruppe+Quelle_j).Value;
 
+      IF sonderartikel_schaeffler = FALSE THEN
+        BEGIN
+          PL_Book := PL_Excel.Workbooks._Open(PL_USD_Pfad,0,TRUE);
+          PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
+          IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
+            ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
+        END
+      ELSE
+        BEGIN
+          PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
+          PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
+          IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
+            ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
+        END;
+
+      cell_services := FindRow('Service',Spalte_PL_PGroup);
       cell_part := FindRow(Artikelname,Spalte_PL_Part);
+      cell_training := FindRow('Technical Training',Spalte_Product);
+
+      //ACHTUNG!!! Artikel wird neu eingelesen, da Schaeffler Artikel und anders lautend mit Punkt am Ende
+      IF sonderartikel_schaeffler THEN
+        BEGIN
+          Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
+          Kred := '880045';
+          ek_system_währung := '';
+        END;
+
       IF cell_part <> '' THEN
         BEGIN
           cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
-          IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL') 
-          AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge') THEN
+          IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
+          AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge')
+          AND (STRPOS(FORMAT(PL_Sheet.Range(cell_part).Value),'Contact') = 0) THEN
             excel_msrp := PL_Sheet.Range(cell_part).Value;
 
           //Hier noch Abfrage Zelle Artikel größer Zelle Service
           row_part := TOPAS_API.ConvertStrToNum(cell_part);
           row_services := TOPAS_API.ConvertStrToNum(cell_services);
-          IF row_services < row_part THEN
+          row_training := TOPAS_API.ConvertStrToNum(cell_training);
+
+          services_artikel := FALSE;
+          training_artikel := FALSE;
+
+          IF row_training < row_part THEN
             BEGIN
-              dc := excel_msrp * 0.8;
-              services_artikel := TRUE;
+              dc := excel_msrp * 0.9;
+              training_artikel := TRUE
             END
           ELSE
             BEGIN
-              dc := excel_msrp * 0.6;
-              services_artikel := FALSE;
+              IF row_services < row_part THEN
+                BEGIN
+                  dc := excel_msrp * 0.8;
+                  services_artikel := TRUE;
+                END
+              ELSE
+                BEGIN
+                  IF sonderartikel_schaeffler THEN
+                    dc := excel_msrp * 0.5
+                  ELSE
+                    dc := excel_msrp * 0.6;
+                END;
             END;
 
           short_descr := PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value;
@@ -103,39 +145,52 @@ IF excel_datensätze > 0 THEN
               //                                    EK-Preise updaten
               //*********************************************************************************************
 
-              art_20 := art_verw.ACS_anlegen_40(Artikelname,dc,ek_system_währung,Kred,startdatum);
+              
+              art_20 := art_verw.ACS_anlegen_40(Artikelname,dc,ek_system_währung,Kred,startdatum,sonderartikel_schaeffler);
 
               Artikel.RESET;
               Artikel.SETFILTER(Artikel."No.",'%1',art_20);
               IF Artikel.FINDFIRST THEN;
 
-              IF services_artikel = TRUE THEN
+              IF training_artikel = TRUE THEN
                 BEGIN
-                  Artikel.Preisinfo := 'MSRP -20%';
+                  Artikel.Preisinfo := 'MSRP -10%';
                   Artikel."Item Tracking Code" := 'KEINE';
-                  Artikel.Serviceklassifizierung := 'SOFTWARE';
-                  Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
+                  Artikel.Serviceklassifizierung := 'KEINE';
+                  Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
                 END
               ELSE
-                BEGIN
-                  Artikel.Preisinfo := 'MSRP -40%';
-                  IF (klassifizierung = 'KEINE') OR (klassifizierung = 'SOFTWARE') THEN
-                    BEGIN
-                      Artikel."Item Tracking Code" := 'KEINE';
-                      Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
-                      IF klassifizierung = 'KEINE' THEN Artikel.Serviceklassifizierung := 'KEINE';
-                    END
-                  ELSE
-                    BEGIN
-                      IF (klassifizierung = 'SYSTEM FLAT') THEN
-                        Artikel.Artikelgruppe := 'TELEFONE';
-                      IF (klassifizierung = 'SYSTEM CHAMPS') THEN
-                        Artikel.Artikelgruppe := 'SYSTEME';
-                      Artikel."Item Tracking Code" := 'SERIENNR';
-                      Artikel."Lead Free" := TRUE;
-                    END;
+                IF services_artikel = TRUE THEN
+                  BEGIN
+                    Artikel.Preisinfo := 'MSRP -20%';
+                    Artikel."Item Tracking Code" := 'KEINE';
+                    Artikel.Serviceklassifizierung := 'KEINE';
+                    Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
+                  END
+                ELSE
+                  BEGIN
+                    Artikel.Preisinfo := 'MSRP -40%';
+                    IF sonderartikel_schaeffler THEN Artikel.Preisinfo := 'MSRP -50%';
+                    IF (klassifizierung = 'KEINE') OR (klassifizierung = 'SOFTWARE') THEN
+                      BEGIN
+                        Artikel."Item Tracking Code" := 'KEINE';
+                        Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
+                        IF klassifizierung = 'KEINE' THEN Artikel.Serviceklassifizierung := 'KEINE';
+                      END
+                    ELSE
+                      BEGIN
+                        IF (klassifizierung = 'SYSTEM FLAT') THEN
+                          Artikel.Artikelgruppe := 'TELEFONE';
+                        IF (klassifizierung = 'SYSTEM CHAMPS') THEN
+                          Artikel.Artikelgruppe := 'SYSTEME';
+                        IF (klassifizierung = 'MODUL') THEN
+                          Artikel.Artikelgruppe := 'BAUGRUPPEN';
+                        Artikel."Item Tracking Code" := 'SERIENNR';
+                        Artikel."Lead Free" := TRUE;
+                      END;
+                  END;
 
-                END;
+              IF sonderartikel_schaeffler THEN Artikel.Preisinfo := Artikel.Preisinfo + ' für Schaeffler';
 
               //Beschreibung und Textbaustein füllen
               IF STRLEN(short_descr) < 30 THEN
@@ -144,10 +199,8 @@ IF excel_datensätze > 0 THEN
                 END
               ELSE
                 BEGIN
-
                   Artikel.Description := Trim_ShortDescr(short_descr,30);
                   Artikel."Description 2" := Trim_ShortDescr(COPYSTR(short_descr,STRLEN(Artikel.Description)+1),30);
-
                 END;
 
               IF STRLEN(long_descr) > 1 THEN
@@ -156,7 +209,10 @@ IF excel_datensätze > 0 THEN
                   LongDescrToExtendedText(Artikel."No.",long_descr,50);
                 END;
 
-              Artikel."Handlingskosten %":=5;
+              IF sonderartikel_schaeffler THEN
+                Artikel."Handlingskosten %":=2
+              ELSE
+                Artikel."Handlingskosten %":=5;
               Artikel.VALIDATE("Handlingskosten %");
               Artikel.UStG_13b_frei := TRUE;
               Artikel."Country/Region of Origin Code" := 'IL';
@@ -206,64 +262,73 @@ IF excel_datensätze > 0 THEN
                 END;
 
               Quelle_Sheet.Range('F'+Quelle_j).Value := 'OK';
-              IF services_artikel = TRUE THEN
-                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.8'
+              IF training_artikel = TRUE THEN
+                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.9'
               ELSE
-                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
+                IF services_artikel = TRUE THEN
+                  Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.8'
+                ELSE
+                  IF sonderartikel_schaeffler THEN
+                    Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.5'
+                  ELSE
+                    Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
               Quelle_Sheet.Range('H'+Quelle_j).Value := FORMAT(dc);
               //Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
               Quelle_Sheet.Range('I'+Quelle_j).Value := FORMAT(excel_msrp);
               //Quelle_Sheet.Range('I'+Quelle_j).NumberFormat := 0.00;
               Quelle_Sheet.Range('K'+Quelle_j).Value := 'A: ' + FORMAT(row_part);
               Quelle_Sheet.Range('L'+Quelle_j).Value := 'S: ' + FORMAT(row_services);
-
+              Quelle_Sheet.Range('M'+Quelle_j).Value := 'T: ' + FORMAT(row_training);
 
               //*********************************************************************************************
               //                                    VK-Preise EURO updaten
               //*********************************************************************************************
 
-              //PL_Book.Close;
-              PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
-              PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
-
-              cell_services := FindRow('Service','A');
-
-              IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
-                ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
-
-              cell_part := FindRow(Artikelname,Spalte_PL_Part);
-              cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
-              excel_msrp := 0;
-              IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
-              AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge') THEN
-                excel_msrp := PL_Sheet.Range(cell_part).Value;
-
-              IF excel_msrp <> 0 THEN
+              IF sonderartikel_schaeffler = FALSE THEN
                 BEGIN
-                  verkaufspreis.RESET;
-                  verkaufspreis.SETFILTER("Sales Type",'%1',verkaufspreis."Sales Type" :: "All Customers");
-                  verkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
-                  verkaufspreis.SETFILTER("Currency Code",'%1','');
-                  verkaufspreis.SETFILTER("Starting Date",'%1',startdatum);
-                  IF NOT verkaufspreis.FINDFIRST THEN
+                  //PL_Book.Close;
+                  PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
+                  PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
+                  IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
+                    ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
+
+                  cell_services := FindRow('Service',Spalte_PL_PGroup);
+                  cell_training := FindRow('Technical Training',Spalte_Product);
+                  cell_part := FindRow(Artikelname,Spalte_PL_Part);
+                  cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
+
+                  excel_msrp := 0;
+                  IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
+                  AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge') 
+                  AND (STRPOS(FORMAT(PL_Sheet.Range(cell_part).Value),'Contact') = 0) THEN
+                    excel_msrp := PL_Sheet.Range(cell_part).Value;
+
+                  IF excel_msrp <> 0 THEN
                     BEGIN
-                      verkaufspreis.INIT;
-                      verkaufspreis."Sales Type" := verkaufspreis."Sales Type" :: "All Customers";
-                      verkaufspreis."Item No.":= Artikel."No.";
-                      verkaufspreis."Starting Date" := startdatum;
-                      verkaufspreis."Currency Code" := '';
-                      verkaufspreis."Unit of Measure Code" := 'STÜCK';
-                      verkaufspreis."Unit Price" := excel_msrp;
-                      verkaufspreis.INSERT(TRUE);
+                      verkaufspreis.RESET;
+                      verkaufspreis.SETFILTER("Sales Type",'%1',verkaufspreis."Sales Type" :: "All Customers");
+                      verkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                      verkaufspreis.SETFILTER("Currency Code",'%1','');
+                      verkaufspreis.SETFILTER("Starting Date",'%1',startdatum);
+                      IF NOT verkaufspreis.FINDFIRST THEN
+                        BEGIN
+                          verkaufspreis.INIT;
+                          verkaufspreis."Sales Type" := verkaufspreis."Sales Type" :: "All Customers";
+                          verkaufspreis."Item No.":= Artikel."No.";
+                          verkaufspreis."Starting Date" := startdatum;
+                          verkaufspreis."Currency Code" := '';
+                          verkaufspreis."Unit of Measure Code" := 'STÜCK';
+                          verkaufspreis."Unit Price" := excel_msrp;
+                          verkaufspreis.INSERT(TRUE);
 
-                      Quelle_Sheet.Range('J'+Quelle_j).Value := FORMAT(excel_msrp);
-                      //Quelle_Sheet.Range('J'+Quelle_j).NumberFormat := 0.00;
+                          Quelle_Sheet.Range('J'+Quelle_j).Value := FORMAT(excel_msrp);
+                          //Quelle_Sheet.Range('J'+Quelle_j).NumberFormat := 0.00;
 
+                        END;
                     END;
+
+                  PL_Book.Close;
                 END;
-
-              PL_Book.Close;
-
             END
           ELSE
             Quelle_Sheet.Range('F'+Quelle_j).Value := 'BEREITS ANGELEGT';
@@ -309,12 +374,14 @@ Dataport - OnPostDataport()
 FindRow(What : Code[40];Spalte : Code[10]) : Text[30]
 WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
   BEGIN
+    i := 1;
     Range1 :=
     (PL_Sheet.Columns.Find(
       What));
+    // Wird der Artikel nicht gefunden, steigt er sofort aus den Schleifen aus
     IF ISCLEAR(Range1) THEN EXIT('');
     Cell := Range1.Address;
-    //Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
+    // Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
     IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'A'))
     OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'F')) THEN
       BEGIN
@@ -322,12 +389,27 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
           Range1 := PL_Sheet.Rows.FindNext(Range1);
           Cell := Range1.Address;
           i += 1;
-        UNTIL (STRPOS(Cell,Spalte) = 2) OR (i = 100);
-      END;
+        UNTIL (STRPOS(Cell,Spalte) = 2) OR (i > 100);
+      END
+    ELSE
+      IF Spalte = 'F' THEN
+        BEGIN
+          // mehr als ein Parameter gibt Probleme bei der Find Methode > HRESULT Fehler, vermutlich
+          // liegt es an einer fehlenden Instanz im 2. Parameter, deshalb wird solange gesucht,
+          // bis der Suchbegriff auch exakt mit dem Treffer übereinstimmt
+          IF (FORMAT(PL_Sheet.Range(Cell).Value) <> What) AND (STRPOS(Cell,Spalte) <> 0) THEN
+            REPEAT
+              Range1 := PL_Sheet.Rows.FindNext(Range1);
+              EVALUATE(vorherige_zeile,COPYSTR(Cell,4));
+              Cell := Range1.Address;
+              EVALUATE(naechste_zeile,COPYSTR(Cell,4));
+              IF (vorherige_zeile > naechste_zeile) THEN EXIT(''); // beginnt Suche wieder am Anfang > Abbruch
+            UNTIL (FORMAT(PL_Sheet.Range(Cell).Value) = What);
+        END;
     EXIT(Cell);
 END;
 
-Trim_ShortDescr(string : Text[250];max_length : Integer) : Text[30]
+Trim_ShortDescr(string : Text[1024];max_length : Integer) : Text[30]
 cr := 32;
 temp_string := string;
 IF COPYSTR(temp_string,1,1) = FORMAT(cr) THEN
