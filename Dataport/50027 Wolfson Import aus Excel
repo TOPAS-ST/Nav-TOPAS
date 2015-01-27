@@ -63,7 +63,7 @@ IF excel_datensätze > 99 THEN
 
         selection := STRMENU(Text001,1);
         Artikel.RESET;
-        Artikel.SETFILTER("Manufacturer Code",'%1','68');
+        Artikel.SETFILTER("Manufacturer Code",'%1','69');
         CASE selection OF
 
         1 :
@@ -73,19 +73,18 @@ IF excel_datensätze > 99 THEN
             //                          Überprüfung Syntax Quelldatei - Chips
             //********************************************************************************************
 
-            IF FORMAT(Quelle_Sheet.Range(Spalte_Part_Chips + '1').Value) <> 'Part Number' THEN 
+            IF FORMAT(Quelle_Sheet.Range(Spalte_Part_Chips + '1').Value) <> 'MPN' THEN
               ERROR(Text000,Spalte_Part_Chips);
-            IF FORMAT(Quelle_Sheet.Range('B1').Value) <> 'Description' THEN ERROR(Text000,'B');
-            IF FORMAT(Quelle_Sheet.Range('C1').Value) <> 'PACKAGE ' THEN ERROR(Text000,'C');
-            IF FORMAT(Quelle_Sheet.Range('D1').Value) <> 'Standard Lead Time' THEN ERROR(Text000,'D');
-            IF FORMAT(Quelle_Sheet.Range(Spalte_Reg_Chips + '1').Value) <> 'Registerable?' THEN 
+            IF FORMAT(Quelle_Sheet.Range('C1').Value) <> 'Description' THEN ERROR(Text000,'C');
+            IF FORMAT(Quelle_Sheet.Range('U1').Value) <> 'Package' THEN ERROR(Text000,'U');
+            IF FORMAT(Quelle_Sheet.Range(Spalte_Reg_Chips + '1').Value) <> 'Register' THEN
               ERROR(Text000,Spalte_Reg_Chips);
-            IF FORMAT(Quelle_Sheet.Range(Spalte_LF_Chips + '1').Value) <> 'Lead Free' THEN 
+            IF FORMAT(Quelle_Sheet.Range(Spalte_LF_Chips + '1').Value) <> 'RoHS' THEN
               ERROR(Text000,Spalte_LF_Chips);
-            IF FORMAT(Quelle_Sheet.Range('H1').Value) <> 'Pack Type' THEN ERROR(Text000,'H');
-            IF FORMAT(Quelle_Sheet.Range(Spalte_MOQ_Chips + '1').Value) <> 'MOQ' THEN 
+            IF FORMAT(Quelle_Sheet.Range(Spalte_Class_Chips + '1').Value) <> 'Part Class' THEN ERROR(Text000,Spalte_Class_Chips);
+            IF FORMAT(Quelle_Sheet.Range(Spalte_MOQ_Chips + '1').Value) <> 'Min' THEN
               ERROR(Text000,Spalte_MOQ_Chips);
-            IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Chips + '1').Value) <> 'DBP' THEN
+            IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Chips + '1').Value) <> 'DBC' THEN
               ERROR(Text000,Spalte_DC_Chips);
 
             Artikel.SETFILTER(Artikel."Item Tracking Code",'%1','DATECODE');
@@ -144,7 +143,7 @@ Dataport - OnPostDataport()
 MESSAGE('Import der Wolfson Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Änderungen: %2\\'+
         'Excel Datensätze: %3\',neuer_preis,sonstige_aenderungen,excel_datensätze);
 
-Preise_updaten(PL : Code[20])
+Preise_updaten(PL : Text[30])
 REPEAT
    CASE PL OF
 
@@ -156,6 +155,7 @@ REPEAT
          PL_DISTI_TEXT := FORMAT(Quelle_Sheet.Range(Spalte_DC_Chips+Quelle_j).Value);
          PL_LF := FORMAT(Quelle_Sheet.Range(Spalte_LF_Chips+Quelle_j).Value);
          PL_Reg := FORMAT(Quelle_Sheet.Range(Spalte_Reg_Chips+Quelle_j).Value);
+         PL_Class := FORMAT(Quelle_Sheet.Range(Spalte_Class_Chips+Quelle_j).Value);
          IF (FORMAT(Quelle_Sheet.Range(Spalte_MOQ_Chips+Quelle_j).Value) <> '') AND
          (FORMAT(Quelle_Sheet.Range(Spalte_MOQ_Chips+Quelle_j).Value) <> 'TBA') THEN
            EVALUATE(PL_MOQ,FORMAT(Quelle_Sheet.Range(Spalte_MOQ_Chips+Quelle_j).Value))
@@ -299,55 +299,49 @@ REPEAT
               //                                     Lead Free überprüfen
               //*********************************************************************************************
 
-              IF (STRLEN(PL_LF) < 4) THEN
+              IF (STRPOS(UPPERCASE(PL_LF),'ROHS AND LEAD FREE') <> 0) AND (Artikel."Lead Free" = FALSE) THEN
                 BEGIN
-                  IF (STRPOS(UPPERCASE(PL_LF),'YES') <> 0) AND (Artikel."Lead Free" = FALSE) THEN
-                    BEGIN
-                      Artikel."Lead Free" := TRUE;
-                      Artikel.MODIFY(TRUE);
-                      sonstige_aenderungen += 1;
-                      Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
-                      Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Lead Free geändert';
-                      Protokoll_j := INCSTR(Protokoll_j);
+                  Artikel."Lead Free" := TRUE;
+                  Artikel.MODIFY(TRUE);
+                  sonstige_aenderungen += 1;
+                  Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                  Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Lead Free geändert';
+                  Protokoll_j := INCSTR(Protokoll_j);
 
-                    END;
-                  IF (STRPOS(UPPERCASE(PL_LF),'NO') <> 0) AND (Artikel."Lead Free" = TRUE) THEN
-                    BEGIN
-                      Artikel."Lead Free" := FALSE;
-                      Artikel.MODIFY(TRUE);
-                      sonstige_aenderungen += 1;
-                      Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
-                      Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Lead Free geändert';
-                      Protokoll_j := INCSTR(Protokoll_j);
-                    END;
+                END;
+              IF (STRPOS(UPPERCASE(PL_LF),'NO') <> 0) AND (Artikel."Lead Free" = TRUE) THEN
+                BEGIN
+                  Artikel."Lead Free" := FALSE;
+                  Artikel.MODIFY(TRUE);
+                  sonstige_aenderungen += 1;
+                  Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                  Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Lead Free geändert';
+                  Protokoll_j := INCSTR(Protokoll_j);
                 END;
 
               //*********************************************************************************************
               //                                    Registrierbar überprüfen
               //*********************************************************************************************
 
-              IF (STRLEN(PL_Reg) < 4) THEN
+              IF (STRPOS(UPPERCASE(PL_Reg),'YES') <> 0) AND (Artikel.Registrierbar = FALSE) THEN
                 BEGIN
-                  IF (STRPOS(UPPERCASE(PL_Reg),'YES') <> 0) AND (Artikel.Registrierbar = FALSE) THEN
-                    BEGIN
-                      Artikel.Registrierbar := TRUE;
-                      Artikel.MODIFY(TRUE);
-                      sonstige_aenderungen += 1;
-                      Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
-                      Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Reg geändert';
-                      Protokoll_j := INCSTR(Protokoll_j);
-                    END;
-                  IF (STRPOS(UPPERCASE(PL_Reg),'NO') <> 0) AND (Artikel.Registrierbar = TRUE) THEN
-                    BEGIN
-                      Artikel.Registrierbar := FALSE;
-                      Artikel.MODIFY(TRUE);
-                      sonstige_aenderungen += 1;
-                      Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
-                      Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Reg geändert';
-                      Protokoll_j := INCSTR(Protokoll_j);
-                    END;
+                  Artikel.Registrierbar := TRUE;
+                  Artikel.MODIFY(TRUE);
+                  sonstige_aenderungen += 1;
+                  Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                  Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Reg geändert';
+                  Protokoll_j := INCSTR(Protokoll_j);
                 END;
-             END;
+              IF (STRPOS(UPPERCASE(PL_Reg),'NO') <> 0) AND (Artikel.Registrierbar = TRUE) THEN
+                BEGIN
+                  Artikel.Registrierbar := FALSE;
+                  Artikel.MODIFY(TRUE);
+                  sonstige_aenderungen += 1;
+                  Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                  Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'Reg geändert';
+                  Protokoll_j := INCSTR(Protokoll_j);
+                END;
+            END;
 
            IF PL_DC <> 0 THEN
              BEGIN
