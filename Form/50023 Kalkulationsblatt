@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=16.01.15;
-    Time=09:16:28;
+    Date=18.03.15;
+    Time=16:00:43;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -41,7 +41,7 @@ OBJECT Form 50023 Kalkulationsblatt
 
                            IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
                            OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')
-                           OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) THEN
+                           OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')) THEN
                              BEGIN
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -128,6 +128,12 @@ OBJECT Form 50023 Kalkulationsblatt
                                                  SourceExpr="Vertragsnr. bernommen" }
     { 1140053;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140052;
                                                  InColumnHeading=Yes }
+    { 1140067;TextBox   ;23072;5280 ;2000 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 SourceExpr="Rabatt/Marge" }
+    { 1140068;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140067;
+                                                 InColumnHeading=Yes }
     { 1140007;TextBox   ;0    ;0    ;2100 ;0    ;ParentControl=1140000;
                                                  InColumn=Yes;
                                                  SourceExpr="Belegnr.";
@@ -157,11 +163,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                                             END;
                                                              }
     { 1140031;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140030;
-                                                 InColumnHeading=Yes }
-    { 1140067;TextBox   ;23072;5280 ;2000 ;440  ;ParentControl=1140000;
-                                                 InColumn=Yes;
-                                                 SourceExpr="Rabatt/Marge" }
-    { 1140068;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140067;
                                                  InColumnHeading=Yes }
     { 1140018;TextBox   ;14813;2200 ;1700 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
@@ -403,8 +404,12 @@ OBJECT Form 50023 Kalkulationsblatt
                                                  SourceExpr=kalk_prozentsatz;
                                                  OnValidate=BEGIN
                                                               Artikel.GET("SUP Artikelnr.");
+
                                                               IF (kalk_prozentsatz > 10) AND (Artikel.Artikelgruppe = 'ACTS') THEN
-                                                                ERROR(Text017);
+                                                                ERROR(Text017,10);
+
+                                                              IF (kalk_prozentsatz > 5) AND (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
+                                                                ERROR(Text017,5);
                                                             END;
                                                              }
   }
@@ -478,7 +483,7 @@ OBJECT Form 50023 Kalkulationsblatt
         'DEU=Sie drfen nicht verschiedene Basisger„te in einer Kalkulation aufweisen.';
 
       Text017@1140030 : TextConst
-        'DEU=Der ACTS Rabatt darf den Wert von 10 nicht bersteigen.';
+        'DEU=Der ACTS Rabatt darf den Wert von %1 nicht bersteigen.';
 
       Text018@1140031 : TextConst
         'DEU=Die %1 Marge sollte ber 50 Prozent liegen.';
@@ -1913,8 +1918,8 @@ OBJECT Form 50023 Kalkulationsblatt
       Ger„te_Artikel.GET(Ger„te_Artikelnr);
       Service_Artikel.GET(Service_Artikelnr);
 
-      IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS')
-      OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
+      IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'ACHAT')
+      OR (Service_Artikel.Artikelgruppe = 'ACTS') OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER'))
       AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
