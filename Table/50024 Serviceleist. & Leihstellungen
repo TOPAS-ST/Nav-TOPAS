@@ -716,7 +716,7 @@ Artikel.GET("SUP Artikelnr.");
 sup_artikelnr_lang := Artikel."No. 2";
 IF (STRPOS("SUP Artikelnr.",'HW') <> 0) OR ("SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR' )
 OR ("SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01') OR (STRPOS("SUP Artikelnr.",'RPLC') <> 0)
-OR ("SUP Artikelnr." = 'RE_INSTATEMENT_FEE') THEN
+OR ("SUP Artikelnr." = 'RE_INSTATEMENT_FEE') OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
   EXIT('');
 
 IF STRPOS(Seriennr,'S/N: ') = 1 THEN
@@ -1896,7 +1896,8 @@ IF Vkliefkopf.FINDLAST THEN
          IF Artikel.GET(Vkliefzeile."No.") AND (Artikel."Software Upgrade Protection" = TRUE) THEN
            BEGIN
 
-             IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') THEN
+             IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
+             OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
                ACTS := TRUE
              ELSE
                ACTS := FALSE;
@@ -2504,7 +2505,7 @@ IF Vkliefkopf.FINDLAST THEN
       UNTIL Vkliefzeile.NEXT = 0;
 
     Debitor.GET(Vkliefkopf."Sell-to Customer No.");
-    IF Debitor."Champs via EMail" = TRUE THEN
+    IF Debitor."Service via EMail" = TRUE THEN
       nur_intern_drucken := TRUE
     ELSE
       nur_intern_drucken := FALSE;
@@ -2955,7 +2956,7 @@ ELSE
 
 ServiceArtikelnrErmitteln(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Waehrung : Code[10]) : Code[40]
 Artikel.GET("SUP Artikelnr");
-IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
+IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
 OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') THEN
   ACTS := TRUE
 ELSE
@@ -3025,6 +3026,7 @@ ServicePreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Lauf
 //2014-01-27 ST Nun auch für ACHAT
 //2014-06-18 ST Nun auch für Misch ACTS/ACHAT
 //2014-12-09 ST ACTS Schaeffler Projekt
+//2015-03-18 ST ACTS Managed Spare Service
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -3044,6 +3046,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS := FALSE;
     ACHAT := FALSE;
     ACTS_SCHAEFFLER := FALSE;
+    ACTS_MSS := FALSE;
     CHAMPS := FALSE;
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
@@ -3055,8 +3058,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-            CHAMPS := TRUE;
+          IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
+            ACTS_MSS := TRUE
+          ELSE
+            IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+              CHAMPS := TRUE;
 
     EVALUATE(kalk_laufzeit,COPYSTR(Laufzeit,1,STRPOS(Laufzeit,'M')-1));
 
@@ -3071,7 +3077,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Service_PL.RESET;
     Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
@@ -3116,6 +3122,19 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 END;
               END;
 
+            //ACTS Managed Spare Service EK Konditionen
+            IF ACTS_MSS = TRUE THEN
+              BEGIN
+                v_service_laufzeit := kalk_laufzeit DIV 12;
+                CASE v_service_laufzeit OF
+                  0..1 : acts_discount := 1;
+                  2 : acts_discount := 0.95; // -5%
+                  3 : acts_discount := 0.88; // -12%
+                  4 : acts_discount := 0.84; // -16%
+                  5..100 : acts_discount := 0.8; // -20%
+                END;
+              END;
+
             //ACHAT EK Konditionen
             IF ACHAT = TRUE THEN
               BEGIN
@@ -3143,9 +3162,13 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                   EXIT((ROUND((((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
                   * (acts_discount),rundgs_faktor)) * spezial_discount)
                 ELSE
-                  IF (ACTS_SCHAEFFLER = TRUE) THEN
-                    EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
-                     * (acts_discount),rundgs_faktor)) * spezial_discount)
+                  IF (ACTS_MSS = TRUE) THEN
+                    EXIT((ROUND((((Service_PL.MSRP * 0.9) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
+                    * (acts_discount),rundgs_faktor)) * spezial_discount)
+                  ELSE
+                    IF (ACTS_SCHAEFFLER = TRUE) THEN
+                      EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
+                       * (acts_discount),rundgs_faktor)) * spezial_discount)
           END;
 
         IF Feld = 'MSRP' THEN
