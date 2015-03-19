@@ -4505,8 +4505,9 @@ Gen_Service_DC("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit 
 //***************************************************************************************************
 //              TOPAS 2011-07-26 ST  Generiert den DC für den jeweiligen Champ Artikel
 //              TOPAS 2014-01-10 ST  Nun auch für ACTS und ACHAT
-//              TOPAS 2014-06-18 ST Nun auch für Misch ACTS/ACHAT
+//              TOPAS 2014-06-18 ST  Nun auch für Misch ACTS/ACHAT
 //              TOPAS 2014-12-09 ST  ACTS Schaeffler Projekt
+//              TOPAS 2015-03-18 ST  ACTS Managed Spare Service
 //***************************************************************************************************
 
 IF Runden = TRUE THEN
@@ -4525,6 +4526,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS := FALSE;
     ACHAT := FALSE;
     ACTS_SCHAEFFLER := FALSE;
+    ACTS_MSS := FALSE;
+    CHAMPS := FALSE;
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
@@ -4535,13 +4538,16 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-            CHAMPS := TRUE;
+          IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
+            ACTS_MSS := TRUE
+          ELSE
+            IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+              CHAMPS := TRUE;
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
     AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
-    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
     Opt_laufzeit.RESET;
@@ -4555,7 +4561,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Service_PL.RESET;
     Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
@@ -4601,6 +4607,19 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             END;
           END;
 
+        //ACTS Managed Spare Service EK Konditionen
+        IF ACTS_MSS = TRUE THEN
+          BEGIN
+            v_service_laufzeit := Laufzeit DIV 12;
+            CASE v_service_laufzeit OF
+              0..1 : acts_discount := 1;
+              2 : acts_discount := 0.95; // -5%
+              3 : acts_discount := 0.88; // -12%
+              4 : acts_discount := 0.84; // -16%
+              5..100 : acts_discount := 0.8; // -20%
+            END;
+          END;
+
         //ACHAT EK Konditionen
         IF ACHAT = TRUE THEN
           BEGIN
@@ -4628,15 +4647,21 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
               EXIT((ROUND((((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
               * (acts_discount),rundgs_faktor)) * spezial_discount)
             ELSE
-              IF (ACTS_SCHAEFFLER = TRUE) THEN
-                EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
-                * (acts_discount),rundgs_faktor)) * spezial_discount);
+              IF (ACTS_MSS = TRUE) THEN
+                EXIT((ROUND((((Service_PL.MSRP * 0.9) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+                * (acts_discount),rundgs_faktor)) * spezial_discount)
+              ELSE
+                IF (ACTS_SCHAEFFLER = TRUE) THEN
+                  EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
+                  * (acts_discount),rundgs_faktor)) * spezial_discount);
       END
     ELSE
       BEGIN
         IF ("SUP Artikelnr" = 'SW-UPGRADE-ACS-1Y') OR ("SUP Artikelnr" = 'EXTD-HW-WARR/YR')
         OR ("SUP Artikelnr" = 'ENH-SUPP-PROG/YR') OR ("SUP Artikelnr" = 'ENH-SUPP-PROG/3 YR') THEN
           BEGIN
+            {
+            //2015-02-11 ST deaktiviert, da für diese eigenen Serviceleistungen kein DC erwünscht ist
             Opt_prozent.RESET;
             Opt_prozent.SETFILTER("Tabellen ID",'%1',50024);
             Opt_prozent.SETFILTER("Feld ID",'%1',5);
@@ -4651,6 +4676,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 IF EkPreise.FINDLAST THEN
                   EXIT(ROUND((EkPreise."Direct Unit Cost" * Opt_prozent.Prozentsatz/100) * (Laufzeit/v_laufzeit),rundgs_faktor))
               END;
+            }
           END
         ELSE
           ERROR(Text125,"Basis Artikelnr","SUP Artikelnr");
@@ -4672,18 +4698,18 @@ IF Runden THEN
 ELSE
   rundgs_faktor := 0.01;
 
-
 Artikel.GET("SUP Artikelnr");
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
     AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
-    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
-    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
+    IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
+    OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
       ACTS := TRUE
     ELSE
       IF Artikel.Artikelgruppe = 'ACHAT' THEN
@@ -4991,12 +5017,15 @@ ELSE
       IF Artikel.Artikelgruppe = 'ACTS/ACHAT' THEN
         ACTS_ACHAT := TRUE
       ELSE
-        IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-          CHAMPS := TRUE
+        IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
+          ACTS_MSS := TRUE
         ELSE
-          SUP := TRUE;
+          IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+            CHAMPS := TRUE
+          ELSE
+            SUP := TRUE;
 
-IF (CHAMPS = TRUE) OR (ACTS_ACHAT = TRUE) OR (SUP = TRUE) THEN
+IF (CHAMPS = TRUE) OR (SUP = TRUE) THEN
   BEGIN
     WITH FindSalesPrice DO BEGIN
       IF (Artikelnr = 'M1KB-CH') THEN
@@ -5036,7 +5065,8 @@ IF (CHAMPS = TRUE) OR (ACTS_ACHAT = TRUE) OR (SUP = TRUE) THEN
 //                                     ACTS und ACHAT  Berechnung
 //***************************************************************************************************
 
-IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
+IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) 
+OR (ACTS_MSS = TRUE) THEN
   BEGIN
     WITH FindMSRPPrice DO BEGIN
       SETRANGE("Artikelnr.",Artikelnr);
