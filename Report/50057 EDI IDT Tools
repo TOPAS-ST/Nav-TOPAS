@@ -1,0 +1,1456 @@
+OBJECT Report 50057 EDI IDT Tools
+{
+  OBJECT-PROPERTIES
+  {
+    Date=03.09.13;
+    Time=10:09:26;
+    Modified=Yes;
+    Version List=Topas Bericht neu;
+  }
+  PROPERTIES
+  {
+    ProcessingOnly=No;
+    OnPreReport=BEGIN
+                  //IF v_idt_bestell=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_orders=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_ordchg=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_invrpt=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_slsrpt=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_ssdclm=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_ordchg_bernehmen=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_posreport=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+                  IF v_statement=TRUE THEN var_anzahl_h„kchen:=var_anzahl_h„kchen + 1;
+
+                  IF var_anzahl_h„kchen>1 THEN
+                  ERROR('Es wurden mehrere H„kchen gesetzt. Report abgebrochen!');
+                  // ENDE šberprfung ob mehrere H„kchen gesetzt sind
+                  hochkomma := 39;
+
+                  // ANFANG Aufruf der Funktionen
+                  //IF v_idt_bestell=TRUE THEN "IDT Bestellungen";
+                  IF v_orders=TRUE THEN "IDT ORDERS";
+                  IF v_ordchg=TRUE THEN "IDT ORDCHG";
+                  IF v_invrpt=TRUE THEN "IDT INVRPT";
+                  IF v_slsrpt=TRUE THEN "IDT SLSRPT";
+                  IF v_ssdclm=TRUE THEN "IDT SSDCLM";
+                  IF v_ordchg_bernehmen=TRUE THEN "IDT ORDCHG bernehmen";
+                  IF v_posreport=TRUE THEN "POS Report";
+                  IF v_statement=TRUE THEN STATEMENT;
+                END;
+
+    Orientation=Landscape;
+  }
+  DATAITEMS
+  {
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=16500;
+      Height=15070;
+    }
+    CONTROLS
+    {
+      { 1140020;Label     ;770  ;5720 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum vom: }
+      { 1140021;Label     ;770  ;6820 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum bis: }
+      { 1140022;TextBox   ;2640 ;5720 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   SourceExpr=datum_von }
+      { 1140023;TextBox   ;2640 ;6820 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   SourceExpr=datum_bis }
+      { 1140024;Label     ;6160 ;4840 ;9350 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   LeaderDots=No;
+                                                   CaptionML=[DEU="Standard = 0; falls neu geschickt werden muss mit 1, dann 2 .. hochz„hlen"] }
+      { 1140025;CheckBox  ;880  ;4070 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_ssdclm }
+      { 1140026;Label     ;1760 ;4070 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140027;Label     ;7920 ;4070 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Versionsz„hler }
+      { 1140028;TextBox   ;11220;4070 ;550  ;440  ;ParentControl=1140013;
+                                                   InPage=4;
+                                                   SourceExpr=v_versionsz„hler }
+      { 1140009;CheckBox  ;880  ;3520 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_slsrpt }
+      { 1140010;Label     ;1760 ;3520 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140001;TextBox   ;2640 ;5170 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   SourceExpr=datum_von }
+      { 1140014;TextBox   ;2640 ;6270 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   SourceExpr=datum_bis }
+      { 1140016;Label     ;770  ;6270 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum bis: }
+      { 1140017;Label     ;770  ;5170 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum vom: }
+      { 1140015;TextBox   ;11220;3520 ;550  ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   SourceExpr=v_versionsz„hler }
+      { 1140018;Label     ;7920 ;3520 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Versionsz„hler }
+      { 1140019;Label     ;6160 ;4290 ;9350 ;440  ;ParentControl=1140013;
+                                                   InPage=3;
+                                                   LeaderDots=No;
+                                                   CaptionML=[DEU="Standard = 0; falls neu geschickt werden muss mit 1, dann 2 .. hochz„hlen"] }
+      { 1140008;Label     ;1760 ;3520 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=2;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140007;CheckBox  ;880  ;3520 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=2;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_invrpt }
+      { 1140011;Label     ;770  ;5390 ;3300 ;440  ;ParentControl=1140013;
+                                                   InPage=2;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Lagerdaten Stand vom: }
+      { 1140012;TextBox   ;4290 ;5390 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=2;
+                                                   SourceExpr=datum_von }
+      { 1140003;CheckBox  ;880  ;3520 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_ordchg }
+      { 1140006;Label     ;1760 ;3520 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140032;TextBox   ;880  ;5280 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=1;
+                                                   SourceExpr=Bestellnr }
+      { 1140033;Label     ;3080 ;5280 ;7370 ;440  ;ParentControl=1140013;
+                                                   InPage=1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Bestellnummer der ge„nderten BET30xxxx immer eingeben }
+      { 1140029;CheckBox  ;880  ;3850 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_posreport }
+      { 1140030;Label     ;1760 ;3850 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140031;Label     ;990  ;7150 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum bis: }
+      { 1140034;Label     ;990  ;6050 ;1650 ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Datum vom: }
+      { 1140035;TextBox   ;2860 ;6050 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   SourceExpr=datum_von }
+      { 1140036;TextBox   ;2860 ;7150 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=5;
+                                                   SourceExpr=datum_bis }
+      { 1140038;Label     ;1870 ;4180 ;5170 ;440  ;ParentControl=1140013;
+                                                   InPage=6;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=IDT Statement-šberprfung ausfhren }
+      { 1140037;CheckBox  ;990  ;4180 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=6;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_statement }
+      { 1140000;CheckBox  ;880  ;3520 ;440  ;440  ;ParentControl=1140013;
+                                                   InPage=0;
+                                                   ShowCaption=No;
+                                                   SourceExpr=v_orders }
+      { 1140002;Label     ;1760 ;3520 ;3080 ;440  ;ParentControl=1140013;
+                                                   InPage=0;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Auswertung ausfhren }
+      { 1140005;Label     ;3520 ;5390 ;7370 ;440  ;ParentControl=1140013;
+                                                   InPage=0;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Bestellnummer der ge„nderten BET30xxxx immer eingeben }
+      { 1140004;TextBox   ;880  ;5390 ;1700 ;440  ;ParentControl=1140013;
+                                                   InPage=0;
+                                                   SourceExpr=Bestellnr }
+      { 1140013;TabControl;110  ;2200 ;15730;9570 ;InPage=-1;
+                                                   PageNamesML=DEU=IDT ORDERS, IDT ORDCHG, IDT INVRPT, IDT SLSRPT, IDT SSDCLM, POS Report, Statement }
+    }
+  }
+  CODE
+  {
+    VAR
+      Excel@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      k@1140004 : Text[30];
+      j@1140005 : Text[30];
+      var_anzahl_h„kchen@1140007 : Integer;
+      v_ordchg_bernehmen@1140008 : Boolean;
+      v_orders@1140020 : Boolean;
+      v_ordchg@1140021 : Boolean;
+      v_invrpt@1140022 : Boolean;
+      v_slsrpt@1140023 : Boolean;
+      v_ssdclm@1140024 : Boolean;
+      v_posreport@1140040 : Boolean;
+      v_statement@1140042 : Boolean;
+      ekk@1140006 : Record 38;
+      ekz@1140009 : Record 39;
+      bestelldat@1140010 : Date;
+      preis1@1140011 : Text[10];
+      tag@1140012 : Text[2];
+      monat@1140013 : Text[2];
+      jahr@1140014 : Text[4];
+      date1@1140015 : Date;
+      date2@1140018 : Date;
+      Bestelldatum@1140016 : Text[8];
+      Wunschdatum@1140017 : Text[30];
+      lfdnr@1140019 : Text[15];
+      vkrk@1140025 : Record 112;
+      vkrz@1140026 : Record 113;
+      vkgk@1140027 : Record 114;
+      vkgz@1140028 : Record 115;
+      quotedaten@1140029 : Record 50014;
+      "EK-Preise"@1140034 : Record 7012;
+      Artikel@1140035 : Record 27;
+      datum_von@1140030 : Date;
+      datum_bis@1140031 : Date;
+      v_zeilennummer@1140032 : Integer;
+      v_versionsz„hler@1140033 : Integer;
+      Bestellnr@1140036 : Code[10];
+      hochkomma@1140037 : Char;
+      resaleprice@1140038 : Decimal;
+      Dateiname@1140041 : Text[250];
+      Position@1140039 : Integer;
+      kredpost@1140043 : Record 25;
+      v_kum_saldo@1140044 : Decimal;
+      v_l„nge@1140045 : Integer;
+      v_deb_name@1140046 : Text[50];
+      v_deb_endk@1140047 : Text[50];
+      v_deb_name1@1140048 : Text[29];
+      v_deb_endk1@1140049 : Text[29];
+
+    PROCEDURE "IDT ORDCHG bernehmen"@1140004();
+    BEGIN
+      ekk.RESET;
+      ekk.SETFILTER(ekk."Buy-from Vendor No.",'%1','880003');
+      ekk.SETFILTER(ekk."No.",'%1',Bestellnr);
+      IF ekk.FINDFIRST THEN BEGIN
+      IF ekk.Status=ekk.Status::Released THEN
+      ERROR('Status der Bestellung muss Offen sein. Bitte „ndern und erneut aufrufen!');
+      REPEAT
+        ekz.RESET;
+        ekz.SETFILTER(ekz."Document No.",'%1',ekk."No.");
+        ekz.SETFILTER(ekz.Zeilen„nderung,'%1',TRUE);
+        IF ekz.FINDFIRST THEN BEGIN
+        REPEAT
+         ekz.VALIDATE(ekz.Quantity,ekz.Žnderungsmenge);
+         ekz.VALIDATE(ekz."Requested Receipt Date",ekz.Žnderungslieferdatum);
+         ekz.Zeilen„nderung:=FALSE;
+         ekz.Žnderungsmenge:=0;
+         ekz.Žnderungslieferdatum:=0D;
+         ekz.MODIFY;
+        UNTIL ekz.NEXT=0;
+        END;
+
+      UNTIL ekk.NEXT=0;
+      END;
+    END;
+
+    PROCEDURE "IDT ORDERS"@1140000();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'UNH';    //'Ref-Nr';
+      Sheet.Range('B1').Value := 'BGM';    //'PO-Nr';
+      Sheet.Range('C1').Value := 'DTM';    //'PO-Date';
+      Sheet.Range('D1').Value := 'NADSE';  // Name Seller  ('Endkun Nr';)
+      Sheet.Range('E1').Value := 'NADDP';  // Name Disti   ('Endkun Name';)
+      Sheet.Range('F1').Value := 'NADBY';  // 'K„ufer';
+      Sheet.Range('G1').Value := 'CUX';    //'W„hrung';
+      Sheet.Range('H1').Value := 'LIN';    //'Artnr. K„ufer';
+      Sheet.Range('I1').Value := 'PIA';    //'Artnr. Verk„ufer';
+      Sheet.Range('J1').Value := 'QTY';    //'Menge';
+      Sheet.Range('K1').Value := 'PRIAAA'; // 'SCD Comment';
+      Sheet.Range('L1').Value := 'Pricetype';
+      Sheet.Range('M1').Value := 'Unitpricebasis';
+      Sheet.Range('N1').Value := 'Measureunitqualifier';
+      Sheet.Range('O1').Value := 'RFFLI';   //Line item
+      Sheet.Range('P1').Value := 'SSC';
+      Sheet.Range('Q1').Value := 'DTM';     //'Lieferdatum';
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+
+      ekk.RESET;
+      ekk.SETFILTER(ekk."Buy-from Vendor No.",'%1','880003');
+      IF Bestellnr <> '' THEN BEGIN
+      ekk.SETFILTER(ekk."No.",'%1',Bestellnr);
+      END ELSE BEGIN
+      ERROR('Es wurde keine Bestellnummer eingegeben!');
+      END;
+      IF ekk.FINDFIRST THEN BEGIN
+      REPEAT
+      ekz.RESET;
+      ekz.SETFILTER(ekz."Document No.",'%1',ekk."No.");
+      ekz.SETFILTER(ekz.Quantity,'>%1',0);
+      IF ekz.FINDFIRST THEN BEGIN
+      REPEAT
+      lfdnr:=ekz."Document No.";
+      lfdnr:= DELSTR(lfdnr,1,3);
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := ekk."No.";
+      date1:=ekk."Order Date";
+      tag := FORMAT(DATE2DMY(date1,1));
+      IF tag='1' THEN tag:='01';
+      IF tag='2' THEN tag:='02';
+      IF tag='3' THEN tag:='03';
+      IF tag='4' THEN tag:='04';
+      IF tag='5' THEN tag:='05';
+      IF tag='6' THEN tag:='06';
+      IF tag='7' THEN tag:='07';
+      IF tag='8' THEN tag:='08';
+      IF tag='9' THEN tag:='09';
+      monat := FORMAT(DATE2DMY(date1,2));
+      IF monat='1' THEN monat:='01';
+      IF monat='2' THEN monat:='02';
+      IF monat='3' THEN monat:='03';
+      IF monat='4' THEN monat:='04';
+      IF monat='5' THEN monat:='05';
+      IF monat='6' THEN monat:='06';
+      IF monat='7' THEN monat:='07';
+      IF monat='8' THEN monat:='08';
+      IF monat='9' THEN monat:='09';
+      jahr :=FORMAT(DATE2DMY(date1,3));
+      Bestelldatum := jahr+monat+tag;
+      Sheet.Range('C'+j).Value := Bestelldatum;
+      Sheet.Range('D'+j).Value := 'IDTEDIEU';
+      Sheet.Range('E'+j).Value := 'TOPASEDI';
+      Sheet.Range('F'+j).Value := 'TOPASEDI';
+      Sheet.Range('G'+j).Value := ekk."Currency Code";
+      Sheet.Range('H'+j).Value := ekz."No.";
+      Sheet.Range('I'+j).Value := ekz."No.";
+      Sheet.Range('J'+j).Value := ekz.Quantity;
+      Sheet.Range('J'+j).NumberFormat := '@';
+      //Sheet.Range('K'+j).Value := FORMAT(ekz."Direct Unit Cost");
+
+      Sheet.Range('K'+j).Value := FORMAT(hochkomma) + CONVERTSTR(FORMAT(ekz."Direct Unit Cost"),',','.');
+      Sheet.Range('L'+j).Value := 'DI';
+      Sheet.Range('M'+j).Value := '1';
+      Sheet.Range('N'+j).Value := 'PCE';
+      Sheet.Range('O'+j).Value := ekz."Line No.";
+      Sheet.Range('P'+j).Value := '1';
+      date2:=ekz."Requested Receipt Date";
+      tag :=FORMAT(DATE2DMY(date2,1));
+      IF tag='1' THEN tag:='01';
+      IF tag='2' THEN tag:='02';
+      IF tag='3' THEN tag:='03';
+      IF tag='4' THEN tag:='04';
+      IF tag='5' THEN tag:='05';
+      IF tag='6' THEN tag:='06';
+      IF tag='7' THEN tag:='07';
+      IF tag='8' THEN tag:='08';
+      IF tag='9' THEN tag:='09';
+      monat :=FORMAT(DATE2DMY(date2,2));
+      IF monat='1' THEN monat:='01';
+      IF monat='2' THEN monat:='02';
+      IF monat='3' THEN monat:='03';
+      IF monat='4' THEN monat:='04';
+      IF monat='5' THEN monat:='05';
+      IF monat='6' THEN monat:='06';
+      IF monat='7' THEN monat:='07';
+      IF monat='8' THEN monat:='08';
+      IF monat='9' THEN monat:='09';
+      jahr :=FORMAT(DATE2DMY(date2,3));
+      Wunschdatum := jahr+monat+tag;
+      Sheet.Range('Q'+j).Value := Wunschdatum;
+      j:=INCSTR(j);
+      UNTIL ekz.NEXT=0;
+      END;
+      j:=INCSTR(j);
+      UNTIL ekk.NEXT=0;
+      END;
+
+      Dateiname := 'R:\EDI\IDT\DATEN\OUT\ORDERS\ORDERS_' + ekz."Document No." + '_' + FORMAT(DATE2DMY(TODAY,3)) +
+      COPYSTR(FORMAT(TODAY),4,2) +COPYSTR(FORMAT(TODAY),1,2) + '.csv';
+      Book.SaveAs(Dateiname,6);//.csv Format
+      //Book.Close(FALSE);
+      //Excel.Visible(TRUE);
+    END;
+
+    PROCEDURE "IDT ORDCHG"@1140001();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'UNH';       // Ref-Nr Message
+      Sheet.Range('B1').Value := 'BGM230';    // Ref-Nr Document
+      Sheet.Range('C1').Value := 'DTM137';    // Date Document/Message
+      Sheet.Range('D1').Value := 'RFFON';     // Bestellnummer K„ufer
+      Sheet.Range('E1').Value := 'DTM171';    // Datum der Bestellung K„ufer
+      Sheet.Range('F1').Value := 'NADDP';     // K„ufer (TOPASEDI)
+      Sheet.Range('G1').Value := 'LIN1229';   // Žnderungskennzeichen = 3
+      Sheet.Range('H1').Value := 'LINBP';     // Artnr. K„ufer';
+      Sheet.Range('I1').Value := 'PIAVP';     // Artnr. Verk„ufer';
+      Sheet.Range('J1').Value := 'RFFLI';     // Zeilennumer der Bestellung
+      Sheet.Range('K1').Value := 'SCC';       // SCC Code = 1 (Firm)
+      Sheet.Range('L1').Value := 'QTY18';     // bisherige Menge
+      Sheet.Range('M1').Value := 'DTM2';      // bisherige Datum  Lieferung     ge„ndert auf Datum neu gewnscht
+      Sheet.Range('N1').Value := 'QTY21';     // neue Bestellmenge
+      Sheet.Range('O1').Value := 'DTM42';     // Datum neu gewnscht    ge„ndert auf bisheriges Datum Lieferung
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+
+      ekk.RESET;
+      ekk.SETFILTER(ekk."Buy-from Vendor No.",'%1','880003');
+      IF Bestellnr <> '' THEN BEGIN
+      ekk.SETFILTER(ekk."No.",'%1',Bestellnr);
+      END ELSE BEGIN
+      ERROR('Es wurde keine Bestellnummer eingegeben!');
+      END;
+      IF ekk.FINDFIRST THEN BEGIN
+      REPEAT
+      ekz.RESET;
+      ekz.SETFILTER(ekz."Document No.",'%1',ekk."No.");
+      ekz.SETFILTER(ekz.Zeilen„nderung,'%1',TRUE);
+
+      IF ekz.FINDFIRST THEN BEGIN
+      REPEAT
+      lfdnr:=ekz."Document No.";
+      lfdnr:= DELSTR(lfdnr,1,3);
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := ekk."No.";
+      date1:=ekk."Order Date";
+      tag := FORMAT(DATE2DMY(date1,1));
+      IF tag='1' THEN tag:='01';
+      IF tag='2' THEN tag:='02';
+      IF tag='3' THEN tag:='03';
+      IF tag='4' THEN tag:='04';
+      IF tag='5' THEN tag:='05';
+      IF tag='6' THEN tag:='06';
+      IF tag='7' THEN tag:='07';
+      IF tag='8' THEN tag:='08';
+      IF tag='9' THEN tag:='09';
+      monat := FORMAT(DATE2DMY(date1,2));
+      IF monat='1' THEN monat:='01';
+      IF monat='2' THEN monat:='02';
+      IF monat='3' THEN monat:='03';
+      IF monat='4' THEN monat:='04';
+      IF monat='5' THEN monat:='05';
+      IF monat='6' THEN monat:='06';
+      IF monat='7' THEN monat:='07';
+      IF monat='8' THEN monat:='08';
+      IF monat='9' THEN monat:='09';
+      jahr :=FORMAT(DATE2DMY(date1,3));
+      Bestelldatum := jahr+monat+tag;
+      Sheet.Range('C'+j).Value := ekk."Document Date";
+      Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('D'+j).Value := ekk."No.";
+      Sheet.Range('E'+j).Value := Bestelldatum;
+      Sheet.Range('F'+j).Value := 'TOPASEDI';
+      Sheet.Range('G'+j).Value := '3';
+      Sheet.Range('H'+j).Value := ekz."No.";
+      Sheet.Range('I'+j).Value := ekz."No.";
+      Sheet.Range('J'+j).Value := ekz."Line No.";
+      Sheet.Range('K'+j).Value := '1';
+      Sheet.Range('L'+j).Value := ekz.Žnderungsmenge;
+      //Sheet.Range('L'+j).Value := ekz.Quantity;
+      Sheet.Range('L'+j).NumberFormat := '@';
+      Sheet.Range('M'+j).Value := ekz.Žnderungslieferdatum;
+      //Sheet.Range('M'+j).Value := ekz."Promised Receipt Date";
+      //Sheet.Range('M'+j).Value := ekz."Requested Receipt Date";
+      Sheet.Range('M'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('N'+j).Value := ekz.Quantity;
+      //Sheet.Range('N'+j).Value := ekz.Žnderungsmenge;
+      Sheet.Range('N'+j).NumberFormat := '@';
+      Sheet.Range('O'+j).Value := ekz."Promised Receipt Date";
+      //Sheet.Range('O'+j).Value := ekz.Žnderungslieferdatum;
+      Sheet.Range('O'+j).NumberFormat := 'JJJJMMTT';
+      j:=INCSTR(j);
+      UNTIL ekz.NEXT=0;
+      END;
+      j:=INCSTR(j);
+      UNTIL ekk.NEXT=0;
+      END;
+
+      //    Abfrage ob alles korrekt bertragen wurde
+      //    Wenn ja   ->  Alle Zeilen„nderungs-H„kchen l”schen, ekz.Žnderungsmenge, ekz.Žnderungslieferdatum
+      //    Wenn nein ->  Programm beenden
+
+      Dateiname := 'R:\EDI\IDT\DATEN\OUT\ORDCHG\ORDCHG_' + ekz."Document No." + '_' + FORMAT(DATE2DMY(TODAY,3)) +
+      COPYSTR(FORMAT(TODAY),4,2) +COPYSTR(FORMAT(TODAY),1,2) + '.csv';
+      Book.SaveAs(Dateiname,6);//.csv Format
+      //Book.CLOSE(FALSE);
+
+      IF CONFIRM('Ist die Excel-Tabelle korrekt erstellt worden?',TRUE) THEN
+      BEGIN
+       "IDT ORDCHG bernehmen";
+      END;
+    END;
+
+    PROCEDURE "IDT INVRPT"@1140002();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'UNH';            // Ref-Nr
+      Sheet.Range('B1').Value := 'BGM35_9';       // Ref-Nr
+      Sheet.Range('C1').Value := 'DTM137_102';      // Datum von
+      Sheet.Range('D1').Value := 'DTM366_102';      // Workdate
+      Sheet.Range('E1').Value := 'NADBY_92';     // Datum ausfhrung
+      Sheet.Range('F1').Value := 'NADDB_92';
+      Sheet.Range('G1').Value := 'CUX_10';
+      Sheet.Range('H1').Value := 'LIN_1082';
+      Sheet.Range('I1').Value := 'LIN1_VP91';
+      Sheet.Range('J1').Value := 'INV';
+      Sheet.Range('K1').Value := 'QTY17_PCE';
+      Sheet.Range('L1').Value := 'PRIAAA';
+      Sheet.Range('M1').Value := 'PRIDI';
+      Sheet.Range('N1').Value := 'PRI1';
+      Sheet.Range('O1').Value := 'PRIPCE';
+      j := '2';
+      date1:= datum_von;
+      jahr :=FORMAT(DATE2DWY(date1,3));
+      monat := FORMAT(DATE2DWY(date1,2));
+      lfdnr := jahr+monat+FORMAT(v_versionsz„hler);
+
+      Artikel.RESET;
+      Artikel.SETFILTER(Artikel."Manufacturer Code",'%1','00');
+      Artikel.SETFILTER("Location Filter",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      Artikel.CALCFIELDS(Artikel.Inventory);
+      Artikel.SETFILTER(Artikel.Inventory,'>%1',0);
+      IF Artikel.FINDFIRST THEN BEGIN
+      REPEAT
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := lfdnr;
+      Sheet.Range('C'+j).Value := datum_von;
+      Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('D'+j).Value := WORKDATE;
+      Sheet.Range('D'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('E'+j).Value := 'TOPASEDI';
+      Sheet.Range('F'+j).Value := 'DE';
+      Sheet.Range('G'+j).Value := 'USD';
+      v_zeilennummer:=v_zeilennummer+1;
+      Sheet.Range('H'+j).Value := v_zeilennummer;
+      Sheet.Range('I'+j).Value := Artikel."No.";
+      Sheet.Range('J'+j).Value := '2';
+      Artikel.CALCFIELDS(Artikel.Inventory);
+      Sheet.Range('K'+j).Value := Artikel.Inventory;
+      Sheet.Range('K'+j).NumberFormat := '@';
+
+      //Preis aus Preisliste
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',Artikel."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      Sheet.Range('L'+j).Value := FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      //Sheet.Range('L'+j).Value := FORMAT("EK-Preise"."Direct Unit Cost") ;
+      //Sheet.Range('L'+j).NumberFormat := '0,0000';
+      Sheet.Range('M'+j).Value := 'DI';
+      Sheet.Range('N'+j).Value := '1';
+      Sheet.Range('O'+j).Value := 'PCE';
+
+
+      END;
+      j:=INCSTR(j);
+      UNTIL Artikel.NEXT=0;
+
+      END;
+    END;
+
+    PROCEDURE "IDT SLSRPT"@1140003();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'UNH';            // Ref-Nr
+      Sheet.Range('B1').Value := 'BGMRED_9';       // Ref-Nr
+      Sheet.Range('C1').Value := 'DTM90_102';      // Datum von
+      Sheet.Range('D1').Value := 'DTM91_102';      // Datum bis
+      Sheet.Range('E1').Value := 'DTM137_102';     // Datum ausfhrung
+      Sheet.Range('F1').Value := 'NADBY_92';       // Buyer
+      Sheet.Range('G1').Value := 'NADDB_92';       // Distributor branch
+      Sheet.Range('H1').Value := 'CUX_6345_4';     // W„hrung
+      Sheet.Range('I1').Value := 'DOC';            // 380 = Invoice, 381 = Credit note
+      Sheet.Range('J1').Value := 'NADPC_92';       // Actual purchaser's customer (Debitor Nummer)
+      Sheet.Range('K1').Value := 'NADPC_3124';     // Debitor Name (max.29 Stellen)
+      Sheet.Range('L1').Value := 'NADPC_3164';     // Debitor Ort
+      Sheet.Range('M1').Value := 'NADPC_3251';     // Debitor PLZ
+      Sheet.Range('N1').Value := 'NADPC_3207';     // Debitor Land
+      Sheet.Range('O1').Value := 'NADUD';          // Endkunde (max.29 Stellen)
+      Sheet.Range('P1').Value := 'NADSE';          // Topas
+      Sheet.Range('Q1').Value := 'LIN_1082';       // Line item no
+      Sheet.Range('R1').Value := 'LIN_7140_VP_91'; // IDT part no
+      Sheet.Range('S1').Value := 'PIA_1';          // Topas part no oder Endkunde part no
+      Sheet.Range('T1').Value := 'PIA_92';         // Krzel BP (Buyer) oder ZZZ (Endkunde)
+      Sheet.Range('U1').Value := 'QTY_1_PCE';      // Menge
+      Sheet.Range('V1').Value := 'CUX_6345_4';     // Rechnungsw„hrung (USD)
+      Sheet.Range('W1').Value := 'PRIAAA_CA_';     // DC Preis lt. Liste
+      Sheet.Range('X1').Value := 'PRI_5284';       // DC Einheit 1 = 1 Stck
+      Sheet.Range('Y1').Value := 'PRI_6411';       // DC Einheit PCE = Stck
+      Sheet.Range('Z1').Value := 'CUX_6345_4';     // Quote W„hrung
+      Sheet.Range('AA1').Value := 'PRIAAA_NBP_';    // Quote Preis
+      Sheet.Range('AB1').Value := 'PRI_5284';      // Quote Einheit 1 = 1 Stck
+      Sheet.Range('AC1').Value := 'PRI_6411';      // Quote Einheit PCE = Stck
+      Sheet.Range('AD1').Value := 'CUX_6345_4';    // Resale W„hrung
+      Sheet.Range('AE1').Value := 'PRIAAA_RES';    // Resale Preis
+      Sheet.Range('AF1').Value := 'PRI_5284';      // Resale Einheit 1 = 1 Stck
+      Sheet.Range('AG1').Value := 'PRI_6411';      // Resale Einheit PCE = Stck
+      Sheet.Range('AH1').Value := 'RFF_AU_1154';   // Quote/Debit Nummer
+      Sheet.Range('AI1').Value := 'RFF_AU_1156';   // Quote/Debit Zeilennummer
+      Sheet.Range('AJ1').Value := 'RFF_IN_1154';   // Topas Rechnungsnummer
+      Sheet.Range('AK1').Value := 'RFF_IN_1156';   // Topas Rechnungszeilennummer
+      Sheet.Range('AL1').Value := 'DMT_171_102';   // Topas Rechnungsdatum
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+      date1:= datum_von;
+      jahr :=FORMAT(DATE2DWY(date1,3));
+      monat := FORMAT(DATE2DWY(date1,2));
+      lfdnr := jahr+monat+FORMAT(v_versionsz„hler);
+      v_l„nge:=0;
+      vkrk.RESET;
+      vkrk.SETFILTER(vkrk."Posting Date",'%1..%2',datum_von,datum_bis);
+      IF vkrk.FINDFIRST THEN BEGIN
+      REPEAT
+      vkrz.RESET;
+      vkrz.SETFILTER(vkrz."Document No.",'%1',vkrk."No.");
+      vkrz.SETFILTER(vkrz."Manufacturer Code",'%1','00');
+      vkrz.SETFILTER(vkrz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      vkrz.SETFILTER(vkrz.Quantity,'<>%1',0);
+
+      IF vkrz.FINDFIRST THEN BEGIN
+      REPEAT
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := lfdnr;
+      Sheet.Range('C'+j).Value := datum_von;
+      Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('D'+j).Value := datum_bis;
+      Sheet.Range('D'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('E'+j).Value := WORKDATE;
+      Sheet.Range('E'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('F'+j).Value := 'TOPASEDI';
+      Sheet.Range('G'+j).Value := 'DE';
+      Sheet.Range('H'+j).Value := 'USD';
+      Sheet.Range('I'+j).Value := '380';
+      Sheet.Range('J'+j).Value := vkrk."Sell-to Customer No.";
+      // Name auf 29 Stellen krzen und + in & umsetzen
+      v_deb_name:= CONVERTSTR(vkrk."Bill-to Name",'+','&');
+      v_deb_name1:=COPYSTR(v_deb_name,1,29);
+      Sheet.Range('K'+j).Value :=  v_deb_name1;
+      //Ende Name verkrzen
+      Sheet.Range('L'+j).Value :=  vkrk."Bill-to City";
+      Sheet.Range('M'+j).Value :=  vkrk."Bill-to Post Code";
+      Sheet.Range('M'+j).NumberFormat := '00000';
+      Sheet.Range('N'+j).Value :=  vkrk."Bill-to Country/Region Code";
+      // Endkunde auf 29 Stellen krzen und + in & umsetzen
+      v_deb_endk:= CONVERTSTR(vkrz.Endkunde,'+','&');
+      v_deb_endk1:=COPYSTR(v_deb_endk,1,29);
+      Sheet.Range('O'+j).Value :=  v_deb_endk1;
+      //Ende Endkunde verkrzen
+
+      //Sheet.Range('O'+j).Value := vkrz.Endkunde;
+      Sheet.Range('P'+j).Value := 'Topas';
+      v_zeilennummer:=v_zeilennummer+1;
+      Sheet.Range('Q'+j).Value := v_zeilennummer;
+      //Sheet.Range('Q'+j).Value := vkrz."Line No.";
+      Sheet.Range('R'+j).Value := vkrz."No.";
+      Sheet.Range('S'+j).Value := vkrz."No.";
+      Sheet.Range('T'+j).Value := 'BP';
+      Sheet.Range('U'+j).Value := vkrz.Quantity;
+      Sheet.Range('U'+j).NumberFormat := '@';
+
+
+      //Preis aus Preisliste
+
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkrz."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      Sheet.Range('V'+j).Value := vkrz.Einkaufsw„hrungscode;
+      Sheet.Range('W'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      //Sheet.Range('W'+j).Value := FORMAT("EK-Preise"."Direct Unit Cost") ;
+      //Sheet.Range('W'+j).NumberFormat := '0,0000';
+      Sheet.Range('X'+j).Value := '1';
+      Sheet.Range('Y'+j).Value := 'PCE';
+      END;
+
+
+      //  Quotepreis
+      IF vkrz."Quotenr."='' THEN
+      BEGIN
+      END ELSE BEGIN
+      Sheet.Range('Z'+j).Value := vkrz.Einkaufsw„hrungscode;
+      Sheet.Range('AA'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."DC-Preis (EKW)"),',','.');
+      //Sheet.Range('AA'+j).Value := FORMAT(vkrz."DC-Preis (EKW)");
+      //Sheet.Range('AA'+j).NumberFormat := '0,0000';
+      Sheet.Range('AB'+j).Value := '1';
+      Sheet.Range('AC'+j).Value := 'PCE';
+      END;
+
+      // Resale Preis
+      IF vkrk."Currency Code"='USD' THEN BEGIN
+      Sheet.Range('AD'+j).Value := 'USD';
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."Unit Price"),',','.');
+      //Sheet.Range('AE'+j).Value := FORMAT(vkrz."Unit Price");
+      //Sheet.Range('AE'+j).NumberFormat := '0,0000';
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END ELSE BEGIN
+      Sheet.Range('AD'+j).Value := 'USD';
+      resaleprice:=ROUND((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor),0.01);
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      //Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor)),',','.');
+      //Sheet.Range('AE'+j).Value := FORMAT((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor));
+      //Sheet.Range('AE'+j).NumberFormat := '0.0000';
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END;
+
+      quotedaten.RESET;
+      quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkrz."Quotenr.");
+      quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkrz."No.");
+      IF quotedaten.FINDFIRST THEN BEGIN
+      IF quotedaten."Hersteller-VK-Preis"=0 THEN BEGIN
+      END ELSE BEGIN
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(quotedaten."Hersteller-VK-Preis"),',','.');
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END;
+
+
+      Sheet.Range('AH'+j).Value := quotedaten."Quotenr. Hersteller";
+      Sheet.Range('AI'+j).Value := quotedaten.Fremdpositionsnummer;
+      END;
+
+      Sheet.Range('AJ'+j).Value := vkrz."Document No.";
+      Sheet.Range('AK'+j).Value := vkrz."Line No.";
+      Sheet.Range('AL'+j).Value := vkrk."Posting Date";
+      Sheet.Range('AL'+j).NumberFormat := 'JJJJMMTT';
+      j := INCSTR (j);
+      UNTIL vkrz.NEXT=0;
+      END;
+      UNTIL vkrk.NEXT=0;
+      END;
+
+      // ab hier  GUTSCHRIFTEN
+
+      vkgk.RESET;
+      vkgk.SETFILTER(vkgk."Posting Date",'%1..%2',datum_von,datum_bis);
+      IF vkgk.FINDFIRST THEN BEGIN
+      REPEAT
+      vkgz.RESET;
+      vkgz.SETFILTER(vkgz."Document No.",'%1',vkgk."No.");
+      vkgz.SETFILTER(vkgz."Manufacturer Code",'%1','00');
+      vkgz.SETFILTER(vkgz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      vkgz.SETFILTER(vkgz.Quantity,'<>%1',0);
+
+      IF vkgz.FINDFIRST THEN BEGIN
+      REPEAT
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := lfdnr;
+      Sheet.Range('C'+j).Value := datum_von;
+      Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('D'+j).Value := datum_bis;
+      Sheet.Range('D'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('E'+j).Value := WORKDATE;
+      Sheet.Range('E'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('F'+j).Value := 'TOPASEDI';
+      Sheet.Range('G'+j).Value := 'DE';
+      Sheet.Range('H'+j).Value := 'USD';
+      Sheet.Range('I'+j).Value := '381';
+      Sheet.Range('J'+j).Value := vkgk."Sell-to Customer No.";
+      // Name auf 29 Stellen krzen und + in & umsetzen
+      v_deb_name:= CONVERTSTR(vkgk."Bill-to Name",'+','&');
+      v_deb_name1:=COPYSTR(v_deb_name,1,29);
+      Sheet.Range('K'+j).Value :=  v_deb_name1;
+      //Ende Name verkrzen
+
+      //Sheet.Range('K'+j).Value := vkgk."Bill-to Name";
+      Sheet.Range('L'+j).Value := vkgk."Bill-to City";
+      Sheet.Range('M'+j).Value := vkgk."Bill-to Post Code";
+      Sheet.Range('M'+j).NumberFormat := '00000';
+      Sheet.Range('N'+j).Value := vkgk."Bill-to Country/Region Code";
+      // Endkunde auf 29 Stellen krzen und + in & umsetzen
+      v_deb_endk:= CONVERTSTR(vkgz.Endkunde,'+','&');
+      v_deb_endk1:=COPYSTR(v_deb_endk,1,29);
+      Sheet.Range('O'+j).Value :=  v_deb_endk1;
+      //Ende Endkunde verkrzen
+
+      //Sheet.Range('O'+j).Value := vkgz.Endkunde;
+      Sheet.Range('P'+j).Value := 'Topas';
+      v_zeilennummer:=v_zeilennummer+1;
+      Sheet.Range('Q'+j).Value := v_zeilennummer;
+      //Sheet.Range('Q'+j).Value := vkgz."Line No.";
+
+
+      Sheet.Range('R'+j).Value := vkgz."No.";
+      Sheet.Range('S'+j).Value := vkgz."No.";
+      Sheet.Range('T'+j).Value := 'BP';
+      Sheet.Range('U'+j).Value := vkgz.Quantity;
+      Sheet.Range('U'+j).NumberFormat := '@';
+
+
+      //Preis aus Preisliste
+
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkgz."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      Sheet.Range('V'+j).Value := vkgz.Einkaufsw„hrungscode;
+      Sheet.Range('W'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      //Sheet.Range('W'+j).Value := FORMAT("EK-Preise"."Direct Unit Cost") ;
+      //Sheet.Range('W'+j).NumberFormat := '0,0000';
+      Sheet.Range('X'+j).Value := '1';
+      Sheet.Range('Y'+j).Value := 'PCE';
+      END;
+
+
+      //  Quotepreis
+      IF vkgz."Quotenr."='' THEN
+      BEGIN
+      END ELSE BEGIN
+      Sheet.Range('Z'+j).Value := vkgz.Einkaufsw„hrungscode;
+      Sheet.Range('AA'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."DC-Preis (EKW)"),',','.');
+      //Sheet.Range('AA'+j).Value := FORMAT(vkgz."DC-Preis (EKW)");
+      //Sheet.Range('AA'+j).NumberFormat := '0,0000';
+      Sheet.Range('AB'+j).Value := '1';
+      Sheet.Range('AC'+j).Value := 'PCE';
+      END;
+
+      // Resale Preis
+      IF vkgk."Currency Code"='USD' THEN BEGIN
+      Sheet.Range('AD'+j).Value := 'USD';
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."Unit Price"),',','.');
+      //Sheet.Range('AE'+j).Value := FORMAT(vkgz."Unit Price");
+      //Sheet.Range('AE'+j).NumberFormat := '0,0000';
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END ELSE BEGIN
+      Sheet.Range('AD'+j).Value := 'USD';
+      resaleprice:=ROUND((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor),0.01);
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      //Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor)),',','.');
+      //Sheet.Range('AE'+j).Value := FORMAT((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor));
+      //Sheet.Range('AE'+j).NumberFormat := '0.0000';
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END;
+
+      //quotedaten.RESET;
+      //quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkgz."Quotenr.");
+      //quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkgz."No.");
+      //IF quotedaten.FINDFIRST THEN BEGIN
+      //Sheet.Range('AH'+j).Value := quotedaten."Quotenr. Hersteller";
+      //Sheet.Range('AI'+j).Value := quotedaten.Fremdpositionsnummer;
+      //END;
+
+
+      quotedaten.RESET;
+      quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkgz."Quotenr.");
+      quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkgz."No.");
+      IF quotedaten.FINDFIRST THEN BEGIN
+      IF quotedaten."Hersteller-VK-Preis"=0 THEN BEGIN
+      END ELSE BEGIN
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(quotedaten."Hersteller-VK-Preis"),',','.');
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END;
+
+
+      Sheet.Range('AH'+j).Value := quotedaten."Quotenr. Hersteller";
+      Sheet.Range('AI'+j).Value := quotedaten.Fremdpositionsnummer;
+      END;
+
+
+
+
+
+
+      Sheet.Range('AJ'+j).Value := vkgz."Document No.";
+      Sheet.Range('AK'+j).Value := vkgz."Line No.";
+      Sheet.Range('AL'+j).Value := vkgk."Posting Date";
+      Sheet.Range('AL'+j).NumberFormat := 'JJJJMMTT';
+      j := INCSTR (j);
+      UNTIL vkgz.NEXT=0;
+      END;
+      UNTIL vkgk.NEXT=0;
+      END;
+      //Excel.Visible(TRUE);
+      //"POS Report";
+    END;
+
+    PROCEDURE "IDT SSDCLM"@1140005();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'UNH';                 // Ref-Nr
+      Sheet.Range('B1').Value := 'BGM_SSC_9';           // Ref-Nr
+      Sheet.Range('C1').Value := 'DTM_137_102';         // Datum Ausfhrung
+      Sheet.Range('D1').Value := 'NAD_SE_91';           // Seller
+      Sheet.Range('E1').Value := 'CUX_2_4';             // Ref. W„hrung
+      Sheet.Range('F1').Value := 'UNS_D';               // Header/Detail section separation
+      Sheet.Range('G1').Value := 'NAD_PC_92';           // Debitor Nr
+      Sheet.Range('H1').Value := 'NAD_3124';            // Debitor Name (max. 29 Stellen)
+      Sheet.Range('I1').Value := 'NAD_3042';            // Debitor Strasse
+      Sheet.Range('J1').Value := 'NAD_3164';            // Debitor Ort
+      Sheet.Range('K1').Value := 'NAD_3251';            // Debitor PLZ
+      Sheet.Range('L1').Value := 'NAD_3207';            // Debitor Land
+      Sheet.Range('M1').Value := 'NAD_UD';              // Endkunde (max. 29 Stellen)
+      Sheet.Range('N1').Value := 'DOC';                 // 380 = Rechnung / 381 = Gutschrift
+      Sheet.Range('O1').Value := 'DTM_137_102';         // Datum Rechnung
+      Sheet.Range('P1').Value := 'LIN';                 // Lfd.NR 1 bis xxx
+      Sheet.Range('Q1').Value := 'LIN_VP_90';           // IDT part no
+      Sheet.Range('R1').Value := 'PIA_DI_89';           // TOPAS part no
+      Sheet.Range('S1').Value := 'RFF_AU_1154';         // IDT QuoteNr D40xxxxx
+      Sheet.Range('T1').Value := 'RFF_AU_1156';         // IDT Quote Line No
+      Sheet.Range('U1').Value := 'RFF_DM_1154';         // TOPAS Rechnungs-Nr
+      Sheet.Range('V1').Value := 'RFF_DM_1156';         // TOPAS RE Zeilen Nr
+      Sheet.Range('W1').Value := 'RFF_IV_1154';         // TOPAS Gutschrifts-Nr
+      Sheet.Range('X1').Value := 'RFF_IV_1156';         // TOPAS GU Zeilen Nr
+      Sheet.Range('Y1').Value := 'QTY_6060';            // Menge
+      Sheet.Range('Z1').Value := 'QTY_6063';            // Quote Einheit 1 = 1 Stck
+      Sheet.Range('AA1').Value := 'QTY_6411';           // Quote Einheit PCE = Stck
+      Sheet.Range('AB1').Value := 'PRI_AAA_CA';         // Listen Preis
+      Sheet.Range('AC1').Value := 'PRI_AAA_CA_5284';    // Listen Preis 1 = 1 Stck
+      Sheet.Range('AD1').Value := 'PRI_AAA_CA_6411';    // Listen Preis PCE = Stck
+      Sheet.Range('AE1').Value := 'PRI_AAA_NBP';        // Quote Preis
+      Sheet.Range('AF1').Value := 'PRI_AAA_NBP_5284';   // Quote Preis 1 = 1 Stck
+      Sheet.Range('AG1').Value := 'PRI_AAA_NBP_6411';   // Quote Preis PCE = Stck
+      Sheet.Range('AH1').Value := 'PRI_AAA_RES';        // Resale Preis
+      Sheet.Range('AI1').Value := 'PRI_AAA_RES_5284';   // Resale Preis 1 = 1 Stck
+      Sheet.Range('AJ1').Value := 'PRI_AAA_RES_6411';   // Resale Preis PCE = Stck
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+
+
+
+      date1:= datum_von;
+      jahr :=FORMAT(DATE2DWY(date1,3));
+      monat := FORMAT(DATE2DWY(date1,2));
+      lfdnr := jahr+monat+FORMAT(v_versionsz„hler);
+      vkrk.RESET;
+      vkrk.SETFILTER(vkrk."Posting Date",'%1..%2',datum_von,datum_bis);
+      IF vkrk.FINDFIRST THEN BEGIN
+      REPEAT
+      vkrz.RESET;
+      vkrz.SETFILTER(vkrz."Document No.",'%1',vkrk."No.");
+      vkrz.SETFILTER(vkrz."Manufacturer Code",'%1','00');
+      vkrz.SETFILTER(vkrz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      vkrz.SETFILTER(vkrz."Quotenr.",'<>%1','');
+      vkrz.SETFILTER(vkrz.Quantity,'<>%1',0);
+
+      IF vkrz.FINDFIRST THEN BEGIN
+      REPEAT
+      Sheet.Range('A'+j).Value := lfdnr;
+      Sheet.Range('B'+j).Value := lfdnr;
+      Sheet.Range('C'+j).Value := WORKDATE;
+      Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      Sheet.Range('D'+j).Value := 'IDTEDIEU';
+      Sheet.Range('E'+j).Value := vkrz.Einkaufsw„hrungscode;
+      Sheet.Range('F'+j).Value := 'D';
+      Sheet.Range('G'+j).Value := vkrk."Sell-to Customer No.";
+      // Name auf 29 Stellen krzen und + in & umsetzen
+      v_deb_name:= CONVERTSTR(vkrk."Bill-to Name",'+','&');
+      v_deb_name1:=COPYSTR(v_deb_name,1,29);
+      Sheet.Range('H'+j).Value :=  v_deb_name1;
+      //Ende Name verkrzen
+
+      //Sheet.Range('H'+j).Value := vkrk."Bill-to Name";
+      Sheet.Range('I'+j).Value := vkrk."Bill-to Address";
+      Sheet.Range('J'+j).Value := vkrk."Bill-to City";
+      Sheet.Range('K'+j).Value := vkrk."Bill-to Post Code";
+      Sheet.Range('K'+j).NumberFormat := '00000';
+      Sheet.Range('L'+j).Value := vkrk."Bill-to Country/Region Code";
+      // Endkunde auf 29 Stellen krzen und + in & umsetzen
+      v_deb_endk:= CONVERTSTR(vkrz.Endkunde,'+','&');
+      v_deb_endk1:=COPYSTR(v_deb_endk,1,29);
+      Sheet.Range('M'+j).Value :=  v_deb_endk1;
+      //Ende Endkunde verkrzen
+
+      //Sheet.Range('M'+j).Value := vkrz.Endkunde;
+      Sheet.Range('N'+j).Value := '380';
+      Sheet.Range('O'+j).Value := vkrk."Posting Date";
+      Sheet.Range('O'+j).NumberFormat := 'JJJJMMTT';
+      v_zeilennummer:=v_zeilennummer+1;
+      Sheet.Range('P'+j).Value := v_zeilennummer;
+      Sheet.Range('Q'+j).Value := vkrz."No.";
+      Sheet.Range('R'+j).Value := vkrz."No.";
+      quotedaten.RESET;
+      quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkrz."Quotenr.");
+      quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkrz."No.");
+      // šberprfung ob Quote-Nummer mit D4 beginnt
+      IF quotedaten.FINDFIRST THEN BEGIN
+      Position := STRPOS(quotedaten."Quotenr. Hersteller",'D4');
+
+      IF Position=1 THEN BEGIN
+      Sheet.Range('S'+j).Value := quotedaten."Quotenr. Hersteller";
+      Sheet.Range('T'+j).Value := quotedaten.Fremdpositionsnummer;
+      END ELSE BEGIN
+      Sheet.Range('S'+j).Value := quotedaten."Quotenr. Hersteller";
+      MESSAGE('Keine gltige Quote-Nummer! -> Siehe Excel-Blatt!');
+      END;
+      IF quotedaten.Quotepreis<>vkrz."DC-Preis (EKW)" THEN
+      MESSAGE('Quotepreisabweichung zwischen Quotekarte und Rechnung -> siehe Excel-Blatt!');
+      END;
+
+      Sheet.Range('U'+j).Value := vkrz."Document No.";
+      Sheet.Range('V'+j).Value := vkrz."Line No.";
+      Sheet.Range('W'+j).Value := '';       // Gu-Nr
+      Sheet.Range('X'+j).Value := '';       //Gu-Zeilennr
+      Sheet.Range('Y'+j).Value := vkrz.Quantity;
+      Sheet.Range('Y'+j).NumberFormat := '@';
+      Sheet.Range('Z'+j).Value := '1';
+      Sheet.Range('AA'+j).Value := 'PCE';
+
+
+      //Preis aus Preisliste
+
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkrz."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      Sheet.Range('AB'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      //Sheet.Range('AB'+j).Value := FORMAT("EK-Preise"."Direct Unit Cost") ;
+      //Sheet.Range('AB'+j).NumberFormat := '0,0000';
+      Sheet.Range('AC'+j).Value := '1';
+      Sheet.Range('AD'+j).Value := 'PCE';
+      END;
+
+
+      //  Quotepreis
+      IF vkrz."Quotenr."='' THEN
+      BEGIN
+      END ELSE BEGIN
+      Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."DC-Preis (EKW)"),',','.');
+      //Sheet.Range('AE'+j).Value := FORMAT(vkrz."DC-Preis (EKW)");
+      //Sheet.Range('AE'+j).NumberFormat := '0,0000';
+      Sheet.Range('AF'+j).Value := '1';
+      Sheet.Range('AG'+j).Value := 'PCE';
+      END;
+
+      // Resale Preis
+      IF quotedaten."Hersteller-VK-Preis"=0 THEN BEGIN
+
+       IF vkrk."Currency Code"='USD' THEN BEGIN
+       Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."Unit Price"),',','.');
+      //Sheet.Range('AH'+j).Value := FORMAT(vkrz."Unit Price");
+      //Sheet.Range('AH'+j).NumberFormat := '0,0000';
+       Sheet.Range('AI'+j).Value := '1';
+       Sheet.Range('AJ'+j).Value := 'PCE';
+       END ELSE BEGIN
+       resaleprice:=ROUND((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor),0.01);
+       Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      //Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor)),',','.');
+      //Sheet.Range('AH'+j).Value := FORMAT((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor));
+      //Sheet.Range('AH'+j).NumberFormat := '0.0000';
+       Sheet.Range('AI'+j).Value := '1';
+       Sheet.Range('AJ'+j).Value := 'PCE';
+       END;
+      END ELSE BEGIN
+      Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(quotedaten."Hersteller-VK-Preis"),',','.');
+      Sheet.Range('AI'+j).Value := '1';
+      Sheet.Range('AJ'+j).Value := 'PCE';
+      END;
+
+      j := INCSTR (j);
+      UNTIL vkrz.NEXT=0;
+      END;
+      UNTIL vkrk.NEXT=0;
+      END;
+
+      // // ab hier  GUTSCHRIFTEN
+
+      //vkgk.RESET;
+      //vkgk.SETFILTER(vkgk."Posting Date",'%1..%2',datum_von,datum_bis);
+      //IF vkgk.FINDFIRST THEN BEGIN
+      //REPEAT
+      //vkgz.RESET;
+      //vkgz.SETFILTER(vkgz."Document No.",'%1',vkgk."No.");
+      //vkgz.SETFILTER(vkgz."Manufacturer Code",'%1','00');
+      //vkgz.SETFILTER(vkgz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      //vkgz.SETFILTER(vkgz."Quotenr.",'<>%1','');
+      //vkgz.SETFILTER(vkgz.Quantity,'<>%1',0);
+
+      //IF vkgz.FINDFIRST THEN BEGIN
+      //REPEAT
+      //Sheet.Range('A'+j).Value := lfdnr;
+      //Sheet.Range('B'+j).Value := lfdnr;
+      //Sheet.Range('C'+j).Value := WORKDATE;
+      //Sheet.Range('C'+j).NumberFormat := 'JJJJMMTT';
+      //Sheet.Range('D'+j).Value := 'IDTEDIEU';
+      //Sheet.Range('E'+j).Value := vkgz.Einkaufsw„hrungscode;
+      //Sheet.Range('F'+j).Value := 'D';
+      //Sheet.Range('G'+j).Value := vkgk."Sell-to Customer No.";
+      //Sheet.Range('H'+j).Value := vkgk."Bill-to Name";
+      //Sheet.Range('I'+j).Value := vkgk."Bill-to Address";
+      //Sheet.Range('J'+j).Value := vkgk."Bill-to City";
+      //Sheet.Range('K'+j).Value := vkgk."Bill-to Post Code";
+      //Sheet.Range('K'+j).NumberFormat := '00000';
+      //Sheet.Range('L'+j).Value := vkgk."Bill-to Country/Region Code";
+      //Sheet.Range('M'+j).Value := vkgz.Endkunde;
+      //Sheet.Range('N'+j).Value := '381';
+      //Sheet.Range('O'+j).Value := WORKDATE;
+      //Sheet.Range('O'+j).NumberFormat := 'JJJJMMTT';
+      //v_zeilennummer:=v_zeilennummer+1;
+      //Sheet.Range('P'+j).Value := v_zeilennummer;
+      //Sheet.Range('Q'+j).Value := vkgz."No.";
+      //Sheet.Range('R'+j).Value := vkgz."No.";
+      //quotedaten.RESET;
+      //quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkgz."Quotenr.");
+      //quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkgz."No.");
+      //IF quotedaten.FINDFIRST THEN BEGIN
+      //Sheet.Range('S'+j).Value := quotedaten."Quotenr. Hersteller";
+      //Sheet.Range('T'+j).Value := quotedaten.Fremdpositionsnummer;
+      //END;
+
+      //Sheet.Range('U'+j).Value := '';                   // Re Nr
+      //Sheet.Range('V'+j).Value := '';                   // Re Zeilen Nr
+      //Sheet.Range('W'+j).Value := vkgz."Document No.";  // Gu-Nr
+      //Sheet.Range('X'+j).Value := vkgz."Line No.";      //Gu-Zeilennr
+      //Sheet.Range('Y'+j).Value := vkgz.Quantity;
+      //Sheet.Range('Y'+j).NumberFormat := '@';
+      //Sheet.Range('Z'+j).Value := '1';
+      //Sheet.Range('AA'+j).Value := 'PCE';
+
+
+      // //Preis aus Preisliste
+
+      //"EK-Preise".RESET;
+      //"EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkgz."No.");
+      //IF "EK-Preise".FINDLAST THEN BEGIN
+      //Sheet.Range('AB'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      //Sheet.Range('AC'+j).Value := '1';
+      //Sheet.Range('AD'+j).Value := 'PCE';
+      //END;
+
+
+      // //  Quotepreis
+      //IF vkgz."Quotenr."='' THEN
+      //BEGIN
+      //END ELSE BEGIN
+      //Sheet.Range('AE'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."DC-Preis (EKW)"),',','.');
+      //Sheet.Range('AF'+j).Value := '1';
+      //Sheet.Range('AG'+j).Value := 'PCE';
+      //END;
+
+      // Resale Preis
+      //IF vkrk."Currency Code"='USD' THEN BEGIN
+      //Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."Unit Price"),',','.');
+      //Sheet.Range('AI'+j).Value := '1';
+      //Sheet.Range('AJ'+j).Value := 'PCE';
+      //END ELSE BEGIN
+      //resaleprice:=ROUND((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor),0.01);
+      //Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      // //Sheet.Range('AH'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor)),',','.');
+      //Sheet.Range('AI'+j).Value := '1';
+      //Sheet.Range('AJ'+j).Value := 'PCE';
+      //END;
+
+      //j := INCSTR (j);
+      //UNTIL vkgz.NEXT=0;
+      //END;
+      //UNTIL vkgk.NEXT=0;
+      //END;
+    END;
+
+    PROCEDURE "POS Report"@1140006();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      //Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'POS Report IDT';            //šberschrift
+      Sheet.Range('C1').Value := 'Datum von:';            // Datum von
+      Sheet.Range('D1').Value := datum_von;
+      Sheet.Range('D1').NumberFormat := 'JJJJMMTT';
+      Sheet.Range('E1').Value := 'Datum bis:';            // Datum bis
+      Sheet.Range('F1').Value := datum_bis;       //
+      Sheet.Range('F1').NumberFormat := 'JJJJMMTT';
+
+      Sheet.Range('A2').Value := 'Deb-Nr';
+      Sheet.Range('B2').Value := 'Customer';
+      Sheet.Range('C2').Value := 'Qty';
+      Sheet.Range('D2').Value := 'Part';
+      Sheet.Range('E2').Value := 'Invoice-Nr';
+      Sheet.Range('F2').Value := 'Inv-Date';
+      Sheet.Range('G2').Value := 'DC-Preis';
+      Sheet.Range('H2').Value := 'Quote-Preis';
+      Sheet.Range('I2').Value := 'Resale';
+      Sheet.Range('J2').Value := 'IDT Resale';
+      Sheet.Range('K2').Value := 'Gesamt Umsatz USD';
+      Sheet.Range('L2').Value := 'Gesamt Quote USD';
+
+      j := '3';                                                    // <- Import in excel ab Zeile 2
+      //date1:= datum_von;
+      //jahr :=FORMAT(DATE2DWY(date1,3));
+      //monat := FORMAT(DATE2DWY(date1,2));
+      //lfdnr := jahr+monat+FORMAT(v_versionsz„hler);
+      vkrk.RESET;
+      vkrk.SETFILTER(vkrk."Posting Date",'%1..%2',datum_von,datum_bis);
+      IF vkrk.FINDFIRST THEN BEGIN
+      REPEAT
+      vkrz.RESET;
+      vkrz.SETFILTER(vkrz."Document No.",'%1',vkrk."No.");
+      vkrz.SETFILTER(vkrz."Manufacturer Code",'%1','00');
+      vkrz.SETFILTER(vkrz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      vkrz.SETFILTER(vkrz.Quantity,'<>%1',0);
+
+      IF vkrz.FINDFIRST THEN BEGIN
+      REPEAT
+      resaleprice:=0;
+      Sheet.Range('A'+j).Value := vkrk."Sell-to Customer No.";
+      Sheet.Range('B'+j).Value := vkrk."Bill-to Name";
+      Sheet.Range('C'+j).Value := vkrz.Quantity;
+      Sheet.Range('C'+j).NumberFormat := '@';
+      Sheet.Range('D'+j).Value := vkrz."No.";
+      Sheet.Range('E'+j).Value :=vkrz."Document No.";
+      Sheet.Range('F'+j).Value :=  vkrk."Posting Date";
+      Sheet.Range('F'+j).NumberFormat := 'JJJJMMTT';
+
+      //Preis aus Preisliste
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkrz."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      //Sheet.Range('V'+j).Value := vkrz.Einkaufsw„hrungscode;
+      //Sheet.Range('G'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      Sheet.Range('G'+j).Value :=FORMAT("EK-Preise"."Direct Unit Cost");
+
+      END;
+
+      //  Quotepreis
+      IF vkrz."Quotenr."='' THEN
+      BEGIN
+      END ELSE BEGIN
+      //Sheet.Range('Z'+j).Value := vkrz.Einkaufsw„hrungscode;
+      //Sheet.Range('H'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."DC-Preis (EKW)"),',','.');
+      Sheet.Range('H'+j).Value :=FORMAT(vkrz."DC-Preis (EKW)");
+      END;
+
+      // Resale Preis
+      IF vkrk."Currency Code"='USD' THEN BEGIN
+      //Sheet.Range('AD'+j).Value := 'USD';
+      //Sheet.Range('I'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkrz."Unit Price"),',','.');
+      Sheet.Range('I'+j).Value :=FORMAT(vkrz."Unit Price");
+      //Sheet.Range('K'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((vkrz."Unit Price")*vkrz.Quantity),',','.');
+      Sheet.Range('K'+j).Value :=FORMAT((vkrz."Unit Price")*(vkrz.Quantity));
+
+      END ELSE BEGIN
+      //Sheet.Range('AD'+j).Value := 'USD';
+      resaleprice:=ROUND((vkrz."Unit Price")*(vkrz.Einkaufsw„hrungsfaktor),0.01);
+      //Sheet.Range('I'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      Sheet.Range('I'+j).Value :=FORMAT(resaleprice);
+      //Sheet.Range('K'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((resaleprice)*vkrz.Quantity),',','.');
+      Sheet.Range('K'+j).Value :=FORMAT(resaleprice*vkrz.Quantity);
+
+      END;
+
+      quotedaten.RESET;
+      quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkrz."Quotenr.");
+      quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkrz."No.");
+      IF quotedaten.FINDFIRST THEN BEGIN
+      IF quotedaten."Hersteller-VK-Preis"=0 THEN BEGIN
+      END ELSE BEGIN
+      //Sheet.Range('J'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(quotedaten."IDT-VK-Preis"),',','.');
+      Sheet.Range('J'+j).Value :=FORMAT(quotedaten."Hersteller-VK-Preis");
+      //Sheet.Range('K'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT((quotedaten."IDT-VK-Preis")*vkrz.Quantity),',','.');
+      Sheet.Range('K'+j).Value :=FORMAT((quotedaten."Hersteller-VK-Preis")*(vkrz.Quantity));
+      END;
+      Sheet.Range('L'+j).Value := FORMAT((("EK-Preise"."Direct Unit Cost")-(vkrz."DC-Preis (EKW)"))*vkrz.Quantity);
+
+      END;
+      //Sheet.Range('L'+j).Value := FORMAT((("EK-Preise"."Direct Unit Cost")-(vkrz."DC-Preis (EKW)"))*vkrz.Quantity);
+
+
+      j := INCSTR (j);
+      UNTIL vkrz.NEXT=0;
+      END;
+      UNTIL vkrk.NEXT=0;
+      END;
+
+      // ab hier  GUTSCHRIFTEN
+
+      vkgk.RESET;
+      vkgk.SETFILTER(vkgk."Posting Date",'%1..%2',datum_von,datum_bis);
+      IF vkgk.FINDFIRST THEN BEGIN
+      REPEAT
+      vkgz.RESET;
+      vkgz.SETFILTER(vkgz."Document No.",'%1',vkgk."No.");
+      vkgz.SETFILTER(vkgz."Manufacturer Code",'%1','00');
+      vkgz.SETFILTER(vkgz."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      vkgz.SETFILTER(vkgz.Quantity,'<>%1',0);
+
+      IF vkgz.FINDFIRST THEN BEGIN
+      REPEAT
+      Sheet.Range('A'+j).Value := vkgk."Sell-to Customer No.";
+      Sheet.Range('B'+j).Value := vkgk."Bill-to Name";
+      Sheet.Range('C'+j).Value := vkgz.Quantity;
+      Sheet.Range('C'+j).NumberFormat := '@';
+      Sheet.Range('D'+j).Value := vkgz."No.";
+      Sheet.Range('E'+j).Value :=vkgz."Document No.";
+      Sheet.Range('F'+j).Value :=  vkgk."Posting Date";
+      Sheet.Range('F'+j).NumberFormat := 'JJJJMMTT';
+
+
+
+      //Preis aus Preisliste
+
+      "EK-Preise".RESET;
+      "EK-Preise".SETFILTER("EK-Preise"."Item No.",'%1',vkgz."No.");
+      IF "EK-Preise".FINDLAST THEN BEGIN
+      //Sheet.Range('V'+j).Value := vkgz.Einkaufsw„hrungscode;
+      //Sheet.Range('G'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT("EK-Preise"."Direct Unit Cost"),',','.');
+      Sheet.Range('G'+j).Value :=FORMAT("EK-Preise"."Direct Unit Cost");
+
+      END;
+
+
+      //  Quotepreis
+      IF vkgz."Quotenr."='' THEN
+      BEGIN
+      END ELSE BEGIN
+      //Sheet.Range('Z'+j).Value := vkgz.Einkaufsw„hrungscode;
+      //Sheet.Range('H'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."DC-Preis (EKW)"),',','.');
+      Sheet.Range('H'+j).Value :=FORMAT(vkgz."DC-Preis (EKW)");
+
+      END;
+
+      // Resale Preis
+      IF vkgk."Currency Code"='USD' THEN BEGIN
+      //Sheet.Range('AD'+j).Value := 'USD';
+      //Sheet.Range('I'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(vkgz."Unit Price"),',','.');
+      Sheet.Range('I'+j).Value :=FORMAT(vkgz."Unit Price");
+      Sheet.Range('K'+j).Value :=FORMAT((vkgz."Unit Price")*(vkgz.Quantity)*(-1));
+      END ELSE BEGIN
+      //Sheet.Range('AD'+j).Value := 'USD';
+      resaleprice:=ROUND((vkgz."Unit Price")*(vkgz.Einkaufsw„hrungsfaktor),0.01);
+      //Sheet.Range('I'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(resaleprice),',','.');
+      Sheet.Range('I'+j).Value :=FORMAT(resaleprice);
+      Sheet.Range('K'+j).Value :=FORMAT(resaleprice*vkgz.Quantity*(-1))
+      END;
+
+
+      quotedaten.RESET;
+      quotedaten.SETFILTER(quotedaten."Quotenr.",'%1',vkgz."Quotenr.");
+      quotedaten.SETFILTER(quotedaten."Artikelnr.",'%1',vkgz."No.");
+      IF quotedaten.FINDFIRST THEN BEGIN
+      IF quotedaten."Hersteller-VK-Preis"=0 THEN BEGIN
+      END ELSE BEGIN
+      //Sheet.Range('J'+j).Value :=FORMAT(hochkomma) + CONVERTSTR(FORMAT(quotedaten."IDT-VK-Preis"),',','.');
+      Sheet.Range('J'+j).Value :=FORMAT(quotedaten."Hersteller-VK-Preis");
+      Sheet.Range('K'+j).Value :=FORMAT((quotedaten."Hersteller-VK-Preis")*(vkgz.Quantity)*(-1));
+      END;
+      Sheet.Range('L'+j).Value := FORMAT(((("EK-Preise"."Direct Unit Cost")-(vkgz."DC-Preis (EKW)"))*vkgz.Quantity)*(-1));
+
+      END;
+
+      //Sheet.Range('L'+j).Value := FORMAT(((("EK-Preise"."Direct Unit Cost")-(vkgz."DC-Preis (EKW)"))*vkgz.Quantity)*(-1));
+
+      j := INCSTR (j);
+      UNTIL vkgz.NEXT=0;
+      END;
+      UNTIL vkgk.NEXT=0;
+      END;
+    END;
+
+    PROCEDURE STATEMENT@1140007();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      //Excel.Visible(TRUE);
+      Sheet.Range('A1').Value := 'IDT Statement of Account';            //šberschrift
+      Sheet.Range('C1').Value := 'Datum:';            // Datum von
+      Sheet.Range('D1').Value := WORKDATE;
+      Sheet.Range('D1').NumberFormat := 'TTMMJJJJ';
+      //Sheet.Range('E1').Value := 'Datum bis:';            // Datum bis
+      //Sheet.Range('F1').Value := datum_bis;       //
+      //Sheet.Range('F1').NumberFormat := 'JJJJMMTT';
+
+      Sheet.Range('A2').Value := 'Kred-Nr';
+      Sheet.Range('B2').Value := 'Buchungsdatum';
+      Sheet.Range('C2').Value := 'Belegnr';
+      Sheet.Range('D2').Value := 'Beschreibung';
+      Sheet.Range('E2').Value := 'WŽ-Code';
+      Sheet.Range('F2').Value := 'F„llig';
+      Sheet.Range('G2').Value := 'Betrag';
+      Sheet.Range('H2').Value := 'Restbetrag';
+      Sheet.Range('I2').Value := 'kum. Restbetrag';
+      j := '3';
+      v_kum_saldo:=0;
+      kredpost.RESET;
+      kredpost.SETFILTER(kredpost."Vendor No.",'%1','880003');
+      kredpost.SETFILTER(kredpost.Open,'%1',TRUE);
+      IF kredpost.FINDFIRST THEN BEGIN
+      REPEAT
+      kredpost.CALCFIELDS(kredpost.Amount,kredpost."Remaining Amount");
+      Sheet.Range('A'+j).Value :=kredpost."Vendor No.";
+      Sheet.Range('B'+j).Value :=kredpost."Posting Date";
+      Sheet.Range('C'+j).Value :=kredpost."Document No.";
+      Sheet.Range('D'+j).Value :=kredpost.Description;
+      Sheet.Range('E'+j).Value :=kredpost."Currency Code";
+      Sheet.Range('F'+j).Value :=kredpost."Due Date";
+      Sheet.Range('G'+j).Value :=FORMAT(kredpost.Amount);
+      Sheet.Range('H'+j).Value :=FORMAT(kredpost."Remaining Amount");
+      v_kum_saldo:=v_kum_saldo+kredpost."Remaining Amount";
+      Sheet.Range('I'+j).Value :=FORMAT(v_kum_saldo);
+
+      j := INCSTR (j);
+      UNTIL kredpost.NEXT=0;
+      END;
+
+
+      ekz.RESET;
+      ekz.SETCURRENTKEY(Type,"Promised Receipt Date");
+      ekz.SETFILTER(ekz."Buy-from Vendor No.",'%1','880003');
+      ekz.SETFILTER(ekz."Outstanding Quantity",'>%1',0);
+
+      IF ekz.FINDFIRST THEN BEGIN
+
+      //ekz.ASCENDING:= FALSE;
+      REPEAT
+
+      Sheet.Range('A'+j).Value :=ekz."Buy-from Vendor No.";
+      Sheet.Range('B'+j).Value :=ekz."Order Date";
+      Sheet.Range('C'+j).Value :=ekz."Document No.";
+      Sheet.Range('D'+j).Value :=ekz."Line No.";
+      Sheet.Range('E'+j).Value :=ekz."Currency Code";
+      Sheet.Range('F'+j).Value :=ekz."Promised Receipt Date";
+      //Sheet.Range('G'+j).Value :=FORMAT(kredpost.Amount);
+      Sheet.Range('H'+j).Value :=FORMAT(ekz."Line Amount"*(-1));
+      v_kum_saldo:=v_kum_saldo+(ekz."Line Amount"*(-1));
+      Sheet.Range('I'+j).Value :=FORMAT(v_kum_saldo);
+
+
+
+
+      j := INCSTR (j);
+      UNTIL ekz.NEXT=0;
+      END;
+      //          Artikelposten.SETCURRENTKEY("Item No.","Posting Date");
+      //          Artikelposten.ASCENDING:= FALSE;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
