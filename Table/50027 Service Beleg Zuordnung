@@ -6,14 +6,14 @@ OnInsert()
 OnModify()
 
 OnDelete()
-ChampsLizenzTab.RESET;
-ChampsLizenzTab.SETFILTER(Art,'%1',ChampsLizenzTab.Art :: Temporär);
-ChampsLizenzTab.SETFILTER("Nr.",'%1',"Belegnr.");
-ChampsLizenzTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-ChampsLizenzTab.SETFILTER("Auftragsnr.",'%1',"Nr.");
-ChampsLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Zeilennr.");
-IF ChampsLizenzTab.FINDFIRST THEN
-  ChampsLizenzTab.DELETEALL;
+ServiceLizenzTab.RESET;
+ServiceLizenzTab.SETFILTER(Art,'%1',ServiceLizenzTab.Art :: Temporär);
+ServiceLizenzTab.SETFILTER("Nr.",'%1',"Belegnr.");
+ServiceLizenzTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+ServiceLizenzTab.SETFILTER("Auftragsnr.",'%1',"Nr.");
+ServiceLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Zeilennr.");
+IF ServiceLizenzTab.FINDFIRST THEN
+  ServiceLizenzTab.DELETEALL;
 
 OnRename()
 
@@ -40,18 +40,18 @@ IF Art = Art :: "SUP-AU" THEN
     //Prüfung: Bei Fremderwerb müssen für ein und derselben Pseudo Belegnr. + Zeilennr. die Artikelnummern identisch sein
     IF Fremderwerb = TRUE THEN
       BEGIN
-        ChampZuordnungBeleg.RESET;
-        ChampZuordnungBeleg.SETFILTER(Art,'%1',ChampZuordnungBeleg.Art :: "SUP-AU");
-        ChampZuordnungBeleg.SETFILTER("Belegnr.",'%1',"Belegnr.");
-        ChampZuordnungBeleg.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-        IF ChampZuordnungBeleg.FINDFIRST THEN
+        ServiceZuordnungBeleg.RESET;
+        ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
+        ServiceZuordnungBeleg.SETFILTER("Belegnr.",'%1',"Belegnr.");
+        ServiceZuordnungBeleg.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+        IF ServiceZuordnungBeleg.FINDFIRST THEN
           REPEAT 
-            IF ((ChampZuordnungBeleg."Nr." <> "Nr.") OR (ChampZuordnungBeleg."Zeilennr." <> "Zeilennr."))
-            AND (ChampZuordnungBeleg."Geräte Artikelnr." <> "Geräte Artikelnr.") THEN
-              ERROR(Text004,FIELDCAPTION("Belegnr."),ChampZuordnungBeleg."Belegnr.",FIELDCAPTION("Belegzeilennr."),
-                    ChampZuordnungBeleg."Belegzeilennr.",FIELDCAPTION("Geräte Artikelnr."),
-                    ChampZuordnungBeleg."Geräte Artikelnr.",ChampZuordnungBeleg."Nr.","Geräte Artikelnr.");
-          UNTIL ChampZuordnungBeleg.NEXT = 0;
+            IF ((ServiceZuordnungBeleg."Nr." <> "Nr.") OR (ServiceZuordnungBeleg."Zeilennr." <> "Zeilennr."))
+            AND (ServiceZuordnungBeleg."Geräte Artikelnr." <> "Geräte Artikelnr.") THEN
+              ERROR(Text004,FIELDCAPTION("Belegnr."),ServiceZuordnungBeleg."Belegnr.",FIELDCAPTION("Belegzeilennr."),
+                    ServiceZuordnungBeleg."Belegzeilennr.",FIELDCAPTION("Geräte Artikelnr."),
+                    ServiceZuordnungBeleg."Geräte Artikelnr.",ServiceZuordnungBeleg."Nr.","Geräte Artikelnr.");
+          UNTIL ServiceZuordnungBeleg.NEXT = 0;
       END;
 
     Artikel.GET("Geräte Artikelnr.");
@@ -131,6 +131,7 @@ IF xRec.Laufzeit <> Laufzeit THEN
     "Service VK-Preis Zeilenbetrag" := 0;  
     "Service DC einzeln" := 0;
     "Service DC Gesamt" := 0;
+    "Rabatt/Marge" := 0;
   END;
 
 VALIDATE(Startdatum);
@@ -140,12 +141,12 @@ Laufzeit - OnLookup()
 Startdatum - OnValidate()
 IF "SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN ERROR(Text005);
 
-ChampZuordnungBeleg.RESET;
-ChampZuordnungBeleg.SETRANGE(Art,ChampZuordnungBeleg.Art :: "SUP-AU");
-ChampZuordnungBeleg.SETRANGE("Nr.","Nr.");
-ChampZuordnungBeleg.SETRANGE("Zeilennr.","Zeilennr.");
-ChampZuordnungBeleg.SETRANGE(Startdatum,Startdatum);
-IF NOT ChampZuordnungBeleg.FINDFIRST THEN
+ServiceZuordnungBeleg.RESET;
+ServiceZuordnungBeleg.SETRANGE(Art,ServiceZuordnungBeleg.Art :: "SUP-AU");
+ServiceZuordnungBeleg.SETRANGE("Nr.","Nr.");
+ServiceZuordnungBeleg.SETRANGE("Zeilennr.","Zeilennr.");
+ServiceZuordnungBeleg.SETRANGE(Startdatum,Startdatum);
+IF NOT ServiceZuordnungBeleg.FINDFIRST THEN
   BEGIN
     IF (Startdatum < WORKDATE) AND (Startdatum <> 0D) THEN
       IF NOT CONFIRM(Text002,TRUE,FIELDCAPTION(Startdatum)) THEN
@@ -171,8 +172,20 @@ IF (Ablaufdatum < WORKDATE) AND (Ablaufdatum <> 0D) THEN
 //IF (Laufzeit <> '') AND (Startdatum <> 0D) THEN
 //  Ablaufdatum := CALCDATE(Laufzeit,Startdatum);
 
+Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum)) + 'M';
+
 IF Startdatum = 0D THEN
   Ablaufdatum := 0D;
+
+IF Ablaufdatum = 0D THEN
+  BEGIN
+    Opt.RESET;
+    Opt.SETFILTER("Tabellen ID",'%1',50024);
+    Opt.SETFILTER("Feld ID",'%1',44);
+    Opt.SETFILTER("Nr.",'%1',"SUP Artikelnr.");
+    IF Opt.FINDFIRST THEN
+      Laufzeit := Opt.Code;
+  END;
 
 Ablaufdatum - OnLookup()
 
@@ -200,35 +213,35 @@ Service DC Währungscode - OnValidate()
 
 Service DC Währungscode - OnLookup()
 
-ACTS Rabatt - OnValidate()
+Rabatt/Marge - OnValidate()
 
-ACTS Rabatt - OnLookup()
+Rabatt/Marge - OnLookup()
 
 Gruppierung - OnValidate()
 
 Gruppierung - OnLookup()
 
 PseudoBelegNrErmitteln(auftragsnr : Code[20];auzeilennr : Integer) : Code[20]
-PrüfeChampRelaDoc.RESET;
-PrüfeChampRelaDoc.SETFILTER(Art,'%1',PrüfeChampRelaDoc.Art :: "SUP-AU");
-PrüfeChampRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
-PrüfeChampRelaDoc.SETFILTER("Zeilennr.",'%1',auzeilennr);
-PrüfeChampRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
-IF PrüfeChampRelaDoc.FINDFIRST THEN
+PrüfeServRelaDoc.RESET;
+PrüfeServRelaDoc.SETFILTER(Art,'%1',PrüfeServRelaDoc.Art :: "SUP-AU");
+PrüfeServRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
+PrüfeServRelaDoc.SETFILTER("Zeilennr.",'%1',auzeilennr);
+PrüfeServRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+IF PrüfeServRelaDoc.FINDFIRST THEN
   BEGIN
-    EXIT(PrüfeChampRelaDoc."Belegnr.");
+    EXIT(PrüfeServRelaDoc."Belegnr.");
   END
 ELSE
   BEGIN
     // Prüfe, ob im Beleg eine andere Kalkulation mit Pseudo Belegnr. besteht und wenn ja biete diese an
-    PrüfeChampRelaDoc.RESET;
-    PrüfeChampRelaDoc.SETFILTER(Art,'%1',PrüfeChampRelaDoc.Art :: "SUP-AU");
-    PrüfeChampRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
-    //PrüfeChampRelaDoc.SETFILTER(Basisgerät,'%1',TRUE);
-    PrüfeChampRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
-    IF PrüfeChampRelaDoc.FINDLAST THEN
-      IF CONFIRM(Text001,TRUE,PrüfeChampRelaDoc."Zeilennr.",PrüfeChampRelaDoc."SUP Artikelnr.",PrüfeChampRelaDoc."Belegnr.") THEN
-        EXIT(PrüfeChampRelaDoc."Belegnr.");
+    PrüfeServRelaDoc.RESET;
+    PrüfeServRelaDoc.SETFILTER(Art,'%1',PrüfeServRelaDoc.Art :: "SUP-AU");
+    PrüfeServRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
+    //PrüfeServRelaDoc.SETFILTER(Basisgerät,'%1',TRUE);
+    PrüfeServRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+    IF PrüfeServRelaDoc.FINDLAST THEN
+      IF CONFIRM(Text001,TRUE,PrüfeServRelaDoc."Zeilennr.",PrüfeServRelaDoc."SUP Artikelnr.",PrüfeServRelaDoc."Belegnr.") THEN
+        EXIT(PrüfeServRelaDoc."Belegnr.");
 
     ok := EVALUATE(eingabe,'TOPAS-PSEU');
     laufende_nummer:='';
