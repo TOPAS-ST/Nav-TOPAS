@@ -326,6 +326,10 @@ IF Cust."Rech via EMail" = TRUE THEN
   BEGIN
     "Rech EMail-Adresse" := Cust."Rech via EMail-Adresse";
   END;
+IF Cust."Service via EMail" = TRUE THEN
+  BEGIN
+    "Service EMail-Adresse" := Cust."Service via EMail-Adresse";
+  END;
 Spediteuraccount := Cust.Spediteuraccount;
 VALIDATE(Kontaktperson,'');
 //TOPAS-
@@ -2279,12 +2283,11 @@ AB via EMail-Adresse - OnValidate()
 
 AB via EMail-Adresse - OnLookup()
 //TOPAS 16.05.08 ST
-KontBez.SETFILTER(KontBez."Business Relation Code",'DEB');
-KontBez.SETFILTER(KontBez."No.","Sell-to Customer No.");
+KontBez.SETRANGE(KontBez."Business Relation Code",'DEB');
+KontBez.SETRANGE(KontBez."No.","Sell-to Customer No.");
 IF KontBez.FINDFIRST THEN
   BEGIN
-    "Mandantennr.":=KontBez."Contact No.";
-    Kontakt.SETFILTER(Kontakt."Company No.","Mandantennr.");
+    Kontakt.SETRANGE(Kontakt."Company No.",KontBez."Contact No.");
     IF Kontakt.FINDFIRST THEN BEGIN
       IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
         "AB via EMail-Adresse" := Kontakt."E-Mail";
@@ -2295,12 +2298,11 @@ Rech EMail-Adresse - OnValidate()
 
 Rech EMail-Adresse - OnLookup()
 //TOPAS 160508 ST
-KontBez.SETFILTER(KontBez."Business Relation Code",'DEB');
-KontBez.SETFILTER(KontBez."No.","Sell-to Customer No.");
+KontBez.SETRANGE(KontBez."Business Relation Code",'DEB');
+KontBez.SETRANGE(KontBez."No.","Sell-to Customer No.");
 IF KontBez.FINDFIRST THEN
   BEGIN
-    "Mandantennr.":=KontBez."Contact No.";
-    Kontakt.SETFILTER(Kontakt."Company No.","Mandantennr.");
+    Kontakt.SETRANGE(Kontakt."Company No.",KontBez."Contact No.");
     IF Kontakt.FINDFIRST THEN BEGIN
       IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
         "Rech EMail-Adresse" := Kontakt."E-Mail";
@@ -2314,6 +2316,21 @@ Spediteuraccount - OnLookup()
 Nicht rechnen - OnValidate()
 
 Nicht rechnen - OnLookup()
+
+Service EMail-Adresse - OnValidate()
+
+Service EMail-Adresse - OnLookup()
+//TOPAS ST 2015-01-20
+KontBez.SETRANGE(KontBez."Business Relation Code",'DEB');
+KontBez.SETRANGE(KontBez."No.","Sell-to Customer No.");
+IF KontBez.FINDFIRST THEN
+  BEGIN
+    Kontakt.SETRANGE(Kontakt."Company No.",KontBez."Contact No.");
+    IF Kontakt.FINDFIRST THEN BEGIN
+      IF FORM.RUNMODAL(5052,Kontakt) = ACTION::LookupOK THEN
+        "Service EMail-Adresse" := Kontakt."E-Mail";
+    END;
+  END;
 
 USt13b2 - OnValidate()
 
@@ -2354,6 +2371,10 @@ Endkunde Telefonnr. - OnLookup()
 Endkunde E-Mail - OnValidate()
 
 Endkunde E-Mail - OnLookup()
+
+Virtuelle Systeme - OnValidate()
+
+Virtuelle Systeme - OnLookup()
 
 keine Rahmen-AB via Email - OnValidate()
 
@@ -3489,7 +3510,7 @@ IF AUzeile.FINDFIRST THEN
         END;
 
       //***************************************************************************************************
-      //                   SOR Aufträge dürfen nicht mit Champs fakturiert werden
+      //                   SOR Aufträge dürfen nicht mit Service fakturiert werden
       //***************************************************************************************************
 
       IF (AUkopf.GET(AUkopf."Document Type" :: Order,AUzeile."Document No."))
@@ -3497,46 +3518,46 @@ IF AUzeile.FINDFIRST THEN
           ERROR(Text132,AUkopf.FIELDCAPTION(AUkopf."Payment Terms Code"));
 
       //***************************************************************************************************
-      //Prüfung, ob Artikel in Champ Kalkulation auftauchen und ob dieser Champ Artikel auch geliefert wird
+      //Prüfung, ob Artikel in Kalkulation auftauchen und ob dieser Service Artikel auch geliefert wird
       //***************************************************************************************************
 
-      ChampZuordnungHolen.RESET;
-      ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-      ChampZuordnungHolen.SETFILTER("Belegnr.",'%1',AUnr);
-      ChampZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',AUzeile."Line No.");
-      ChampZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
-      ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
-      IF ChampZuordnungHolen.FINDFIRST THEN
+      ServiceZuordnungHolen.RESET;
+      ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+      ServiceZuordnungHolen.SETFILTER("Belegnr.",'%1',AUnr);
+      ServiceZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',AUzeile."Line No.");
+      ServiceZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
+      ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+      IF ServiceZuordnungHolen.FINDFIRST THEN
         REPEAT
           PrüfeAUzeile.RESET;
-          PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Nr.");
-          PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Zeilennr.");
+          PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Nr.");
+          PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Zeilennr.");
           IF PrüfeAUzeile.FINDFIRST THEN
             BEGIN
               IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
                 ERROR(Text117,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.");
             END
           ELSE
-            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen."Geräte Artikelnr.",
-                          ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.");
-        UNTIL ChampZuordnungHolen.NEXT = 0;
+            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen."Geräte Artikelnr.",
+                          ServiceZuordnungHolen."Belegnr.",ServiceZuordnungHolen."Belegzeilennr.");
+        UNTIL ServiceZuordnungHolen.NEXT = 0;
 
       //***************************************************************************************************
-      //        Prüfung, ob auch wirklich alle Artikel, die in der Champ Kalkulation auftauchen, auch
-      //          tatsächlich mit dem Champ Artikel ausgeliefert werden, der obere Fall umgedreht
+      //      Prüfung, ob auch wirklich alle Artikel, die in der Service Kalkulation auftauchen, auch
+      //         tatsächlich mit dem Service Artikel ausgeliefert werden, der obere Fall umgedreht
       //***************************************************************************************************
 
-      ChampZuordnungHolen.RESET;
-      ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-      ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-      ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-      ChampZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
-      ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
-      IF ChampZuordnungHolen.FINDFIRST THEN
+      ServiceZuordnungHolen.RESET;
+      ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+      ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+      ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+      ServiceZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
+      ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+      IF ServiceZuordnungHolen.FINDFIRST THEN
         REPEAT
           PrüfeAUzeile.RESET;
-          PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
-          PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
+          PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
+          PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
           IF PrüfeAUzeile.FINDFIRST THEN
             BEGIN
               IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
@@ -3544,19 +3565,19 @@ IF AUzeile.FINDFIRST THEN
 
               //Zu liefernde Pos. im AU müssen mengenmäßig mit der Kalkulation übereinstimmen,
               //um Überbuchungen zu verhindern, betrifft keine Basisgeräte (Sonderregel für FLAT)
-              IF (PrüfeAUzeile."Qty. to Ship" <> ChampZuordnungHolen."Menge kalk.")
-              AND (ChampZuordnungHolen.Basisgerät = FALSE) THEN
-                ERROR(Text122,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.",ChampZuordnungHolen."Zeilennr.",
-                      ChampZuordnungHolen."Menge kalk.");
+              IF (PrüfeAUzeile."Qty. to Ship" <> ServiceZuordnungHolen."Menge kalk.")
+              AND (ServiceZuordnungHolen.Basisgerät = FALSE) THEN
+                ERROR(Text122,PrüfeAUzeile."No.",PrüfeAUzeile."Line No.",ServiceZuordnungHolen."Zeilennr.",
+                      ServiceZuordnungHolen."Menge kalk.");
 
             END
           ELSE
-            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen."Geräte Artikelnr.",
-                          ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.");
-        UNTIL ChampZuordnungHolen.NEXT = 0;
+            ERROR(Text119,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen."Geräte Artikelnr.",
+                          ServiceZuordnungHolen."Belegnr.",ServiceZuordnungHolen."Belegzeilennr.");
+        UNTIL ServiceZuordnungHolen.NEXT = 0;
 
       //***************************************************************************************************
-      //          Ein Champ Artikel kann nicht ohne Kalkulation gebucht werden, kann auch nur mit
+      //          Ein Service Artikel kann nicht ohne Kalkulation gebucht werden, kann auch nur mit
       //                               Menge Zu liefern > 1 ausgebucht werden
       //***************************************************************************************************
 
@@ -3565,43 +3586,43 @@ IF AUzeile.FINDFIRST THEN
           IF ((Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '5710')) AND (AUzeile."Qty. to Ship" > 1) THEN
             ERROR(Text112,AUzeile.FIELDCAPTION("Qty. to Ship"),Artikel.Artikelgruppe,AUzeile."No.");
 
-          ChampZuordnungHolen.RESET;
-          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          IF NOT ChampZuordnungHolen.FINDFIRST THEN
+          ServiceZuordnungHolen.RESET;
+          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          IF NOT ServiceZuordnungHolen.FINDFIRST THEN
             ERROR(Text113,AUzeile."No.",AUzeile."Line No.");
 
           //***************************************************************************************************
           //                          Es muss ein System Basisgeräte vorhanden sein
-          //              Ausnahme: Alle Champ Kalkulationszeilen haben eine Wartungsvertragsnr.
+          //              Ausnahme: Alle Kalkulationszeilen haben eine Wartungsvertragsnr.
           //***************************************************************************************************
 
-          ChampZuordnungHolen.RESET;
-          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          ChampZuordnungHolen.SETFILTER(Basisgerät,'%1',TRUE);
-          IF NOT ChampZuordnungHolen.FINDFIRST THEN
+          ServiceZuordnungHolen.RESET;
+          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          ServiceZuordnungHolen.SETFILTER(Basisgerät,'%1',TRUE);
+          IF NOT ServiceZuordnungHolen.FINDFIRST THEN
             BEGIN
-              ChampZuordnungHolen.SETFILTER(Basisgerät,'%1|%2',TRUE,FALSE);
-              IF ChampZuordnungHolen.FINDFIRST THEN
+              ServiceZuordnungHolen.SETFILTER(Basisgerät,'%1|%2',TRUE,FALSE);
+              IF ServiceZuordnungHolen.FINDFIRST THEN
                 REPEAT
-                  IF ChampZuordnungHolen."Wartungsvertragsnr." = '' THEN
+                  IF ServiceZuordnungHolen."Wartungsvertragsnr." = '' THEN
                     ERROR(Text118,AUzeile."No.",AUzeile."Line No.");
 
                   //***************************************************************************************************
                   //         Der Wartungsvertrag muss bei nachträglicher Zubuchung neuer Pos. noch gültig sein
                   //***************************************************************************************************
 
-                  IF ChampZuordnungHolen."Wartungsvertragsnr." <> '' THEN
+                  IF ServiceZuordnungHolen."Wartungsvertragsnr." <> '' THEN
                     BEGIN
-                      Wartungsvertrag.GET(ChampZuordnungHolen."Wartungsvertragsnr.");
+                      Wartungsvertrag.GET(ServiceZuordnungHolen."Wartungsvertragsnr.");
                       IF (Wartungsvertrag.Vertragsablaufdatum < WORKDATE) THEN
                         ERROR(Text121,Wartungsvertrag."Wartungsvertragsnr.",AUzeile."Line No.",Wartungsvertrag.Vertragsablaufdatum);
                     END;
 
-                UNTIL ChampZuordnungHolen.NEXT = 0;
+                UNTIL ServiceZuordnungHolen.NEXT = 0;
             END;
 
           //***************************************************************************************************
@@ -3609,68 +3630,71 @@ IF AUzeile.FINDFIRST THEN
           //           der einzeln zu liefernden Artikel bzw. die gelieferte Menge ab, Fall 1 und 2
           //***************************************************************************************************
 
-          ChampZuordnungHolen.RESET;
-          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          ChampZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
-          IF ChampZuordnungHolen.FINDFIRST THEN
+          ServiceZuordnungHolen.RESET;
+          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+          IF ServiceZuordnungHolen.FINDFIRST THEN
             BEGIN
-              menge_champ_kalk_ges := 0;
+              menge_kalk_ges := 0;
               menge_liefern_ges := 0;
               REPEAT
-                menge_champ_kalk_ges := menge_champ_kalk_ges + ChampZuordnungHolen."Menge kalk.";
-                IF ChampZuordnungHolen."Nachträgliche Service Order" = FALSE THEN
+                menge_kalk_ges := menge_kalk_ges + ServiceZuordnungHolen."Menge kalk.";
+                IF ServiceZuordnungHolen."Nachträgliche Service Order" = FALSE THEN
                   BEGIN
                     PrüfeAUzeile.RESET;
-                    PrüfeAUzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
-                    PrüfeAUzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
-                    PrüfeAUzeile.SETFILTER("No.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
+                    PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
+                    PrüfeAUzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeAUzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeAUzeile."Qty. to Ship";
                   END
                 ELSE
                   BEGIN
                     PrüfeLiefzeile.RESET;
-                    PrüfeLiefzeile.SETFILTER("Document No.",'%1',ChampZuordnungHolen."Belegnr.");
-                    PrüfeLiefzeile.SETFILTER("Line No.",'%1',ChampZuordnungHolen."Belegzeilennr.");
-                    PrüfeLiefzeile.SETFILTER("No.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    PrüfeLiefzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
+                    PrüfeLiefzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
+                    PrüfeLiefzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeLiefzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeLiefzeile.Quantity;
                   END;
-              UNTIL ChampZuordnungHolen.NEXT = 0;
+              UNTIL ServiceZuordnungHolen.NEXT = 0;
 
-              IF (menge_champ_kalk_ges * AUzeile."Qty. to Ship") > menge_liefern_ges THEN
-                ERROR(Text114,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen.FIELDCAPTION("Menge kalk."));
+              IF (menge_kalk_ges * AUzeile."Qty. to Ship") > menge_liefern_ges THEN
+                ERROR(Text114,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen.FIELDCAPTION("Menge kalk."));
 
             END;
 
           //***************************************************************************************************
-          //                            Champ Kalkulation auf Plausibilität prüfen
+          //                            Service Kalkulation auf Plausibilität prüfen
           //***************************************************************************************************
 
-          ChampZuordnungHolen.RESET;
-          ChampZuordnungHolen.SETFILTER(Art,'%1',ChampZuordnungHolen.Art :: "SUP-AU");
-          ChampZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ChampZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          IF ChampZuordnungHolen.FINDFIRST THEN
+          ServiceZuordnungHolen.RESET;
+          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
+          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          IF ServiceZuordnungHolen.FINDFIRST THEN
             BEGIN
-              menge_champ_kalk_ges := 0;
-              menge_auswahl_ges := 0;
-              REPEAT
-                Artikel.GET(ChampZuordnungHolen."Geräte Artikelnr.");
-                IF Artikel.Serviceklassifizierung = '' THEN
-                  ERROR(Text110,ChampZuordnungHolen."Geräte Artikelnr.",' (Champ Kalkulation)');
 
-                IF ChampZuordnungHolen."Menge kalk." = 0 THEN
-                  ERROR(Text120,AUzeile."No.",AUzeile."Line No.",ChampZuordnungHolen.FIELDCAPTION("Menge kalk."));
+              menge_kalk_ges := 0;
+              menge_auswahl_ges := 0;
+              menge_basissystem_pos := 0;
+
+              REPEAT
+                Artikel.GET(ServiceZuordnungHolen."Geräte Artikelnr.");
+                IF Artikel.Serviceklassifizierung = '' THEN
+                  ERROR(Text110,ServiceZuordnungHolen."Geräte Artikelnr.",' (Service Kalkulation)');
+
+                IF ServiceZuordnungHolen."Menge kalk." = 0 THEN
+                  ERROR(Text120,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen.FIELDCAPTION("Menge kalk."));
 
                 //***************************************************************************************************
                 //            Prüft auch darauf, ob nach der Buchung nur genau ein aktives Basisgerät vorliegt
                 //***************************************************************************************************
 
                 basisgerät_kollision_ok := FALSE;
-                IF ChampZuordnungHolen.Basisgerät THEN
+                IF ServiceZuordnungHolen.Basisgerät THEN
                   BEGIN
                     ServiceZuordnungBeleg.RESET;
                     ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
@@ -3702,18 +3726,18 @@ IF AUzeile.FINDFIRST THEN
                                   REPEAT
                                     IF PrüfeServicePos.Art = PrüfeServicePos.Art :: Service THEN
                                       BEGIN
-                                        IF PrüfeServicePos."Urspr. Lieferscheinnr." <> ChampZuordnungHolen."Belegnr." THEN
+                                        IF PrüfeServicePos."Urspr. Lieferscheinnr." <> ServiceZuordnungHolen."Belegnr." THEN
                                           ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
-                                          ChampZuordnungHolen."Zeilennr.")
+                                          ServiceZuordnungHolen."Zeilennr.")
                                         ELSE
                                           basisgerät_kollision_ok := TRUE;
                                       END
                                     ELSE
                                       BEGIN
                                         IF PrüfeServicePos.Art = PrüfeServicePos.Art :: System THEN
-                                          IF PrüfeServicePos."Nr." <> ChampZuordnungHolen."Belegnr." THEN
+                                          IF PrüfeServicePos."Nr." <> ServiceZuordnungHolen."Belegnr." THEN
                                             ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
-                                            ChampZuordnungHolen."Zeilennr.")
+                                            ServiceZuordnungHolen."Zeilennr.")
                                           ELSE
                                             basisgerät_kollision_ok := TRUE;
                                       END;
@@ -3727,26 +3751,26 @@ IF AUzeile.FINDFIRST THEN
                 //         Prüfung Menge kalk. gegen Auswahl Seriennr. der einzelnen Artikel, Fall 2 oder 3
                 //***************************************************************************************************
 
-                IF (ChampZuordnungHolen."Nachträgliche Service Order" = TRUE) OR (ChampZuordnungHolen.Fremderwerb = TRUE) THEN
+                IF (ServiceZuordnungHolen."Nachträgliche Service Order" = TRUE) OR (ServiceZuordnungHolen.Fremderwerb = TRUE) THEN
                   BEGIN
-                    ChampZuordnungHolen.TESTFIELD("Geräte Artikelnr.");
-                    menge_champ_kalk_pos := 0;
+                    ServiceZuordnungHolen.TESTFIELD("Geräte Artikelnr.");
+                    menge_kalk_pos := 0;
                     //Ausnahme wieder für FLAT Geräte, bei denen mehr als 1 Gerät ausgeliefert werden darf
-                    Artikel.GET(ChampZuordnungHolen."Geräte Artikelnr.");
+                    Artikel.GET(ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF Artikel.Serviceklassifizierung = 'SYSTEM FLAT' THEN
-                      menge_champ_kalk_pos := menge_champ_kalk_pos + (ChampZuordnungHolen."Menge kalk." * AUzeile."Qty. to Ship")
+                      menge_kalk_pos := menge_kalk_pos + (ServiceZuordnungHolen."Menge kalk." * AUzeile."Qty. to Ship")
                     ELSE
-                      menge_champ_kalk_pos := menge_champ_kalk_pos + ChampZuordnungHolen."Menge kalk.";
+                      menge_kalk_pos := menge_kalk_pos + ServiceZuordnungHolen."Menge kalk.";
 
-                    menge_champ_kalk_ges := menge_champ_kalk_ges + menge_champ_kalk_pos;
+                    menge_kalk_ges := menge_kalk_ges + menge_kalk_pos;
 
                     HoleTempLizenzTab.RESET;
                     HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                    HoleTempLizenzTab.SETFILTER("Nr.",'%1',ChampZuordnungHolen."Belegnr.");
-                    HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',ChampZuordnungHolen."Belegzeilennr.");
-                    HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',ChampZuordnungHolen."Nr.");
-                    HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',ChampZuordnungHolen."Zeilennr.");
-                    HoleTempLizenzTab.SETFILTER("Artikelnr.",'%1',ChampZuordnungHolen."Geräte Artikelnr.");
+                    HoleTempLizenzTab.SETFILTER("Nr.",'%1',ServiceZuordnungHolen."Belegnr.");
+                    HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
+                    HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',ServiceZuordnungHolen."Nr.");
+                    HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',ServiceZuordnungHolen."Zeilennr.");
+                    HoleTempLizenzTab.SETFILTER("Artikelnr.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
                     HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
                     IF HoleTempLizenzTab.FINDFIRST THEN
                       BEGIN
@@ -3771,14 +3795,14 @@ IF AUzeile.FINDFIRST THEN
                           PrüfeSystemPos.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
                           IF (PrüfeSystemPos.FINDLAST) AND (PrüfeSystemPos.Inaktiv = TRUE) THEN
                             ERROR(Text131,HoleTempLizenzTab.FIELDCAPTION("Seriennr."),PrüfeSystemPos."Seriennr.",
-                                  ChampZuordnungHolen."Zeilennr.");
+                                  ServiceZuordnungHolen."Zeilennr.");
 
-                          IF (PrüfeSystemPos.FINDLAST) AND (ChampZuordnungHolen."Wartungsvertragsnr." <> '')
-                          AND ((PrüfeSystemPos."Wartungsvertragsnr." = '') OR (ChampZuordnungHolen."Wartungsvertragsnr." <>
+                          IF (PrüfeSystemPos.FINDLAST) AND (ServiceZuordnungHolen."Wartungsvertragsnr." <> '')
+                          AND ((PrüfeSystemPos."Wartungsvertragsnr." = '') OR (ServiceZuordnungHolen."Wartungsvertragsnr." <>
                           PrüfeSystemPos."Wartungsvertragsnr.")) THEN
-                            ERROR(Text133,ChampZuordnungHolen."Geräte Artikelnr.",PrüfeSystemPos."Seriennr.",
-                            ChampZuordnungHolen."Belegnr.",ChampZuordnungHolen."Belegzeilennr.",
-                            ChampZuordnungHolen."Wartungsvertragsnr.");
+                            ERROR(Text133,ServiceZuordnungHolen."Geräte Artikelnr.",PrüfeSystemPos."Seriennr.",
+                            ServiceZuordnungHolen."Belegnr.",ServiceZuordnungHolen."Belegzeilennr.",
+                            ServiceZuordnungHolen."Wartungsvertragsnr.");
 
                           menge_auswahl_pos := menge_auswahl_pos + HoleTempLizenzTab.Menge;
                           menge_auswahl_ges := menge_auswahl_ges + HoleTempLizenzTab.Menge;
@@ -3786,14 +3810,18 @@ IF AUzeile.FINDFIRST THEN
                         UNTIL HoleTempLizenzTab.NEXT = 0;
                       END;
 
-                    IF menge_auswahl_pos <> menge_champ_kalk_pos THEN
+                    IF menge_auswahl_pos <> menge_kalk_pos THEN
                       ERROR(Text116,AUzeile."No.",AUzeile."Line No.");
 
                   END;
-              UNTIL ChampZuordnungHolen.NEXT = 0;
+              UNTIL ServiceZuordnungHolen.NEXT = 0;
 
-              IF menge_champ_kalk_ges <> menge_auswahl_ges THEN
+              IF menge_kalk_ges <> menge_auswahl_ges THEN
                 ERROR(Text115,AUzeile."No.",AUzeile."Line No.");
+
+              //Prüft, ob nur eine Basisgerät Position vorhanden ist
+              IF menge_basissystem_pos > 1 THEN
+                ERROR(Text136,AUzeile."No.",AUzeile."Line No.");
 
             END;
         END;
@@ -3825,8 +3853,8 @@ IF Belegzeile.FINDFIRST THEN
       MESSAGE(Text130);
   END;
 
-PrüfeChampKalkAngelegt(Belegnr : Code[20];Belegart : Option)
-//Bei Beleg Freigabe wird das Vorhandensein einer Champ Kalkulation überprüft
+PrüfeServiceKalkAngelegt(Belegnr : Code[20];Belegart : Option)
+//Bei Beleg Freigabe wird das Vorhandensein einer Service Kalkulation überprüft
 Belegzeile.RESET;
 Belegzeile.SETFILTER("Document No.",'%1',Belegnr);
 Belegzeile.SETFILTER("Document Type",'%1',Belegart);
@@ -3837,11 +3865,11 @@ IF Belegzeile.FINDFIRST THEN
     Artikel.GET(Belegzeile."No.");
     IF Artikel."Software Upgrade Protection" = TRUE THEN
       BEGIN
-        ChampKalk.RESET;
-        ChampKalk.SETFILTER(Art,'%1',ChampKalk.Art :: "SUP-AU");
-        ChampKalk.SETFILTER("Nr.",'%1',Belegzeile."Document No.");
-        ChampKalk.SETFILTER("Zeilennr.",'%1',Belegzeile."Line No.");
-        IF NOT ChampKalk.FINDFIRST THEN
+        ServiceKalk.RESET;
+        ServiceKalk.SETFILTER(Art,'%1',ServiceKalk.Art :: "SUP-AU");
+        ServiceKalk.SETFILTER("Nr.",'%1',Belegzeile."Document No.");
+        ServiceKalk.SETFILTER("Zeilennr.",'%1',Belegzeile."Line No.");
+        IF NOT ServiceKalk.FINDFIRST THEN
           MESSAGE(Text113,Belegzeile."No.",Belegzeile."Line No.");
       END;
   UNTIL Belegzeile.NEXT = 0;
