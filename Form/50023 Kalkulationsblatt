@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=18.03.15;
-    Time=16:00:43;
+    Date=07.04.15;
+    Time=12:42:31;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -247,6 +247,17 @@ OBJECT Form 50023 Kalkulationsblatt
                                                                   AND (Wartungsvertrag.Status <> Wartungsvertrag.Status :: ACTS)
                                                                   AND (Wartungsvertrag.Status <> Wartungsvertrag.Status :: ACHAT)) THEN
                                                                     ERROR(Text015,Wartungsvertrag."Wartungsvertragsnr.");
+
+                                                                  IF Ablaufdatum = 0D THEN
+                                                                    BEGIN
+                                                                       v_ablaufdatum := Ablaufdatum_generieren("SUP Artikelnr.","Wartungsvertragsnr.");
+                                                                      IF v_ablaufdatum <> 0D THEN
+                                                                        BEGIN
+                                                                          Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',WORKDATE,v_ablaufdatum)) + 'M';
+                                                                          MESSAGE(Text020,Laufzeit);
+                                                                        END;
+                                                                    END;
+
                                                                 END;
 
                                                               //Bei Basisger„ten nicht gestattet, sonst wird evtl. nicht das Vertragsablaufdatum im Vertragskopf ge„ndert
@@ -487,10 +498,14 @@ OBJECT Form 50023 Kalkulationsblatt
 
       Text018@1140031 : TextConst
         'DEU=Die %1 Marge sollte ber 50 Prozent liegen.';
+      v_ablaufdatum@1140035 : Date;
       diff@1140032 : Integer;
 
       Text019@1140034 : TextConst
         'DEU=Sie k”nnen nicht einzelne Module verl„ngern.Žndern Sie die Kalkulation dahingehend, dass Sie Basisger„t und all seine Komponenten gleichzeitg verl„ngern.';
+
+      Text020@1140036 : TextConst
+        'DEU=Die Laufzeit wurde entsprechend des Wartungsvertrages auf %1 angepasst.';
 
     PROCEDURE HoleArtikelPos@1140007();
     VAR
@@ -1925,6 +1940,43 @@ OBJECT Form 50023 Kalkulationsblatt
         EXIT(FALSE)
       ELSE
         EXIT(TRUE);
+    END;
+
+    PROCEDURE Ablaufdatum_generieren@1140020(SUPArtikelnr@1140003 : Code[20];Wartungsnr@1140004 : Code[20]) : Date;
+    VAR
+      PrfeServiceTab@1140002 : Record 50024;
+      Ermittle_Servicegruppe@1140001 : Record 50001;
+      Artikel_Servicegruppe@1140000 : Record 50001;
+    BEGIN
+      Ermittle_Servicegruppe.RESET;
+      Ermittle_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
+      Ermittle_Servicegruppe.SETFILTER("Feld ID",'%1',44);
+      Ermittle_Servicegruppe.SETFILTER("Nr.",'%1',SUPArtikelnr);
+      IF Ermittle_Servicegruppe.FINDFIRST THEN
+        BEGIN
+          PrfeServiceTab.RESET;
+          PrfeServiceTab.SETFILTER(Art,'%1',PrfeServiceTab.Art :: Service);
+          PrfeServiceTab.SETFILTER("Ablaufdatum Serviceleistung",'>%1',WORKDATE);
+          PrfeServiceTab.SETFILTER("Wartungsvertragsnr.",'%1',Wartungsnr);
+          //PrfeServiceTab.SETFILTER("Zu exportieren",'%1',TRUE);
+          PrfeServiceTab.SETFILTER(Basisger„t,'%1',TRUE);
+          PrfeServiceTab.SETFILTER(Inaktiv,'%1',FALSE);
+          PrfeServiceTab.ASCENDING(FALSE);
+          IF PrfeServiceTab.FINDFIRST THEN
+            REPEAT
+              Artikel_Servicegruppe.RESET;
+              Artikel_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
+              Artikel_Servicegruppe.SETFILTER("Feld ID",'%1',44);
+              Artikel_Servicegruppe.SETFILTER("Nr.",'%1',PrfeServiceTab."SUP Artikelnr.");
+              IF (Artikel_Servicegruppe.FINDFIRST) AND (Artikel_Servicegruppe."Einordnung Servicegruppe" =
+              Ermittle_Servicegruppe."Einordnung Servicegruppe") THEN
+                BEGIN
+                  EXIT(PrfeServiceTab."Ablaufdatum Serviceleistung");
+                END;
+          UNTIL PrfeServiceTab.NEXT = 0;
+        END;
+
+      EXIT(0D);
     END;
 
     EVENT Sheet@1140019::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
