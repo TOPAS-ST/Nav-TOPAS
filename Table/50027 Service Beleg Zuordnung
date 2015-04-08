@@ -134,7 +134,7 @@ IF xRec.Laufzeit <> Laufzeit THEN
     "Rabatt/Marge" := 0;
   END;
 
-VALIDATE(Startdatum);
+//VALIDATE(Startdatum);
 
 Laufzeit - OnLookup()
 
@@ -172,12 +172,13 @@ IF (Ablaufdatum < WORKDATE) AND (Ablaufdatum <> 0D) THEN
 //IF (Laufzeit <> '') AND (Startdatum <> 0D) THEN
 //  Ablaufdatum := CALCDATE(Laufzeit,Startdatum);
 
-Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum)) + 'M';
+IF Ablaufdatum <> 0D THEN
+  Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum)) + 'M';
 
 IF Startdatum = 0D THEN
   Ablaufdatum := 0D;
 
-IF Ablaufdatum = 0D THEN
+IF (Ablaufdatum = 0D) AND (Startdatum = 0D) THEN
   BEGIN
     Opt.RESET;
     Opt.SETFILTER("Tabellen ID",'%1',50024);
