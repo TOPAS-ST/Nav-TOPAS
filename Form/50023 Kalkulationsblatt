@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=07.04.15;
-    Time=12:42:31;
+    Date=21.04.15;
+    Time=11:09:43;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -23,8 +23,6 @@ OBJECT Form 50023 Kalkulationsblatt
                END;
 
     OnAfterGetRecord=BEGIN
-                       KalkFehlerPrfen;
-
                        diff := TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum);
                      END;
 
@@ -51,6 +49,8 @@ OBJECT Form 50023 Kalkulationsblatt
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := FALSE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := FALSE;
                              END;
+
+                           KalkFehlerPrfen;
                          END;
 
     OnModifyRecord=BEGIN
@@ -1123,12 +1123,15 @@ OBJECT Form 50023 Kalkulationsblatt
       "Lief-Zeile"@1140007 : Record 111;
       ChampRelaDoc@1140001 : Record 50027;
       Artikel@1140011 : Record 27;
+      Ger„teArtikel@1140012 : Record 27;
       champ_price_au@1140004 : Decimal;
       champ_price_einzeln@1140005 : Decimal;
       champ_dc_au@1140009 : Decimal;
       champ_dc_einzeln@1140008 : Decimal;
+      v_artikelnr@1140013 : Code[20];
       v_laufzeit@1140006 : Integer;
       v_zeilennr@1140000 : Integer;
+      anzahl_basissysteme@1140014 : Integer;
       ACTS@1140003 : Boolean;
     BEGIN
       IF Rec.HASFILTER THEN
@@ -1161,8 +1164,18 @@ OBJECT Form 50023 Kalkulationsblatt
                 EXIT;
             END
           ELSE
-            IF ChampRelaDoc.COUNT > 1 THEN
-              ERROR(Text016);
+            REPEAT
+              Ger„teArtikel.GET(ChampRelaDoc."Ger„te Artikelnr.");
+              IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." <> v_artikelnr) THEN
+                ERROR(Text016);
+              v_artikelnr := ChampRelaDoc."Ger„te Artikelnr.";
+              IF Ger„teArtikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
+                BEGIN
+                  anzahl_basissysteme += 1;
+                  IF anzahl_basissysteme > 1 THEN
+                    ERROR(Text016);
+                END;
+              UNTIL ChampRelaDoc.NEXT = 0;
 
           champ_price_au := 0;
           champ_dc_au := 0;
@@ -1430,14 +1443,14 @@ OBJECT Form 50023 Kalkulationsblatt
       kalk_preis_gesamt := 0;
 
       AktBeleg.RESET;
-      AktBeleg.SETFILTER("No.",'%1',"Nr.");
+      AktBeleg.SETRANGE("No.","Nr.");
       IF NOT AktBeleg.FINDFIRST THEN
         EXIT;
 
       ChampRelaDoc.RESET;
-      ChampRelaDoc.SETFILTER(Art,'%1',ChampRelaDoc.Art::"SUP-AU");
-      ChampRelaDoc.SETFILTER("Nr.",'%1',"Nr.");
-      ChampRelaDoc.SETFILTER("Zeilennr.",'%1',"Zeilennr.");
+      ChampRelaDoc.SETRANGE(Art,ChampRelaDoc.Art::"SUP-AU");
+      ChampRelaDoc.SETRANGE("Nr.","Nr.");
+      ChampRelaDoc.SETRANGE("Zeilennr.","Zeilennr.");
       IF ChampRelaDoc.FINDFIRST THEN
         REPEAT
 
@@ -1445,9 +1458,9 @@ OBJECT Form 50023 Kalkulationsblatt
           IF (ChampRelaDoc."Nachtr„gliche Service Order" = FALSE) AND (ChampRelaDoc.Fremderwerb = FALSE) THEN
             BEGIN
               "AU-Zeile".RESET;
-              "AU-Zeile".SETFILTER(Type,'%1',"AU-Zeile".Type :: Item);
-              "AU-Zeile".SETFILTER("Document No.",'%1',ChampRelaDoc."Belegnr.");
-              "AU-Zeile".SETFILTER("Line No.",'%1',ChampRelaDoc."Belegzeilennr.");
+              "AU-Zeile".SETRANGE(Type,"AU-Zeile".Type :: Item);
+              "AU-Zeile".SETRANGE("Document No.",ChampRelaDoc."Belegnr.");
+              "AU-Zeile".SETRANGE("Line No.",ChampRelaDoc."Belegzeilennr.");
               IF "AU-Zeile".FINDFIRST THEN
                 BEGIN
                   IF "AU-Zeile"."No." <> ChampRelaDoc."Ger„te Artikelnr." THEN
@@ -1463,13 +1476,13 @@ OBJECT Form 50023 Kalkulationsblatt
           IF ChampRelaDoc."Nachtr„gliche Service Order" = TRUE THEN
             BEGIN
               TempLizenzTab.RESET;
-              TempLizenzTab.SETFILTER(Art,'%1',TempLizenzTab.Art :: Tempor„r);
-              TempLizenzTab.SETFILTER("Auftragsnr.",'%1',ChampRelaDoc."Nr.");
-              TempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',ChampRelaDoc."Zeilennr.");
-              TempLizenzTab.SETFILTER("Nr.",'%1',ChampRelaDoc."Belegnr.");
-              TempLizenzTab.SETFILTER("Belegzeilennr.",'%1',ChampRelaDoc."Belegzeilennr.");
-              TempLizenzTab.SETFILTER("Artikelnr.",'%1',ChampRelaDoc."Ger„te Artikelnr.");
-              TempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
+              TempLizenzTab.SETRANGE(Art,TempLizenzTab.Art :: Tempor„r);
+              TempLizenzTab.SETRANGE("Auftragsnr.",ChampRelaDoc."Nr.");
+              TempLizenzTab.SETRANGE("Auftragszeilennr.",ChampRelaDoc."Zeilennr.");
+              TempLizenzTab.SETRANGE("Nr.",ChampRelaDoc."Belegnr.");
+              TempLizenzTab.SETRANGE("Belegzeilennr.",ChampRelaDoc."Belegzeilennr.");
+              TempLizenzTab.SETRANGE("Artikelnr.",ChampRelaDoc."Ger„te Artikelnr.");
+              TempLizenzTab.SETRANGE(Vormerkung,TRUE);
               IF NOT TempLizenzTab.FINDFIRST THEN
                 BEGIN
                   hinweistext := 'Fr Artikelnr. ' + ChampRelaDoc."Ger„te Artikelnr." + ' wurden noch nicht gengend ' +
@@ -1498,8 +1511,8 @@ OBJECT Form 50023 Kalkulationsblatt
 
       //Prft, ob der Beleg VK-Preis noch mit dem Kalkulations Gesamtpreis bereinstimmt
       "AU-Zeile".RESET;
-      "AU-Zeile".SETFILTER("Document No.",'%1',ChampRelaDoc."Nr.");
-      "AU-Zeile".SETFILTER("Line No.",'%1',ChampRelaDoc."Zeilennr.");
+      "AU-Zeile".SETRANGE("Document No.",ChampRelaDoc."Nr.");
+      "AU-Zeile".SETRANGE("Line No.",ChampRelaDoc."Zeilennr.");
       IF "AU-Zeile".FINDFIRST THEN
         IF ROUND(kalk_preis_gesamt,1) <> "AU-Zeile"."Unit Price" THEN
           hinweistext := 'Der Vk-Preis im Beleg stimmt nicht mit dem Gesamtpreis der Kalkulation berein.';
