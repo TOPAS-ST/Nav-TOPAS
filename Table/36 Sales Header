@@ -3696,6 +3696,9 @@ IF AUzeile.FINDFIRST THEN
                 basisgerät_kollision_ok := FALSE;
                 IF ServiceZuordnungHolen.Basisgerät THEN
                   BEGIN
+                    IF Artikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
+                      menge_basissystem_pos += 1;
+
                     ServiceZuordnungBeleg.RESET;
                     ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
                     ServiceZuordnungBeleg.SETFILTER("Nr.",'%1',AUnr);
@@ -3724,23 +3727,35 @@ IF AUzeile.FINDFIRST THEN
                                 PrüfeServicePos.SETFILTER(Inaktiv,'%1',FALSE);
                                 IF PrüfeServicePos.FINDFIRST THEN
                                   REPEAT
+
+                                    GeräteArtikel.GET(PrüfeServicePos."Artikelnr.");
+
                                     IF PrüfeServicePos.Art = PrüfeServicePos.Art :: Service THEN
                                       BEGIN
-                                        IF PrüfeServicePos."Urspr. Lieferscheinnr." <> ServiceZuordnungHolen."Belegnr." THEN
-                                          ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
-                                          ServiceZuordnungHolen."Zeilennr.")
-                                        ELSE
-                                          basisgerät_kollision_ok := TRUE;
+                                        IF (PrüfeServicePos."Urspr. Lieferscheinnr." <> ServiceZuordnungHolen."Belegnr.") THEN
+                                          IF (GeräteArtikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+                                            ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                          ELSE
+                                            IF ((v_artikelnr <> '') AND (PrüfeServicePos."Artikelnr." <> v_artikelnr)) THEN
+                                              ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                            ELSE
+                                              basisgerät_kollision_ok := TRUE;
                                       END
                                     ELSE
                                       BEGIN
                                         IF PrüfeServicePos.Art = PrüfeServicePos.Art :: System THEN
-                                          IF PrüfeServicePos."Nr." <> ServiceZuordnungHolen."Belegnr." THEN
-                                            ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.",
-                                            ServiceZuordnungHolen."Zeilennr.")
-                                          ELSE
-                                            basisgerät_kollision_ok := TRUE;
+                                          IF (PrüfeServicePos."Nr." <> ServiceZuordnungHolen."Belegnr.") THEN
+                                            IF (GeräteArtikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+                                              ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                            ELSE
+                                              IF ((v_artikelnr <> '') AND (PrüfeServicePos."Artikelnr." <> v_artikelnr)) THEN
+                                                ERROR(Text134,PrüfeServicePos."Wartungsvertragsnr.",PrüfeServicePos."Seriennr.")
+                                              ELSE
+                                                basisgerät_kollision_ok := TRUE;
                                       END;
+
+                                    v_artikelnr := PrüfeServicePos."Artikelnr.";
+
                                   UNTIL PrüfeServicePos.NEXT = 0;
                              END;
                           END;
