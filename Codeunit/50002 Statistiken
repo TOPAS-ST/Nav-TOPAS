@@ -25,8 +25,8 @@ IF Klasse = Klasse :: Einzelgerät THEN
   Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Einzelgerät);
 IF Klasse = Klasse :: Mehrgeräte THEN
   Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Mehrgeräte);
-Wartungsvertrag.SETFILTER(Status,'%1|%2|%3',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
-                          Wartungsvertrag.Status :: ACHAT);
+Wartungsvertrag.SETFILTER(Status,'%1|%2|%3|%4',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+                          Wartungsvertrag.Status :: ACHAT, Wartungsvertrag.Status :: "Champs Partner");
 IF Wartungsvertrag.FINDFIRST THEN
   REPEAT
     Window.UPDATE(1,Wartungsvertrag."Wartungsvertragsnr.");
@@ -40,7 +40,7 @@ IF Wartungsvertrag.FINDFIRST THEN
         ServicePositionen.SETFILTER(Art,'%1',ServicePositionen.Art :: Service);
         ServicePositionen.SETFILTER("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
         ServicePositionen.SETFILTER(Basisgerät,'%1',TRUE);
-        ServicePositionen.SETFILTER("SUP Artikelnr.",'%1|%2|%3','CHAMPS-ADV*','ACTS*','ACHAT*');
+        ServicePositionen.SETFILTER("SUP Artikelnr.",'%1|%2|%3|%4','CHAMPS-ADV*','ACTS*','ACHAT*','CHAMPS-BASIC-AHR*');
         //ServicePositionen.SETFILTER(Inaktiv,'%1',FALSE);
         IF ServicePositionen.FINDFIRST THEN
           zähler7 += 1;
