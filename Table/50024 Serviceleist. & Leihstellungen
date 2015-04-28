@@ -1587,7 +1587,7 @@ IF Liefkopf.FINDLAST THEN
     Liefzeile.RESET;
     Liefzeile.SETFILTER(Liefzeile."Document No.",'%1',Liefkopf."No.");
     Liefzeile.SETFILTER(Liefzeile."Order No.",AUnr);
-    Liefzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
+    Liefzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5|%6','53','57','59','98','5710','5720');
     Liefzeile.SETFILTER(Type,'%1',Liefzeile.Type::Item);
     Liefzeile.SETFILTER(Quantity,'>%1',0);
     IF Liefzeile.FINDFIRST THEN
@@ -2976,6 +2976,20 @@ IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
   "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
 IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
   "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+//Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#01' THEN
+  "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#01';
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#02' THEN
+  "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#02';
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#01' THEN
+  "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#01';
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#02' THEN
+  "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#02';
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/1YR' THEN
+  "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#01';
+IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/3YR' THEN
+  "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#02';
+
 Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
 Champs.SETFILTER(Währungscode,'%1',Waehrung);
 IF Champs.FINDFIRST THEN
@@ -3062,7 +3076,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             ACTS_MSS := TRUE
           ELSE
             IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-              CHAMPS := TRUE;
+              CHAMPS := TRUE
+            ELSE
+              IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+                CHAMPS_PARTNER := TRUE;
+
 
     EVALUATE(kalk_laufzeit,COPYSTR(Laufzeit,1,STRPOS(Laufzeit,'M')-1));
 
@@ -3089,6 +3107,20 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
     IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
       "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+    //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#01' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#02' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#02';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#01' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#02' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#02';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/1YR' THEN
+      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/3YR' THEN
+      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#02';
+
     Service_PL.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     Service_PL.SETFILTER(Währungscode,'%1',Währung);
     IF Service_PL.FINDFIRST THEN
@@ -3096,8 +3128,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Feld = 'DC' THEN
           BEGIN
 
-            //CHAMPS EK Konditionen
-            IF CHAMPS = TRUE THEN
+            //CHAMPS und PARTNER EK Konditionen
+            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER) THEN
               BEGIN
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
@@ -3150,7 +3182,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 END;
               END;
 
-            IF (CHAMPS = TRUE) THEN
+            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
               EXIT((ROUND((((Service_PL.MSRP * 0.72) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
               * (champs_discount),rundgs_faktor)) * spezial_discount)
             ELSE
