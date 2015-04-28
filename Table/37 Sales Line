@@ -4508,6 +4508,7 @@ Gen_Service_DC("SUP Artikelnr" : Code[20];"Basis Artikelnr" : Code[20];Laufzeit 
 //              TOPAS 2014-06-18 ST  Nun auch für Misch ACTS/ACHAT
 //              TOPAS 2014-12-09 ST  ACTS Schaeffler Projekt
 //              TOPAS 2015-03-18 ST  ACTS Managed Spare Service
+//              TOPAS 2015-04-27 ST  CHAMPS zertifizierte Partner
 //***************************************************************************************************
 
 IF Runden = TRUE THEN
@@ -4528,6 +4529,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS_SCHAEFFLER := FALSE;
     ACTS_MSS := FALSE;
     CHAMPS := FALSE;
+    CHAMPS_PARTNER := FALSE;
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
@@ -4542,11 +4544,15 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             ACTS_MSS := TRUE
           ELSE
             IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-              CHAMPS := TRUE;
+              CHAMPS := TRUE
+            ELSE
+              IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+                CHAMPS_PARTNER := TRUE;
 
-    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
-    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'CHAMPS_PARTNER')
+    AND (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')
+    AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER')
+    AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
     AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
@@ -4565,13 +4571,27 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
-      //Manuelle Artikel Filter erspart separate ACHAT Preisliste
-      IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
-        "SUP Artikelnr" := 'ACTS-SUPP-24X7/SO#01';
-      IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
-        "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
-      IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
-         "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+    //Manuelle Artikel Filter erspart separate ACHAT Preisliste
+    IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
+      "SUP Artikelnr" := 'ACTS-SUPP-24X7/SO#01';
+    IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
+      "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
+    IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
+       "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+    //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#01' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#02' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#02';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#01' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#02' THEN
+      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#02';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/1YR' THEN
+      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#01';
+    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/3YR' THEN
+      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#02';
+
     Service_PL.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     Service_PL.SETFILTER("Artikelnr.",'%1',"Basis Artikelnr");
     Service_PL.SETFILTER(Währungscode,'%1',Währung);
@@ -4581,8 +4601,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Service_PL."Update letzte Preisliste" = FALSE THEN
           MESSAGE(Text120,"Basis Artikelnr",Service_PL.Preisliste,Service_PL."Letzte Aktualisierung");
 
-        //CHAMPS EK Konditionen
-        IF CHAMPS = TRUE THEN
+        //CHAMPS und PARTNER EK Konditionen
+        IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
           BEGIN
             v_service_laufzeit := Laufzeit DIV 12;
             CASE v_service_laufzeit OF
@@ -4635,7 +4655,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             END;
           END;
 
-        IF (CHAMPS = TRUE) THEN
+        IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
           EXIT((ROUND((((Service_PL.MSRP * 0.72) * Service_PL."Laufzeit in Jahren") * (Laufzeit/v_laufzeit))
           * (champs_discount),rundgs_faktor)) * spezial_discount)
         ELSE
@@ -4702,9 +4722,10 @@ Artikel.GET("SUP Artikelnr");
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
-    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'ACTS')
-    AND (Artikel.Artikelgruppe <> 'ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT')
-    AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'CHAMPS_PARTNER')
+    AND (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')
+    AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER')
+    AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
     AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') THEN
       ERROR(Text126);
 
@@ -4717,6 +4738,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
       ELSE
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE;
+
+    //VK Kondition CHAMPS zertifizierte Partner = -20% MSRP
+    IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+      v_prozentsatz := 80;
+
 
     //***************************************************************************************************
     //                Angabe der Positionsnr. bezieht sich auf eine Auftrags Position
@@ -4772,7 +4798,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                                           basissatz := 0;
                                       END
                                     ELSE
-                                      ERROR(Text113,"SUP Artikelnr",AktBelegZeile."No.");
+                                      IF v_prozentsatz = 0 THEN ERROR(Text113,"SUP Artikelnr",AktBelegZeile."No.");
                                   END
                                 ELSE
                                   //ACTS_SCHAEFFLER
@@ -4810,7 +4836,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                       ERROR(Text123,"SUP Artikelnr",AktBelegZeile."No.");
                   END
                 ELSE
-                  ERROR(Text119,AktBelegZeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+                  IF Artikel."Kein VK notwendig" = FALSE THEN
+                    ERROR(Text119,AktBelegZeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
               END;
           END
 
@@ -4863,7 +4890,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                                               basissatz := 0;
                                           END
                                         ELSE
-                                          ERROR(Text113,"SUP Artikelnr",Vkliefzeile."No.")
+                                          IF v_prozentsatz = 0 THEN ERROR(Text113,"SUP Artikelnr",Vkliefzeile."No.")
                                       END
                                     ELSE
                                       //ACTS_SCHAEFFLER
@@ -4900,7 +4927,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                           ERROR(Text123,"SUP Artikelnr",Vkliefzeile."No.");
                       END
                     ELSE
-                      ERROR(Text119,Vkliefzeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+                      IF Artikel."Kein VK notwendig" = FALSE THEN
+                        ERROR(Text119,Vkliefzeile."No.",Artikel.FIELDCAPTION("Software Upgrade Protection"));
                   END;
               END;
           END;
@@ -4953,7 +4981,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                                          basissatz := 0;
                                      END
                                    ELSE
-                                     ERROR(Text113,"SUP Artikelnr","Basis Artikelnr");
+                                     IF v_prozentsatz = 0 THEN ERROR(Text113,"SUP Artikelnr","Basis Artikelnr");
                                  END
                                ELSE
                                  //ACTS_SCHAEFFLER
@@ -4989,7 +5017,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                      ERROR(Text123,"SUP Artikelnr","Basis Artikelnr");
                  END
                ELSE
-                 ERROR(Text119,"Basis Artikelnr",Artikel.FIELDCAPTION("Software Upgrade Protection"));
+                 IF Artikel."Kein VK notwendig" = FALSE THEN
+                   ERROR(Text119,"Basis Artikelnr",Artikel.FIELDCAPTION("Software Upgrade Protection"));
              END;
           END;
       END;
@@ -5023,7 +5052,10 @@ ELSE
           IF Artikel.Artikelgruppe = 'CHAMPS' THEN
             CHAMPS := TRUE
           ELSE
-            SUP := TRUE;
+            IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+              CHAMPS_PARTNER := TRUE
+            ELSE
+              SUP := TRUE;
 
 IF (CHAMPS = TRUE) OR (SUP = TRUE) THEN
   BEGIN
@@ -5066,7 +5098,7 @@ IF (CHAMPS = TRUE) OR (SUP = TRUE) THEN
 //***************************************************************************************************
 
 IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) 
-OR (ACTS_MSS = TRUE) THEN
+OR (ACTS_MSS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
   BEGIN
     WITH FindMSRPPrice DO BEGIN
       SETRANGE("Artikelnr.",Artikelnr);
@@ -5077,9 +5109,25 @@ OR (ACTS_MSS = TRUE) THEN
         SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
       IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
         SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
+      //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#01' THEN
+        SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#01';
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#02' THEN
+        SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#02';
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#01' THEN
+        SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#01';
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#02' THEN
+        SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#02';
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/1YR' THEN
+        SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#01';
+      IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/3YR' THEN
+        SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#02';
+
       SETRANGE("SUP Artikelnr.",SUP_Artikelnr);
       SETRANGE(Währungscode,Wäh);
       SETRANGE(Art,Art:: ACTS);
+      IF CHAMPS_PARTNER = TRUE THEN
+        SETRANGE(Art,Art:: Champs);
       SETRANGE("Zuordnung obsolete",FALSE);
       IF FINDFIRST THEN
         BEGIN
