@@ -2,8 +2,8 @@ OBJECT Report 50176 TOPAS Servicevertrag
 {
   OBJECT-PROPERTIES
   {
-    Date=03.12.14;
-    Time=15:57:32;
+    Date=28.04.15;
+    Time=10:20:28;
     Modified=Yes;
     Version List=fertig;
   }
@@ -47,8 +47,12 @@ OBJECT Report 50176 TOPAS Servicevertrag
                         CurrReport.PAPERSOURCE(3);
 
                         Nummer := 0;
-                        vkkopf_text := '';
+                        kopf_text := '';
                         status_text := '';
+
+                        //Blendet nun abgelaufene Servicepositionen aus
+                        IF alles_drucken = FALSE THEN
+                          "Serviceleist. & Leihstellungen".SETFILTER("Ablaufdatum Serviceleistung",'>=%1',WORKDATE);
                       END;
 
         OnAfterGetRecord=BEGIN
@@ -102,9 +106,9 @@ OBJECT Report 50176 TOPAS Servicevertrag
                            Artikel.GET("SUP Artikelnr.");
                            sup_artikelnr_lang := Artikel."No. 2";
 
-                           IF ((STRPOS(sup_artikelnr_lang,'HW') <> 0) OR (STRPOS(sup_artikelnr_lang,'SW') = 0)
-                           OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR' ) OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0))
-                           AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)
+                           IF ((STRPOS(sup_artikelnr_lang,'HW') <> 0) OR (STRPOS(sup_artikelnr_lang,'AHR') <> 0)
+                           OR (STRPOS(sup_artikelnr_lang,'SW') = 0) OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0))
+                           OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR') AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)
                            AND (STRPOS(sup_artikelnr_lang,'ENH-SUPP-PROG') = 0) THEN
                              BEGIN
                                benutzer := '-';
@@ -128,33 +132,34 @@ OBJECT Report 50176 TOPAS Servicevertrag
                            LetzteServicePos.RESET;
                            LetzteServicePos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
                            LetzteServicePos.SETFILTER(Art,'%1',LetzteServicePos.Art :: Service);
-                           IF LetzteServicePos.FINDLAST THEN
+                           IF LetzteServicePos.FINDFIRST THEN
                              BEGIN
-                               IF STRPOS(LetzteServicePos."SUP Artikelnr.",'CHAMPS') <> 0 THEN
-                                 BEGIN
-                                   andruck_champs := TRUE;
-                                   IF CurrReport.LANGUAGE = 1031 THEN
-                                     vkkopf_text := 'Champs Servicevertrag'
-                                   ELSE
-                                     vkkopf_text := 'Champs Service Agreement';
-                                 END
-                               ELSE
-                                 BEGIN
-                                   IF STRPOS(LetzteServicePos."SUP Artikelnr.",'ACHAT') <> 0 THEN
-                                     BEGIN
-                                       andruck_champs := TRUE;
-                                       IF CurrReport.LANGUAGE = 1031 THEN
-                                         vkkopf_text := 'ACHAT Servicevertrag'
-                                       ELSE
-                                         vkkopf_text := 'ACHAT Service Agreement';
-                                     END
-                                   ELSE
-                                     BEGIN
-                                       andruck_champs := FALSE;
-                                       vkkopf_text := 'Software Upgrade Protection';
-                                     END;
-                                 END;
+                               REPEAT
+                                 IF (STRPOS(LetzteServicePos."SUP Artikelnr.",'CHAMPS') <> 0)
+                                 OR (STRPOS(LetzteServicePos."SUP Artikelnr.",'ACTS') <> 0) THEN
+                                   BEGIN
+                                     andruck_champs := TRUE;
+                                     IF CurrReport.LANGUAGE = 1031 THEN
+                                       kopf_text := 'Champs Servicevertrag'
+                                     ELSE
+                                       kopf_text := 'Champs Service Agreement';
+                                   END
+                                 ELSE
+                                   BEGIN
+                                     IF STRPOS(LetzteServicePos."SUP Artikelnr.",'ACHAT') <> 0 THEN
+                                       BEGIN
+                                         andruck_champs := TRUE;
+                                         IF CurrReport.LANGUAGE = 1031 THEN
+                                           kopf_text := 'ACHAT Servicevertrag'
+                                         ELSE
+                                           kopf_text := 'ACHAT Service Agreement';
+                                       END;
+                                   END;
+                               UNTIL LetzteServicePos.NEXT = 0;
                              END;
+
+                           IF andruck_champs = FALSE THEN
+                             kopf_text := 'Software Upgrade Protection';
 
                            KopfdatenAndruck.RESET;
                            KopfdatenAndruck.SETFILTER(Art,'%1',KopfdatenAndruck.Art :: Service);
@@ -263,7 +268,7 @@ OBJECT Report 50176 TOPAS Servicevertrag
             { 1140055;TextBox   ;2100 ;8477 ;10300;926  ;HorzAlign=Center;
                                                          FontSize=22;
                                                          FontBold=No;
-                                                         SourceExpr=vkkopf_text }
+                                                         SourceExpr=kopf_text }
             { 1140102;Label     ;10700;11622;2200 ;423  ;FontSize=8;
                                                          CaptionML=[DEU=Auftragsnr.;
                                                                     ENU=Order No.] }
@@ -324,7 +329,7 @@ OBJECT Report 50176 TOPAS Servicevertrag
                                                          FontSize=9;
                                                          FontBold=No;
                                                          CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
-                                                                    ENU="TOPAS electronic Vetriebsgesellschaft mbH   "] }
+                                                                    ENU="TOPAS electronic Vertriebsgesellschaft mbH   "] }
             { 1140008;Label     ;19   ;1453 ;2700 ;400  ;FontName=Arial;
                                                          FontSize=7;
                                                          FontBold=No;
@@ -722,11 +727,16 @@ OBJECT Report 50176 TOPAS Servicevertrag
   {
     PROPERTIES
     {
-      Width=9020;
-      Height=3410;
+      Width=4510;
+      Height=1320;
     }
     CONTROLS
     {
+      { 1140000;CheckBox  ;3740 ;440  ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=alles_drucken }
+      { 1140001;Label     ;330  ;440  ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Alles drucken }
     }
   }
   CODE
@@ -744,7 +754,7 @@ OBJECT Report 50176 TOPAS Servicevertrag
       Land_Region@1140024 : Record 9;
       Verk„ufer@1140015 : Record 13;
       FormatAddr@1140031 : Codeunit 365;
-      vkkopf_text@1140000 : Text[50];
+      kopf_text@1140000 : Text[50];
       SUP_Art_Beschr@1140009 : Text[70];
       AndruckFeld@1140033 : ARRAY [8] OF Text[50];
       Nummer@1140005 : Integer;
@@ -766,6 +776,8 @@ OBJECT Report 50176 TOPAS Servicevertrag
       seriennr@1140002 : Code[20];
       board_ini_text@1140004 : Text[50];
       Firmendaten@1140003 : Record 79;
+      wdate@1140034 : Date;
+      alles_drucken@1140035 : Boolean;
 
     BEGIN
     END.
