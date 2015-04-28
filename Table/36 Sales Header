@@ -3481,7 +3481,7 @@ AUzeile.RESET;
 AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
 AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
 AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
-AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5|%6','53','57','59','98','5710','5720');
 IF AUzeile.FINDFIRST THEN
   BEGIN
     REPEAT
@@ -3583,7 +3583,8 @@ IF AUzeile.FINDFIRST THEN
 
       IF (Artikel."Software Upgrade Protection" = TRUE)  THEN
         BEGIN
-          IF ((Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '5710')) AND (AUzeile."Qty. to Ship" > 1) THEN
+          IF ((Artikel."Manufacturer Code" = '57') OR (Artikel."Manufacturer Code" = '5710') OR
+          ((Artikel."Manufacturer Code" = '5720'))) AND (AUzeile."Qty. to Ship" > 1) THEN
             ERROR(Text112,AUzeile.FIELDCAPTION("Qty. to Ship"),Artikel.Artikelgruppe,AUzeile."No.");
 
           ServiceZuordnungHolen.RESET;
@@ -3901,7 +3902,7 @@ AUzeile.RESET;
 AUzeile.SETFILTER(AUzeile."Document No.",'%1',AUnr);
 AUzeile.SETFILTER(Type,'%1',AUzeile.Type :: Item);
 AUzeile.SETFILTER(AUzeile."Qty. to Ship",'>%1',0);
-AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5','53','57','59','98','5710');
+AUzeile.SETFILTER("Manufacturer Code",'%1|%2|%3|%4|%5|%6','53','57','59','98','5710','5720');
 IF AUzeile.FINDFIRST THEN
   BEGIN
     REPEAT
