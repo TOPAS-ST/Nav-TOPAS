@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=21.04.15;
-    Time=11:09:43;
+    Date=28.04.15;
+    Time=10:15:57;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -1946,10 +1946,10 @@ OBJECT Form 50023 Kalkulationsblatt
       Ger„te_Artikel.GET(Ger„te_Artikelnr);
       Service_Artikel.GET(Service_Artikelnr);
 
-      IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'ACHAT')
-      OR (Service_Artikel.Artikelgruppe = 'ACTS') OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS')
-      OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER'))
-      AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+      IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_PARTNER')
+      OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
+      OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
+      OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
         EXIT(TRUE);
