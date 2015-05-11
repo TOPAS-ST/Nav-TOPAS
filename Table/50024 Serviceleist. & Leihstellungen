@@ -714,9 +714,10 @@ IF Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS' THEN
 
 Artikel.GET("SUP Artikelnr.");
 sup_artikelnr_lang := Artikel."No. 2";
-IF (STRPOS("SUP Artikelnr.",'HW') <> 0) OR ("SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR' )
-OR ("SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01') OR (STRPOS("SUP Artikelnr.",'RPLC') <> 0)
-OR ("SUP Artikelnr." = 'RE_INSTATEMENT_FEE') OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
+IF (STRPOS("SUP Artikelnr.",'HW') <> 0) OR (STRPOS("SUP Artikelnr.",'AHR') <> 0)
+OR ("SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR') OR ("SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01')
+OR (STRPOS("SUP Artikelnr.",'RPLC') <> 0) OR ("SUP Artikelnr." = 'RE_INSTATEMENT_FEE')
+OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
   EXIT('');
 
 IF STRPOS(Seriennr,'S/N: ') = 1 THEN
@@ -1907,6 +1908,11 @@ IF Vkliefkopf.FINDLAST THEN
              ELSE
                ACHAT := FALSE;
 
+             IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+               CHAMPS_PARTNER := TRUE
+             ELSE
+               CHAMPS_PARTNER := FALSE;
+
              //Bestimmt mit welcher Währung Champs eingekauft werden soll, für Euro gleich leer setzen
              //In den Lieferscheinen gibt es nur Currency Code als FlowField Lookup auf den Vekaufslieferkopf
              IF Kreditor.GET(Artikel."Vendor No.") THEN
@@ -2074,8 +2080,10 @@ IF Vkliefkopf.FINDLAST THEN
                                                    Wartung.Status := Wartung.Status :: Auftrag;
                                                    IF ACTS THEN
                                                      Wartung.Status := Wartung.Status :: ACTS;
-                                                    IF ACHAT THEN
-                                                      Wartung.Status := Wartung.Status :: ACHAT;
+                                                   IF ACHAT THEN
+                                                     Wartung.Status := Wartung.Status :: ACHAT;
+                                                   IF CHAMPS_PARTNER THEN
+                                                     Wartung.Status := Wartung.Status :: "Champs Partner";
                                                    Wartung."Auftragsnr. Service" := Vkliefzeile."Order No.";
                                                    Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                                    Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
@@ -2087,7 +2095,8 @@ IF Vkliefkopf.FINDLAST THEN
                                                    IF LizenzTab.Basisgerät = TRUE THEN
                                                      BEGIN
                                                        Wartung.Basisgerät := LizenzTab."Artikelnr.";
-                                                       IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) THEN
+                                                       IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) 
+                                                       AND (CHAMPS_PARTNER = FALSE) THEN
                                                          LizenzTab."Zu exportieren" := TRUE;
                                                      END;
                                                    Wartung.MODIFY(TRUE);
@@ -2257,6 +2266,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               Wartung.Status := Wartung.Status :: ACTS;
                                             IF ACHAT THEN
                                               Wartung.Status := Wartung.Status :: ACHAT;
+                                            IF CHAMPS_PARTNER THEN
+                                              Wartung.Status := Wartung.Status :: "Champs Partner";
                                             Wartung."Auftragsnr. Service" := Vkliefzeile."Order No.";
                                             Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                             Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
@@ -2268,7 +2279,8 @@ IF Vkliefkopf.FINDLAST THEN
                                             IF LizenzTab.Basisgerät = TRUE THEN
                                               BEGIN
                                                 Wartung.Basisgerät := LizenzTab."Artikelnr.";
-                                                IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) THEN
+                                                IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) 
+                                                AND (CHAMPS_PARTNER = FALSE) THEN
                                                   LizenzTab."Zu exportieren" := TRUE;
                                               END;
                                             Wartung.MODIFY(TRUE);
@@ -2449,6 +2461,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               Wartung.Status := Wartung.Status :: ACTS;
                                             IF ACHAT THEN
                                               Wartung.Status := Wartung.Status :: ACHAT;
+                                            IF CHAMPS_PARTNER THEN
+                                              Wartung.Status := Wartung.Status :: "Champs Partner";
                                             Wartung."Auftragsnr. Service" := Vkliefzeile."Order No.";
                                             Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                             Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
@@ -2460,7 +2474,8 @@ IF Vkliefkopf.FINDLAST THEN
                                             IF LizenzTab.Basisgerät = TRUE THEN
                                               BEGIN
                                                 Wartung.Basisgerät := LizenzTab."Artikelnr.";
-                                                IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) THEN
+                                                IF (LizenzTab.Benutzername <> '') AND (ACTS = FALSE) 
+                                                AND (CHAMPS_PARTNER = FALSE) THEN
                                                   LizenzTab."Zu exportieren" := TRUE;
                                               END;
                                             Wartung.MODIFY(TRUE);
@@ -2592,48 +2607,45 @@ IF (Ermittle_Servicegruppe.FINDFIRST) AND (Ermittle_Servicegruppe."Einordnung Se
               IF Ausgabedatum = Ausgabedatum :: Lizenzdatum THEN
                 EXIT(PrüfeLizenzTab."Ablaufdatum Serviceleistung")
           UNTIL PrüfeLizenzTab.NEXT = 0
-        ELSE
-          //Nachträgliches Modul hinzu, das bisher noch nicht in Wartung steht, umweg über Systemposition
-          BEGIN
-            TempSystemTab.RESET;
-            TempSystemTab.SETFILTER(Art,'%1',TempSystemTab.Art :: System);
-            TempSystemTab.SETFILTER("Nr.",'%1',Lieferscheinnr);
-            TempSystemTab.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
-            TempSystemTab.SETFILTER("Seriennr.",'%1',Seriennr);
-            TempSystemTab.SETFILTER(Basisgerät,'%1',FALSE);
-            TempSystemTab.SETFILTER(Inaktiv,'%1',FALSE);
-            IF TempSystemTab.FINDLAST THEN
-              BEGIN
-                PrüfeLizenzTab.RESET;
-                PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: Service);
-                PrüfeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'>%1',WORKDATE);
-                PrüfeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',TempSystemTab."Wartungsvertragsnr.");
-                //PrüfeLizenzTab.SETFILTER("Zu exportieren",'%1',TRUE);
-                PrüfeLizenzTab.SETFILTER(Basisgerät,'%1',TRUE);
-                PrüfeLizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
-                PrüfeLizenzTab.ASCENDING(FALSE);
-                IF PrüfeLizenzTab.FINDFIRST THEN
-                  REPEAT
-                    Artikel_Servicegruppe.RESET;
-                    Artikel_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
-                    Artikel_Servicegruppe.SETFILTER("Feld ID",'%1',44);
-                    Artikel_Servicegruppe.SETFILTER("Nr.",'%1',PrüfeLizenzTab."SUP Artikelnr.");
-                    IF (Artikel_Servicegruppe.FINDFIRST) AND (Artikel_Servicegruppe."Einordnung Servicegruppe" =
-                    Ermittle_Servicegruppe."Einordnung Servicegruppe") THEN
-                      BEGIN
-                        IF (Laufzeit <> '') AND (STRPOS(Laufzeit,'M') <> 0) THEN
-                          //Muss hier runtergerechnet werden, da anschließend wieder drauf gerechnet wird
-                          IF Ausgabedatum = Ausgabedatum :: Lizenzdatum THEN
-                            EXIT(CALCDATE('-1T',CALCDATE('-'+PrüfeLizenzTab."Dauer Serviceleistung",
-                            PrüfeLizenzTab."Ablaufdatum Serviceleistung")))
-                          ELSE
-                            EXIT(PrüfeLizenzTab."Ablaufdatum Serviceleistung");
-                      END;
-                UNTIL PrüfeLizenzTab.NEXT = 0;
-              END;
-          END;
-
       UNTIL Verbundene_Servicegruppe.NEXT = 0;
+
+      //Nachträgliches Modul hinzu, das bisher noch nicht in Wartung steht, umweg über Systemposition
+      TempSystemTab.RESET;
+      TempSystemTab.SETFILTER(Art,'%1',TempSystemTab.Art :: System);
+      TempSystemTab.SETFILTER("Nr.",'%1',Lieferscheinnr);
+      TempSystemTab.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
+      TempSystemTab.SETFILTER("Seriennr.",'%1',Seriennr);
+      TempSystemTab.SETFILTER(Basisgerät,'%1',FALSE);
+      TempSystemTab.SETFILTER(Inaktiv,'%1',FALSE);
+      IF TempSystemTab.FINDLAST THEN
+        BEGIN
+          PrüfeLizenzTab.RESET;
+          PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: Service);
+          PrüfeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'>%1',WORKDATE);
+          PrüfeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',TempSystemTab."Wartungsvertragsnr.");
+          //PrüfeLizenzTab.SETFILTER("Zu exportieren",'%1',TRUE);
+          PrüfeLizenzTab.SETFILTER(Basisgerät,'%1',TRUE);
+          PrüfeLizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+          PrüfeLizenzTab.ASCENDING(FALSE);
+          IF PrüfeLizenzTab.FINDFIRST THEN
+            REPEAT
+              Artikel_Servicegruppe.RESET;
+              Artikel_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
+              Artikel_Servicegruppe.SETFILTER("Feld ID",'%1',44);
+              Artikel_Servicegruppe.SETFILTER("Nr.",'%1',PrüfeLizenzTab."SUP Artikelnr.");
+              IF (Artikel_Servicegruppe.FINDFIRST) AND (Artikel_Servicegruppe."Einordnung Servicegruppe" =
+              Ermittle_Servicegruppe."Einordnung Servicegruppe") THEN
+                BEGIN
+                  IF (Laufzeit <> '') AND (STRPOS(Laufzeit,'M') <> 0) THEN
+                    //Muss hier runtergerechnet werden, da anschließend wieder drauf gerechnet wird
+                    IF Ausgabedatum = Ausgabedatum :: Lizenzdatum THEN
+                      EXIT(CALCDATE('-1T',CALCDATE('-'+PrüfeLizenzTab."Dauer Serviceleistung",
+                      PrüfeLizenzTab."Ablaufdatum Serviceleistung")))
+                    ELSE
+                      EXIT(PrüfeLizenzTab."Ablaufdatum Serviceleistung");
+                END;
+          UNTIL PrüfeLizenzTab.NEXT = 0;
+        END;
   END
 ELSE
   //Nur die gleiche Service Artikelnr kann verlängert werden Bsp. EXT-HW
@@ -2700,8 +2712,8 @@ IF wartungsnr = '' THEN
 
 Wartungsvertrag.RESET;
 Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
-Wartungsvertrag.SETFILTER(Status,'%1|%2|%3',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
-                          Wartungsvertrag.Status :: ACHAT);
+//Wartungsvertrag.SETFILTER(Status,'%1|%2|%3|%4',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+//                          Wartungsvertrag.Status :: ACHAT,Wartungsvertrag.Status :: "Champs Partner");
 IF Wartungsvertrag.FINDFIRST THEN
   BEGIN
     Wartungsvertrag.Verlängerungen := 0;
@@ -3041,6 +3053,7 @@ ServicePreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Lauf
 //2014-06-18 ST Nun auch für Misch ACTS/ACHAT
 //2014-12-09 ST ACTS Schaeffler Projekt
 //2015-03-18 ST ACTS Managed Spare Service
+//2015-04-28 ST CHAMPS zertifizierte Partner
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -3129,7 +3142,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
           BEGIN
 
             //CHAMPS und PARTNER EK Konditionen
-            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER) THEN
+            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
               BEGIN
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
