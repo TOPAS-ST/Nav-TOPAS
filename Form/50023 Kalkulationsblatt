@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=28.04.15;
-    Time=10:15:57;
+    Date=12.05.15;
+    Time=14:31:32;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -39,7 +39,8 @@ OBJECT Form 50023 Kalkulationsblatt
 
                            IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
                            OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')
-                           OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')) THEN
+                           OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
+                           OR (Artikel.Artikelgruppe = 'APSS_OB')) THEN
                              BEGIN
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -415,6 +416,9 @@ OBJECT Form 50023 Kalkulationsblatt
                                                  SourceExpr=kalk_prozentsatz;
                                                  OnValidate=BEGIN
                                                               Artikel.GET("SUP Artikelnr.");
+
+                                                              IF (kalk_prozentsatz > 20) AND (Artikel.Artikelgruppe = 'APSS_OB') THEN
+                                                                ERROR(Text017,20);
 
                                                               IF (kalk_prozentsatz > 10) AND (Artikel.Artikelgruppe = 'ACTS') THEN
                                                                 ERROR(Text017,10);
@@ -1949,6 +1953,7 @@ OBJECT Form 50023 Kalkulationsblatt
       IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_PARTNER')
       OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
+      OR (Service_Artikel.Artikelgruppe = 'APSS_OB')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
