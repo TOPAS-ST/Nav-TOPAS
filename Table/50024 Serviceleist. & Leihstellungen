@@ -1898,7 +1898,7 @@ IF Vkliefkopf.FINDLAST THEN
            BEGIN
 
              IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
-             OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
+             OR (Artikel.Artikelgruppe = 'ACTS_MSS') OR (Artikel.Artikelgruppe = 'APSS_OB') THEN
                ACTS := TRUE
              ELSE
                ACTS := FALSE;
@@ -2966,10 +2966,10 @@ ELSE
       EXIT('12M');
   END;
 
-ServiceArtikelnrErmitteln(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Waehrung : Code[10]) : Code[40]
-Artikel.GET("SUP Artikelnr");
+ServiceArtikelnrErmitteln(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Waehrung : Code[10]) : Code[40]
+Artikel.GET(SUP_Artikelnr);
 IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
-OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') THEN
+OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'APSS_OB') THEN
   ACTS := TRUE
 ELSE
   ACTS := FALSE;
@@ -2982,32 +2982,41 @@ ELSE
   Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
 Champs.SETFILTER("Artikelnr.",'%1',Artikelnr);
 //Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
-IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
-  "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#01';
-IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
-  "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
-IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
-  "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#01';
+IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
+IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
+  SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
 //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#01' THEN
-  "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#01';
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#02' THEN
-  "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#02';
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#01' THEN
-  "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#01';
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#02' THEN
-  "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#02';
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/1YR' THEN
-  "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#01';
-IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/3YR' THEN
-  "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#02';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#01' THEN
+  SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#01';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#02' THEN
+  SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#02';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#01' THEN
+  SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#01';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#02' THEN
+  SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#02';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/1YR' THEN
+  SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#01';
+IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/3YR' THEN
+  SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#02';
+//Manuelle Artikel Filter erspart separate APSS One Box Preisliste
+IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTWARE' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#01';
+IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTW#01' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#02';
+IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#01' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
+IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#02' THEN
+  SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#02';
 
-Champs.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
+Champs.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
 Champs.SETFILTER(Währungscode,'%1',Waehrung);
 IF Champs.FINDFIRST THEN
   EXIT(Champs."Champ Artikelnr.")
 ELSE
-  IF "SUP Artikelnr" = 'CHAMPS-RE_INSTATE#01' THEN
+  IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
     EXIT('CHAMPS-RE_INSTATEMENT_FEE');
 
 NewPosFromRMA(LfdNr : Code[20];AlteSN : Code[20];NeueSN : Code[20];"RMA-Nr" : Code[20];CopyRec : Record "Serviceleist. & Leihstellungen"
@@ -3046,14 +3055,14 @@ IF CopyRec.Reklamiert = FALSE THEN
     CopyRec.MODIFY(TRUE);
   END;
 
-ServicePreiseNeuKalkulieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Laufzeit : Code[20];Feld : Code[20];Runden : Boolean;Währun
+ServicePreiseNeuKalkulieren(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Laufzeit : Code[20];Feld : Code[20];Runden : Boolean;Währung 
 //2011-12-06 ST Für Übergang genutzt, bis eindeutig Champ Preise vor dem Buchen neu kalkuliert werden
 //2014-01-10 ST Nun auch für ACTS
 //2014-01-27 ST Nun auch für ACHAT
 //2014-06-18 ST Nun auch für Misch ACTS/ACHAT
 //2014-12-09 ST ACTS Schaeffler Projekt
 //2015-03-18 ST ACTS Managed Spare Service
-//2015-04-28 ST CHAMPS zertifizierte Partner
+//2015-05-12 ST APSS One Box
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -3064,9 +3073,9 @@ ELSE
   rundgs_faktor := 0.01;
 
 spezial_discount := 1;
-acts_discount := 1;
+additional_discount := 1;
 
-Artikel.GET("SUP Artikelnr");
+Artikel.GET(SUP_Artikelnr);
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
   BEGIN
 
@@ -3074,6 +3083,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACHAT := FALSE;
     ACTS_SCHAEFFLER := FALSE;
     ACTS_MSS := FALSE;
+    APSS_OB := FALSE;
     CHAMPS := FALSE;
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
@@ -3092,7 +3102,10 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
               CHAMPS := TRUE
             ELSE
               IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
-                CHAMPS_PARTNER := TRUE;
+                CHAMPS_PARTNER := TRUE
+              ELSE
+                IF Artikel.Artikelgruppe = 'APSS_OB' THEN
+                  APSS_OB := TRUE;
 
 
     EVALUATE(kalk_laufzeit,COPYSTR(Laufzeit,1,STRPOS(Laufzeit,'M')-1));
@@ -3100,7 +3113,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     Opt_laufzeit.RESET;
     Opt_laufzeit.SETFILTER("Tabellen ID",'%1',50024);
     Opt_laufzeit.SETFILTER("Feld ID",'%1',44);
-    Opt_laufzeit.SETFILTER("Nr.",'%1',"SUP Artikelnr");
+    Opt_laufzeit.SETFILTER("Nr.",'%1',SUP_Artikelnr);
     IF Opt_laufzeit.FINDFIRST THEN
       EVALUATE(v_laufzeit,COPYSTR(Opt_laufzeit.Code,1,STRPOS(Opt_laufzeit.Code,'M')-1))
     ELSE
@@ -3108,33 +3121,42 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Service_PL.RESET;
     Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) THEN
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (APSS_OB = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
     Service_PL.SETFILTER("Artikelnr.",'%1',Artikelnr);
     //Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
-    IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#01' THEN
-      "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#01';
-    IF "SUP Artikelnr" = 'ACHAT/SOFTWARE/24#02' THEN
-      "SUP Artikelnr" := 'ACTS-SUPP-24x7/SO#02';
-    IF "SUP Artikelnr" = 'ACHAT-ADV-HWREPLA#01' THEN
-      "SUP Artikelnr" := 'ACTS-ADV-HWREPLAC#01';
+    IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#01';
+    IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
+    IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
+      SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
     //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#01' THEN
-      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#01';
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-8X5-#02' THEN
-      "SUP Artikelnr" := 'CHAMPS-SUPP-8X5/S#02';
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#01' THEN
-      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#01';
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-24X7#02' THEN
-      "SUP Artikelnr" := 'CHAMPS-SUPP-24X7/#02';
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/1YR' THEN
-      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#01';
-    IF "SUP Artikelnr" = 'CHAMPS-BASIC-AHR/3YR' THEN
-      "SUP Artikelnr" := 'CHAMPS-ADV-HWREPL#02';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#01' THEN
+      SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#01';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#02' THEN
+      SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#02';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#01' THEN
+      SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#01';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#02' THEN
+      SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#02';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/1YR' THEN
+      SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#01';
+    IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/3YR' THEN
+      SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#02';
+    //Manuelle Artikel Filter erspart separate APSS One Box Preisliste
+    IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTWARE' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#01';
+    IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTW#01' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#02';
+    IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#01' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
+    IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#02' THEN
+      SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#02';
 
-    Service_PL.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
+    Service_PL.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
     Service_PL.SETFILTER(Währungscode,'%1',Währung);
     IF Service_PL.FINDFIRST THEN
       BEGIN
@@ -3142,78 +3164,79 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
           BEGIN
 
             //CHAMPS und PARTNER EK Konditionen
-            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
+            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER) THEN
               BEGIN
+                normal_discount := 0.72;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : champs_discount := 1;
-                  2 : champs_discount := 0.95; // -5%
-                  3 : champs_discount := 0.88; // -12%
-                  4 : champs_discount := 0.84; // -16%
-                  5..100 : champs_discount := 0.8; // -20%
+                  0..1 : additional_discount := 1;
+                  2 : additional_discount := 0.95; // -5%
+                  3 : additional_discount := 0.88; // -12%
+                  4 : additional_discount := 0.84; // -16%
+                  5..100 : additional_discount := 0.8; // -20%
                 END;
               END;
 
             //ACTS EK Konditionen
             IF ACTS = TRUE THEN
               BEGIN
+                normal_discount := 0.8;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : acts_discount := 1;
-                  2 : acts_discount := 0.95; // -5%
-                  3 : acts_discount := 0.88; // -12%
-                  4 : acts_discount := 0.84; // -16%
-                  5..100 : acts_discount := 0.8; // -20%
+                  0..1 : additional_discount := 1;
+                  2 : additional_discount := 0.95; // -5%
+                  3 : additional_discount := 0.88; // -12%
+                  4 : additional_discount := 0.84; // -16%
+                  5..100 : additional_discount := 0.8; // -20%
                 END;
               END;
 
             //ACTS Managed Spare Service EK Konditionen
             IF ACTS_MSS = TRUE THEN
               BEGIN
+                normal_discount := 0.9;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : acts_discount := 1;
-                  2 : acts_discount := 0.95; // -5%
-                  3 : acts_discount := 0.88; // -12%
-                  4 : acts_discount := 0.84; // -16%
-                  5..100 : acts_discount := 0.8; // -20%
+                  0..1 : additional_discount := 1;
+                  2 : additional_discount := 0.95; // -5%
+                  3 : additional_discount := 0.88; // -12%
+                  4 : additional_discount := 0.84; // -16%
+                  5..100 : additional_discount := 0.8; // -20%
                 END;
               END;
 
             //ACHAT EK Konditionen
             IF ACHAT = TRUE THEN
               BEGIN
+                normal_discount := 0.8;
                 spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (Zurückrechnung Champ DC auf 100 % MSRP) * 0.58 EK ACHAT
               END;
 
             //ACTS Schaeffler EK Konditionen
             IF ACTS_SCHAEFFLER = TRUE THEN
               BEGIN
+                normal_discount := 1;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..100 : acts_discount := 0.5 // -50 %;
+                  0..100 : additional_discount := 0.5 // -50 %;
                 END;
               END;
 
-            IF (CHAMPS = TRUE) OR (CHAMPS_PARTNER = TRUE) THEN
-              EXIT((ROUND((((Service_PL.MSRP * 0.72) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
-              * (champs_discount),rundgs_faktor)) * spezial_discount)
-            ELSE
-              IF (ACHAT = TRUE) THEN
-                EXIT((ROUND((((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit)),
-                rundgs_faktor)) * spezial_discount)
-              ELSE
-                IF (ACTS = TRUE) THEN
-                  EXIT((ROUND((((Service_PL.MSRP * 0.8) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
-                  * (acts_discount),rundgs_faktor)) * spezial_discount)
-                ELSE
-                  IF (ACTS_MSS = TRUE) THEN
-                    EXIT((ROUND((((Service_PL.MSRP * 0.9) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
-                    * (acts_discount),rundgs_faktor)) * spezial_discount)
-                  ELSE
-                    IF (ACTS_SCHAEFFLER = TRUE) THEN
-                      EXIT((ROUND(((Service_PL.MSRP * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit / v_laufzeit))
-                       * (acts_discount),rundgs_faktor)) * spezial_discount)
+            //APSS One Box EK Konditionen
+            IF APSS_OB = TRUE THEN
+              BEGIN
+                normal_discount := 0.7;
+                v_service_laufzeit := kalk_laufzeit DIV 12;
+                CASE v_service_laufzeit OF
+                  0..1 : additional_discount := 1;
+                  2 : additional_discount := 0.95; // -5%
+                  3..100 : additional_discount := 0.88; // -12%
+                END;
+              END;
+
+            EXIT((ROUND((((Service_PL.MSRP * normal_discount) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit/v_laufzeit))
+            * (additional_discount),rundgs_faktor)) * spezial_discount);
+
           END;
 
         IF Feld = 'MSRP' THEN
