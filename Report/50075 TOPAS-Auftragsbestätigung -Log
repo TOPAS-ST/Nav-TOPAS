@@ -2,8 +2,8 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
 {
   OBJECT-PROPERTIES
   {
-    Date=17.02.15;
-    Time=12:34:35;
+    Date=25.06.15;
+    Time=14:12:41;
     Modified=Yes;
     Version List=Beleg Žnderungsbest„tigung --> 50098 !!;
   }
@@ -46,14 +46,15 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
         OnAfterGetRecord=BEGIN
                            //25.04.2012-ST
                            CurrReport.LANGUAGE := language.GetLanguageID("Language Code");
+                           kunde.GET("Sales Header"."Sell-to Customer No.");
 
                            lead_free_text0 := '';
                            lead_free_text1 := '';
                            lead_free_text2 := '';
                            lead_text := '';
 
-                           IF "Sales Header"."AB via EMail" THEN AnzKopien:=0 ELSE AnzKopien:=AnzKopien_sich;
-
+                           IF ("Sales Header"."AB via EMail") OR (kunde."Best„tigung via Internet") THEN
+                             AnzKopien:=0 ELSE AnzKopien:=AnzKopien_sich;
 
                            IF "Salesperson Code" = '' THEN BEGIN
                              CLEAR(VerkEinkPerson);
@@ -320,8 +321,8 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
 
                            counter := 0;
 
-                           kunde.GET("Sales Header"."Sell-to Customer No.");
-                           IF ((Number > 1) AND (pdf = FALSE)) OR (pdf = TRUE) THEN
+                           //kunde.GET("Sales Header"."Sell-to Customer No.");
+                           IF ((Number > 1) AND (pdf = FALSE)) OR (pdf = TRUE) OR (kunde."Best„tigung via Internet" = TRUE) THEN
                              BEGIN
                              CurrReport.PAPERSOURCE(1);
                              KopieText := 'skopie';
@@ -403,7 +404,7 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
 
                              IF CurrReport.LANGUAGE = 1031 THEN
                                BEGIN
-                                  IF (Number > 1) OR (pdf = TRUE) THEN KopieText := 'skopie';
+                                  IF (Number > 1) OR (pdf = TRUE) OR (kunde."Best„tigung via Internet" = TRUE) THEN KopieText := 'skopie';
                                   CurrReport.PAGENO := 1;
                                   IF "Sales Header"."Document Date" > "Sales Header"."Order Date" THEN
                                      BEGIN
@@ -415,7 +416,7 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
                                END
                               ELSE
                                BEGIN
-                                  IF (Number > 1) OR (pdf = TRUE)THEN KopieText := ' Copy';
+                                  IF (Number > 1) OR (pdf = TRUE) OR (kunde."Best„tigung via Internet" = TRUE) THEN KopieText := ' Copy';
                                   CurrReport.PAGENO := 1;
                                   IF "Sales Header"."Document Date" > "Sales Header"."Order Date" THEN
                                      BEGIN
