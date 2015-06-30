@@ -2,8 +2,8 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
 {
   OBJECT-PROPERTIES
   {
-    Date=25.06.15;
-    Time=08:50:08;
+    Date=29.06.15;
+    Time=13:51:24;
     Modified=Yes;
     Version List=Beleg Rechnungskopie --> 50131 !!!;
   }
@@ -286,7 +286,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
           {
             SectionType=Header;
             PrintOnEveryPage=Yes;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=12900;
             OnPreSection=BEGIN
                            IF CurrReport.LANGUAGE = 1031 THEN
@@ -330,6 +330,18 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
                                      END;
                                  END;
                              END;
+
+                           //TOPAS 2015-06-29 ST
+                           //rendert das Firmenlogo fr Batch L„ufe, da das Logo beim normalen Druck vom Briefpapier bezogen wird
+                           "Printer selection".RESET;
+                           "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                           "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50076);
+                           IF "Printer selection".FINDFIRST() THEN
+                             BEGIN
+                               IF "Printer selection"."Printer Name" = 'PDFCreator' THEN
+                                 Firmendaten.CALCFIELDS(Picture);
+                             END;
+
                            //TOPAS Ende
                          END;
 
@@ -427,12 +439,12 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
                                                          FontBold=No;
                                                          CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
                                                                     ENU="TOPAS electronic Vertriebsgesellschaft mbH   "] }
-            { 53  ;Label        ;6683 ;1334 ;3433 ;400  ;FontName=Arial;
+            { 53  ;Label        ;6683 ;1300 ;3433 ;400  ;FontName=Arial;
                                                          FontSize=7;
                                                          FontBold=No;
                                                          CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
                                                                     ENU=Grosser Kolonnenweg 18C3,] }
-            { 87  ;Label        ;9985 ;1332 ;2467 ;400  ;FontName=Arial;
+            { 87  ;Label        ;9985 ;1300 ;2467 ;400  ;FontName=Arial;
                                                          FontSize=7;
                                                          FontBold=No;
                                                          CaptionML=[DEU=30163 Hannover;
@@ -584,6 +596,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
                                                          FontSize=7;
                                                          FontBold=No }
             { 1140019;PictureBox;9319 ;2797 ;2800 ;1600 ;SourceExpr=Firmendaten."ISO Logo" }
+            { 1140021;PictureBox;12436;1270 ;5250 ;1270 ;SourceExpr=Firmendaten.Picture }
           }
            }
         { PROPERTIES
@@ -591,7 +604,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
             SectionType=Footer;
             PrintOnEveryPage=Yes;
             PlaceInBottom=Yes;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1400;
           }
           CONTROLS
@@ -792,7 +805,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
           {
             SectionType=Header;
             PrintOnEveryPage=Yes;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1000;
             OnPreSection=BEGIN
                            IF "Sales Invoice Header"."Currency Code" = '' THEN
@@ -868,7 +881,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=TransHeader;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=800;
           }
           CONTROLS
@@ -886,7 +899,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
             OnPreSection=BEGIN
                            // CurrReport.SHOWOUTPUT(Art = 0);
@@ -933,7 +946,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=800;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT((Type = Type::"G/L Account")  AND ("Sales Invoice Line".Quantity > 0));
@@ -967,7 +980,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=0;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(Type = Type::Item);
@@ -981,7 +994,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=0;
             OnPreSection=BEGIN
                            {lshanf c03}
@@ -998,7 +1011,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=TransFooter;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=846;
           }
           CONTROLS
@@ -1016,7 +1029,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT("Inv. Discount Amount" <> 0);
@@ -1044,7 +1057,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=800;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(lead_free_text0 <>'');
@@ -1062,7 +1075,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=800;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(lead_free_text1 <>'');
@@ -1080,7 +1093,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=600;
             OnPreSection=BEGIN
 
@@ -1099,7 +1112,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=986;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(lead_text <>'');
@@ -1117,7 +1130,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=100;
           }
           CONTROLS
@@ -1128,7 +1141,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=468;
             OnPreSection=BEGIN
                              CurrReport.SHOWOUTPUT(v_FER_SPL=FALSE);
@@ -1147,7 +1160,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1847;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(Customer."VAT Bus. Posting Group" <> 'HAN_AUSL' );
@@ -1193,7 +1206,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=824;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(Customer."VAT Bus. Posting Group" = 'HAN_AUSL' );
@@ -1275,7 +1288,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=946;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item)
@@ -1350,7 +1363,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line"."Description 2" <> '')
@@ -1367,7 +1380,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(((Item.NCNR=TRUE) AND ("Sales Invoice Line".Quantity > 0)) OR ((Item."Manufacturer Code"='00')
@@ -1387,7 +1400,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=479;
             OnPreSection=BEGIN
                            //debitor_artikel.SETFILTER(debitor_artikel."Artikelnr.",'%1',"Sales Invoice Line"."No.");
@@ -1411,7 +1424,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=458;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item)
@@ -1435,7 +1448,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=479;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
@@ -1454,7 +1467,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=528;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
@@ -1471,7 +1484,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=846;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
@@ -1536,7 +1549,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
           {
             SectionType=Header;
             PrintOnEveryPage=Yes;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1800;
           }
           CONTROLS
@@ -1567,7 +1580,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=TransHeader;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=600;
           }
           CONTROLS
@@ -1589,7 +1602,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
           }
           CONTROLS
@@ -1612,7 +1625,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=TransFooter;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=700;
           }
           CONTROLS
@@ -1634,7 +1647,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=900;
           }
           CONTROLS
@@ -1670,7 +1683,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1031;
             OnPreSection=BEGIN
                                  CurrReport.SHOWOUTPUT( Customer.Bonusregelung <>'');
@@ -1692,7 +1705,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=800;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Header"."Gen. Bus. Posting Group" ='EU') AND (v_reverse1='1'));
@@ -1710,7 +1723,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=846;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(( "Sales Invoice Header"."Gen. Bus. Posting Group" ='AUSLAND') AND (v_reverse2='1'));
@@ -1727,7 +1740,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=846;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(("Sales Invoice Header"."Gen. Bus. Posting Group" ='AUSLAND') AND (v_reverse1='1'));
@@ -1744,7 +1757,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=846;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(( "Sales Invoice Header"."Gen. Bus. Posting Group" ='EU') AND (v_reverse2='1'));
@@ -1763,7 +1776,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=1223;
             OnPreSection=BEGIN
                            {lshanf c01}
@@ -1822,7 +1835,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=700;
           }
           CONTROLS
@@ -1836,7 +1849,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=423;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT :=
@@ -1856,7 +1869,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=21200;
+            SectionWidth=19106;
             SectionHeight=3300;
           }
           CONTROLS
@@ -1916,6 +1929,7 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
       Deb@1140011 : Record 18;
       MWSTBetragZeile@1140012 : TEMPORARY Record 290;
       language@1140061 : Record 8;
+      "Printer selection"@1140065 : Record 78;
       VerkRechDruckZ„hler@1140013 : Codeunit 315;
       FormatAdr@1140014 : Codeunit 365;
       DebAdr@1140015 : ARRAY [8] OF Text[50];
