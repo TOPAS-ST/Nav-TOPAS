@@ -1,0 +1,1992 @@
+OBJECT Report 50076 TOPAS-Rechnung - Logo
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.06.15;
+    Time=08:50:08;
+    Modified=Yes;
+    Version List=Beleg Rechnungskopie --> 50131 !!!;
+  }
+  PROPERTIES
+  {
+    ShowPrintStatus=No;
+    TopMargin=400;
+    BottomMargin=50;
+    LeftMargin=1700;
+    RightMargin=50;
+    OnInitReport=BEGIN
+                   FIBUEinrichtung.GET;
+                 END;
+
+    PaperSize=A4 210 x 297 mm;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table112;
+        DataItemTableView=SORTING(No.);
+        NewPagePerRecord=Yes;
+        ReqFilterHeadingML=DEU=Geb. Verkaufsrechnung;
+        OnPreDataItem=BEGIN
+
+                        Firmendaten.GET;
+                        Firmendaten.CALCFIELDS("ISO Logo");
+                        FormatAdr.Company(FirmaAdr,Firmendaten);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           VkRK:="Sales Invoice Header";
+
+
+                           //25.04.2012-ST
+                           CurrReport.LANGUAGE := language.GetLanguageID("Language Code");
+
+                           IF "Location Code" = 'MUST' THEN CurrReport.SKIP;
+
+                           v_reverse1:='';
+
+                           IF "Order No." = '' THEN
+                             AuftragNrText := ''
+                           ELSE
+                             AuftragNrText := FIELDNAME("Order No.");
+                           IF "Salesperson Code" = '' THEN BEGIN
+                             VerkEinkPerson.INIT;
+                             Verk„uferText := '';
+                           END ELSE BEGIN
+                             VerkEinkPerson.GET("Salesperson Code");
+                             Verk„uferText := 'Verk„ufer';
+                           END;
+                           IF "Your Reference" = '' THEN
+                             ReferenzText := ''
+                           ELSE
+                             ReferenzText := FIELDNAME("Your Reference");
+                           IF "VAT Registration No." = '' THEN
+                             MWStNrText := ''
+                           ELSE
+                             MWStNrText := FIELDNAME("VAT Registration No.");
+                           IF "Currency Code" = '' THEN BEGIN
+                             FIBUEinrichtung.TESTFIELD("LCY Code");
+                             TotalText := 'Total';
+                             TotalInklMWStText := 'Total inkl. MWSt';
+                           //  TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                           //  TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',FIBUEinrichtung."LCY Code");
+                           END ELSE BEGIN
+                             TotalText := 'Total';
+                             TotalInklMWStText := 'Total inkl. MWSt';
+                           //  TotalText := STRSUBSTNO('Total %1',"Currency Code");
+                           //  TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',"Currency Code");
+                           END;
+                           FormatAdr.SalesInvBillTo(DebAdr,"Sales Invoice Header");
+                           Deb.GET("Bill-to Customer No.");
+
+                           IF "Payment Terms Code" = '' THEN
+                             ZlgBed.INIT
+                           ELSE
+                             ZlgBed.GET("Payment Terms Code");
+                           IF "Shipment Method Code" = '' THEN
+                             LieferBed.INIT
+                           ELSE
+                             LieferBed.GET("Shipment Method Code");
+
+                           FormatAdr.SalesInvShipTo(LieferAnAdr,"Sales Invoice Header");
+                           LiefAdrAnzeigen := "Sell-to Customer No." <> "Bill-to Customer No.";
+                           FOR i := 1 TO ARRAYLEN(LieferAnAdr) DO
+                             IF LieferAnAdr[i] <> DebAdr[i] THEN
+                               LiefAdrAnzeigen := TRUE;
+
+                           IF "Currency Code" = '' THEN
+                           BEGIN
+                           waehrung:='[ '+'EUR'+' ]';
+                           waehrung2:='EUR';
+                           END
+                           ELSE
+                           BEGIN
+                           waehrung:='[ '+"Currency Code"+' ]';
+                           waehrung2:="Currency Code";
+                           END;
+
+
+                           lead_free_text0 := '';
+                           lead_free_text1 := '';
+                           lead_free_text2 := '';
+                           lead_text := '';
+                           v_bonusdatum := 0D;
+
+                           v_FER_SPL:=FALSE;
+                         END;
+
+        ReqFilterFields=No.,Sell-to Customer No.,No. Printed;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table291;
+        OnAfterGetRecord=BEGIN
+                           spedition:="Shipping Agent";
+                         END;
+
+        DataItemLink=Code=FIELD(Shipping Agent Code);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table18;
+        OnAfterGetRecord=BEGIN
+                           {
+                           IF (("Country/Region Code" <> 'DE') AND("Country/Region Code" <>'AT') AND ("Country/Region Code" <>'CH'))THEN
+                           BEGIN
+                           CurrReport.LANGUAGE(1033); // Deutscher L„ndercode
+                           END
+                           ELSE
+                           BEGIN
+                           CurrReport.LANGUAGE(1031); // Englischer L„ndercode  (ENU Englisch(USA))
+                           END;
+                           }
+                           //end
+
+
+                           verk_debitor:=Customer;
+
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                               BEGIN
+                                 IF Steuernummer='' THEN
+                                    Var_Steuernr:=''
+                                 ELSE
+                                    Var_Steuernr:='Ihre Steuernummer:';
+
+                                 IF "VAT Registration No."='' THEN
+                                     Var_UST_ID:=''
+                                 ELSE
+                                     Var_UST_ID:=FIELDNAME("VAT Registration No.");
+                               END
+                               ELSE
+                               BEGIN
+                                 Var_Steuernr:='';
+
+                                 IF "VAT Registration No."='' THEN
+                                     Var_UST_ID:=''
+                                 ELSE
+                                     Var_UST_ID:='Tax Number';
+                               END;
+
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                              BEGIN
+                                  IF "Sales Invoice Header"."Currency Code" = '' THEN BEGIN
+                                     FIBUEinrichtung.TESTFIELD("LCY Code");
+                                     TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                                     TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',FIBUEinrichtung."LCY Code");
+                                  END ELSE BEGIN
+                                     TotalText := STRSUBSTNO('Total %1',"Sales Invoice Header"."Currency Code");
+                                     TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',"Sales Invoice Header"."Currency Code");
+                                  END;
+                              END
+                              ELSE
+                              BEGIN
+                                  IF "Sales Invoice Header"."Currency Code" = '' THEN BEGIN
+                                     FIBUEinrichtung.TESTFIELD("LCY Code");
+                                     TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                                     TotalInklMWStText := STRSUBSTNO('Total %1 incl. V.A.T.',FIBUEinrichtung."LCY Code");
+                                  END ELSE BEGIN
+                                     TotalText := STRSUBSTNO('Total %1',"Sales Invoice Header"."Currency Code");
+                                     TotalInklMWStText := STRSUBSTNO('Total %1 incl. V.A.T.',"Sales Invoice Header"."Currency Code");
+                                  END;
+                              END;
+
+                           //Bonusdatum fllen
+                           IF  Customer.Bonusregelung <>'' THEN
+                           v_bonusdatum :=Customer.Bonusdatum;
+                         END;
+
+        DataItemLink=No.=FIELD(Sell-to Customer No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        NewPagePerRecord=Yes;
+        DataItemVarName=KopieSchleife;
+        OnPreDataItem=BEGIN
+                        Deb."Invoice Copies":= 2;
+                        //AnzSchleifen := ABS(AnzKopien) + Deb."Anzahl Rechnungskopien" +1;
+                        AnzSchleifen :=1;
+                        IF AnzSchleifen <= 0 THEN
+                          AnzSchleifen := 1;
+                          KopieText := '';
+                        SETRANGE(Number,1,AnzSchleifen);
+
+
+                        IF (("Sales Invoice Header"."Shipment Method Code"='ACCOUNT') OR ("Sales Invoice Header"."Shipment Method Code"='ACC-ENG'))
+                         THEN
+                          BEGIN
+                        //    Account:="Sales Invoice Header".Spediteuraccount;
+                            Account:="Shipping Agent".Name+' / '+"Sales Invoice Header".Spediteuraccount;
+                            END ELSE
+                              BEGIN
+                            Account:="Shipping Agent".Name
+                              END;
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           CurrReport.PAPERSOURCE(3);
+                           //IF Nummer > 2 THEN
+                           //  BEGIN
+                           //    CurrReport.PAPERSOURCE(3);
+                           //
+                           //  END;
+
+                             IF CurrReport.LANGUAGE = 1031 THEN
+                               BEGIN
+                                  IF Number > 1 THEN KopieText := 'skopie';
+                                  CurrReport.PAGENO := 1;
+                               END
+                              ELSE
+                               BEGIN
+                                  IF Number > 1 THEN KopieText := ' Copy';
+                                  CurrReport.PAGENO := 1;
+                               END;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         IF NOT CurrReport.PREVIEW THEN
+                           VerkRechDruckZ„hler.RUN("Sales Invoice Header");
+                       END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=21200;
+            SectionHeight=12900;
+            OnPreSection=BEGIN
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                              BEGIN
+                                seite:=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO))   ;
+                              END
+                              ELSE
+                              BEGIN
+                                seite:=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO))   ;
+                              END;
+
+
+                           //TOPAS 13.05.09-ST
+                           //Lieferscheinnr. auf Rechnung anzeigen
+
+                           Lieferscheinnr := '';
+                           Belegdatum := 0D;
+                           VkZeile.RESET;
+                           VkZeile.SETFILTER(VkZeile."Document No.","Sales Invoice Header"."No.");
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                             VkZeile.SETFILTER(VkZeile.Type,'Artikel')
+                           ELSE
+                             VkZeile.SETFILTER(VkZeile.Type,'Item');
+                           VkZeile.SETFILTER(VkZeile.Quantity,'>%1',0);
+                           IF VkZeile.FINDFIRST THEN
+                             BEGIN
+                               InvoiceRowID:=STRSUBSTNO('"%1";"%2";"%3";"%4";"%5";"%6"',113,0,VkZeile."Document No.",'',0,VkZeile."Line No.");
+                               ValueEntryRelation.SETCURRENTKEY(ValueEntryRelation."Source RowId");
+                               ValueEntryRelation.SETRANGE(ValueEntryRelation."Source RowId",InvoiceRowID);
+                               IF ValueEntryRelation.FINDFIRST THEN
+                                 BEGIN
+                                   ValueEntry.SETFILTER(ValueEntry."Entry No.",'%1',ValueEntryRelation."Value Entry No.");
+                                   IF ValueEntry.FINDFIRST THEN
+                                     BEGIN
+                                       ItemLedgerEntry.SETFILTER(ItemLedgerEntry."Entry No.",'%1',ValueEntry."Item Ledger Entry No.");
+                                       IF ItemLedgerEntry.FINDFIRST THEN
+                                         BEGIN
+                                           Lieferscheinnr := ItemLedgerEntry."Document No.";
+                                           Belegdatum := ItemLedgerEntry."Document Date";
+                                         END;
+                                     END;
+                                 END;
+                             END;
+                           //TOPAS Ende
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 2   ;TextBox      ;16900;10400;1400 ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=seite }
+            { 4   ;TextBox      ;572  ;5053 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[1] }
+            { 6   ;TextBox      ;572  ;5476 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[2] }
+            { 8   ;TextBox      ;572  ;5899 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[3] }
+            { 10  ;TextBox      ;572  ;6322 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[4] }
+            { 12  ;TextBox      ;572  ;6745 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[5] }
+            { 15  ;TextBox      ;572  ;7168 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[6] }
+            { 3   ;TextBox      ;572  ;7591 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[7] }
+            { 48  ;TextBox      ;572  ;8014 ;8800 ;423  ;FontSize=10;
+                                                         SourceExpr=DebAdr[8] }
+            { 153 ;TextBox      ;16900;11900;1400 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Sales Invoice Header"."Posting Date" }
+            { 1   ;Label        ;5832 ;9700 ;3360 ;900  ;VertAlign=Bottom;
+                                                         FontSize=18;
+                                                         CaptionML=[DEU=Rechnung;
+                                                                    ENU=Invoice] }
+            { 5   ;Label        ;0    ;11500;2600 ;400  ;FontSize=7;
+                                                         CaptionML=[DEU=Ihre Auftragsangaben;
+                                                                    ENU=Customer Ref.] }
+            { 7   ;TextBox      ;0    ;11900;4400 ;800  ;VertAlign=Top;
+                                                         FontSize=8;
+                                                         MultiLine=Yes;
+                                                         SourceExpr="Sales Invoice Header"."External Document No."+' '+"Sales Invoice Header"."Your Reference" }
+            { 9   ;Label        ;4500 ;11500;1900 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Lieferanten-Nr.;
+                                                                    ENU=Account Code] }
+            { 11  ;TextBox      ;4530 ;11900;2100 ;423  ;FontSize=8;
+                                                         SourceExpr=verk_debitor."Our Account No." }
+            { 13  ;TextBox      ;6800 ;11900;2300 ;423  ;FontSize=8;
+                                                         SourceExpr=VkRK."VAT Registration No." }
+            { 16  ;Shape        ;9200 ;11400;9100 ;1100  }
+            { 17  ;TextBox      ;9400 ;11900;2310 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         CaptionML=DEU=Lieferungsnr.;
+                                                         SourceExpr="Sales Invoice Header"."Order No." }
+            { 18  ;Label        ;9400 ;11500;2310 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Auftragsnummer;
+                                                                    ENU=Our Reference] }
+            { 19  ;Label        ;11900;11500;2100 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Kundennummer;
+                                                                    ENU=Customer] }
+            { 20  ;TextBox      ;11900;11900;2100 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Header"."Bill-to Customer No." }
+            { 22  ;Label        ;16900;11500;1050 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Datum;
+                                                                    ENU=Date] }
+            { 23  ;Label        ;9200 ;10900;9100 ;423  ;HorzAlign=Center;
+                                                         CaptionML=[DEU=Bitte bei Zahlung immer Rechnungsnummer angeben;
+                                                                    ENU=Please with the payment always indicate the invoice number] }
+            { 24  ;Label        ;14200;11500;2520 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Rechnungsnummer;
+                                                                    ENU=Invoice Number] }
+            { 25  ;TextBox      ;14200;11900;2520 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Header"."No." }
+            { 21  ;TextBox      ;8732 ;9700 ;3200 ;900  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontSize=18;
+                                                         SourceExpr=KopieText }
+            { 75  ;Label        ;572  ;4400 ;4200 ;300  ;Name=[TOPAS electronic GmbH, ];
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=TOPAS electronic GmbH, }
+            { 77  ;Label        ;3472 ;4400 ;2300 ;300  ;Name=Postfach 11 04 11,;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Postfach 11 04 11, }
+            { 74  ;Label        ;5672 ;4400 ;4200 ;300  ;Name=30100 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=" 30100 Hannover";
+                                                                    ENU=" 30100 Hannover, Germany"] }
+            { 31  ;Label        ;100  ;1300 ;6600 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vertriebsgesellschaft mbH   "] }
+            { 53  ;Label        ;6683 ;1334 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 87  ;Label        ;9985 ;1332 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 88  ;Label        ;119  ;2158 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 91  ;Label        ;119  ;1758 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 55  ;Label        ;2955 ;1758 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 64  ;Label        ;2955 ;2158 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 102 ;Label        ;13000;8400 ;4200 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=USt.-ID.-Nr.: DE115651057;
+                                                                    ENU=VAT Reg.No.: DE115651057] }
+            { 106 ;Label        ;13000;9075 ;4200 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Buchhaltung:;
+                                                                    ENU=Accounting:] }
+            { 134 ;Label        ;13000;9375 ;4200 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Herr Joachim Maaá;
+                                                                    ENU=Mr. Joachim Maass] }
+            { 136 ;Label        ;13000;9675 ;4200 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Tel. 0511 9 68 64-12;
+                                                                    ENU=Phone +49 511 9 68 64-12] }
+            { 137 ;Label        ;13000;10275;4200 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=email: jm@topas.de }
+            { 138 ;Label        ;13000;8100 ;4200 ;300  ;Name=Steuer-Nr.:   25/202/35327;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Steuer-Nr.:   25/202/35327;
+                                                                    ENU=TAX No.:   25/202/35327] }
+            { 149 ;Label        ;9400 ;12477;2700 ;423  ;HorzAlign=Left;
+                                                         CaptionML=[DEU=Zeitpunkt der Lieferung:;
+                                                                    ENU=Delivery date:] }
+            { 155 ;TextBox      ;4500 ;12477;2300 ;423  ;FontSize=7;
+                                                         SourceExpr=Var_Steuernr }
+            { 157 ;TextBox      ;6800 ;12477;2300 ;423  ;FontSize=8;
+                                                         SourceExpr=verk_debitor.Steuernummer }
+            { 158 ;TextBox      ;6800 ;11500;2300 ;423  ;FontSize=7;
+                                                         SourceExpr=Var_UST_ID }
+            { 162 ;Label        ;13000;9975 ;4200 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Fax. 0511 9 68 64-512;
+                                                                    ENU=Fax. +49 511 9 68 64-512] }
+            { 172 ;TextBox      ;12100;12477;1400 ;423  ;HorzAlign=Left;
+                                                         FontSize=7;
+                                                         SourceExpr=Belegdatum }
+            { 1140006;Label     ;13706;12477;1800 ;423  ;HorzAlign=Left;
+                                                         CaptionML=[DEU=Lieferscheinnr.:;
+                                                                    ENU=No.of Delivery:] }
+            { 1140009;TextBox   ;15505;12477;1586 ;423  ;HorzAlign=Left;
+                                                         FontSize=7;
+                                                         SourceExpr=Lieferscheinnr }
+            { 1140015;Label     ;13000;8700 ;4200 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-Nr.: DE 69202523] }
+            { 1140033;Label     ;13000;3000 ;4200 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140034;Label     ;13000;3300 ;4200 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR- und USD-Konto: }
+            { 1140035;Label     ;13000;3600 ;4200 ;300  ;Name=SWIFT-BIC.: DEUTDE2HXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140036;Label     ;13000;3900 ;4200 ;300  ;Name=IBAN: DE62250700700030561500;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140037;Label     ;13000;4275 ;4200 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 1140038;Label     ;13000;4575 ;4200 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR-, USD- und JPY-Konto: }
+            { 1140039;Label     ;13000;4875 ;4200 ;300  ;Name=SWIFT-BIC.: DRESDEFF250;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140040;Label     ;13000;5175 ;4200 ;300  ;Name=IBAN: DE30250800200770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140041;Label     ;13000;5550 ;4200 ;300  ;Name=Stadtsparkasse Barsinghausen;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140042;Label     ;13000;5850 ;4200 ;300  ;Name=EUR-Konto:;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140043;Label     ;13000;6150 ;4200 ;300  ;Name=Swift-BIC.: NOLADE21BAH;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140044;Label     ;13000;6450 ;4200 ;300  ;Name=IBAN: DE68251512700000106054;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140045;Label     ;13000;6825 ;4200 ;300  ;Name=Postbank Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140046;Label     ;13000;7125 ;4200 ;300  ;Name=EUR-Konto:;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140047;Label     ;13000;7425 ;4200 ;300  ;Name=SWIFT-BIC.: PBNKDEFFXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140048;Label     ;13000;7725 ;4200 ;300  ;Name=IBAN: DE24250100300379307301;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140019;PictureBox;9319 ;2797 ;2800 ;1600 ;SourceExpr=Firmendaten."ISO Logo" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=Yes;
+            PlaceInBottom=Yes;
+            SectionWidth=21200;
+            SectionHeight=1400;
+          }
+          CONTROLS
+          {
+            { 30  ;Label        ;0    ;0    ;18500;600  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=www.topas.de }
+            { 34  ;Label        ;0    ;900  ;18500;400  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=6;
+                                                         CaptionML=[DEU=Eigentumsvorbehalt: Insbesondere weisen wir darauf hin, dass die Ware gem„á unserer allgemeinen Gesch„ftsbedingungen bis zur Zahlung in voller H”he unser Eigentum bleibt.;
+                                                                    ENU=TOPAS shall retain title to goods until it has received payment in full.] }
+            { 43  ;Label        ;0    ;600  ;18500;400  ;HorzAlign=Center;
+                                                         FontName=arial;
+                                                         FontSize=6;
+                                                         CaptionML=[DEU=Fr die Ausfhrung dieses Auftrages gelten unsere allgemeinen Gesch„ftsbedingungen;
+                                                                    ENU=The execution of orders are subject to our standard terms and conditions of sale] }
+            { 46  ;Shape        ;100  ;300  ;18900;423  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table113;
+        DataItemTableView=SORTING(Document No.,Line No.);
+        DataItemVarName=Sales Invoice Line;
+        OnPreDataItem=BEGIN
+                        MWSTBetragZeile.DELETEALL;
+                        MehrZeilen := FIND('+');
+                        WHILE MehrZeilen AND (Description = '') AND ("No." = '') AND (Quantity = 0) AND (Amount = 0) DO
+                          MehrZeilen := NEXT(-1) <> 0;
+                        IF NOT MehrZeilen THEN
+                          CurrReport.BREAK;
+                        SETRANGE("Line No.",0,"Line No.");
+                        CurrReport.CREATETOTALS(Amount,"Amount Including VAT","Inv. Discount Amount");
+
+                        {lshanf c02}
+                        grechrabbetr := 0;
+                        {lshend}
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           MWSTBetragZeile.INIT;
+                           MWSTBetragZeile."VAT %" := "VAT %";
+                           MWSTBetragZeile."VAT Base" := Amount;
+                           MWSTBetragZeile."Amount Including VAT" := "Amount Including VAT";
+                           MWSTBetragZeile.InsertLine;
+
+                           {lshanf c02}
+                           IF "Inv. Discount Amount" <> 0 THEN BEGIN
+                             "grechrab%" := ("Inv. Discount Amount"*100) / (Amount+"Inv. Discount Amount");
+                             grechrabbetr := grechrabbetr+Amount+"Inv. Discount Amount";
+                           END;
+                           {lshend}
+
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                              BEGIN
+                                 steuer_text := MWSTBetragZeile.VATAmountText ;
+                                 einheiten_text:="Sales Invoice Line"."Unit of Measure";
+                              END
+                              ELSE
+                              BEGIN
+                                 steuer_text := MWSTBetragZeile.VATAmountText;
+                                 IF "Sales Invoice Line"."Unit of Measure" <> 'STšCK' THEN
+                                    BEGIN
+                                      einheiten_text:= 'pcs.';
+                                    END
+                                    ELSE
+                                    BEGIN
+                                      einheiten_text:= "Sales Invoice Line"."Unit of Measure";
+                                    END;
+                              END;
+
+
+
+                           // Lead Free
+                           {
+                           leadfree_symbol:='';
+                           leadfree_artikel.SETFILTER(leadfree_artikel."No.",'%1',"Sales Invoice Line"."No.");
+
+                           IF leadfree_artikel.FIND('-') THEN
+                              BEGIN
+
+                                IF (leadfree_artikel."Lead Free" = TRUE) AND
+                                   ("Sales Invoice Line".Quantity > 0) AND
+                                   (NOT(leadfree_artikel.Herstellerkurzname = 'HAL') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'SYN') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'IDT') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'PLX') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'TDK') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'TSC') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'JEL') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'SIM') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'NEX') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'LSI') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'WML') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'SIW') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'ACL') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'ICP') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'RIC') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'ICSA') AND
+                                    NOT(leadfree_artikel.Herstellerkurzname = 'ICS'))
+                                    THEN
+                                   BEGIN
+                                      leadfree_symbol:='ø';
+                                      IF CurrReport.LANGUAGE = 1031 THEN
+                                         BEGIN
+                                           lead_free_text1 := ' ø Diese Bauteile sind nach Angabe des Herstellers bleifrei.';
+                                           lead_free_text2 := 'Bitte beachten Sie gegebenenfalls die neue Bestellbezeichnung.';
+                                         END
+                                      ELSE
+                                         BEGIN
+                                           lead_free_text1 := ' ø According to manufacturer these parts are leadfree.';
+                                           lead_free_text2 := 'Please note the new part number where applicable.';
+
+                                        END;
+
+                                   END;
+                                IF (leadfree_artikel."Lead Free" = TRUE) AND
+                                   ("Sales Invoice Line".Quantity > 0) AND
+                                   ((leadfree_artikel.Herstellerkurzname = 'HAL') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'SYN') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'IDT') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'PLX') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'TDK') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'TSC') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'JEL') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'SIM') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'NEX') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'LSI') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'WML') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'SIW') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'ACL') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'ICP') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'RIC') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'ICSA') OR
+                                    (leadfree_artikel.Herstellerkurzname = 'ICS'))
+                                   THEN
+                                   BEGIN
+                                      leadfree_symbol:='øø';
+                                      IF CurrReport.LANGUAGE = 1031 THEN
+                                         BEGIN
+                                            lead_free_text0 := 'øø Diese Bauteile sind nach Angabe des Herstellers RoHS konform.';
+                                            lead_free_text2 := 'Bitte beachten Sie gegebenenfalls die neue Bestellbezeichnung.';
+                                         END
+                                         ELSE
+                                         BEGIN
+                                            lead_free_text0 := 'øø  According to manufacturer these parts are RoHS compliant.';
+                                            lead_free_text2 := 'Please note the new part number where applicable.';
+                                         END;
+                                   END;
+
+                              END;
+                           }
+
+                           //20.08.09-ST Andruck, wenn Artikel bleihaltig ist
+
+                           IF "Sales Invoice Line".Type="Sales Invoice Line".Type::Item THEN
+                             BEGIN
+                               lead_symbol:='';
+                               lead_artikel.SETFILTER(lead_artikel."No.",'%1',"Sales Invoice Line"."No.");
+
+                               IF lead_artikel.FINDFIRST THEN
+                                 BEGIN
+                                   IF (lead_artikel."Lead Free" = FALSE) AND (lead_artikel."Item Tracking Code" = 'DATECODE')
+                                   AND ("Sales Invoice Line".Quantity > 0) THEN
+                                     BEGIN
+                                       lead_symbol := 'ø';
+                                       IF CurrReport.LANGUAGE = 1031 THEN
+                                         BEGIN
+                                           lead_text := 'ø Diese Bauteile sind nach Angabe des Herstellers nicht RoHS konform bzw. nicht bleifrei.';
+                                         END
+                                       ELSE
+                                         BEGIN
+                                           lead_text := 'ø According to manufacturer these parts are non-RoHS compliant respectively not leadfree.';
+                                         END;
+                                     END;
+                                 END;
+                             END;
+
+
+                            IF v_FER_SPL=FALSE THEN BEGIN
+                              IF (("Sales Invoice Line"."Manufacturer Code" ='82') OR ("Sales Invoice Line"."Manufacturer Code" = '85')) THEN BEGIN
+                               v_FER_SPL:=TRUE;
+                              END;
+                            END;
+                         END;
+
+        DataItemLinkReference=Sales Invoice Header;
+        DataItemLink=Document No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=21200;
+            SectionHeight=1000;
+            OnPreSection=BEGIN
+                           IF "Sales Invoice Header"."Currency Code" = '' THEN
+                              BEGIN
+                                waehrungs_text:= 'EUR';
+                              END
+                              ELSE
+                              BEGIN
+                                waehrungs_text:= "Sales Invoice Header"."Currency Code";
+                              END;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 26  ;Shape        ;0    ;0    ;18300;900   }
+            { 41  ;Label        ;100  ;100  ;700  ;700  ;VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Pos.;
+                                                                    ENU=Item] }
+            { 42  ;Label        ;2100 ;100  ;4320 ;700  ;VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Artikel;
+                                                                    ENU=Part-No.] }
+            { 44  ;Label        ;12900;100  ;950  ;700  ;VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Einheit;
+                                                                    ENU=Unit] }
+            { 45  ;Label        ;14100;100  ;1680 ;400  ;HorzAlign=Right;
+                                                         VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Einzelpreis;
+                                                                    ENU=Unit Price] }
+            { 47  ;Label        ;15800;100  ;2310 ;400  ;HorzAlign=Right;
+                                                         VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Betrag;
+                                                                    ENU=Total] }
+            { 29  ;Label        ;7300 ;100  ;1900 ;700  ;HorzAlign=Center;
+                                                         VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Ursprungsland;
+                                                                    ENU=Country of Origin] }
+            { 36  ;Label        ;9400 ;100  ;1600 ;700  ;HorzAlign=Center;
+                                                         VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Liefermenge;
+                                                                    ENU=Quantity Shipped] }
+            { 27  ;Label        ;1300 ;100  ;700  ;700  ;VertAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=HK }
+            { 14  ;TextBox      ;17100;500  ;1000 ;400  ;HorzAlign=Right;
+                                                         SourceExpr=waehrungs_text }
+            { 37  ;TextBox      ;14800;500  ;1000 ;400  ;HorzAlign=Right;
+                                                         SourceExpr=waehrungs_text }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=21200;
+            SectionHeight=800;
+          }
+          CONTROLS
+          {
+            { 56  ;TextBox      ;15840;0    ;2310 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=Amount+"Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 38  ;Label        ;13200;0    ;2700 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=šbertrag;
+                                                                    ENU=Continuation] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           // CurrReport.SHOWOUTPUT(Art = 0);
+
+                           // Unterdckt Artikeltexte wenn eine Artikelzeile nicht berechnet wird oder die Textzeilen aus Testkonserve 'Woche' oder leer ist
+
+                           vk_rech_zeile.SETFILTER(vk_rech_zeile."Document No.",'%1',"Sales Invoice Line"."Document No." );
+                           vk_rech_zeile.SETFILTER(vk_rech_zeile."Line No.",'%1',"Sales Invoice Line"."Attached to Line No." );
+                           IF vk_rech_zeile.FINDFIRST THEN
+                             BEGIN
+                               CurrReport.SHOWOUTPUT(
+                                 ((vk_rech_zeile.Type=vk_rech_zeile.Type::Item) AND (vk_rech_zeile.Quantity > 0))
+                                 OR
+                                 (vk_rech_zeile.Type=0) AND (vk_rech_zeile."No." <> 'WOCHE'));
+                             END
+                           ELSE
+                             BEGIN
+                               IF (("Sales Invoice Line"."Attached to Line No."=0) AND ("Sales Invoice Line".Type=0)
+                               AND ("Sales Invoice Line"."No." <> 'WOCHE') AND ("Sales Invoice Line".Description <> '')) THEN
+                                 BEGIN
+                                   CurrReport.SHOWOUTPUT(TRUE);
+                                 END
+                               ELSE
+                                 BEGIN
+                                   CurrReport.SHOWOUTPUT(FALSE);
+                                 END
+                                END;
+
+                           IF "Sales Invoice Line"."No." = 'LIEF_DRUCK' THEN
+                             CurrReport.SHOWOUTPUT(FALSE);
+                           IF "Sales Invoice Line"."No." = 'LIEF_DRU_A' THEN
+                             CurrReport.SHOWOUTPUT(TRUE);
+
+                           //
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 57  ;TextBox      ;2133 ;0    ;15800;423  ;FontSize=8;
+                                                         SourceExpr=Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((Type = Type::"G/L Account")  AND ("Sales Invoice Line".Quantity > 0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 58  ;TextBox      ;2175 ;200  ;6500 ;423  ;FontSize=8;
+                                                         SourceExpr=Description }
+            { 59  ;TextBox      ;9200 ;200  ;1500 ;423  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=Quantity }
+            { 60  ;TextBox      ;12800;200  ;1050 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=einheiten_text }
+            { 61  ;TextBox      ;13800;200  ;2100 ;423  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 63  ;TextBox      ;15800;200  ;2310 ;423  ;HorzAlign=General;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=Amount+"Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(Type = Type::Item);
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           {lshanf c03}
+                           CurrReport.SHOWOUTPUT(("Description 2" <> '')
+                            AND ("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item));
+                           {lshend}
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=21200;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 86  ;TextBox      ;15800;400  ;2310 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=Amount+"Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 39  ;Label        ;12200;400  ;3600 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=Fortsetzung;
+                                                                    ENU=To Be Continued] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Inv. Discount Amount" <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 110 ;Label        ;2800 ;0    ;2730 ;423  ;ParentControl=133;
+                                                         FontSize=9;
+                                                         CaptionML=DEU="Rechnungsrabatt " }
+            { 114 ;TextBox      ;5460 ;0    ;1050 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="grechrab%" }
+            { 118 ;Label        ;6720 ;0    ;1050 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=% aus }
+            { 132 ;TextBox      ;7980 ;0    ;2520 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=grechrabbetr }
+            { 133 ;TextBox      ;15780;0    ;2310 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Rechn.-Rabatt Betrag;
+                                                         SourceExpr=-"Inv. Discount Amount" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(lead_free_text0 <>'');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 163 ;TextBox      ;1700 ;400  ;10100;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         SourceExpr=lead_free_text0 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(lead_free_text1 <>'');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 152 ;TextBox      ;1700 ;400  ;10100;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         SourceExpr=lead_free_text1 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=600;
+            OnPreSection=BEGIN
+
+                           CurrReport.SHOWOUTPUT((lead_free_text1 <>'')OR (lead_free_text0 <> ''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 151 ;TextBox      ;2000 ;0    ;10100;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         SourceExpr=lead_free_text2 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=986;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(lead_text <>'');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140007;TextBox   ;1700 ;400  ;13646;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         MultiLine=Yes;
+                                                         SourceExpr=lead_text }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=100;
+          }
+          CONTROLS
+          {
+            { 68  ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=468;
+            OnPreSection=BEGIN
+                             CurrReport.SHOWOUTPUT(v_FER_SPL=FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 167 ;Shape        ;0    ;368  ;18300;100  ;ShapeStyle=HorzLine }
+            { 168 ;Label        ;0    ;0    ;18300;350  ;HorzAlign=Center;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Diese Waren wurden NICHT in der EU hergestellt, sie entsprechen NICHT den Pr„ferenzregeln;
+                                                                    ENU=These products were not manufactured in the European Union.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=1847;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(Customer."VAT Bus. Posting Group" <> 'HAN_AUSL' );
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 90  ;TextBox      ;14700;324  ;2520 ;400  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=Amount;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 92  ;TextBox      ;14700;724  ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr="Amount Including VAT" - Amount;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 94  ;TextBox      ;14700;1424 ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Amount Including VAT";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 79  ;TextBox      ;11100;724  ;4200 ;423  ;FontSize=9;
+                                                         SourceExpr=steuer_text }
+            { 80  ;TextBox      ;11100;324  ;4200 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=TotalText }
+            { 81  ;TextBox      ;11100;1424 ;4200 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=TotalInklMWStText }
+            { 35  ;TextBox      ;17400;724  ;1000 ;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=waehrung2 }
+            { 65  ;TextBox      ;17400;1424 ;1000 ;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=waehrung2 }
+            { 66  ;TextBox      ;17400;324  ;1000 ;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=waehrung2 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=824;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(Customer."VAT Bus. Posting Group" = 'HAN_AUSL' );
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 164 ;TextBox      ;17400;377  ;1000 ;400  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=waehrung2 }
+            { 165 ;TextBox      ;14700;377  ;2520 ;400  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Sales Invoice Line".GetCurrencyCode;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 166 ;TextBox      ;11100;377  ;4200 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=TotalText }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table27;
+        OnPreDataItem=BEGIN
+                        IF debart<>'' THEN
+                        debart:='Ihre Artikelnummer: '+debart;
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                            v_reverse := ' ';
+                           //IF Item."Global Dimension 2 Code" = 'WARTUNG' THEN BEGIN
+                           //    v_reverse := 'ø*';
+                           //    v_reverse1:='1';
+                           //END;
+
+                            IF "Sales Invoice Header"."Ship-to Country/Region Code"='DE' THEN BEGIN
+                            END ELSE BEGIN
+                               IF (("Sales Invoice Header"."Gen. Bus. Posting Group"='EU') AND (Item."Gen. Prod. Posting Group"='HANDEL')
+                                     AND ("Sales Invoice Line".Quantity>0)) THEN
+                                BEGIN
+                                 v_reverse:='**';
+                                 v_reverse1:='1';
+                                END;
+                               IF (("Sales Invoice Header"."Gen. Bus. Posting Group"='EU') AND (Item."Gen. Prod. Posting Group"<>'HANDEL')
+                                     AND ("Sales Invoice Line".Quantity>0)) THEN
+                                BEGIN
+                                 v_reverse:='***';
+                                 v_reverse2:='1';
+                                END;
+                               IF (("Sales Invoice Header"."Gen. Bus. Posting Group"='AUSLAND') AND (Item."Gen. Prod. Posting Group"='HANDEL')
+                                     AND ("Sales Invoice Line".Quantity>0)) THEN
+                                BEGIN
+                                 v_reverse:='**';
+                                 v_reverse1:='1';
+                                END;
+                               IF (("Sales Invoice Header"."Gen. Bus. Posting Group"='AUSLAND') AND (Item."Gen. Prod. Posting Group"<>'HANDEL')
+                                     AND ("Sales Invoice Line".Quantity>0)) THEN
+                                BEGIN
+                                 v_reverse:='***';
+                                 v_reverse2:='1';
+                                END;
+                            END;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         debart:='';
+                       END;
+
+        DataItemLinkReference=Sales Invoice Line;
+        DataItemLink=No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=946;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item)
+                            AND ("Sales Invoice Line".Quantity > 0));
+
+
+                           //TOPAS 22.07.08-ST
+                           //Artikelposten / Wertposten holen , um Ursprungsland zu fllen
+
+                           vUrsprungsland := '';
+                           InvoiceRowID:=STRSUBSTNO('"%1";"%2";"%3";"%4";"%5";"%6"',113,0,"Sales Invoice Line"."Document No.",'',0,
+                           "Sales Invoice Line"."Line No.");
+                           ValueEntryRelation.SETCURRENTKEY(ValueEntryRelation."Source RowId");
+                           ValueEntryRelation.SETRANGE(ValueEntryRelation."Source RowId",InvoiceRowID);
+                           IF ValueEntryRelation.FINDFIRST THEN BEGIN
+                             REPEAT
+                               ValueEntry.SETFILTER(ValueEntry."Entry No.",'%1',ValueEntryRelation."Value Entry No.");
+                               IF ValueEntry.FINDFIRST THEN BEGIN
+                                 ItemLedgerEntry.SETFILTER(ItemLedgerEntry."Entry No.",'%1',ValueEntry."Item Ledger Entry No.");
+                                 IF ItemLedgerEntry.FINDFIRST THEN BEGIN
+                                   IF vUrsprungsland <> '' THEN BEGIN
+                                     IF STRPOS(vUrsprungsland,ItemLedgerEntry.Ursprungsland) = 0 THEN
+                                     vUrsprungsland:=vUrsprungsland + ',' +ItemLedgerEntry.Ursprungsland;
+                                   END
+                                   ELSE
+                                     vUrsprungsland:=ItemLedgerEntry.Ursprungsland;
+                                 END;
+                               END;
+                             UNTIL ValueEntryRelation.NEXT = 0;
+                           END;
+
+                           //TOPAS Ende
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 62  ;TextBox      ;15800;100  ;2310 ;423  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Invoice Line".Amount+"Sales Invoice Line"."Inv. Discount Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 69  ;TextBox      ;13800;100  ;2100 ;423  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Invoice Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 76  ;TextBox      ;9200 ;100  ;1500 ;423  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Invoice Line".Quantity }
+            { 85  ;TextBox      ;12900;100  ;900  ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=einheiten_text }
+            { 93  ;TextBox      ;2200 ;523  ;5900 ;423  ;FontSize=8;
+                                                         SourceExpr="Sales Invoice Line".Description }
+            { 99  ;TextBox      ;2200 ;100  ;5900 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Artikelnr. 2" }
+            { 100 ;TextBox      ;0    ;100  ;1300 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Line No." }
+            { 101 ;TextBox      ;1300 ;100  ;574  ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=Item.Herstellerkurzname }
+            { 32  ;TextBox      ;8100 ;100  ;1000 ;423  ;FontSize=8;
+                                                         SourceExpr=vUrsprungsland }
+            { 1140005;TextBox   ;1800 ;100  ;400  ;423  ;SourceExpr=lead_symbol }
+            { 1140013;TextBox   ;1297 ;523  ;611  ;423  ;SourceExpr=v_reverse }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line"."Description 2" <> '')
+                            AND ("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND ("Sales Invoice Line".Quantity > 0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 82  ;TextBox      ;2200 ;0    ;6200 ;423  ;FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Description 2" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(((Item.NCNR=TRUE) AND ("Sales Invoice Line".Quantity > 0)) OR ((Item."Manufacturer Code"='00')
+                            AND ("Sales Invoice Line".Quantity > 0)));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 72  ;Label        ;2179 ;0    ;15800;423  ;Name=NCNR;
+                                                         HorzAlign=Left;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Dieses Bauteil ist nicht stornier- und nicht retournierbar!;
+                                                                    ENU=This part is non-cancelable and non-returnable!] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=479;
+            OnPreSection=BEGIN
+                           //debitor_artikel.SETFILTER(debitor_artikel."Artikelnr.",'%1',"Sales Invoice Line"."No.");
+                           //debitor_artikel.SETFILTER(debitor_artikel."Debitornr.",'%1',"Sales Invoice Line"."Sell-to Customer No.");
+
+                           //CurrReport.SHOWOUTPUT((NOT debitor_artikel.FIND('-')) AND ("Sales Invoice Line".Quantity > 0) AND
+                           // ("Sales Invoice Line"."Cross-Reference No."='') AND (Item."Tariff No." <> ''));
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item)
+                            AND ("Sales Invoice Line".Quantity > 0) AND (Item."Tariff No." <> '') AND ("Sales Invoice Line"."Cross-Reference No." = ''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 174 ;TextBox      ;4570 ;0    ;3900 ;300  ;HorzAlign=Left;
+                                                         SourceExpr=Item."Tariff No." }
+            { 171 ;Label        ;2210 ;0    ;2403 ;300  ;CaptionML=[DEU=Warentarifnummer:;
+                                                                    ENU=Harm. Code:] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=458;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item)
+                            AND ("Sales Invoice Line".Quantity > 0) AND (Item."Tariff No." <> '') AND ("Sales Invoice Line"."Cross-Reference No." <> ''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 54  ;Label        ;2216 ;0    ;2300 ;300  ;CaptionML=[DEU=Ihre Artikelnummer:;
+                                                                    ENU=Your part number:] }
+            { 40  ;Label        ;9179 ;0    ;2360 ;300  ;CaptionML=[DEU=Warentarifnummer:;
+                                                                    ENU=Harm. Code:] }
+            { 159 ;TextBox      ;11539;0    ;3900 ;300  ;HorzAlign=Left;
+                                                         SourceExpr=Item."Tariff No." }
+            { 1140004;TextBox   ;4579 ;0    ;4500 ;300  ;HorzGlue=Left;
+                                                         HorzAlign=Left;
+                                                         SourceExpr="Sales Invoice Line"."Cross-Reference No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=479;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
+                            ("Sales Invoice Line".Quantity > 0) AND (Item."Tariff No." = '') AND ("Sales Invoice Line"."Cross-Reference No."<>''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 160 ;Label        ;2215 ;0    ;2300 ;300  ;CaptionML=[DEU=Ihre Artikelnummer:;
+                                                                    ENU=Your part number:] }
+            { 1140002;TextBox   ;4558 ;0    ;4600 ;300  ;HorzAlign=Left;
+                                                         SourceExpr="Sales Invoice Line"."Cross-Reference No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=528;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
+                            ("Sales Invoice Line".Quantity > 0) AND (Item."ECCN-Nr." <>''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140016;TextBox   ;2223 ;0    ;6930 ;360  ;FontSize=7;
+                                                         SourceExpr='ECCN-Nr.: '+ Item."ECCN-Nr." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Line".Type ="Sales Invoice Line".Type::Item) AND
+                            ("Sales Invoice Line".Quantity > 0) AND ("Sales Invoice Line"."VAT Prod. Posting Group"='13B2'));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140014;Label     ;6312 ;180  ;8773 ;423  ;Name=NCNR;
+                                                         HorzAlign=Left;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Steuerschuldbergang gem„á õ 13b Abs.2 Nr.10 i.V.m. Abs.5 UStG !;
+                                                                    ENU=This part is non-cancelable and non-returnable!] }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=5;
+        DataItemTable=Table9;
+        DataItemLink=Code=FIELD(Country/Region of Origin Code);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table44;
+        DataItemTableView=SORTING(Document Type,No.,Line No.);
+        DataItemLinkReference=Sales Invoice Header;
+        DataItemLink=No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=MWStZ„hler;
+        OnPreDataItem=BEGIN
+                        IF MWSTBetragZeile.COUNT <= 1 THEN
+                          CurrReport.BREAK;
+                        SETRANGE(Number,1,MWSTBetragZeile.COUNT);
+                        CurrReport.CREATETOTALS(MWSTBetragZeile."VAT Base",MWSTBetragZeile."VAT Amount");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           MWSTBetragZeile.GetLine(Number);
+                         END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=21200;
+            SectionHeight=1800;
+          }
+          CONTROLS
+          {
+            { 95  ;Label        ;0    ;846  ;2100 ;846  ;ParentControl=107;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 96  ;Label        ;2310 ;846  ;2520 ;846  ;ParentControl=108;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 97  ;Label        ;5040 ;846  ;2520 ;846  ;ParentControl=109;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 78  ;Label        ;0    ;0    ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=MwSt. Betrag Spezifikation }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=21200;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 103 ;Label        ;0    ;0    ;2100 ;423  ;ParentControl=104;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 104 ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Line".GetCurrencyCode }
+            { 105 ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 107 ;TextBox      ;0    ;0    ;2100 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt %;
+                                                         SourceExpr=MWSTBetragZeile."VAT %" }
+            { 108 ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Bemessungsgrundlage;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+            { 109 ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Betrag;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=21200;
+            SectionHeight=700;
+          }
+          CONTROLS
+          {
+            { 111 ;Label        ;0    ;200  ;2100 ;423  ;ParentControl=112;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 112 ;TextBox      ;2310 ;200  ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+            { 113 ;TextBox      ;5000 ;200  ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=21200;
+            SectionHeight=900;
+          }
+          CONTROLS
+          {
+            { 115 ;Label        ;0    ;200  ;2100 ;423  ;ParentControl=116;
+                                                         FontSize=9;
+                                                         FontBold=Yes }
+            { 116 ;TextBox      ;2310 ;200  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Total;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+            { 117 ;TextBox      ;5000 ;200  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Invoice Header"."Currency Code" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=1031;
+            OnPreSection=BEGIN
+                                 CurrReport.SHOWOUTPUT( Customer.Bonusregelung <>'');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140008;Label     ;0    ;370  ;10958;423  ;FontSize=9;
+                                                         CaptionML=[DEU=Es k”nnen sich Entgeltminderungen aufgrund der Bonusvereinbarung vom;
+                                                                    ENU=""] }
+            { 1140010;Label     ;12064;370  ;1618 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=ergeben.;
+                                                                    ENU=""] }
+            { 1140012;TextBox   ;10406;360  ;1534 ;423  ;FontSize=9;
+                                                         SourceExpr=v_bonusdatum }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Header"."Gen. Bus. Posting Group" ='EU') AND (v_reverse1='1'));
+                           //CurrReport.SHOWOUTPUT(v_reverse1='1');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140003;Label     ;0    ;100  ;9000 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=**  Steuerfreie innergemeinschaftliche Lieferung;
+                                                                    ENU=**  Intra-Community supply of goods] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(( "Sales Invoice Header"."Gen. Bus. Posting Group" ='AUSLAND') AND (v_reverse2='1'));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140018;Label     ;0    ;211  ;9000 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=***  Nicht im Inland steuerbare Leistung.;
+                                                                    ENU=*** Tax free export service.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Sales Invoice Header"."Gen. Bus. Posting Group" ='AUSLAND') AND (v_reverse1='1'));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140017;Label     ;0    ;133  ;9000 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=**  Steuerfreie Ausfuhrlieferung.;
+                                                                    ENU=**  Tax freeexport.] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(( "Sales Invoice Header"."Gen. Bus. Posting Group" ='EU') AND (v_reverse2='1'));
+                           //CurrReport.SHOWOUTPUT( "Sales Invoice Header"."Gen. Bus. Posting Group" ='EU');
+                           //CurrReport.SHOWOUTPUT(v_reverse2='1');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140011;Label     ;0    ;159  ;13154;423  ;FontSize=9;
+                                                         CaptionML=[DEU=*** Reverse Charge - Steuerschuldnerschaft des Leistungsempf„ngers - Autoliquidation;
+                                                                    ENU=*** Reverse Charge - Steuerschuldnerschaft des Leistungsempf„ngers - Autoliquidation] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=1223;
+            OnPreSection=BEGIN
+                           {lshanf c01}
+                           IF ZlgBed."Discount %" <> 0 THEN BEGIN
+                           //  "Sales Invoice Header".CALCFIELDS(Skontobetrag);
+
+                             IF COPYSTR(ZlgBed.Description,1,1) <> '*' THEN
+                               gzbedtx := ZlgBed.Description;
+                           END ELSE BEGIN
+                               gzbedtx := ZlgBed.Description;
+                           END;
+                           {lshend}
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 119 ;Label        ;0    ;0    ;3150 ;423  ;ParentControl=120;
+                                                         FontSize=9;
+                                                         CaptionML=[DEU=Zahlungsbedingung;
+                                                                    ENU=Payment Terms] }
+            { 120 ;TextBox      ;3600 ;0    ;13230;423  ;FontSize=9;
+                                                         CaptionML=DEU=Zahlungsbedingung;
+                                                         SourceExpr=gzbedtx }
+            { 121 ;Label        ;0    ;423  ;3150 ;423  ;ParentControl=122;
+                                                         FontSize=9;
+                                                         CaptionML=[DEU=Lieferbedingung;
+                                                                    ENU=Delivery Terms] }
+            { 122 ;TextBox      ;3600 ;423  ;13200;423  ;FontSize=9;
+                                                         CaptionML=DEU=Lieferbedingung;
+                                                         SourceExpr=LieferBed.Description }
+            { 1140001;Label     ;0    ;800  ;3150 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=Versandart;
+                                                                    ENU=Shipping] }
+            { 1140000;TextBox   ;3600 ;800  ;13200;423  ;FontSize=9;
+                                                         SourceExpr=Account }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total2;
+        OnPreDataItem=BEGIN
+                        IF NOT LiefAdrAnzeigen THEN
+                          CurrReport.BREAK;
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=700;
+          }
+          CONTROLS
+          {
+            { 123 ;Label        ;0    ;277  ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Lieferadresse;
+                                                                    ENU=Shipping Address] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT :=
+                             "Sales Invoice Header"."Sell-to Customer No." <> "Sales Invoice Header"."Bill-to Customer No.";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 125 ;TextBox      ;3600 ;0    ;2100 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Sales Invoice Header"."Sell-to Customer No." }
+            { 124 ;Label        ;0    ;0    ;3150 ;423  ;ParentControl=125;
+                                                         FontSize=9 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=21200;
+            SectionHeight=3300;
+          }
+          CONTROLS
+          {
+            { 127 ;TextBox      ;3600 ;400  ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[2] }
+            { 128 ;TextBox      ;3600 ;800  ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[3] }
+            { 129 ;TextBox      ;3600 ;1200 ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[4] }
+            { 130 ;TextBox      ;3600 ;1600 ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[5] }
+            { 131 ;TextBox      ;3600 ;2000 ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[6] }
+            { 51  ;TextBox      ;3600 ;2400 ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[7] }
+            { 52  ;TextBox      ;3600 ;2800 ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[8] }
+            { 126 ;TextBox      ;3600 ;0    ;7700 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[1] }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=5060;
+      Height=440;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+      { 1   ;TextBox      ;3410 ;0    ;1650 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Anzahl Kopien;
+                                                   SourceExpr=AnzKopien }
+      { 21  ;Label        ;0    ;0    ;3300 ;440  ;ParentControl=1;
+                                                   InPage=-1 }
+    }
+  }
+  CODE
+  {
+    VAR
+      waehrung2@1140000 : Code[10];
+      waehrung@1140001 : Code[10];
+      debart@1140002 : Text[80];
+      spedition@1140003 : Record 291;
+      art1@1140004 : Record 27;
+      verk_debitor@1140005 : Record 18;
+      FIBUEinrichtung@1140006 : Record 98;
+      LieferBed@1140007 : Record 10;
+      ZlgBed@1140008 : Record 3;
+      VerkEinkPerson@1140009 : Record 13;
+      Firmendaten@1140010 : Record 79;
+      Deb@1140011 : Record 18;
+      MWSTBetragZeile@1140012 : TEMPORARY Record 290;
+      language@1140061 : Record 8;
+      VerkRechDruckZ„hler@1140013 : Codeunit 315;
+      FormatAdr@1140014 : Codeunit 365;
+      DebAdr@1140015 : ARRAY [8] OF Text[50];
+      LieferAnAdr@1140016 : ARRAY [8] OF Text[50];
+      FirmaAdr@1140017 : ARRAY [8] OF Text[50];
+      AuftragNrText@1140018 : Text[30];
+      Verk„uferText@1140019 : Text[30];
+      MWStNrText@1140020 : Text[30];
+      ReferenzText@1140021 : Text[30];
+      TotalText@1140022 : Text[50];
+      TotalInklMWStText@1140023 : Text[50];
+      MehrZeilen@1140024 : Boolean;
+      AnzKopien@1140025 : Integer;
+      AnzSchleifen@1140026 : Integer;
+      KopieText@1140027 : Text[30];
+      LiefAdrAnzeigen@1140028 : Boolean;
+      i@1140029 : Integer;
+      "--------LSH--------"@1140030 : Integer;
+      "grechrab%"@1140031 : Decimal;
+      grechrabbetr@1140032 : Decimal;
+      gzbedtx@1140033 : Text[100];
+      lead_free_text0@1140034 : Text[80];
+      lead_free_text1@1140035 : Text[80];
+      leadfree_symbol@1140036 : Text[3];
+      leadfree_artikel@1140037 : Record 27;
+      lead_artikel@1140055 : Record 27;
+      lead_symbol@1140057 : Text[3];
+      lead_text@1140056 : Text[120];
+      lead_free_text2@1140038 : Text[80];
+      Var_UST_ID@1140039 : Text[20];
+      Var_Steuernr@1140040 : Text[20];
+      steuer_text@1140041 : Text[30];
+      seite@1140042 : Text[30];
+      waehrungs_text@1140043 : Text[15];
+      einheiten_text@1140044 : Text[30];
+      vk_rech_zeile@1140045 : Record 113;
+      Account@1140046 : Text[90];
+      vUrsprungsland@1140047 : Text[50];
+      Lieferscheinnr@1140052 : Code[20];
+      Belegdatum@1140054 : Date;
+      InvoiceRowID@1140048 : Text[100];
+      ValueEntryRelation@1140049 : Record 6508;
+      ValueEntry@1140050 : Record 5802;
+      ItemLedgerEntry@1140051 : Record 32;
+      VkZeile@1140053 : Record 113;
+      v_bonusdatum@1140058 : Date;
+      v_reverse@1140059 : Text[3];
+      v_reverse1@1140060 : Text[3];
+      v_reverse2@1140063 : Text[3];
+      v_FER_SPL@1140062 : Boolean;
+      VkRK@1140064 : Record 112;
+
+    BEGIN
+    {
+      030299 pl
+      c01  Total, Body(1) und Globals
+           Zahlungsbedingung vom Skonto abh„nging ausdrucken.
+
+      230699 ug
+           Adressfeld auf Fensterkurvert-Norm gesetzt.
+      c02  Verkaufsrechnungszeile, C/AL und Globals
+           Rechnungsrabatt %-Satz und Rabattgrundlage in Rechnungsrabattzeile mit ausdrucken.
+
+      131099 al
+      c03  Verkaufsrechnungszeile, Body(7) eingefgt.
+           Bezeichnung 2 ausdrucken.
+
+      Papersource 3 --> Fach IV HP 4050NT
+      Papersource 2 --> Fach II HP 4050NT
+    }
+    END.
+  }
+}
+
