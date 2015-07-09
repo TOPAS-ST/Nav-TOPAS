@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=12.05.15;
-    Time=14:31:32;
+    Date=22.06.15;
+    Time=12:19:32;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -238,15 +238,17 @@ OBJECT Form 50023 Kalkulationsblatt
 
                                                               IF "Wartungsvertragsnr." <> '' THEN
                                                                 BEGIN
+
                                                                   Wartungsvertrag.GET("Wartungsvertragsnr.");
-                                                                  IF (Wartungsvertrag.Vertragsablaufdatum < WORKDATE)
-                                                                  AND ((Wartungsvertrag.Status = Wartungsvertrag.Status :: Auftrag)
+                                                                  IF ((Wartungsvertrag.Status = Wartungsvertrag.Status :: Auftrag)
                                                                   OR (Wartungsvertrag.Status = Wartungsvertrag.Status :: ACTS)
-                                                                  OR (Wartungsvertrag.Status = Wartungsvertrag.Status :: ACHAT)) THEN
-                                                                    ERROR(Text014,Wartungsvertrag."Wartungsvertragsnr.");
-                                                                  IF ((Wartungsvertrag.Status <> Wartungsvertrag.Status :: Auftrag)
-                                                                  AND (Wartungsvertrag.Status <> Wartungsvertrag.Status :: ACTS)
-                                                                  AND (Wartungsvertrag.Status <> Wartungsvertrag.Status :: ACHAT)) THEN
+                                                                  OR (Wartungsvertrag.Status = Wartungsvertrag.Status :: ACHAT)
+                                                                  OR (Wartungsvertrag.Status = Wartungsvertrag.Status :: "Champs Partner")) THEN
+                                                                    BEGIN
+                                                                      IF (Wartungsvertrag.Vertragsablaufdatum < WORKDATE) THEN
+                                                                        ERROR(Text014,Wartungsvertrag."Wartungsvertragsnr.");
+                                                                    END
+                                                                  ELSE
                                                                     ERROR(Text015,Wartungsvertrag."Wartungsvertragsnr.");
 
                                                                   IF Ablaufdatum = 0D THEN
@@ -254,7 +256,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                                        v_ablaufdatum := Ablaufdatum_generieren("SUP Artikelnr.","Wartungsvertragsnr.");
                                                                       IF v_ablaufdatum <> 0D THEN
                                                                         BEGIN
-                                                                          Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',WORKDATE,v_ablaufdatum)) + 'M';
+                                                                          VALIDATE(Laufzeit,FORMAT(TOPAS_API.CalculateTimeDiff('M',WORKDATE,v_ablaufdatum)) + 'M');
                                                                           MESSAGE(Text020,Laufzeit);
                                                                         END;
                                                                     END;
