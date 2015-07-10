@@ -3,7 +3,7 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
   OBJECT-PROPERTIES
   {
     Date=10.07.15;
-    Time=11:22:07;
+    Time=13:47:46;
     Modified=Yes;
     Version List=Beleg - manuell --> 50152;
   }
@@ -167,9 +167,8 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
 
                            IF "Currency Code" = '' THEN
                              w„hrung:='°'
-                             ELSE
+                           ELSE
                              w„hrung:="Currency Code";
-
 
                            lead_free_text0:='';
                            lead_free_text1:='';
@@ -177,11 +176,7 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
                            lead_text := '';
 
                            v_FER_SPL:=FALSE;
-
-
-
-                            v_sum_system:=0;
-
+                           v_sum_system:=0;
 
                            VerkZeile1.RESET;
                            VerkZeile1.SETFILTER(VerkZeile1."Document No.",'%1',"Sales Header"."No.");
@@ -190,6 +185,7 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
                            REPEAT
                            IF VerkZeile1."Manufacturer Code"='57' THEN v_system:=TRUE;
                            IF VerkZeile1."Manufacturer Code"='5710' THEN v_system:=TRUE;
+                           IF VerkZeile1."Manufacturer Code"='5720' THEN v_system:=TRUE;
                            IF VerkZeile1."Manufacturer Code"='59' THEN v_system:=TRUE;
                            IF VerkZeile1."Manufacturer Code"='82' THEN v_system:=TRUE;
                            IF VerkZeile1."Manufacturer Code"='85' THEN v_system:=TRUE;
@@ -387,10 +383,6 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
                                     END;
                                  END;
                                  IF "Sales Header"."Currency Code" = 'YEN' THEN minbestellwert:= ':    50.000,-- JPY';   //**********************
-
-
-
-
 
                              END;
 
@@ -1024,6 +1016,24 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
                                v_FER_SPL:=TRUE;
                               END;
                             END;
+
+                           //2015-07-10 ST MSRP Andruck fr Systeme, anstatt VPE
+                           msrp := 0;
+                           IF v_system = TRUE THEN
+                             BEGIN
+                               WITH FindSalesPrice DO BEGIN
+                                 SETRANGE("Item No.","Sales Line"."No.");
+                                 SETFILTER("Ending Date",'%1|>=%2',0D,WORKDATE);
+                                 SETFILTER("Currency Code",'%1',"Sales Header"."Currency Code");
+                                 IF "Sales Line"."Unit of Measure" <> '' THEN
+                                   SETFILTER("Unit of Measure Code",'%1|%2',"Sales Line"."Unit of Measure",'');
+                                 SETRANGE("Starting Date",0D,WORKDATE);
+                                 SETRANGE("Sales Type","Sales Type"::"All Customers");
+                                 SETRANGE("Sales Code");
+                                 IF FINDLAST THEN
+                                   msrp := FindSalesPrice."Unit Price";
+                               END;
+                             END;
                          END;
 
         OnPostDataItem=BEGIN
@@ -1189,9 +1199,8 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
                                                          FontSize=9;
                                                          FontBold=Yes;
                                                          MultiLine=Yes;
-                                                         CaptionML=[DEU=VPE*;
-                                                                    ENU=Tube / Tray Qty.] }
-            { 1140052;Label     ;8400 ;0    ;1700 ;846  ;HorzAlign=Left;
+                                                         CaptionML=DEU=MSRP }
+            { 1140052;Label     ;8426 ;0    ;1674 ;846  ;HorzAlign=Left;
                                                          VertAlign=Bottom;
                                                          FontSize=9;
                                                          FontBold=Yes;
@@ -1371,16 +1380,16 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
           {
             { 1140056;TextBox   ;13800;23   ;2800 ;423  ;FontSize=9;
                                                          SourceExpr=LieferText }
-            { 1140057;TextBox   ;11500;23   ;2000 ;423  ;FontSize=9;
+            { 1140057;TextBox   ;11606;23   ;2000 ;423  ;FontSize=9;
                                                          BlankZero=Yes;
                                                          SourceExpr="Sales Line"."Unit Price";
                                                          AutoFormatType=2;
                                                          AutoFormatExpr="Sales Header"."Currency Code" }
-            { 1140058;TextBox   ;10000;23   ;1300 ;423  ;FontSize=9;
+            { 1140058;TextBox   ;9630 ;23   ;1882 ;423  ;FontSize=9;
                                                          DecimalPlaces=0:0;
                                                          BlankZero=Yes;
-                                                         SourceExpr=Artikel.Verpackungsmenge }
-            { 1140059;TextBox   ;7900 ;23   ;1970 ;423  ;FontSize=9;
+                                                         SourceExpr=msrp }
+            { 1140059;TextBox   ;7900 ;23   ;1574 ;423  ;FontSize=9;
                                                          BlankZero=Yes;
                                                          SourceExpr="Sales Line".Quantity }
             { 1140060;TextBox   ;1500 ;0    ;7300 ;423  ;HorzAlign=Left;
@@ -2006,8 +2015,10 @@ OBJECT Report 50052 TOPAS Verkauf - Angebot LOGO
       v_FER_SPL@1140080 : Boolean;
       v_system@1140081 : Boolean;
       VerkZeile1@1140082 : Record 37;
+      FindSalesPrice@1140085 : Record 7002;
       v_sum_system@1140083 : Decimal;
       v_total_drucken@1140084 : Boolean;
+      msrp@1140086 : Decimal;
 
     PROCEDURE "*** Scantec ***"@1();
     BEGIN
