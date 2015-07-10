@@ -3690,6 +3690,16 @@ IF AUzeile.FINDFIRST THEN
                 IF ServiceZuordnungHolen."Menge kalk." = 0 THEN
                   ERROR(Text120,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen.FIELDCAPTION("Menge kalk."));
 
+                //Falsche Mengen Konstellation Auftrag und Menge kalk. bei FLAT Geräten wird abgefangen
+                IF Artikel.Serviceklassifizierung = 'SYSTEM FLAT' THEN
+                  BEGIN
+                    IF (AUzeile.Quantity > AUzeile."Qty. to Ship") AND (ServiceZuordnungHolen."Menge kalk." >
+                    AUzeile."Qty. to Ship") THEN
+                      ERROR(Text137,AUzeile."Line No.",AUzeile.FIELDCAPTION(Quantity),AUzeile.Quantity,
+                      ServiceZuordnungHolen.FIELDCAPTION("Menge kalk."),ServiceZuordnungHolen."Menge kalk.",
+                      AUzeile.FIELDCAPTION("Qty. to Ship"),AUzeile."Qty. to Ship");
+                  END;
+
                 //***************************************************************************************************
                 //            Prüft auch darauf, ob nach der Buchung nur genau ein aktives Basisgerät vorliegt
                 //***************************************************************************************************
