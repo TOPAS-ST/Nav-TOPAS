@@ -1956,6 +1956,8 @@ IF Vkliefkopf.FINDLAST THEN
                                    LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                                    LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                                    LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
+                                   LizenzTab.SETFILTER("Urspr. Auftragsnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
+                                   LizenzTab.SETFILTER("Urspr. Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
                                    LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                                    LizenzTab.SETFILTER("Artikelnr.",'%1',SeriennrVerfolgung."Item No.");
                                    LizenzTab.SETFILTER("Seriennr.",'%1',SeriennrVerfolgung."Serial No.");
@@ -2056,8 +2058,8 @@ IF Vkliefkopf.FINDLAST THEN
                                                      IF LizenzTab.Verlängerung = TRUE THEN
                                                        LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                                    LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                                   IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                                     BEGIN
+                                                   //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
+                                                   //  BEGIN
                                                        v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                                        LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                                        ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
@@ -2065,7 +2067,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                        CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                                        IF v_verlaengerung_ablauf <> 0D THEN
                                                          LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                                      END;
+                                                   //   END;
                                                  END;
 
                                                //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2145,6 +2147,8 @@ IF Vkliefkopf.FINDLAST THEN
                             LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                             LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                             LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
                             LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                             LizenzTab.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                             LizenzTab.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
@@ -2241,8 +2245,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               IF LizenzTab.Verlängerung = TRUE THEN
                                                 LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                            IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                              BEGIN
+                                            //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
+                                            //  BEGIN
                                                 v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                                 LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                                 ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
@@ -2250,7 +2254,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                 CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                                 IF v_verlaengerung_ablauf <> 0D THEN
                                                   LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                              END;
+                                            //  END;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2343,6 +2347,8 @@ IF Vkliefkopf.FINDLAST THEN
                             LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                             LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                             LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
                             LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                             LizenzTab.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                             LizenzTab.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
@@ -2436,8 +2442,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               IF LizenzTab.Verlängerung = TRUE THEN
                                                 LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                            IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                              BEGIN
+                                            //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
+                                            //  BEGIN
                                                 v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                                 LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                                 ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
@@ -2445,7 +2451,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                 CHAMPZuordnungHolen."Wartungsvertragsnr.");
                                                 IF v_verlaengerung_ablauf <> 0D THEN
                                                   LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                              END;
+                                            //  END;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2981,36 +2987,7 @@ IF ACTS THEN
 ELSE
   Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
 Champs.SETFILTER("Artikelnr.",'%1',Artikelnr);
-//Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
-IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#01';
-IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
-IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
-  SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
-//Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
-IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#01' THEN
-  SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#01';
-IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#02' THEN
-  SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#02';
-IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#01' THEN
-  SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#01';
-IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#02' THEN
-  SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#02';
-IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/1YR' THEN
-  SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#01';
-IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/3YR' THEN
-  SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#02';
-//Manuelle Artikel Filter erspart separate APSS One Box Preisliste
-IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTWARE' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#01';
-IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTW#01' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#02';
-IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#01' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
-IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#02' THEN
-  SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#02';
-
+SUP_Artikelnr := ServiceTab.FakeSUPArtikelErmitteln(SUP_Artikelnr);
 Champs.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
 Champs.SETFILTER(Währungscode,'%1',Waehrung);
 IF Champs.FINDFIRST THEN
@@ -3126,36 +3103,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
     Service_PL.SETFILTER("Artikelnr.",'%1',Artikelnr);
-    //Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
-    IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#01' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#01';
-    IF SUP_Artikelnr = 'ACHAT/SOFTWARE/24#02' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-24x7/SO#02';
-    IF SUP_Artikelnr = 'ACHAT-ADV-HWREPLA#01' THEN
-      SUP_Artikelnr := 'ACTS-ADV-HWREPLAC#01';
-    //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#01' THEN
-      SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#01';
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-8X5-#02' THEN
-      SUP_Artikelnr := 'CHAMPS-SUPP-8X5/S#02';
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#01' THEN
-      SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#01';
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-24X7#02' THEN
-      SUP_Artikelnr := 'CHAMPS-SUPP-24X7/#02';
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/1YR' THEN
-      SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#01';
-    IF SUP_Artikelnr = 'CHAMPS-BASIC-AHR/3YR' THEN
-      SUP_Artikelnr := 'CHAMPS-ADV-HWREPL#02';
-    //Manuelle Artikel Filter erspart separate APSS One Box Preisliste
-    IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTWARE' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#01';
-    IF SUP_Artikelnr = 'APSS-OB-9X5/SOFTW#01' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-9X5/SOF#02';
-    IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#01' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#01';
-    IF SUP_Artikelnr = 'APSS-OB-24X7/SOFT#02' THEN
-      SUP_Artikelnr := 'ACTS-SUPP-24X7/SO#02';
-
+    SUP_Artikelnr := ServiceTab.FakeSUPArtikelErmitteln(SUP_Artikelnr);
     Service_PL.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
     Service_PL.SETFILTER(Währungscode,'%1',Währung);
     IF Service_PL.FINDFIRST THEN
@@ -3382,3 +3330,25 @@ IF TempSystemPos.FINDFIRST THEN
   END
 ELSE
   EXIT(FALSE);
+
+FakeSUPArtikelErmitteln(SUP_Artikelnr : Code[20]) : Code[20]
+CASE SUP_Artikelnr OF
+//Für ACHAT wird auf das ACTS pendant verwiesen, spart separate ACHAT Preisliste
+  'ACHAT/SOFTWARE/24#01' : EXIT('ACTS-SUPP-24x7/SO#01');
+  'ACHAT/SOFTWARE/24#02' : EXIT('ACTS-SUPP-24x7/SO#02');
+  'ACHAT-ADV-HWREPLA#01' : EXIT('ACTS-ADV-HWREPLAC#01');
+//Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
+ 'CHAMPS-BASIC-8X5-#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
+ 'CHAMPS-BASIC-8X5-#02' : EXIT('CHAMPS-SUPP-8X5/S#02');
+ 'CHAMPS-BASIC-24X7#01' : EXIT('CHAMPS-SUPP-24X7/#01');
+ 'CHAMPS-BASIC-24X7#02' : EXIT('CHAMPS-SUPP-24X7/#02');
+ 'CHAMPS-BASIC-AHR/1YR' : EXIT('CHAMPS-ADV-HWREPL#01');
+ 'CHAMPS-BASIC-AHR/3YR' : EXIT('CHAMPS-ADV-HWREPL#02');
+//Manuelle Artikel Filter erspart separate APSS One Box Preisliste
+ 'APSS-OB-9X5/SOFTWARE' : EXIT('ACTS-SUPP-9X5/SOF#01');
+ 'APSS-OB-9X5/SOFTW#01' : EXIT('ACTS-SUPP-9X5/SOF#02');
+ 'APSS-OB-24X7/SOFT#01' : EXIT('ACTS-SUPP-24X7/SO#01');
+ 'APSS-OB-24X7/SOFT#02' : EXIT('ACTS-SUPP-24X7/SO#02');
+END;
+
+EXIT(SUP_Artikelnr);
