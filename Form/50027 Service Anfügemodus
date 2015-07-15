@@ -1,0 +1,209 @@
+OBJECT Form 50027 Service Anfgemodus
+{
+  OBJECT-PROPERTIES
+  {
+    Date=15.07.15;
+    Time=16:18:20;
+    Modified=Yes;
+    Version List=TOPAS;
+  }
+  PROPERTIES
+  {
+    Width=9790;
+    Height=6710;
+    SaveValues=Yes;
+    InsertAllowed=No;
+    TableBoxID=1140000;
+    SourceTable=Table50024;
+    DelayedInsert=Yes;
+    SourceTableView=WHERE(Art=FILTER(Tempor„r));
+    OnOpenForm=BEGIN
+                 CurrForm.Vormerkung.ENABLED := TRUE;
+                 //IF (Fremderwerb = TRUE) AND (Verl„ngerung = FALSE) THEN
+                 //  CurrForm.Vormerkung.ENABLED := FALSE;
+               END;
+
+    OnQueryCloseForm=BEGIN
+                       IF (Rec.GETFILTERS <> '') AND (Rec.Art = Rec.Art :: Tempor„r) THEN
+                         BEGIN
+                           TempLizenzTab.RESET;
+                           TempLizenzTab.SETFILTER(Art,'%1',TempLizenzTab.Art :: Tempor„r);
+                           TempLizenzTab.SETFILTER("Auftragsnr.",'%1',"Auftragsnr.");
+                           TempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Auftragszeilennr.");
+                           TempLizenzTab.SETFILTER(Fremderwerb,'%1',TRUE);
+                           IF TempLizenzTab.FINDFIRST THEN
+                             REPEAT
+                               Artikel.GET(TempLizenzTab."Artikelnr.");
+                               IF Artikel."Item Tracking Code" <> 'KEINE' THEN
+                                 IF (TempLizenzTab."Artikelnr." = '') OR (TempLizenzTab."Seriennr." = '') THEN
+                                   IF CONFIRM(Text001,FALSE,FALSE) THEN
+                                     TempLizenzTab.DELETEALL
+                                   ELSE
+                                     ERROR('');
+                             UNTIL TempLizenzTab.NEXT = 0;
+                         END;
+                     END;
+
+    OnAfterGetRecord=BEGIN
+                       wartungsnr := '';
+                       PrfeServiceTab.RESET;
+                       PrfeServiceTab.SETFILTER(Art,'%1|%2',PrfeServiceTab.Art :: Service,PrfeServiceTab.Art :: System);
+                       IF "Seriennr." = '' THEN
+                         BEGIN
+                           PrfeServiceTab.SETFILTER("Nr.",'%1',"Nr.");
+                           PrfeServiceTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+                         END;
+                       PrfeServiceTab.SETFILTER("Artikelnr.",'%1',"Artikelnr.");
+                       PrfeServiceTab.SETFILTER("Seriennr.",'%1',"Seriennr.");
+                       PrfeServiceTab.SETFILTER(Inaktiv,'%1',FALSE);
+                       IF PrfeServiceTab.FINDFIRST THEN
+                         REPEAT
+                           IF PrfeServiceTab."Wartungsvertragsnr." <> '' THEN
+                             BEGIN
+                               IF wartungsnr = '' THEN wartungsnr := PrfeServiceTab."Wartungsvertragsnr.";
+                               IF (STRPOS(wartungsnr,PrfeServiceTab."Wartungsvertragsnr.") = 0) AND
+                               (STRLEN(wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.") <= 120) THEN
+                                 wartungsnr := wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.";
+                             END;
+                         UNTIL PrfeServiceTab.NEXT = 0
+                       ELSE
+                         wartungsnr := '';
+                     END;
+
+  }
+  CONTROLS
+  {
+    { 1140000;TableBox  ;220  ;220  ;9350 ;5500 ;HorzGlue=Both;
+                                                 VertGlue=Both }
+    { 1140001;TextBox   ;0    ;0    ;1700 ;0    ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 SourceExpr="Nr." }
+    { 1140002;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140001;
+                                                 InColumnHeading=Yes }
+    { 1140003;TextBox   ;0    ;0    ;3970 ;0    ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 SourceExpr="Artikelnr." }
+    { 1140004;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140003;
+                                                 InColumnHeading=Yes }
+    { 1140005;TextBox   ;0    ;0    ;3000 ;0    ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 SourceExpr="Seriennr.";
+                                                 OnValidate=BEGIN
+                                                              IF Fremderwerb = FALSE THEN
+                                                                BEGIN
+                                                                  IF Reklamiert AND Ersatzverfahren THEN
+                                                                    BEGIN
+                                                                      TempLizenzTab.RESET;
+                                                                      TempLizenzTab.SETFILTER(TempLizenzTab."Lfd. Nr.",'%1',"Ersatz fr Lfd. Nr.");
+                                                                      IF (TempLizenzTab.FINDFIRST) AND ("Seriennr." = TempLizenzTab."Seriennr.") THEN BEGIN END
+                                                                        ELSE
+                                                                          ERROR(Text000,FIELDCAPTION("Seriennr."));
+                                                                    END
+                                                                  ELSE
+                                                                    ERROR(Text000,FIELDCAPTION("Seriennr."));
+                                                                END;
+
+                                                              IF (Fremderwerb = TRUE) AND (Verl„ngerung = TRUE) THEN
+                                                                ERROR(Text000,FIELDCAPTION("Seriennr."));
+                                                            END;
+                                                             }
+    { 1140006;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140005;
+                                                 InColumnHeading=Yes }
+    { 1140007;TextBox   ;0    ;0    ;1500 ;0    ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 DecimalPlaces=0:0;
+                                                 SourceExpr=Menge }
+    { 1140008;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140007;
+                                                 InColumnHeading=Yes }
+    { 1140012;CheckBox  ;8493 ;2640 ;1750 ;440  ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 SourceExpr=Vormerkung;
+                                                 OnValidate=VAR
+                                                              TempRec@1140001 : Record 50024;
+                                                            BEGIN
+                                                              IF (Fremderwerb = TRUE) AND (Verl„ngerung = FALSE) AND (xRec.Vormerkung = TRUE) THEN
+                                                                ERROR(Text002,FIELDCAPTION(Vormerkung));
+                                                            END;
+                                                             }
+    { 1140013;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140012;
+                                                 InColumnHeading=Yes }
+    { 1140020;TextBox   ;11286;1100 ;4800 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 CaptionML=DEU=Wartungsvertragsnr.;
+                                                 SourceExpr=wartungsnr;
+                                                 OnLookup=BEGIN
+                                                            IF wartungsnr = '' THEN
+                                                              EXIT;
+
+                                                            Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",wartungsnr);
+                                                            FORM.RUN(FORM::"Wartungsvertrag Karte",Wartungsvertrag);
+                                                          END;
+                                                           }
+    { 1140021;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140020;
+                                                 InColumnHeading=Yes }
+    { 1140014;CheckBox  ;10769;1320 ;2500 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 CaptionML=DEU=Wartung vorhanden;
+                                                 ToolTipML=DEU=Gibt an, dass die Position mit dieser Seriennr. bereits in Wartung ist. Wenn dieser Datensatz gebucht wird, dient dieser als Verl„ngerung des bestehenden Satzes.;
+                                                 SourceExpr=Verl„ngerung }
+    { 1140015;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140014;
+                                                 InColumnHeading=Yes }
+    { 1140016;CheckBox  ;8123 ;1320 ;1700 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 SourceExpr=Reklamiert }
+    { 1140017;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140016;
+                                                 InColumnHeading=Yes }
+    { 1140018;CheckBox  ;14788;1540 ;2100 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 SourceExpr=Ersatzverfahren }
+    { 1140019;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140018;
+                                                 InColumnHeading=Yes }
+    { 1140009;CommandButton;2530;5940;2200;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 Default=Yes;
+                                                 PushAction=LookupOK;
+                                                 InvalidActionAppearance=Hide }
+    { 1140010;CommandButton;4950;5940;2200;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 Cancel=Yes;
+                                                 PushAction=LookupCancel;
+                                                 InvalidActionAppearance=Hide }
+    { 1140011;CommandButton;7370;5940;2200;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 PushAction=FormHelp }
+  }
+  CODE
+  {
+    VAR
+      TempLizenzTab@1140002 : Record 50024;
+      PrfeLizenzTab@1140006 : Record 50024;
+      PrfeServiceTab@1140009 : Record 50024;
+      Wartungsvertrag@1140008 : Record 50011;
+      Artikel@1140001 : Record 27;
+      vormerkung@1140000 : Boolean;
+
+      Text000@1140003 : TextConst
+        'DEU=Sie k”nnen %1 nicht mehr „ndern.';
+
+      Text001@1140004 : TextConst
+        'DEU=Sie haben noch nicht alle Felder ausgefllt. Wenn Sie mit Ja best„tigen, werden vorhandene Datens„tze gel”scht.\M”chten Sie das Fenster wirklich schlieáen?';
+
+      Text002@1140005 : TextConst
+        'DEU=Bei Fremderwerben muss der Haken %1 gesetzt bleiben.';
+      wartungsnr@1140007 : Code[120];
+
+    BEGIN
+    END.
+  }
+}
+
