@@ -508,7 +508,8 @@ IF (Art = Art :: Temporär) THEN
                   VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',TempSystemPos."Belegzeilennr.");
                   VergleichSystemPos.SETFILTER("Seriennr.",'%1',TempSystemPos."Seriennr.");
                   VergleichSystemPos.FINDFIRST;
-                  IF SystemPos."Wartungsvertragsnr." <> VergleichSystemPos."Wartungsvertragsnr." THEN
+                  IF (SystemPos."Wartungsvertragsnr." <> VergleichSystemPos."Wartungsvertragsnr.")
+                  AND (SystemPos."Wartungsvertragsnr." <> '') THEN
                     ERROR(Text025,"Seriennr.",SystemPos."Wartungsvertragsnr.",VergleichSystemPos."Wartungsvertragsnr.");
                 END;
             UNTIL TempSystemPos.NEXT = 0;
@@ -3233,11 +3234,10 @@ END;
 SystemPos_verschieben(Aktueller_WV : Code[20];Neuer_WV : Code[20]) : Boolean
 aktion := FALSE;
 
-IF NOT CONFIRM(Text070,TRUE) THEN
+IF NOT CONFIRM(Text070,TRUE,"Seriennr.",Neuer_WV) THEN
   EXIT(aktion);
 
 NeuerVertrag.GET(Neuer_WV);
-AlterVertrag.GET(Aktueller_WV);
 
 SystemPos.RESET;
 SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
@@ -3282,6 +3282,7 @@ IF SystemPos.FINDFIRST THEN
 
         IF SystemPos.Basisgerät = TRUE THEN
           BEGIN
+            AlterVertrag.GET(Aktueller_WV);
             IF (NeuerVertrag.Basisgerät = '') OR (NeuerVertrag."Ablauf Gewährleistung" = 0D) THEN
               BEGIN
                 NeuerVertrag."Debitornr." := AlterVertrag."Debitornr.";
