@@ -3,7 +3,7 @@ OBJECT Form 50027 Service Anfgemodus
   OBJECT-PROPERTIES
   {
     Date=15.07.15;
-    Time=16:18:20;
+    Time=16:15:21;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -45,29 +45,7 @@ OBJECT Form 50027 Service Anfgemodus
                      END;
 
     OnAfterGetRecord=BEGIN
-                       wartungsnr := '';
-                       PrfeServiceTab.RESET;
-                       PrfeServiceTab.SETFILTER(Art,'%1|%2',PrfeServiceTab.Art :: Service,PrfeServiceTab.Art :: System);
-                       IF "Seriennr." = '' THEN
-                         BEGIN
-                           PrfeServiceTab.SETFILTER("Nr.",'%1',"Nr.");
-                           PrfeServiceTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-                         END;
-                       PrfeServiceTab.SETFILTER("Artikelnr.",'%1',"Artikelnr.");
-                       PrfeServiceTab.SETFILTER("Seriennr.",'%1',"Seriennr.");
-                       PrfeServiceTab.SETFILTER(Inaktiv,'%1',FALSE);
-                       IF PrfeServiceTab.FINDFIRST THEN
-                         REPEAT
-                           IF PrfeServiceTab."Wartungsvertragsnr." <> '' THEN
-                             BEGIN
-                               IF wartungsnr = '' THEN wartungsnr := PrfeServiceTab."Wartungsvertragsnr.";
-                               IF (STRPOS(wartungsnr,PrfeServiceTab."Wartungsvertragsnr.") = 0) AND
-                               (STRLEN(wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.") <= 120) THEN
-                                 wartungsnr := wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.";
-                             END;
-                         UNTIL PrfeServiceTab.NEXT = 0
-                       ELSE
-                         wartungsnr := '';
+                       AktualisiereWartungsvertragsnr;
                      END;
 
   }
@@ -126,6 +104,65 @@ OBJECT Form 50027 Service Anfgemodus
                                                             BEGIN
                                                               IF (Fremderwerb = TRUE) AND (Verl„ngerung = FALSE) AND (xRec.Vormerkung = TRUE) THEN
                                                                 ERROR(Text002,FIELDCAPTION(Vormerkung));
+
+                                                              IF (Vormerkung = TRUE) AND (Art = Art :: Tempor„r) THEN
+                                                                BEGIN
+                                                                  PrfeSystemTab.RESET;
+                                                                  PrfeSystemTab.SETRANGE(Art,PrfeSystemTab.Art :: System);
+                                                                  PrfeSystemTab.SETRANGE("Artikelnr.","Artikelnr.");
+                                                                  PrfeSystemTab.SETRANGE("Seriennr.","Seriennr.");
+                                                                  PrfeSystemTab.SETRANGE("Nr.","Nr.");
+                                                                  PrfeSystemTab.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+                                                                  PrfeSystemTab.SETRANGE(Inaktiv,FALSE);
+                                                                  PrfeSystemTab.SETRANGE("Wartungsvertragsnr.",'');
+                                                                  IF PrfeSystemTab.FINDLAST THEN
+                                                                    BEGIN
+                                                                      ServiceZuordnung.RESET;
+                                                                      ServiceZuordnung.SETRANGE("Nr.","Auftragsnr.");
+                                                                      ServiceZuordnung.SETRANGE("Zeilennr.","Auftragszeilennr.");
+                                                                      ServiceZuordnung.SETRANGE("Belegnr.","Nr.");
+                                                                      ServiceZuordnung.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+                                                                      ServiceZuordnung.SETRANGE("Ger„te Artikelnr.","Artikelnr.");
+                                                                      IF (ServiceZuordnung.FINDFIRST) AND (ServiceZuordnung."Wartungsvertragsnr." <> '') THEN
+                                                                        BEGIN
+                                                                          PrfeSystemTab."Zum Verschieben markieren" := TRUE;
+                                                                          PrfeSystemTab.MODIFY(TRUE);
+                                                                          IF PrfeSystemTab.SystemPos_verschieben('',ServiceZuordnung."Wartungsvertragsnr.") = FALSE THEN
+                                                                            Vormerkung := FALSE;
+                                                                        END
+                                                                      ELSE
+                                                                        BEGIN
+                                                                          ServiceZuordnung.RESET;
+                                                                          ServiceZuordnung.SETRANGE("Nr.","Auftragsnr.");
+                                                                          ServiceZuordnung.SETRANGE("Zeilennr.","Auftragszeilennr.");
+                                                                          ServiceZuordnung.SETRANGE(Basisger„t,TRUE);
+                                                                          IF ServiceZuordnung.FINDFIRST THEN
+                                                                            BEGIN
+                                                                              TempRec.RESET;
+                                                                              TempRec.SETRANGE(Art,TempRec.Art ::Tempor„r);
+                                                                              TempRec.SETRANGE("Artikelnr.",ServiceZuordnung."Ger„te Artikelnr.");
+                                                                              TempRec.SETRANGE("Auftragsnr.",ServiceZuordnung."Nr.");
+                                                                              TempRec.SETRANGE("Auftragszeilennr.",ServiceZuordnung."Belegzeilennr.");
+                                                                              TempRec.FINDFIRST;
+
+                                                                              PrfeNeuenWV.RESET;
+                                                                              PrfeNeuenWV.SETRANGE(Art,PrfeSystemTab.Art :: System);
+                                                                              PrfeNeuenWV.SETRANGE("Artikelnr.",TempRec."Artikelnr.");
+                                                                              PrfeNeuenWV.SETRANGE("Seriennr.",TempRec."Seriennr.");
+                                                                              PrfeNeuenWV.SETRANGE("Nr.",ServiceZuordnung."Belegnr.");
+                                                                              PrfeNeuenWV.SETRANGE("Belegzeilennr.",ServiceZuordnung."Belegzeilennr.");
+                                                                              PrfeNeuenWV.SETRANGE(Inaktiv,FALSE);
+                                                                              PrfeNeuenWV.FINDLAST;
+                                                                              PrfeSystemTab."Zum Verschieben markieren" := TRUE;
+                                                                              PrfeSystemTab.MODIFY(TRUE);
+                                                                              IF PrfeSystemTab.SystemPos_verschieben('',PrfeNeuenWV."Wartungsvertragsnr.") = FALSE THEN
+                                                                                Vormerkung := FALSE;
+                                                                            END;
+                                                                        END;
+                                                                    END;
+                                                                END;
+
+                                                              AktualisiereWartungsvertragsnr;
                                                             END;
                                                              }
     { 1140013;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140012;
@@ -188,6 +225,9 @@ OBJECT Form 50027 Service Anfgemodus
       TempLizenzTab@1140002 : Record 50024;
       PrfeLizenzTab@1140006 : Record 50024;
       PrfeServiceTab@1140009 : Record 50024;
+      PrfeSystemTab@1140010 : Record 50024;
+      ServiceZuordnung@1140012 : Record 50027;
+      PrfeNeuenWV@1140011 : Record 50024;
       Wartungsvertrag@1140008 : Record 50011;
       Artikel@1140001 : Record 27;
       vormerkung@1140000 : Boolean;
@@ -201,6 +241,33 @@ OBJECT Form 50027 Service Anfgemodus
       Text002@1140005 : TextConst
         'DEU=Bei Fremderwerben muss der Haken %1 gesetzt bleiben.';
       wartungsnr@1140007 : Code[120];
+
+    PROCEDURE AktualisiereWartungsvertragsnr@1140000();
+    BEGIN
+      wartungsnr := '';
+      PrfeServiceTab.RESET;
+      PrfeServiceTab.SETFILTER(Art,'%1|%2',PrfeServiceTab.Art :: Service,PrfeServiceTab.Art :: System);
+      IF "Seriennr." = '' THEN
+        BEGIN
+          PrfeServiceTab.SETFILTER("Nr.",'%1',"Nr.");
+          PrfeServiceTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
+        END;
+      PrfeServiceTab.SETFILTER("Artikelnr.",'%1',"Artikelnr.");
+      PrfeServiceTab.SETFILTER("Seriennr.",'%1',"Seriennr.");
+      PrfeServiceTab.SETFILTER(Inaktiv,'%1',FALSE);
+      IF PrfeServiceTab.FINDFIRST THEN
+        REPEAT
+          IF PrfeServiceTab."Wartungsvertragsnr." <> '' THEN
+            BEGIN
+              IF wartungsnr = '' THEN wartungsnr := PrfeServiceTab."Wartungsvertragsnr.";
+              IF (STRPOS(wartungsnr,PrfeServiceTab."Wartungsvertragsnr.") = 0) AND
+              (STRLEN(wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.") <= 120) THEN
+                wartungsnr := wartungsnr + '|' + PrfeServiceTab."Wartungsvertragsnr.";
+            END;
+        UNTIL PrfeServiceTab.NEXT = 0
+      ELSE
+        wartungsnr := '';
+    END;
 
     BEGIN
     END.
