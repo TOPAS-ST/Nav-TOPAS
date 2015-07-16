@@ -452,17 +452,36 @@ IF (Verlängerung = TRUE) AND (Vormerkung = TRUE) THEN
 IF (Art = Art :: Temporär) AND (Fremderwerb = FALSE) AND (Verlängerung = FALSE) THEN
   BEGIN
     SystemPos.RESET;
-    SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
-    SystemPos.SETFILTER("Nr.",'%1',"Nr.");
-    SystemPos.SETFILTER("Seriennr.",'%1',"Seriennr.");
+    SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+    SystemPos.SETRANGE("Nr.","Nr.");
+    SystemPos.SETRANGE("Seriennr.","Seriennr.");
     IF NOT SystemPos.FINDFIRST THEN
       ERROR(Text024,"Seriennr.","Nr.");
   END;
 
-IF (Art = Art :: Temporär) THEN
+IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
   BEGIN
-    IF ((Fremderwerb = TRUE) AND (Verlängerung = FALSE)) OR (Vormerkung = FALSE) THEN
+
+    IF (Fremderwerb = TRUE) AND (Verlängerung = FALSE) AND (Basisgerät = TRUE) THEN
       BEGIN
+        TempSystemPos.RESET;
+        TempSystemPos.SETRANGE(Art,TempSystemPos.Art :: Temporär);
+        TempSystemPos.SETRANGE(Vormerkung,TRUE);
+        TempSystemPos.SETRANGE("Auftragsnr.","Auftragsnr.");
+        TempSystemPos.SETRANGE("Auftragszeilennr.","Auftragszeilennr.");
+        IF TempSystemPos.FINDFIRST THEN
+          BEGIN
+            REPEAT
+            SystemPos.RESET;
+            SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+            SystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
+            SystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
+            SystemPos.SETRANGE("Artikelnr.",TempSystemPos."Artikelnr.");
+            SystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
+            IF (SystemPos.FINDFIRST) AND (SystemPos."Wartungsvertragsnr." <> '') THEN
+                    ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
+            UNTIL TempSystemPos.NEXT = 0;
+          END;
       END
     ELSE
       BEGIN
@@ -470,49 +489,51 @@ IF (Art = Art :: Temporär) THEN
         SystemPos.CheckDoubleSerialNo("Artikelnr.","Seriennr.");
 
         SystemPos.RESET;
-        SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
-        SystemPos.SETFILTER("Nr.",'%1',"Nr.");
-        SystemPos.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-        SystemPos.SETFILTER("Seriennr.",'%1',"Seriennr.");
-        SystemPos.FINDFIRST;
-        IF (SystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." = '') THEN
-          ERROR(Text031,FIELDCAPTION(Basisgerät),SystemPos."Seriennr.");
+        SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+        SystemPos.SETRANGE("Nr.","Nr.");
+        SystemPos.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+        SystemPos.SETRANGE("Seriennr.","Seriennr.");
+        IF SystemPos.FINDFIRST THEN
+          IF (SystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." = '') THEN
+            ERROR(Text031,FIELDCAPTION(Basisgerät),SystemPos."Seriennr.");
 
         TempSystemPos.RESET;
-        TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
-        TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
-        TempSystemPos.SETFILTER("Auftragsnr.",'%1',"Auftragsnr.");
-        TempSystemPos.SETFILTER("Auftragszeilennr.",'%1',"Auftragszeilennr.");
+        TempSystemPos.SETRANGE(Art,TempSystemPos.Art :: Temporär);
+        TempSystemPos.SETRANGE(Vormerkung,TRUE);
+        TempSystemPos.SETRANGE("Auftragsnr.","Auftragsnr.");
+        TempSystemPos.SETRANGE("Auftragszeilennr.","Auftragszeilennr.");
         IF TempSystemPos.FINDFIRST THEN
           BEGIN
             SystemPos.RESET;
-            SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
-            SystemPos.SETFILTER("Nr.",'%1',"Nr.");
-            SystemPos.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-            SystemPos.SETFILTER("Seriennr.",'%1',"Seriennr.");
-            SystemPos.FINDFIRST;
-            IF SystemPos.Inaktiv = TRUE THEN
-              ERROR(Text030,FIELDCAPTION("Seriennr."),SystemPos."Wartungsvertragsnr.");
-
-            REPEAT
-              IF (TempSystemPos.Fremderwerb = TRUE) AND (TempSystemPos.Verlängerung = FALSE) THEN
-                BEGIN
-                  IF (TempSystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." <> '') THEN
-                    ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
-                END
-              ELSE
-                BEGIN
-                  VergleichSystemPos.RESET;
-                  VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
-                  VergleichSystemPos.SETFILTER("Nr.",'%1',TempSystemPos."Nr.");
-                  VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',TempSystemPos."Belegzeilennr.");
-                  VergleichSystemPos.SETFILTER("Seriennr.",'%1',TempSystemPos."Seriennr.");
-                  VergleichSystemPos.FINDFIRST;
-                  IF (SystemPos."Wartungsvertragsnr." <> VergleichSystemPos."Wartungsvertragsnr.")
-                  AND (SystemPos."Wartungsvertragsnr." <> '') THEN
-                    ERROR(Text025,"Seriennr.",SystemPos."Wartungsvertragsnr.",VergleichSystemPos."Wartungsvertragsnr.");
-                END;
-            UNTIL TempSystemPos.NEXT = 0;
+            SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+            SystemPos.SETRANGE("Nr.","Nr.");
+            SystemPos.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+            SystemPos.SETRANGE("Seriennr.","Seriennr.");
+            IF SystemPos.FINDFIRST THEN
+              BEGIN
+                IF SystemPos.Inaktiv = TRUE THEN
+                  ERROR(Text030,FIELDCAPTION("Seriennr."),SystemPos."Wartungsvertragsnr.");
+                REPEAT
+                  IF (TempSystemPos.Fremderwerb = TRUE) AND (TempSystemPos.Verlängerung = FALSE) THEN
+                    BEGIN
+                      IF (TempSystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." <> '') THEN
+                        ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
+                    END
+                  ELSE
+                    BEGIN
+                      VergleichSystemPos.RESET;
+                      VergleichSystemPos.SETRANGE(Art,VergleichSystemPos.Art :: System);
+                      VergleichSystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
+                      VergleichSystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
+                      VergleichSystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
+                      VergleichSystemPos.SETRANGE(Inaktiv,FALSE);
+                      VergleichSystemPos.FINDFIRST;
+                      IF (SystemPos."Wartungsvertragsnr." <> VergleichSystemPos."Wartungsvertragsnr.")
+                      AND (SystemPos."Wartungsvertragsnr." <> '') THEN
+                        ERROR(Text025,"Seriennr.",SystemPos."Wartungsvertragsnr.",VergleichSystemPos."Wartungsvertragsnr.");
+                    END;
+                UNTIL TempSystemPos.NEXT = 0;
+              END;
           END;
       END;
   END;
@@ -1040,7 +1061,6 @@ ELSE
                     LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
                     LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
                     LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
-                    LizenzTab.Vormerkung := TRUE;
                     LizenzTab.Fremderwerb := TRUE;
                     LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
                                               LizenzTab."Seriennr.",Debnr);
@@ -1075,7 +1095,6 @@ ELSE
                     LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
                     LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
                     LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
-                    LizenzTab.Vormerkung := TRUE;
                     LizenzTab.Fremderwerb := TRUE;
                     LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
                                               LizenzTab."Seriennr.",Debnr);
