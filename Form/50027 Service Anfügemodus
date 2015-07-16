@@ -2,8 +2,8 @@ OBJECT Form 50027 Service Anfgemodus
 {
   OBJECT-PROPERTIES
   {
-    Date=15.07.15;
-    Time=16:15:21;
+    Date=16.07.15;
+    Time=15:05:25;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -102,9 +102,6 @@ OBJECT Form 50027 Service Anfgemodus
                                                  OnValidate=VAR
                                                               TempRec@1140001 : Record 50024;
                                                             BEGIN
-                                                              IF (Fremderwerb = TRUE) AND (Verl„ngerung = FALSE) AND (xRec.Vormerkung = TRUE) THEN
-                                                                ERROR(Text002,FIELDCAPTION(Vormerkung));
-
                                                               IF (Vormerkung = TRUE) AND (Art = Art :: Tempor„r) THEN
                                                                 BEGIN
                                                                   PrfeSystemTab.RESET;
@@ -142,21 +139,22 @@ OBJECT Form 50027 Service Anfgemodus
                                                                               TempRec.SETRANGE(Art,TempRec.Art ::Tempor„r);
                                                                               TempRec.SETRANGE("Artikelnr.",ServiceZuordnung."Ger„te Artikelnr.");
                                                                               TempRec.SETRANGE("Auftragsnr.",ServiceZuordnung."Nr.");
-                                                                              TempRec.SETRANGE("Auftragszeilennr.",ServiceZuordnung."Belegzeilennr.");
-                                                                              TempRec.FINDFIRST;
-
-                                                                              PrfeNeuenWV.RESET;
-                                                                              PrfeNeuenWV.SETRANGE(Art,PrfeSystemTab.Art :: System);
-                                                                              PrfeNeuenWV.SETRANGE("Artikelnr.",TempRec."Artikelnr.");
-                                                                              PrfeNeuenWV.SETRANGE("Seriennr.",TempRec."Seriennr.");
-                                                                              PrfeNeuenWV.SETRANGE("Nr.",ServiceZuordnung."Belegnr.");
-                                                                              PrfeNeuenWV.SETRANGE("Belegzeilennr.",ServiceZuordnung."Belegzeilennr.");
-                                                                              PrfeNeuenWV.SETRANGE(Inaktiv,FALSE);
-                                                                              PrfeNeuenWV.FINDLAST;
-                                                                              PrfeSystemTab."Zum Verschieben markieren" := TRUE;
-                                                                              PrfeSystemTab.MODIFY(TRUE);
-                                                                              IF PrfeSystemTab.SystemPos_verschieben('',PrfeNeuenWV."Wartungsvertragsnr.") = FALSE THEN
-                                                                                Vormerkung := FALSE;
+                                                                              TempRec.SETRANGE("Auftragszeilennr.",ServiceZuordnung."Zeilennr.");
+                                                                              IF TempRec.FINDFIRST THEN
+                                                                                BEGIN
+                                                                                  PrfeNeuenWV.RESET;
+                                                                                  PrfeNeuenWV.SETRANGE(Art,PrfeSystemTab.Art :: System);
+                                                                                  PrfeNeuenWV.SETRANGE("Artikelnr.",TempRec."Artikelnr.");
+                                                                                  PrfeNeuenWV.SETRANGE("Seriennr.",TempRec."Seriennr.");
+                                                                                  PrfeNeuenWV.SETRANGE("Nr.",ServiceZuordnung."Belegnr.");
+                                                                                  PrfeNeuenWV.SETRANGE("Belegzeilennr.",ServiceZuordnung."Belegzeilennr.");
+                                                                                  PrfeNeuenWV.SETRANGE(Inaktiv,FALSE);
+                                                                                  PrfeNeuenWV.FINDLAST;
+                                                                                  PrfeSystemTab."Zum Verschieben markieren" := TRUE;
+                                                                                  PrfeSystemTab.MODIFY(TRUE);
+                                                                                  IF PrfeSystemTab.SystemPos_verschieben('',PrfeNeuenWV."Wartungsvertragsnr.") = FALSE THEN
+                                                                                    Vormerkung := FALSE;
+                                                                                END;
                                                                             END;
                                                                         END;
                                                                     END;
@@ -237,9 +235,6 @@ OBJECT Form 50027 Service Anfgemodus
 
       Text001@1140004 : TextConst
         'DEU=Sie haben noch nicht alle Felder ausgefllt. Wenn Sie mit Ja best„tigen, werden vorhandene Datens„tze gel”scht.\M”chten Sie das Fenster wirklich schlieáen?';
-
-      Text002@1140005 : TextConst
-        'DEU=Bei Fremderwerben muss der Haken %1 gesetzt bleiben.';
       wartungsnr@1140007 : Code[120];
 
     PROCEDURE AktualisiereWartungsvertragsnr@1140000();
