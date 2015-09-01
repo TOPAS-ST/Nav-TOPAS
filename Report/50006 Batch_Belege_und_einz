@@ -1,0 +1,573 @@
+OBJECT Report 50006 Batch_Belege_und_einz
+{
+  OBJECT-PROPERTIES
+  {
+    Date=31.08.15;
+    Time=17:12:16;
+    Modified=Yes;
+    Version List=Entwicklung!!!;
+  }
+  PROPERTIES
+  {
+    ShowPrintStatus=No;
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   AttachmentPath := 'F:\Daten NEU\Gemeinsame Ordner\Customer Service\EMailVersand\';
+
+                   CLEAR(DefaultPrinter);
+                   IF ISCLEAR(DefaultPrinter) THEN
+                   CREATE(DefaultPrinter);
+                   IF DefaultPrinter.cStart('/NoProcessingAtStartup',TRUE) = FALSE THEN
+                     ERROR('Unbekannter PDF Creator Fehler - Programm wird abgebrochen.');
+                   user_DefaultPrinter := DefaultPrinter.cDefaultPrinter;
+                   //DefaultPrinter.cClearCache();
+                   DefaultPrinter.cClose;
+                   CLEAR(DefaultPrinter);
+                   REPEAT
+                   UNTIL ISCLEAR(DefaultPrinter);
+
+                   //Auftragsbest„tigung_PDF:=TRUE;
+                   //Žnderungsauftragsbest„ttig_PDF:=TRUE;
+                   //Bestellung_PDF:=TRUE;
+                   //Rechnung_PDF:=TRUE;
+
+                   //IF DATE2DWY(WORKDATE, 1) = 1 THEN
+                     //BEGIN
+                       // letzter Arbeitstag war Freitag
+                       //Tagesdatum:=WORKDATE-3;
+                     //END
+                   //ELSE
+                     //BEGIN
+                       //Tagesdatum:=WORKDATE-1;
+                     //END;
+
+                   Tagesdatum := WORKDATE;
+                 END;
+
+    OnPreReport=BEGIN
+                  IF Auftragsbest„tigung_PDF THEN
+                    BEGIN
+
+                      // Alten Stand sichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50075);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          original_50075 := "Printer selection"."Printer Name";
+                          "Printer selection"."Printer Name" := 'PDFCreator';
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                      "sales header".RESET;
+                      "sales header".SETFILTER("sales header"."No.",'%1',Belegnr);
+                      "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+                      IF "sales header".FINDFIRST THEN
+                         BEGIN
+                            PDFCreator.SaveToPDF('Auftrag',"sales header"."No.",AttachmentPath,50075,user_DefaultPrinter);
+                         END;
+
+                      // Alten Stand zurcksichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50075);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          "Printer selection"."Printer Name" := original_50075;
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                    END;
+
+
+                  IF AU_Best„tigung_PDF THEN
+                    BEGIN
+
+                      // Alten Stand sichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50098);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          original_50075 := "Printer selection"."Printer Name";
+                          "Printer selection"."Printer Name" := 'PDFCreator';
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                      "sales header".RESET;
+                      "sales header".SETFILTER("sales header"."No.",'%1',Belegnr);
+                      "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+                      IF "sales header".FINDFIRST THEN
+                         BEGIN
+                            PDFCreator.SaveToPDF('Auftrag',"sales header"."No.",AttachmentPath,50098,user_DefaultPrinter);
+                         END;
+
+                      // Alten Stand zurcksichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50098);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          "Printer selection"."Printer Name" := original_50075;
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                    END;
+
+
+                  IF Bestellung_PDF THEN
+                    BEGIN
+
+                      // Alten Stand sichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50019);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          original_50019 := "Printer selection"."Printer Name";
+                          "Printer selection"."Printer Name" := 'PDFCreator';
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                      // Druck als PDF
+                      Bestellung.RESET;
+                      Bestellung.SETFILTER("Document Type",'%1',Bestellung."Document Type"::Order);
+                      Bestellung.SETFILTER("Location Code",'<>%1','MUST');
+                      Bestellung.SETFILTER("Order Date",'%1',Tagesdatum);
+                      Bestellung.SETFILTER("No.",Belegnr);
+                      //Bestellung.SETFILTER("AB via EMail",'%1',TRUE);
+                      IF Bestellung.FINDFIRST THEN
+                        BEGIN
+                          REPEAT
+                            PDFCreator.SaveToPDF('Bestellung',Bestellung."No.",AttachmentPath,50019,user_DefaultPrinter);
+                          UNTIL Bestellung.NEXT = 0
+                        END;
+
+                      // Alten Stand zurcksichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50019);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          "Printer selection"."Printer Name" := original_50019;
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                    END;
+
+
+
+                  IF Rechnung_PDF THEN
+                    BEGIN
+
+                    // Alten Stand sichern
+                    "Printer selection".RESET;
+                    "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                    "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50076);
+                    IF "Printer selection".FINDFIRST() THEN
+                      BEGIN
+                        original_50076 := "Printer selection"."Printer Name";
+                        "Printer selection"."Printer Name" := 'PDFCreator';
+                        "Printer selection".MODIFY(TRUE);
+                      END;
+
+                    // Druckt als PDF
+                      Rechnung.RESET;
+                      Rechnung.SETFILTER("Posting Date",'%1',Tagesdatum);
+                      Rechnung.SETFILTER("Location Code",'<>%1','MUST');
+                      Rechnung.SETFILTER("No.",Belegnr);
+                      IF Rechnung.FINDFIRST THEN
+                         BEGIN
+                           REPEAT
+                             Debitor.GET(Rechnung."Bill-to Customer No.");
+                             IF Debitor."Rech via EMail" = TRUE THEN
+                               PDFCreator.SaveToPDF('Rechnung',Rechnung."No.",AttachmentPath,50076,user_DefaultPrinter);
+                               //REPORT.RUNMODAL(50076,FALSE,FALSE,Rechnung);
+                           UNTIL Rechnung.NEXT = 0;
+                         END;
+
+                      // Alten Stand zurcksichern
+                      "Printer selection".RESET;
+                      "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                      "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50076);
+                      IF "Printer selection".FINDFIRST() THEN
+                        BEGIN
+                          "Printer selection"."Printer Name" := original_50076;
+                          "Printer selection".MODIFY(TRUE);
+                        END;
+
+                    END;
+
+
+                  IF Servicevertr„ge_PDF = TRUE THEN
+                    BEGIN
+                      VKliefkopf.RESET;
+                      VKliefkopf.SETFILTER("Posting Date",'%1',Tagesdatum);
+                      IF VKliefkopf.FINDFIRST THEN
+                        REPEAT
+                          wartungsnr := '';
+                          vertrag_gedruckt := FALSE;
+                          Debitor.GET(VKliefkopf."Sell-to Customer No.");
+                          IF Debitor."Service via EMail" = TRUE THEN
+                            BEGIN
+                              Servicepositionen.RESET;
+                              Servicepositionen.SETFILTER(Art,'%1',Servicepositionen.Art :: Service);
+                              Servicepositionen.SETFILTER(Servicepositionen."Nr.",'%1',VKliefkopf."No.");
+                              Servicepositionen.SETFILTER(Inaktiv,'%1',FALSE);
+                              IF Servicepositionen.FINDFIRST THEN
+                                BEGIN
+                                  REPEAT
+                                    IF Servicepositionen."Wartungsvertragsnr." <> wartungsnr THEN
+                                      vertrag_gedruckt := FALSE;
+                                    IF vertrag_gedruckt = FALSE THEN
+                                      BEGIN
+                                        Wartungsvertrag.RESET;
+                                        Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",Servicepositionen."Wartungsvertragsnr.");
+                                        Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: ACTS);
+                                        IF Wartungsvertrag.FINDFIRST THEN
+                                          BEGIN
+                                            PDFCreator.SaveToPDF('Servicevertrag',Wartungsvertrag."Wartungsvertragsnr.",AttachmentPath,
+                                                                  50176,user_DefaultPrinter);
+                                            vertrag_gedruckt := TRUE;
+                                          END;
+                                      END;
+                                    wartungsnr := Servicepositionen."Wartungsvertragsnr.";
+                                  UNTIL Servicepositionen.NEXT = 0;
+                                END;
+                            END;
+                        UNTIL VKliefkopf.NEXT = 0;
+                    END;
+                END;
+
+    OnPostReport=VAR
+                   chr@1140001 : Char;
+                   body@1140000 : ARRAY [2] OF Text[1024];
+                   subject@1140002 : Text[80];
+                   email_addr@1140003 : Text[80];
+                 BEGIN
+                   chr := 10;
+
+                   //Fr Auftragsbes„tigung
+                   IF Auftragsbest„tigung_PDF THEN
+                     BEGIN
+                       "sales header".RESET;
+                       "sales header".SETFILTER("sales header"."No.",'%1',Belegnr);
+                       "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+                       IF "sales header".FINDFIRST THEN
+                         BEGIN
+                               REPEAT
+                                 IF "sales header"."Language Code" <> 'ENU' THEN
+                                   BEGIN
+                                     body[1] := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                             'vielen Dank fr Ihre Bestellung. Anbei finden Sie Ihre Auftragsbest„tigung.';
+                                     subject := 'Auftragsbest„tigung: ';
+                                   END
+                                 ELSE
+                                   BEGIN
+                                     body[1] := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                             'thank you for your order. Attached you will find your order confirmation.';
+                                     subject := 'Order confirmation: ';
+                                   END;
+                                 TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
+                                 "sales header"."External Document No.",body[1],AttachmentPath,"sales header"."No."+'.pdf');
+                               UNTIL "sales header".NEXT = 0;
+                         END;
+                     END;
+
+                   //Fr AB Žnderung
+                   IF AU_Best„tigung_PDF THEN
+                     BEGIN
+                       "sales header".RESET;
+                       "sales header".SETFILTER("sales header"."No.",'%1',Belegnr);
+                       "sales header".SETFILTER("sales header"."AB via EMail",'%1',TRUE);
+                       IF "sales header".FINDFIRST THEN
+                         BEGIN
+                               REPEAT
+                                 IF "sales header"."Language Code" <> 'ENU' THEN
+                                   BEGIN
+                                     body[1] := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                             'anbei erhalten Sie die ge„nderte Auftragsbest„tigung.';
+                                     subject := 'Žnderungs-Auftragsbest„tigung: ';
+                                   END
+                                 ELSE
+                                   BEGIN
+                                     body[1] := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                             'attached you will find a change order confirmation.';
+                                     subject := 'Change order confirmation: ';
+                                   END;
+                                 TOPAS_API.NewMail("sales header"."AB via EMail-Adresse",'','',subject+
+                                 "sales header"."External Document No.",body[1],AttachmentPath,"sales header"."No."+'.pdf');
+                               UNTIL "sales header".NEXT = 0;
+                         END;
+                     END;
+
+                   //Fr Bestellungen
+                   IF Bestellung_PDF THEN
+                     BEGIN
+                       Bestellung.RESET;
+                       Bestellung.SETFILTER("Document Type",'%1',Bestellung."Document Type"::Order);
+                       Bestellung.SETFILTER("Location Code",'<>%1','MUST');
+                       Bestellung.SETFILTER("Order Date",'%1',Tagesdatum);
+                       Bestellung.SETFILTER("No.",Belegnr);
+                       //Bestellung.SETFILTER("AB via EMail",'%1',TRUE);
+                       IF Bestellung.FINDFIRST THEN
+                         BEGIN
+                           REPEAT
+
+                             body[1] := '';
+                             body[2] := '';
+                             //Debitor.GET(Bestellung."Pay-to Vendor No.");
+                             //IF (Debitor."Rech via EMail" = TRUE) AND (Debitor."Rech via EMail-Adresse" <> '') THEN
+                             //  BEGIN
+                                  IF Bestellung."Language Code" <> 'ENU' THEN
+                                    BEGIN
+                                      body[1] := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                              'anbei erhalten Sie unsere Bestellung.' + FORMAT(chr);
+                                      subject := 'Bestellung: ';
+                                    END
+                                  ELSE
+                                    BEGIN
+                                      body[1] := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                              'attached you will find our purchase order.' + FORMAT(chr);
+                                      subject := 'Purchase Order: ';
+                                    END;
+                                  TOPAS_API.NewMail('','','',subject+
+                                  Bestellung."No.",body[1]+body[2],AttachmentPath,Bestellung."No."+'.pdf');
+                               //END;
+
+                           UNTIL Bestellung.NEXT = 0
+                         END;
+                     END;
+
+                   //Fr Rechnungen
+                   IF Rechnung_PDF THEN
+                     BEGIN
+                       Rechnung.RESET;
+                       Rechnung.SETFILTER("Posting Date",'%1',Tagesdatum);
+                       Rechnung.SETFILTER("Location Code",'<>%1','MUST');
+                       Rechnung.SETFILTER("No.",Belegnr);
+                       IF Rechnung.FINDFIRST THEN
+                         BEGIN
+                           REPEAT
+                             body[1] := '';
+                             body[2] := '';
+                             email_addr := '';
+                             Debitor.GET(Rechnung."Bill-to Customer No.");
+                             IF Debitor."Rech via EMail" = TRUE THEN
+                               BEGIN
+
+                                 Lieferschein.RESET;
+                                 Lieferschein.SETFILTER("Order No.",'%1',Rechnung."Order No.");
+                                 Lieferschein.SETFILTER("Posting Date",'%1',Tagesdatum);
+                                 IF Lieferschein.FINDLAST THEN
+                                   BEGIN
+                                     IF Rechnung."Language Code" <> 'ENU' THEN
+                                       body[2] := 'Das Paket wurde mit ' + Lieferschein."Shipping Agent Code" + ': ' +
+                                        Lieferschein."Package Tracking No." + ' verschickt.'
+                                     ELSE
+                                       body[2] := 'The packet was sent via ' + Lieferschein."Shipping Agent Code" + ': ' +
+                                        Lieferschein."Package Tracking No.";
+                                   END;
+
+                                 IF Rechnung."Language Code" <> 'ENU' THEN
+                                   BEGIN
+                                     body[1] := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                             'anbei erhalten Sie Ihre Rechnung.' + FORMAT(chr);
+                                     subject := 'Rechnung zu Ihrer Bestellung: ' + Rechnung."External Document No.";
+                                   END
+                                 ELSE
+                                   BEGIN
+                                     body[1] := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                             'attached you will find your invoice.' + FORMAT(chr);
+                                     subject := 'Invoice for your order: ' + Rechnung."External Document No.";
+                                   END;
+
+                                 //Email-Adresse wird ausfindig gemacht, wird keine gefunden, wird dennoch eine E-Mail generiert
+                                 "sales header".RESET;
+                                 "sales header".SETFILTER("No.",'%1',Rechnung."Order No.");
+                                 IF "sales header".FINDFIRST THEN
+                                   email_addr := "sales header"."Rech EMail-Adresse";
+                                 IF email_addr = '' THEN
+                                   BEGIN
+                                     "sales archiv header".RESET;
+                                     "sales archiv header".SETFILTER("No.",'%1',Rechnung."Order No.");
+                                     IF "sales archiv header".FINDFIRST THEN
+                                       email_addr := "sales archiv header"."Rech EMail-Adresse";
+                                     IF email_addr = '' THEN
+                                       email_addr := Debitor."Rech via EMail-Adresse";
+                                   END;
+
+                                 TOPAS_API.NewMail(email_addr,'','',subject,body[1]+body[2],
+                                 AttachmentPath,Rechnung."No."+'.pdf');
+                               END;
+                           UNTIL Rechnung.NEXT = 0;
+                         END;
+                     END;
+
+                   //Fr Servicevertr„ge
+                   IF Servicevertr„ge_PDF = TRUE THEN
+                     BEGIN
+                       VKliefkopf.RESET;
+                       VKliefkopf.SETFILTER("Posting Date",'%1',Tagesdatum);
+                       IF VKliefkopf.FINDFIRST THEN
+                         REPEAT
+                           wartungsnr := '';
+                           vertrag_gedruckt := FALSE;
+                           Debitor.GET(VKliefkopf."Sell-to Customer No.");
+                           IF Debitor."Service via EMail" = TRUE THEN
+                             BEGIN
+                               Servicepositionen.RESET;
+                               Servicepositionen.SETFILTER(Art,'%1',Servicepositionen.Art :: Service);
+                               Servicepositionen.SETFILTER(Servicepositionen."Nr.",'%1',VKliefkopf."No.");
+                               Servicepositionen.SETFILTER(Inaktiv,'%1',FALSE);
+                               IF Servicepositionen.FINDFIRST THEN
+                                 BEGIN
+                                   REPEAT
+
+                                     body[1] := '';
+                                     body[2] := '';
+
+                                     IF Servicepositionen."Wartungsvertragsnr." <> wartungsnr THEN
+                                       vertrag_gedruckt := FALSE;
+                                     IF vertrag_gedruckt = FALSE THEN
+                                       BEGIN
+                                         Wartungsvertrag.RESET;
+                                         Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",Servicepositionen."Wartungsvertragsnr.");
+                                         Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: ACTS);
+                                         IF Wartungsvertrag.FINDFIRST THEN
+                                           BEGIN
+                                             IF VKliefkopf."Language Code" <> 'ENU' THEN
+                                               BEGIN
+                                                 body[1] := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                                         'anbei erhalten Sie Ihren Servicevertrag.' + FORMAT(chr);
+                                                 subject := 'Ihre Referenz: ';
+                                               END
+                                             ELSE
+                                               BEGIN
+                                                 body[1] := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                                         'attached you will find your service contract.' + FORMAT(chr);
+                                                 subject := 'Your reference: ';
+                                               END;
+                                             TOPAS_API.NewMail(VKliefkopf."Service EMail-Adresse",'','',subject+
+                                             VKliefkopf."External Document No.",body[1]+body[2],AttachmentPath,
+                                             Wartungsvertrag."Wartungsvertragsnr."+'.pdf');
+                                             vertrag_gedruckt := TRUE;
+                                           END;
+                                       END;
+                                     wartungsnr := Servicepositionen."Wartungsvertragsnr.";
+                                   UNTIL Servicepositionen.NEXT = 0;
+                                 END;
+                             END;
+                         UNTIL VKliefkopf.NEXT = 0;
+                     END;
+                 END;
+
+  }
+  DATAITEMS
+  {
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=12760;
+      Height=5500;
+    }
+    CONTROLS
+    {
+      { 1140000;TextBox   ;8800 ;880  ;1870 ;440  ;InPage=-1;
+                                                   SourceExpr=Belegnr }
+      { 1140001;Label     ;8800 ;330  ;3410 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Belegnr.  (z.B. AU471100) }
+      { 1140002;CheckBox  ;6490 ;330  ;550  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=Auftragsbest„tigung_PDF }
+      { 1140003;CheckBox  ;6490 ;880  ;550  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=AU_Best„tigung_PDF }
+      { 1140004;CheckBox  ;6490 ;1430 ;550  ;440  ;Editable=No;
+                                                   InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=Bestellung_PDF_einzeln }
+      { 1140005;CheckBox  ;6490 ;3300 ;550  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=Rechnung_PDF }
+      { 1140006;Label     ;110  ;330  ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Auftragsbest„tigung als PDF }
+      { 1140007;Label     ;110  ;880  ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Žnderungs-Auftragsbest„tigung als PDF }
+      { 1140008;Label     ;110  ;1430 ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Bestellung als PDF }
+      { 1140009;Label     ;110  ;3300 ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU="Rechnung als PDF " }
+      { 1140010;TextBox   ;1980 ;2750 ;1650 ;440  ;InPage=-1;
+                                                   SourceExpr=Tagesdatum }
+      { 1140011;Label     ;110  ;2750 ;1760 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Tagesdatum }
+      { 1140012;Shape     ;0    ;2200 ;12650;40   ;InPage=-1 }
+      { 1140013;Label     ;110  ;3850 ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Bestellung als PDF }
+      { 1140014;CheckBox  ;6490 ;3850 ;550  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=Bestellung_PDF }
+      { 1140015;CheckBox  ;6490 ;4400 ;550  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=Servicevertr„ge_PDF }
+      { 1140016;Label     ;110  ;4400 ;5390 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Servicevertr„ge als PDF }
+    }
+  }
+  CODE
+  {
+    VAR
+      "Printer selection"@1140000 : Record 78;
+      Belegnr@1140004 : Code[10];
+      Auftragsbest„tigung_PDF@1140005 : Boolean;
+      AU_Best„tigung_PDF@1140006 : Boolean;
+      Bestellung_PDF@1140007 : Boolean;
+      Bestellung_PDF_einzeln@1140021 : Boolean;
+      Rechnung_PDF@1140008 : Boolean;
+      Servicevertr„ge_PDF@1140024 : Boolean;
+      "sales header"@1140009 : Record 36;
+      "sales archiv header"@1140030 : Record 5107;
+      Rechnung@1140002 : Record 112;
+      Lieferschein@1140020 : Record 110;
+      Bestellung@1140022 : Record 38;
+      VKliefkopf@1140025 : Record 110;
+      Wartungsvertrag@1140027 : Record 50011;
+      Servicepositionen@1140026 : Record 50024;
+      Debitor@1140013 : Record 18;
+      wartungsnr@1140028 : Code[20];
+      vertrag_gedruckt@1140029 : Boolean;
+      original_50019@1140023 : Text[80];
+      original_50075@1140010 : Text[80];
+      original_50076@1140003 : Text[80];
+      original_50098@1140011 : Text[80];
+      sales_header2@1140012 : Record 36;
+      Tagesdatum@1140001 : Date;
+      TOPAS_API@1140018 : Codeunit 50001;
+      AttachmentPath@1140017 : Text[250];
+      PDFCreator@1140016 : Codeunit 50004;
+      DefaultPrinter@1140015 : Automation "{35447794-B66C-4757-A7C2-F47A49C16B30} 1.0:{DA7D25B1-1702-40F3-9845-DC7C66C8B75C}:Unknown Automation Server.Unknown Class";
+      user_DefaultPrinter@1140014 : Text[200];
+      pdf_is_running@1140019 : Boolean;
+
+    EVENT DefaultPrinter@1140015::eReady@1();
+    BEGIN
+    END;
+
+    EVENT DefaultPrinter@1140015::eError@2();
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      # 2014-05-15 ST NEU: Servicevertr„ge per EMail und PDF
+
+      # 2014-03-17 ST Bericht vorher nur in Entwicklung, nun k”nnen AB einzeln per PDF + Email autom. erstellt werden,
+                      auáerdem k”nnen nun auch alle REs via Email vorbereitet werden anhand des Tagesdatums + Angabe Paketnr.
+    }
+    END.
+  }
+}
+
