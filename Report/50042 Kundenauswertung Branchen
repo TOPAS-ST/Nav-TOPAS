@@ -1,0 +1,937 @@
+OBJECT Report 50042 Kundenauswertung Branchen
+{
+  OBJECT-PROPERTIES
+  {
+    Date=27.01.14;
+    Time=11:47:20;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    OnPreReport=BEGIN
+                  //*******************************************************************************************************
+                  //                    Sicherheitsabfrage ob Temp Tabelle auch Berichtstabelle ist
+                  //*******************************************************************************************************
+
+                  IF Berichtstabelle.TABLECAPTION <> 'Berichtstabelle' THEN
+                    ERROR('Eine Sicherheitssperre verhindert die Ausfhrung dieses Berichtes.'+
+                          'Stellen Sie sicher, dass die TABLECAPTION der Berichtstabelle auch auf Berichtstabelle lautet.');
+
+                  Berichtstabelle.RESET;
+                  IF Berichtstabelle.ISEMPTY = FALSE THEN
+                    BEGIN
+                      REPEAT
+                        IF Berichtstabelle.ISEMPTY = FALSE THEN
+                          BEGIN
+                            SLEEP(500);
+                            counter += 1;
+                          END;
+
+                        IF counter MOD 30 = 0 THEN
+                          BEGIN
+                            Berichtstabelle.FINDFIRST;
+                            IF CONFIRM('Die Berichtstabelle ist seit %1 durch Anwender %2 gesperrt. Wollen Sie die Anwendung abbrechen?',
+                            TRUE,Berichtstabelle.Uhrzeit,Berichtstabelle.User,counter,TRUE) THEN
+                              ERROR('');
+                          END;
+
+                      UNTIL Berichtstabelle.ISEMPTY = TRUE;
+                    END;
+
+                  //*******************************************************************************************************
+                  //                                  Vorbereitung der Excel Tabelle
+                  //*******************************************************************************************************
+                  IF check_Ansprech = check_Ansprech :: ja THEN
+                    Excel_definieren;
+
+                  //*******************************************************************************************************
+                  //                         Kontakte und deren Klassifizierung werden geprft
+                  //*******************************************************************************************************
+
+                  IF check_klassifizierung = check_klassifizierung :: ja THEN
+                    BEGIN
+                      IF text_branchencode <> '' THEN
+                        text_branchencode := '*' + text_branchencode + '*';
+                      Suche_Kontakte_mit_Branchen;
+                      Anzeigefilter := v_betreuer + ', ' + v_verkcode + ', ' + v_gebietscode + ', ' +text_branchencode;
+                    END;
+
+                  IF check_klassifizierung = check_klassifizierung :: nein THEN
+                    BEGIN
+                      IF Monate = Monate :: "0M" THEN
+                      Suche_Kontakte_ohne_Umsatz
+                        ELSE
+                      Suche_Kontakte_ohne_Branchen;
+                      Anzeigefilter := v_betreuer + ', ' + v_verkcode + ', ' + v_gebietscode;
+                    END;
+
+                  IF check_Ansprech = check_Ansprech :: ja THEN
+                    BEGIN
+                       IF check_klassifizierung = check_klassifizierung :: ja THEN
+                          BEGIN
+                           IF text_branchencode <> '' THEN
+                             BEGIN
+                               text_branchencode := '*' + text_branchencode + '*';
+
+                               Ansprech_Kontakte_mit_Branchen
+                             END
+                            ELSE BEGIN
+                              ERROR('- Kunde mit Klassifizierung -  muss gesetzt sein');
+                              END;
+                          END;
+                    END;
+                END;
+
+    OnPostReport=BEGIN
+                   IF Berichtstabelle.TABLECAPTION = 'Berichtstabelle' THEN
+                     Berichtstabelle.DELETEALL;
+
+                   Excel.Visible (TRUE);
+                 END;
+
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Feld 10,Datum,Index)
+                          WHERE(Tabelle=FILTER(KLASSIFIZIERUNG));
+        DataItemVarName=Klassifizierung;
+        OnAfterGetRecord=BEGIN
+
+                           IF check_Ansprech = check_Ansprech :: ja THEN
+                             BEGIN
+                               IF check_klassifizierung = check_klassifizierung :: ja THEN
+                                 BEGIN
+                                   Sheet.Range('A'+j).Value:= Klassifizierung.Index;
+                                   Sheet.Range('B'+j).Value:= Klassifizierung."Feld 10";
+                                   Sheet.Range('C'+j).Value:= Klassifizierung."Feld 13";
+                                   Sheet.Range('D'+j).Value:= Klassifizierung."Feld 6";
+                                   Sheet.Range('E'+j).Value:= Klassifizierung."Feld 7";
+                                   Sheet.Range('F'+j).Value:= Klassifizierung."Feld 9";
+                                   Sheet.Range('G'+j).Value:= Klassifizierung."Belegnr.";
+                                   Sheet.Range('H'+j).Value:= Klassifizierung."Feld 12";
+                                   j:=INCSTR(j);
+                                 END;
+
+                               IF check_klassifizierung = check_klassifizierung :: nein THEN
+                                 BEGIN
+                                   Sheet.Range('A'+j).Value:= Klassifizierung.Index;
+                                   Sheet.Range('B'+j).Value:= Klassifizierung."Feld 10";
+                                   Sheet.Range('C'+j).Value:= Klassifizierung."Feld 13";
+                                   Sheet.Range('D'+j).Value:= Klassifizierung."Feld 6";
+                                   Sheet.Range('E'+j).Value:= Klassifizierung."Feld 7";
+                                   Sheet.Range('F'+j).Value:= Klassifizierung."Feld 9";
+                                   Sheet.Range('G'+j).Value:= FORMAT(Klassifizierung."Feld 4");
+                                   Sheet.Range('H'+j).Value:= Klassifizierung."Feld 5";
+                                   j:=INCSTR(j);
+                                 END;
+                             END ELSE BEGIN
+                           END;
+                         END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=19217;
+            SectionHeight=1527;
+          }
+          CONTROLS
+          {
+            { 1140000;Label     ;150  ;0    ;10800;423  ;FontSize=12;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Kundenauswertung nach Branchen }
+            { 1140001;TextBox   ;150  ;846  ;16074;423  ;SourceExpr=Anzeigefilter }
+            { 1140003;TextBox   ;16350;0    ;1500 ;423  ;SourceExpr=USERID }
+            { 1140004;TextBox   ;16350;423  ;1500 ;423  ;SourceExpr=WORKDATE }
+            { 1140005;TextBox   ;16350;846  ;1500 ;423  ;SourceExpr=CurrReport.PAGENO }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=19217;
+            SectionHeight=700;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(check_klassifizierung = check_klassifizierung :: ja);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140002;Label     ;13650;0    ;2550 ;423  ;CaptionML=DEU=Branchenbeschreibung }
+            { 1140006;Label     ;11400;0    ;1950 ;423  ;CaptionML=DEU=Branchencode }
+            { 1140007;Label     ;10350;0    ;900  ;423  ;CaptionML=DEU=Gebiet }
+            { 1140008;Label     ;9000 ;0    ;1200 ;423  ;CaptionML=DEU=Verk„ufer }
+            { 1140009;Shape     ;0    ;587  ;19200;35    }
+            { 1140010;Label     ;7800 ;0    ;1050 ;423  ;CaptionML=DEU=Betreuer }
+            { 1140011;Label     ;5700 ;0    ;1050 ;423  ;CaptionML=DEU=Ort }
+            { 1140012;Label     ;1800 ;0    ;1500 ;423  ;CaptionML=DEU=Kontaktname }
+            { 1140013;Label     ;150  ;0    ;1500 ;423  ;CaptionML=DEU=Kontaktnr. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=19217;
+            SectionHeight=700;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(check_klassifizierung = check_klassifizierung :: nein);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140014;Label     ;13650;0    ;2550 ;423  ;CaptionML=DEU=Umsatz in ° }
+            { 1140015;Label     ;11400;0    ;1950 ;423  ;CaptionML=DEU=Projekte }
+            { 1140016;Label     ;10350;0    ;900  ;423  ;CaptionML=DEU=Gebiet }
+            { 1140017;Label     ;9000 ;0    ;1200 ;423  ;CaptionML=DEU=Verk„ufer }
+            { 1140018;Shape     ;0    ;587  ;19200;35    }
+            { 1140019;Label     ;7800 ;0    ;1050 ;423  ;CaptionML=DEU=Betreuer }
+            { 1140020;Label     ;5700 ;0    ;1050 ;423  ;CaptionML=DEU=Ort }
+            { 1140021;Label     ;1800 ;0    ;1500 ;423  ;CaptionML=DEU=Kontaktname }
+            { 1140022;Label     ;150  ;0    ;1500 ;423  ;CaptionML=DEU=Kontaktnr. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19217;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(check_klassifizierung = check_klassifizierung :: ja);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140023;TextBox   ;0    ;0    ;1500 ;423  ;SourceExpr=Index }
+            { 1140024;TextBox   ;1650 ;0    ;3750 ;423  ;SourceExpr="Feld 10" }
+            { 1140025;TextBox   ;5550 ;0    ;2250 ;423  ;SourceExpr="Feld 13" }
+            { 1140026;TextBox   ;11462;0    ;1950 ;423  ;SourceExpr="Belegnr." }
+            { 1140027;TextBox   ;7950 ;0    ;900  ;423  ;SourceExpr="Feld 6" }
+            { 1140028;TextBox   ;9000 ;0    ;900  ;423  ;SourceExpr="Feld 7" }
+            { 1140029;TextBox   ;10200;0    ;750  ;423  ;SourceExpr="Feld 9" }
+            { 1140030;TextBox   ;13711;0    ;4200 ;423  ;SourceExpr="Feld 12" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=19217;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(check_klassifizierung = check_klassifizierung :: nein);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140031;TextBox   ;0    ;0    ;1500 ;423  ;SourceExpr=Index }
+            { 1140032;TextBox   ;1650 ;0    ;3750 ;423  ;SourceExpr="Feld 10" }
+            { 1140033;TextBox   ;5550 ;0    ;2250 ;423  ;SourceExpr="Feld 13" }
+            { 1140034;TextBox   ;11196;0    ;894  ;423  ;DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140035;TextBox   ;7950 ;0    ;900  ;423  ;SourceExpr="Feld 6" }
+            { 1140036;TextBox   ;9000 ;0    ;900  ;423  ;SourceExpr="Feld 7" }
+            { 1140037;TextBox   ;10200;0    ;750  ;423  ;SourceExpr="Feld 9" }
+            { 1140038;TextBox   ;13315;0    ;1600 ;423  ;HorzAlign=General;
+                                                         SourceExpr="Feld 5" }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=11550;
+      Height=10230;
+      SaveValues=Yes;
+      OnOpenForm=BEGIN
+                   EnableFields;
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1140000;Label     ;220  ;220  ;6600 ;440  ;InPage=-1;
+                                                   FontBold=Yes;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Kontakte nach Klassifizierung untersuchen: }
+      { 1140003;Label     ;4730 ;4070 ;1760 ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Suche nach: }
+      { 1140004;OptionButton;220;4070 ;4400 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Kunde besitzt Klassifizierung;
+                                                   SourceExpr=check_klassifizierung;
+                                                   OptionValue=ja;
+                                                   OnPush=BEGIN
+                                                            EnableFields;
+                                                          END;
+                                                           }
+      { 1140005;TextBox   ;6710 ;4070 ;4500 ;440  ;Name=txbox_suche_branchencode;
+                                                   ValidateTableRelation=No;
+                                                   InPage=-1;
+                                                   SourceExpr=text_branchencode;
+                                                   TableRelation="Industry Group" }
+      { 1140001;OptionButton;220;6270 ;4400 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Kunde hat keine Klassifizierung;
+                                                   SourceExpr=check_klassifizierung;
+                                                   OptionValue=nein;
+                                                   OnPush=BEGIN
+                                                            EnableFields;
+                                                          END;
+                                                           }
+      { 1140002;Label     ;220  ;1100 ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Betreuer Innendienst }
+      { 1140006;Label     ;220  ;1650 ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Verk„ufercode }
+      { 1140007;Label     ;220  ;2200 ;3300 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Gebietscode }
+      { 1140008;TextBox   ;3630 ;1100 ;1700 ;440  ;InPage=-1;
+                                                   SourceExpr=v_betreuer }
+      { 1140009;TextBox   ;3630 ;1650 ;1700 ;440  ;InPage=-1;
+                                                   SourceExpr=v_verkcode }
+      { 1140010;TextBox   ;3630 ;2200 ;1700 ;440  ;InPage=-1;
+                                                   SourceExpr=v_gebietscode }
+      { 1140016;OptionButton;6710;6270;4500 ;440  ;Name=rdbutn_12Monate;
+                                                   InPage=-1;
+                                                   CaptionML=DEU=Umsatz in letzten 12 Monaten;
+                                                   SourceExpr=Monate;
+                                                   OptionValue=12M }
+      { 1140012;OptionButton;6710;6930;4500 ;440  ;Name=rdbutn_24Monate;
+                                                   InPage=-1;
+                                                   CaptionML=DEU=Umsatz in letzten 24 Monaten;
+                                                   SourceExpr=Monate;
+                                                   OptionValue=24M }
+      { 1140011;Shape     ;0    ;3410 ;11440;110  ;InPage=-1;
+                                                   ShapeStyle=HorzLine }
+      { 1140013;Label     ;6710 ;4620 ;4510 ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=kein * als Platzhalter verwenden }
+      { 1140014;OptionButton;6710;7920;4500 ;440  ;Name=rdbutn_keinUmsatz;
+                                                   InPage=-1;
+                                                   CaptionML=DEU=Kein Umsatz;
+                                                   SourceExpr=Monate;
+                                                   OptionValue=0M }
+      { 1140017;Shape     ;0    ;5940 ;11440;110  ;InPage=-1;
+                                                   ShapeStyle=HorzLine }
+      { 1140015;OptionButton;220;9460 ;5610 ;440  ;CaptionML=DEU=Ansprechpartner nicht nach Excel ausgeben;
+                                                   SourceExpr=check_Ansprech;
+                                                   OptionValue=nein;
+                                                   OnPush=BEGIN
+                                                            EnableFields;
+                                                          END;
+                                                           }
+      { 1140018;OptionButton;220;8910 ;4950 ;440  ;CaptionML=DEU=Ansprechpartner nach Excel ausgeben;
+                                                   SourceExpr=check_Ansprech;
+                                                   OptionValue=ja;
+                                                   OnPush=BEGIN
+                                                            EnableFields;
+                                                          END;
+                                                           }
+      { 1140019;Shape     ;0    ;8580 ;11440;110  ;ShapeStyle=HorzLine }
+    }
+  }
+  CODE
+  {
+    VAR
+      Berichtstabelle@1140013 : Record 50037;
+      Kontakt@1140014 : Record 5050;
+      Projekt_Ansprech@1140001 : Record 50005;
+      RE_Kopf@1140016 : Record 112;
+      RE_Zeile@1140017 : Record 113;
+      AN_Kopf@1140020 : Record 36;
+      Arch_AN_Kopf@1140021 : Record 5107;
+      Branchen@1140015 : Record 5058;
+      Anzeigefilter@1140000 : Text[250];
+      check_klassifizierung@1140007 : 'ja,nein';
+      v_betreuer@1140008 : Code[10];
+      v_verkcode@1140009 : Code[10];
+      v_gebietscode@1140010 : Code[10];
+      Monate@1140019 : '12M,24M,0M';
+      text_branchencode@1140011 : Code[80];
+      kumuliert@1140018 : Decimal;
+      Umsatz@1140012 : Boolean;
+      keinUmsatz_aberAngebote@1140022 : Boolean;
+      Excel@1140006 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140005 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      j@1140002 : Text[30];
+      check_Ansprech@1140023 : 'ja,nein';
+      Kontakt_Ansprech@1140024 : Record 5050;
+      Mail_gru@1140025 : Record 5056;
+      counter@1140026 : Integer;
+
+    PROCEDURE EnableFields@1140000();
+    BEGIN
+      IF check_klassifizierung = check_klassifizierung :: ja THEN
+        BEGIN
+          RequestOptionsForm.txbox_suche_branchencode.EDITABLE := TRUE;
+          RequestOptionsForm.rdbutn_12Monate.EDITABLE := FALSE;
+          RequestOptionsForm.rdbutn_24Monate.EDITABLE := FALSE;
+          RequestOptionsForm.rdbutn_keinUmsatz.EDITABLE := FALSE;
+        END;
+
+      IF check_klassifizierung = check_klassifizierung :: nein THEN
+        BEGIN
+          RequestOptionsForm.txbox_suche_branchencode.EDITABLE := FALSE;
+          RequestOptionsForm.rdbutn_12Monate.EDITABLE := TRUE;
+          RequestOptionsForm.rdbutn_24Monate.EDITABLE := TRUE;
+          RequestOptionsForm.rdbutn_keinUmsatz.EDITABLE := TRUE;
+        END;
+    END;
+
+    PROCEDURE Excel_definieren@1140015();
+    BEGIN
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+      Sheet.Range('A1').Value:='Kontaktnr.';
+      Sheet.Range('B1').Value:='Kunde';
+      Sheet.Range('C1').Value:='Ort';
+      Sheet.Range('D1').Value:='Betreuer';
+      Sheet.Range('E1').Value:='Verk„ufer';
+      Sheet.Range('F1').Value:='Gebietscode';
+      IF check_klassifizierung = check_klassifizierung :: ja THEN
+        BEGIN
+          Sheet.Range('G1').Value:='Branchencode';
+          Sheet.Range('H1').Value:='Branchenbeschreibung';
+        END;
+      IF check_klassifizierung = check_klassifizierung :: nein THEN
+        BEGIN
+          Sheet.Range('G1').Value:='Projekte';
+          Sheet.Range('H1').Value:='Umsatz in °';
+        END;
+
+
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+    END;
+
+    PROCEDURE Suche_Kontakte_mit_Branchen@1140010();
+    BEGIN
+      Branchen.RESET;
+      Branchen.SETFILTER(Branchen."Industry Group Code",text_branchencode);
+      IF Branchen.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Kontakt.RESET;
+            Kontakt.SETFILTER(Type,'%1',Kontakt.Type :: Company);
+            Kontakt.SETFILTER("No.",Branchen."Contact No.");
+            Kontakt.SETFILTER("Betreuer Innendienst",v_betreuer);
+            Kontakt.SETFILTER("Salesperson Code",v_verkcode);
+            Kontakt.SETFILTER("Territory Code",v_gebietscode);
+            IF Kontakt.FINDFIRST THEN
+              BEGIN
+                Berichtstabelle.INIT;
+                Berichtstabelle.Tabelle := 'KLASSIFIZIERUNG';
+                Berichtstabelle.Index := Kontakt."No.";
+                Berichtstabelle."Feld 10" := Kontakt.Name;
+                Berichtstabelle."Feld 13" := Kontakt.City;
+                Berichtstabelle."Feld 6" := Kontakt."Betreuer Innendienst";
+                Berichtstabelle."Feld 7" := Kontakt."Salesperson Code";
+                Berichtstabelle."Feld 9" := Kontakt."Territory Code";
+                Berichtstabelle."Belegnr." := Branchen."Industry Group Code";
+                Branchen.CALCFIELDS("Industry Group Description");
+                Berichtstabelle."Feld 12" := Branchen."Industry Group Description";
+                Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+              END;
+          UNTIL Branchen.NEXT = 0;
+        END;
+    END;
+
+    PROCEDURE Suche_Kontakte_ohne_Branchen@1140011();
+    BEGIN
+      Kontakt.RESET;
+      Kontakt.SETFILTER(Type,'%1',Kontakt.Type :: Company);
+      Kontakt.SETFILTER("Betreuer Innendienst",v_betreuer);
+      Kontakt.SETFILTER("Salesperson Code",v_verkcode);
+      Kontakt.SETFILTER("Territory Code",v_gebietscode);
+      IF Kontakt.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Branchen.RESET;
+            Branchen.SETFILTER("Contact No.",Kontakt."No.");
+            IF NOT Branchen.FINDFIRST THEN
+              BEGIN
+                kumuliert := 0;
+                RE_Kopf.RESET;
+                RE_Kopf.SETFILTER("Sell-to Contact No.",'%1',Kontakt."No.");
+                RE_Kopf.SETFILTER("Posting Date",'>%1',CALCDATE('-' + FORMAT(Monate),WORKDATE));
+                IF RE_Kopf.FINDFIRST THEN
+                  BEGIN
+                    REPEAT
+                      RE_Zeile.SETFILTER("Document No.",'%1',RE_Kopf."No.");
+                      RE_Zeile.SETFILTER(Type,'%1',RE_Zeile.Type :: Item);
+                      RE_Zeile.SETFILTER(RE_Zeile.Quantity,'<>%1',0);
+                      IF RE_Zeile.FINDFIRST THEN
+                        REPEAT
+                          kumuliert := kumuliert + (RE_Zeile.Quantity * RE_Zeile."VK-Preis (MW)");
+                        UNTIL RE_Zeile.NEXT = 0;
+                    UNTIL RE_Kopf.NEXT = 0;
+                    IF kumuliert <> 0 THEN
+                      BEGIN
+                        Berichtstabelle.INIT;
+                        Berichtstabelle.Tabelle := 'KLASSIFIZIERUNG';
+                        Berichtstabelle.Index := Kontakt."No.";
+                        Berichtstabelle."Feld 10" := Kontakt.Name;
+                        Berichtstabelle."Feld 13" := Kontakt.City;
+                        Berichtstabelle."Feld 6" := Kontakt."Betreuer Innendienst";
+                        Berichtstabelle."Feld 7" := Kontakt."Salesperson Code";
+                        Berichtstabelle."Feld 9" := Kontakt."Territory Code";
+                        Projekt_Ansprech.RESET;
+                        Projekt_Ansprech.SETFILTER("Kampagnennr.",'<>%1','');
+                        Projekt_Ansprech.SETFILTER("Kontaktnr.",Kontakt."No.");
+                        IF Projekt_Ansprech.FINDFIRST THEN
+                          Berichtstabelle."Feld 4" := Projekt_Ansprech.COUNT
+                        ELSE
+                          Berichtstabelle."Feld 4" := 0;
+                        Berichtstabelle."Feld 5" := kumuliert;
+                        Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                        Berichtstabelle.User := USERID;
+                        Berichtstabelle.INSERT;
+                      END;
+                  END;
+              END;
+          UNTIL Kontakt.NEXT = 0;
+        END;
+    END;
+
+    PROCEDURE Suche_Kontakte_ohne_Umsatz@1140001();
+    BEGIN
+      Kontakt.RESET;
+      Kontakt.SETFILTER(Type,'%1',Kontakt.Type :: Company);
+      Kontakt.SETFILTER("Betreuer Innendienst",v_betreuer);
+      Kontakt.SETFILTER("Salesperson Code",v_verkcode);
+      Kontakt.SETFILTER("Territory Code",v_gebietscode);
+      IF Kontakt.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            keinUmsatz_aberAngebote := FALSE;
+
+            Branchen.RESET;
+            Branchen.SETFILTER("Contact No.",Kontakt."No.");
+            IF NOT Branchen.FINDFIRST THEN
+              BEGIN
+                RE_Kopf.RESET;
+                RE_Kopf.SETFILTER("Sell-to Contact No.",'%1',Kontakt."No.");
+                //RE_Kopf.SETFILTER("Posting Date",'>%1',CALCDATE('-' + FORMAT(Monate),WORKDATE));
+                IF NOT RE_Kopf.FINDFIRST THEN
+                  BEGIN
+                    AN_Kopf.RESET;
+                    AN_Kopf.SETFILTER("Document Type",'%1',AN_Kopf."Document Type" :: Quote);
+                    AN_Kopf.SETFILTER("Sell-to Contact No.",'%1',Kontakt."No.");
+                    IF AN_Kopf.FINDFIRST THEN
+                      keinUmsatz_aberAngebote := TRUE;
+
+                    Arch_AN_Kopf.RESET;
+                    Arch_AN_Kopf.SETFILTER("Document Type",'%1',Arch_AN_Kopf."Document Type" :: Quote);
+                    Arch_AN_Kopf.SETFILTER("Sell-to Contact No.",'%1',Kontakt."No.");
+                    IF Arch_AN_Kopf.FINDFIRST THEN
+                      keinUmsatz_aberAngebote := TRUE;
+
+                    IF keinUmsatz_aberAngebote THEN
+                      BEGIN
+                        Berichtstabelle.INIT;
+                        Berichtstabelle.Tabelle := 'KLASSIFIZIERUNG';
+                        Berichtstabelle.Index := Kontakt."No.";
+                        Berichtstabelle."Feld 10" := Kontakt.Name;
+                        Berichtstabelle."Feld 13" := Kontakt.City;
+                        Berichtstabelle."Feld 6" := Kontakt."Betreuer Innendienst";
+                        Berichtstabelle."Feld 7" := Kontakt."Salesperson Code";
+                        Berichtstabelle."Feld 9" := Kontakt."Territory Code";
+                        Projekt_Ansprech.RESET;
+                        Projekt_Ansprech.SETFILTER("Kampagnennr.",'<>%1','');
+                        Projekt_Ansprech.SETFILTER("Kontaktnr.",Kontakt."No.");
+                        IF Projekt_Ansprech.FINDFIRST THEN
+                          Berichtstabelle."Feld 4" := Projekt_Ansprech.COUNT
+                        ELSE
+                          Berichtstabelle."Feld 4" := 0;
+                        Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                        Berichtstabelle.User := USERID;
+                        Berichtstabelle.INSERT;
+                      END;
+                  END;
+              END;
+          UNTIL Kontakt.NEXT = 0;
+        END;
+    END;
+
+    PROCEDURE Ansprech_Kontakte_mit_Branchen@1140002();
+    BEGIN
+
+
+      //CREATE (Excel);                                              //erzeugt excel
+      //Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      //Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+      Sheet.Range('A1').Value:='Kontaktnr.';
+      Sheet.Range('B1').Value:='Kunde';
+      Sheet.Range('C1').Value:='Ort';
+      Sheet.Range('D1').Value:='Betreuer';
+      Sheet.Range('E1').Value:='Verk„ufer';
+      Sheet.Range('F1').Value:='Gebietscode';
+      Sheet.Range('G1').Value:='Branchencode';
+      Sheet.Range('H1').Value:='Branchenbeschreibung';
+      Sheet.Range('I1').Value:='Anrede';
+      Sheet.Range('J1').Value:='Vorname';
+      Sheet.Range('K1').Value:='Nachname';
+      Sheet.Range('L1').Value:='Position';
+      Sheet.Range('M1').Value:='Email';
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+
+      Branchen.RESET;
+      Branchen.SETFILTER(Branchen."Industry Group Code",text_branchencode);
+      IF Branchen.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            Kontakt.RESET;
+            Kontakt.SETFILTER(Type,'%1',Kontakt.Type :: Company);
+            Kontakt.SETFILTER("No.",Branchen."Contact No.");
+            Kontakt.SETFILTER("Betreuer Innendienst",v_betreuer);
+            Kontakt.SETFILTER("Salesperson Code",v_verkcode);
+            Kontakt.SETFILTER("Territory Code",v_gebietscode);
+
+            IF Kontakt.FINDFIRST THEN
+              BEGIN
+                REPEAT
+      //              Sheet.Range('A'+j).Value:= Kontakt."No.";
+      //              Sheet.Range('B'+j).Value:= Kontakt.Name;
+      //              Sheet.Range('C'+j).Value:= Kontakt.City;
+      //              Sheet.Range('D'+j).Value:= Kontakt."Betreuer Innendienst";
+      //              Sheet.Range('E'+j).Value:= Kontakt."Salesperson Code";
+      //              Sheet.Range('F'+j).Value:= Kontakt."Territory Code";
+      //               Branchen.CALCFIELDS("Industry Group Description");
+      //              Sheet.Range('G'+j).Value:= Branchen."Industry Group Code";
+      //              Sheet.Range('H'+j).Value:= Branchen."Industry Group Description";
+                           Kontakt_Ansprech.RESET;
+                           Kontakt_Ansprech.SETFILTER(Kontakt_Ansprech."Company No.",'%1',Kontakt."No.");
+                           Kontakt_Ansprech.SETFILTER(Kontakt_Ansprech.Type,'%1',Kontakt_Ansprech.Type :: Person);
+                           Kontakt_Ansprech.SETFILTER(Kontakt_Ansprech."Unternehmen verlassen",'%1',FALSE);
+                            IF Kontakt_Ansprech.FINDFIRST THEN
+                              BEGIN
+                                REPEAT
+                                  Sheet.Range('A'+j).Value:= Kontakt."No.";
+                                  Sheet.Range('B'+j).Value:= Kontakt.Name;
+                                  Sheet.Range('C'+j).Value:= Kontakt.City;
+                                  Sheet.Range('D'+j).Value:= Kontakt."Betreuer Innendienst";
+                                  Sheet.Range('E'+j).Value:= Kontakt."Salesperson Code";
+                                  Sheet.Range('F'+j).Value:= Kontakt."Territory Code";
+                                   Branchen.CALCFIELDS("Industry Group Description");
+                                  Sheet.Range('G'+j).Value:= Branchen."Industry Group Code";
+                                  Sheet.Range('H'+j).Value:= Branchen."Industry Group Description";
+                                  Sheet.Range('I'+j).Value:= Kontakt_Ansprech."Salutation Code";
+                                  Sheet.Range('J'+j).Value:= Kontakt_Ansprech."First Name";
+                                  Sheet.Range('K'+j).Value:= Kontakt_Ansprech.Surname;
+                                  Sheet.Range('L'+j).Value:= Kontakt_Ansprech."Organizational Level Code";
+                                  Mail_gru.RESET;
+                                  Mail_gru.SETFILTER(Mail_gru."Contact No.",'%1',Kontakt_Ansprech."No.");
+                                  Mail_gru.SETFILTER(Mail_gru."Mailing Group Code",'%1|%2','UNSUB','NO EMAIL');
+                                  IF Mail_gru.FINDFIRST THEN BEGIN
+                                  Sheet.Range('M'+j).Value:= 'Keine Email gewnscht';
+                                  END ELSE BEGIN
+                                  Sheet.Range('M'+j).Value:= Kontakt_Ansprech."E-Mail 2";
+                                  END;
+                                  j:=INCSTR(j);
+                                UNTIL Kontakt_Ansprech.NEXT=0;
+                            END;
+      //              j:=INCSTR(j);
+
+                UNTIL Kontakt.NEXT=0;
+              END;
+          UNTIL Branchen.NEXT = 0;
+        END;
+    END;
+
+    EVENT Sheet@1140003::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00024431-0000-0000-C000-000000000046}:Unknown Automation Server.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140003::PivotTableUpdate@2156(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Book@1140005::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Book@1140005::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Book@1140005::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Book@1140005::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    EVENT Book@1140005::WindowResize@1554(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::WindowActivate@1556(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::WindowDeactivate@1557(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00024431-0000-0000-C000-000000000046}:Unknown Automation Server.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::PivotTableCloseConnection@2158(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::PivotTableOpenConnection@2159(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140005::Sync@2266(SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::BeforeXmlImport@2283(Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::AfterXmlImport@2285(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::BeforeXmlExport@2287(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140001 : Text[1024];VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::AfterXmlExport@2288(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140001 : Text[1024];Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140005::RowsetComplete@2610(Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::NewWorkbook@1565(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookOpen@1567(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookActivate@1568(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookDeactivate@1569(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookBeforeClose@1570(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookBeforeSave@1571(Wb@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookBeforePrint@1572(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookNewSheet@1573(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookAddinInstall@1574(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookAddinUninstall@1575(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WindowResize@1554(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WindowActivate@1556(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WindowDeactivate@1557(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020893-0000-0000-C000-000000000046}:Unknown Automation Server.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00024431-0000-0000-C000-000000000046}:Unknown Automation Server.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookPivotTableCloseConnection@2160(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookPivotTableOpenConnection@2161(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020872-0000-0000-C000-000000000046}:Unknown Automation Server.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookSync@2289(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookBeforeXmlImport@2290(Wb@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookAfterXmlImport@2291(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookBeforeXmlExport@2292(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140001 : Text[1024];VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookAfterXmlExport@2293(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{0002447B-0000-0000-C000-000000000046}:Unknown Automation Server.XmlMap";Url@1140001 : Text[1024];Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::WorkbookRowsetComplete@2611(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.6:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140006::AfterCalculate@2612();
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
