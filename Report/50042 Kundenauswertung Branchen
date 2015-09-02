@@ -2,8 +2,8 @@ OBJECT Report 50042 Kundenauswertung Branchen
 {
   OBJECT-PROPERTIES
   {
-    Date=27.01.14;
-    Time=11:47:20;
+    Date=02.09.15;
+    Time=09:44:53;
     Modified=Yes;
     Version List=;
   }
@@ -87,7 +87,8 @@ OBJECT Report 50042 Kundenauswertung Branchen
                    IF Berichtstabelle.TABLECAPTION = 'Berichtstabelle' THEN
                      Berichtstabelle.DELETEALL;
 
-                   Excel.Visible (TRUE);
+                   IF check_Ansprech = check_Ansprech :: ja THEN
+                     Excel.Visible (TRUE);
                  END;
 
   }
@@ -323,21 +324,24 @@ OBJECT Report 50042 Kundenauswertung Branchen
                                                    OptionValue=0M }
       { 1140017;Shape     ;0    ;5940 ;11440;110  ;InPage=-1;
                                                    ShapeStyle=HorzLine }
-      { 1140015;OptionButton;220;9460 ;5610 ;440  ;CaptionML=DEU=Ansprechpartner nicht nach Excel ausgeben;
+      { 1140015;OptionButton;220;9460 ;6270 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Ansprechpartner nicht nach Excel ausgeben;
                                                    SourceExpr=check_Ansprech;
                                                    OptionValue=nein;
                                                    OnPush=BEGIN
                                                             EnableFields;
                                                           END;
                                                            }
-      { 1140018;OptionButton;220;8910 ;4950 ;440  ;CaptionML=DEU=Ansprechpartner nach Excel ausgeben;
+      { 1140018;OptionButton;220;8910 ;6270 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Ansprechpartner nach Excel ausgeben;
                                                    SourceExpr=check_Ansprech;
                                                    OptionValue=ja;
                                                    OnPush=BEGIN
                                                             EnableFields;
                                                           END;
                                                            }
-      { 1140019;Shape     ;0    ;8580 ;11440;110  ;ShapeStyle=HorzLine }
+      { 1140019;Shape     ;0    ;8580 ;11440;110  ;InPage=-1;
+                                                   ShapeStyle=HorzLine }
     }
   }
   CODE
@@ -376,6 +380,7 @@ OBJECT Report 50042 Kundenauswertung Branchen
       IF check_klassifizierung = check_klassifizierung :: ja THEN
         BEGIN
           RequestOptionsForm.txbox_suche_branchencode.EDITABLE := TRUE;
+          RequestOptionsForm.txbox_suche_branchencode.ENABLED := TRUE;
           RequestOptionsForm.rdbutn_12Monate.EDITABLE := FALSE;
           RequestOptionsForm.rdbutn_24Monate.EDITABLE := FALSE;
           RequestOptionsForm.rdbutn_keinUmsatz.EDITABLE := FALSE;
@@ -384,6 +389,7 @@ OBJECT Report 50042 Kundenauswertung Branchen
       IF check_klassifizierung = check_klassifizierung :: nein THEN
         BEGIN
           RequestOptionsForm.txbox_suche_branchencode.EDITABLE := FALSE;
+          RequestOptionsForm.txbox_suche_branchencode.ENABLED := FALSE;
           RequestOptionsForm.rdbutn_12Monate.EDITABLE := TRUE;
           RequestOptionsForm.rdbutn_24Monate.EDITABLE := TRUE;
           RequestOptionsForm.rdbutn_keinUmsatz.EDITABLE := TRUE;
