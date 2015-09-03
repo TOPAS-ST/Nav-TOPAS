@@ -730,7 +730,7 @@ EXIT(Passwort);
 Benutzername_generieren(Artikelnr : Code[20];"SUP Artikelnr" : Code[20];Seriennr : Code[20];Belegnr : Code[20];Zeilennr : Integer) Benu
 Artikel.GET("Artikelnr.");
 
-IF Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS' THEN
+IF (Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS') OR (Artikelnr = 'PSEUDO-CHASSIS') THEN
   IF (Seriennr = '') OR ("SUP Artikelnr" = '') THEN
     EXIT('');
 
