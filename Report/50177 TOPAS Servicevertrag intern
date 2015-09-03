@@ -1,0 +1,393 @@
+OBJECT Report 50177 TOPAS Servicevertrag intern
+{
+  OBJECT-PROPERTIES
+  {
+    Date=03.09.15;
+    Time=11:52:22;
+    Modified=Yes;
+    Version List=fertig;
+  }
+  PROPERTIES
+  {
+    TopMargin=500;
+    BottomMargin=100;
+    LeftMargin=1700;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50011;
+        DataItemTableView=WHERE(Status=FILTER(<>ACTS&<>Champs Partner));
+        ReqFilterFields=Wartungsvertragsnr.;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50024;
+        DataItemTableView=SORTING(Gruppierung,Basisger„t)
+                          ORDER(Descending)
+                          WHERE(Art=FILTER(Service),
+                                Inaktiv=FILTER(No),
+                                SUP Artikelnr.=FILTER(<>CHAMPS-RE_INSTATE#01&<>RE_INSTATEMENT_FEE));
+        DataItemVarName=Intern;
+        OnPreDataItem=BEGIN
+                        Nummer := 0;
+                        kopf_text := '';
+
+                        //Blendet nun abgelaufene Servicepositionen aus
+                        Intern.SETFILTER("Ablaufdatum Serviceleistung",'>=%1',WORKDATE);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           //Suche nach 1. Basisger„t zum Andruck des Benuters + PW
+                           ErstAndruckLizenz.RESET;
+                           ErstAndruckLizenz.SETFILTER(Art,'%1',ErstAndruckLizenz.Art :: Service);
+                           ErstAndruckLizenz.SETFILTER(Inaktiv,'%1',FALSE);
+                           ErstAndruckLizenz.SETFILTER(Basisger„t,'%1',TRUE);
+                           ErstAndruckLizenz.SETFILTER("SUP Artikelnr.",'%1',Intern."SUP Artikelnr.");
+                           ErstAndruckLizenz.SETFILTER("Wartungsvertragsnr.",'%1',Intern."Wartungsvertragsnr.");
+                           IF ErstAndruckLizenz.FINDFIRST THEN
+                             BEGIN
+                               benutzer := ErstAndruckLizenz.Benutzername;
+                               pw := ErstAndruckLizenz.Passwort;
+                               "artikelnr2 ger„t" := ErstAndruckLizenz."Artikelnr. 2";
+                               "urspr LS ger„t" := ErstAndruckLizenz."Urspr. Lieferscheinnr.";
+                               "urspr AU ger„t" := ErstAndruckLizenz."Urspr. Auftragsnr.";
+                               "fremderwerb ger„t" := ErstAndruckLizenz.Fremderwerb;
+                               "lfdnr ger„t" := ErstAndruckLizenz."Lfd. Nr.";
+                             END
+                           ELSE
+                             //Wartungsvertrag verfgt ber kein Basisger„t
+                             BEGIN
+                               ErstAndruckLizenz.RESET;
+                               ErstAndruckLizenz.SETFILTER(Art,'%1',ErstAndruckLizenz.Art :: Service);
+                               ErstAndruckLizenz.SETFILTER(Inaktiv,'%1',FALSE);
+                               ErstAndruckLizenz.SETFILTER("SUP Artikelnr.",'%1',Intern."SUP Artikelnr.");
+                               ErstAndruckLizenz.SETFILTER("Wartungsvertragsnr.",'%1',Intern."Wartungsvertragsnr.");
+                               IF ErstAndruckLizenz.FINDFIRST THEN
+                                 BEGIN
+                                   benutzer := ErstAndruckLizenz.Benutzername;
+                                   pw := ErstAndruckLizenz.Passwort;
+                                   "artikelnr2 ger„t" := ErstAndruckLizenz."Artikelnr. 2";
+                                   "urspr LS ger„t" := ErstAndruckLizenz."Urspr. Lieferscheinnr.";
+                                   "urspr AU ger„t" := ErstAndruckLizenz."Urspr. Auftragsnr.";
+                                   "fremderwerb ger„t" := ErstAndruckLizenz.Fremderwerb;
+                                   "lfdnr ger„t" := ErstAndruckLizenz."Lfd. Nr.";
+                                 END
+                               ELSE
+                                BEGIN
+                                  benutzer := Intern.Benutzername;
+                                  pw := Intern.Passwort;
+                                  "artikelnr2 ger„t" := ErstAndruckLizenz."Artikelnr. 2";
+                                  "urspr LS ger„t" := Intern."Urspr. Lieferscheinnr.";
+                                  "urspr AU ger„t" := Intern."Urspr. Auftragsnr.";
+                                  "fremderwerb ger„t" := Intern.Fremderwerb;
+                                  "lfdnr ger„t" := Intern."Lfd. Nr.";
+                                END;
+                             END;
+
+                           Artikel.GET("SUP Artikelnr.");
+                           sup_artikelnr_lang := Artikel."No. 2";
+
+                           IF ((STRPOS(sup_artikelnr_lang,'HW') <> 0) OR (STRPOS(sup_artikelnr_lang,'AHR') <> 0)
+                           OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0) OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR')
+                           OR (STRPOS(sup_artikelnr_lang,'ENH-SUPP-PROG') <> 0))
+                           AND ((STRPOS(sup_artikelnr_lang,'SW') = 0) AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)) THEN
+                             BEGIN
+                               benutzer := '-';
+                               pw := '-';
+                             END;
+                         END;
+
+        GroupTotalFields=Gruppierung;
+        DataItemLink=Wartungsvertragsnr.=FIELD(Wartungsvertragsnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18500;
+            SectionHeight=6960;
+            OnPreSection=BEGIN
+                           LetzteServicePos.RESET;
+                           LetzteServicePos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           LetzteServicePos.SETFILTER(Art,'%1',LetzteServicePos.Art :: Service);
+                           IF LetzteServicePos.FINDFIRST THEN
+                             BEGIN
+                               REPEAT
+                                 IF (STRPOS(LetzteServicePos."SUP Artikelnr.",'CHAMPS') <> 0)
+                                 OR (STRPOS(LetzteServicePos."SUP Artikelnr.",'ACHAT') <> 0)
+                                 OR (STRPOS(LetzteServicePos."SUP Artikelnr.",'ACTS') <> 0) THEN
+                                   kopf_text := 'Wartungsvertrag';
+                               UNTIL (LetzteServicePos.NEXT = 0) OR (kopf_text <> '');
+                             END;
+
+                           IF kopf_text = '' THEN
+                             kopf_text := 'Software Upgrade Protection';
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140057;Label     ;300  ;2900 ;6177 ;700  ;FontSize=12;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Zur internen Verwendung an: }
+            { 1140084;Label     ;300  ;4900 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Kundennr. }
+            { 1140087;Label     ;300  ;5300 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Kunde }
+            { 1140089;TextBox   ;3000 ;4900 ;8500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Debitornr." }
+            { 1140090;TextBox   ;3000 ;5300 ;8500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Debitorname }
+            { 1140093;TextBox   ;10039;389  ;3600 ;1020 ;HorzAlign=Left;
+                                                         FontSize=16;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Wartungsvertragsnr." }
+            { 1140094;TextBox   ;300  ;400  ;8614 ;1020 ;FontSize=16;
+                                                         FontBold=Yes;
+                                                         SourceExpr=kopf_text }
+            { 1140004;TextBox   ;3000 ;5700 ;8500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Belegdatum }
+            { 1140005;Label     ;300  ;5700 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Buchungsdatum }
+            { 1140007;Label     ;6483 ;2900 ;8982 ;700  ;FontSize=12;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Sylke (Vertretung: Steffen) }
+            { 1140008;TextBox   ;16100;800  ;2250 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=USERID }
+            { 1140009;TextBox   ;15200;400  ;3150 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+            { 1140016;Label     ;300  ;4400 ;11200;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Allgemeine Angaben: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18500;
+            SectionHeight=1200;
+          }
+          CONTROLS
+          {
+            { 1140067;Shape     ;0    ;200  ;18300;800   }
+            { 1140068;Label     ;10900;300  ;1700 ;500  ;HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Passwort: }
+            { 1140069;Label     ;5800 ;300  ;4700 ;500  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Benutzername / Artikel }
+            { 1140070;Label     ;100  ;300  ;800  ;500  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Pos. }
+            { 1140072;Label     ;14600;300  ;1800 ;500  ;HorzAlign=General;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Laufzeit }
+            { 1140088;Label     ;1000 ;300  ;4600 ;500  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Artikelnr. }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=GroupHeader;
+            SectionWidth=18500;
+            SectionHeight=4535;
+            OnPreSection=BEGIN
+                           Nummer += 1;
+                           CurrReport.SHOWOUTPUT((STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (STRPOS(Intern."SUP Artikelnr.",'AHR') = 0));
+
+                           //Andruck Verl„ngerung, da Anlage des Benutzers bereits erfolgt ist
+                           IF Verl„ngerung = TRUE THEN
+                             verlaengerung := 'Verl„ngerung'
+                           ELSE
+                             verlaengerung := '';
+
+                           //Andruck Zusatzmodule, da Anlage des Benutzers bereits erfolgt ist
+                           zusatzmodul := '';
+                           PruefeLizenzTab.RESET;
+                           PruefeLizenzTab.SETFILTER(Art,'%1',PruefeLizenzTab.Art :: Service);
+                           PruefeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'<>%1',0D);
+                           PruefeLizenzTab.SETFILTER(PruefeLizenzTab."Wartungsvertragsnr.","Wartungsvertragsnr.");
+                           IF PruefeLizenzTab.FINDFIRST THEN
+                             REPEAT
+                               IF (abfrage_array[1] <> PruefeLizenzTab."Nr.") AND (abfrage_array[1] <> '')
+                               AND (STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (PruefeLizenzTab.Basisger„t = FALSE)
+                               AND (abfrage_array[2] = PruefeLizenzTab."Geh”rt zu Lfd. Nr.") THEN
+                                 zusatzmodul := 'Zusatzmodul(e), Benutzer bereits im Typo3 angelegt!';
+                               abfrage_array[1] := PruefeLizenzTab."Nr.";
+                               abfrage_array[2] := PruefeLizenzTab."Geh”rt zu Lfd. Nr.";
+                             UNTIL PruefeLizenzTab.NEXT = 0;
+
+                           //Andruck bei reinen Support Artikeln, kein Zugang notwendig
+                           nurSupport := '';
+                           IF Intern."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR' THEN
+                             nurSupport := 'kein Zugang, da nur Support';
+
+                           IF (Intern."Artikelnr." = 'PSEUDO-CHASSIS') THEN
+                             nurSupport := 'kein Zugang, da PSEUDO-CHASSIS';
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140002;TextBox   ;15775;200  ;1753 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         SourceExpr=Intern."Ablaufdatum Serviceleistung" }
+            { 1140003;TextBox   ;13700;200  ;1753 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         SourceExpr=Intern.Lizenzdatum }
+            { 1140010;TextBox   ;11000;200  ;2200 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=pw }
+            { 1140011;TextBox   ;5700 ;200  ;4700 ;423  ;FontSize=9;
+                                                         SourceExpr=benutzer }
+            { 1140012;TextBox   ;0    ;200  ;644  ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Nummer }
+            { 1140013;TextBox   ;1000 ;200  ;4500 ;423  ;FontSize=9;
+                                                         SourceExpr=Intern."SUP Artikelnr." }
+            { 1140014;TextBox   ;5700 ;800  ;4500 ;423  ;FontSize=8;
+                                                         SourceExpr=Intern."Auftragsnr." }
+            { 1140015;TextBox   ;11000;800  ;4700 ;423  ;FontSize=8;
+                                                         SourceExpr=Intern."Nr." }
+            { 1140021;TextBox   ;1000 ;700  ;3600 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         FontBold=Yes;
+                                                         SourceExpr="lfdnr ger„t" }
+            { 1140017;Label     ;1000 ;1600 ;11200;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Ger„te Angaben: }
+            { 1140019;TextBox   ;3700 ;2100 ;5300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="artikelnr2 ger„t" }
+            { 1140092;TextBox   ;3700 ;2500 ;5300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="urspr LS ger„t" }
+            { 1140000;TextBox   ;3700 ;2900 ;5300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="urspr AU ger„t" }
+            { 1140020;TextBox   ;3700 ;3300 ;5300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="fremderwerb ger„t" }
+            { 1140091;Label     ;1000 ;2500 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Lieferscheinnr. }
+            { 1140001;Label     ;1000 ;2900 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftragsnr. }
+            { 1140018;Label     ;1000 ;2100 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Artikelnr. }
+            { 1140023;Label     ;1000 ;3300 ;2700 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Fremderwerb }
+            { 1140025;TextBox   ;10872;2100 ;7504 ;590  ;HorzAlign=Left;
+                                                         FontSize=12;
+                                                         FontBold=Yes;
+                                                         SourceExpr=verlaengerung }
+            { 1140026;TextBox   ;10879;2683 ;7500 ;1100 ;HorzAlign=Left;
+                                                         FontSize=12;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         SourceExpr=zusatzmodul }
+            { 1140022;TextBox   ;10878;3762 ;7504 ;590  ;HorzAlign=Left;
+                                                         FontSize=12;
+                                                         FontBold=Yes;
+                                                         SourceExpr=nurSupport }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18500;
+            SectionHeight=2600;
+          }
+          CONTROLS
+          {
+            { 1140076;Label     ;100  ;600  ;5200 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=TOPAS-interner-Vermerk: }
+            { 1140077;Label     ;100  ;1400 ;13600;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Konto angelegt und im Navision hinterlegt, Datum / Zeichen:         ____________________ }
+            { 1140006;Label     ;100  ;2000 ;13600;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Kunde hat sich registriert, Daten bernommen, Datum / Zeichen: ____________________ }
+            { 1140024;Shape     ;100  ;100  ;18300;100  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9020;
+      Height=3410;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      Artikel@1140008 : Record 27;
+      ErstAndruckLizenz@1140012 : Record 50024;
+      LetzteServicePos@1140018 : Record 50024;
+      PruefeLizenzTab@1140021 : Record 50024;
+      kopf_text@1140000 : Text[50];
+      Zeile1@1140001 : Text[50];
+      Zeile2@1140002 : Text[50];
+      Zeile3@1140003 : Text[50];
+      Zeile4@1140004 : Text[50];
+      SUP_Art_Beschr@1140009 : Text[60];
+      Nummer@1140005 : Integer;
+      status_text@1140006 : Text[50];
+      "artikelnr2 ger„t"@1140013 : Code[40];
+      "urspr LS ger„t"@1140014 : Code[20];
+      "urspr AU ger„t"@1140015 : Code[20];
+      "fremderwerb ger„t"@1140016 : Boolean;
+      "lfdnr ger„t"@1140017 : Code[20];
+      sup_artikelnr_lang@1140011 : Code[40];
+      verlaengerung@1140019 : Text[100];
+      zusatzmodul@1140020 : Text[100];
+      nurSupport@1140023 : Text[100];
+      abfrage_array@1140022 : ARRAY [2] OF Code[40];
+      benutzer@1140010 : Text[50];
+      pw@1140007 : Text[50];
+
+    BEGIN
+    END.
+  }
+}
+
