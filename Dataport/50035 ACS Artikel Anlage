@@ -436,8 +436,9 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
               EVALUATE(vorherige_zeile,COPYSTR(Cell,4));
               Cell := Range1.Address;
               EVALUATE(naechste_zeile,COPYSTR(Cell,4));
-              IF (vorherige_zeile > naechste_zeile) THEN EXIT(''); // beginnt Suche wieder am Anfang > Abbruch
-            UNTIL (FORMAT(PL_Sheet.Range(Cell).Value) = What);
+              IF (vorherige_zeile = naechste_zeile) AND (UPPERCASE(FORMAT(PL_Sheet.Range(Cell).Value)) <> UPPERCASE(What)) THEN
+                EXIT(''); //Abbruch, sonst Endlosschleife wegen unterschiedlicher Gross- und Kleinschreibung
+            UNTIL (UPPERCASE(FORMAT(PL_Sheet.Range(Cell).Value)) = UPPERCASE(What));
         END;
     EXIT(Cell);
 END;
