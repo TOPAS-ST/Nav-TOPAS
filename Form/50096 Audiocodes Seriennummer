@@ -1,0 +1,1005 @@
+OBJECT Form 50096 Audiocodes Seriennummer
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.03.15;
+    Time=12:25:13;
+    Modified=Yes;
+    Version List=TOPAS;
+  }
+  PROPERTIES
+  {
+    Width=13200;
+    Height=14300;
+    OnOpenForm=BEGIN
+                 Datenblatt_leeren;
+
+                 postennr := 0;
+
+                 Prfe_Autorun;
+               END;
+
+  }
+  CONTROLS
+  {
+    { 1140000;TextBox   ;3850 ;220  ;4510 ;440  ;SourceExpr=Eingabe }
+    { 1140002;CommandButton;5060;880;2090 ;990  ;CaptionML=DEU=Suche;
+                                                 OnPush=BEGIN
+                                                          postennr := 0;
+                                                          durchlauf := 0;
+                                                          Beginne_Suche(Eingabe);
+                                                        END;
+                                                         }
+    { 1140001;Label     ;3410 ;2090 ;6270 ;440  ;LeaderDots=No;
+                                                 CaptionML=DEU=Bitte die vollst„ndige Seriennummer eingeben. }
+    { 1140012;Label     ;330  ;11660;10230;440  ;FontBold=No;
+                                                 CaptionML=DEU=Zusatzbelege }
+    { 1140013;Label     ;330  ;7480 ;5390 ;440  ;CaptionML=DEU=Verkauf }
+    { 1140014;Label     ;6600 ;7480 ;5390 ;440  ;CaptionML=DEU=Einkauf }
+    { 1140015;TextBox   ;3630 ;8250 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=vk_belegnr }
+    { 1140016;TextBox   ;3630 ;8800 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=vk_datum }
+    { 1140017;TextBox   ;3740 ;4510 ;3000 ;440  ;Editable=No;
+                                                 HorzAlign=Left;
+                                                 SourceExpr=kundennr }
+    { 1140018;Label     ;330  ;8250 ;3300 ;440  ;CaptionML=DEU=Lieferscheinnr. }
+    { 1140019;Label     ;330  ;8800 ;3300 ;440  ;CaptionML=DEU=Belegdatum }
+    { 1140020;Label     ;330  ;4510 ;3300 ;440  ;CaptionML=DEU=Kundennr. }
+    { 1140021;Label     ;330  ;2860 ;3300 ;440  ;CaptionML=DEU=Navision System }
+    { 1140022;TextBox   ;3740 ;2860 ;3630 ;440  ;Editable=No;
+                                                 SourceExpr=nav_system }
+    { 1140023;TextBox   ;3740 ;3410 ;5940 ;440  ;Editable=No;
+                                                 SourceExpr=artikelnr }
+    { 1140024;Label     ;330  ;3410 ;3300 ;440  ;CaptionML=DEU=Artikelnr. }
+    { 1140025;TextBox   ;3740 ;5060 ;5940 ;440  ;Editable=No;
+                                                 SourceExpr=kundenname }
+    { 1140026;Label     ;330  ;5060 ;3300 ;440  ;CaptionML=DEU=Kundenname }
+    { 1140027;TextBox   ;9900 ;9350 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=ek_datum }
+    { 1140028;Label     ;6600 ;9350 ;3300 ;440  ;CaptionML=DEU=Belegdatum }
+    { 1140029;TextBox   ;9900 ;8250 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=ek_belegnr }
+    { 1140030;Label     ;6600 ;8250 ;3300 ;440  ;CaptionML=DEU=Lieferscheinnr. }
+    { 1140031;TextBox   ;3740 ;3960 ;5940 ;440  ;Editable=No;
+                                                 SourceExpr=seriennr }
+    { 1140032;Label     ;330  ;3960 ;3300 ;440  ;CaptionML=DEU=Seriennr. }
+    { 1140033;TextBox   ;3630 ;9350 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=ext_belegnr }
+    { 1140034;Label     ;330  ;9350 ;3300 ;440  ;CaptionML=DEU=Ext. Belegnr. }
+    { 1140035;TextBox   ;9900 ;9900 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=kred_po }
+    { 1140036;Label     ;6600 ;9900 ;3300 ;440  ;CaptionML=DEU=PO }
+    { 1140037;TextBox   ;9900 ;10450;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=kred_rcptno }
+    { 1140038;Label     ;6600 ;10450;3300 ;440  ;CaptionML=DEU=Rcpt No. }
+    { 1140011;TextBox   ;3740 ;6160 ;5940 ;440  ;Editable=No;
+                                                 SourceExpr=kreditorname }
+    { 1140039;Label     ;330  ;6160 ;3300 ;440  ;CaptionML=DEU=Kreditorname }
+    { 1140040;TextBox   ;3740 ;5610 ;3000 ;440  ;Editable=No;
+                                                 HorzAlign=Left;
+                                                 SourceExpr=kreditornr }
+    { 1140041;Label     ;330  ;5610 ;3300 ;440  ;CaptionML=DEU=Kreditornr. }
+    { 1140042;TextBox   ;9900 ;8800 ;2100 ;440  ;Editable=No;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=bet_nr }
+    { 1140043;Label     ;6600 ;8800 ;3300 ;440  ;CaptionML=DEU=BET }
+    { 1140044;CommandButton;5830;8250;660 ;550  ;ShowCaption=No;
+                                                 BitmapPos=Center;
+                                                 Bitmap=1257;
+                                                 ToolTipML=ENU=1257;
+                                                 OnPush=BEGIN
+                                                          Lieferschein.GET(vk_belegnr);
+                                                          FORM.RUN(130,Lieferschein);
+                                                        END;
+                                                         }
+    { 1140045;CommandButton;12100;8250;660;550  ;ShowCaption=No;
+                                                 BitmapPos=Center;
+                                                 Bitmap=1257;
+                                                 ToolTipML=ENU=1257;
+                                                 OnPush=BEGIN
+                                                          PurchRcptHeader.GET(ek_belegnr);
+                                                          FORM.RUN(136,PurchRcptHeader);
+                                                        END;
+                                                         }
+    { 1140047;CommandButton;9790;3410;660 ;550  ;ShowCaption=No;
+                                                 BitmapPos=Center;
+                                                 Bitmap=1257;
+                                                 ToolTipML=ENU=1257;
+                                                 OnPush=BEGIN
+                                                          Item.GET(artikelnr);
+                                                          FORM.RUN(30,Item);
+                                                        END;
+                                                         }
+    { 1140048;CommandButton;6820;4510;660 ;550  ;ShowCaption=No;
+                                                 BitmapPos=Center;
+                                                 Bitmap=1257;
+                                                 ToolTipML=ENU=1257;
+                                                 OnPush=BEGIN
+                                                          debitor.GET(kundennr);
+                                                          FORM.RUN(21,debitor);
+                                                        END;
+                                                         }
+    { 1140049;CommandButton;6820;5610;660 ;550  ;ShowCaption=No;
+                                                 BitmapPos=Center;
+                                                 Bitmap=1257;
+                                                 ToolTipML=ENU=1257;
+                                                 OnPush=BEGIN
+                                                          kreditor.GET(kreditornr);
+                                                          FORM.RUN(26,kreditor);
+                                                        END;
+                                                         }
+    { 1140051;TextBox   ;9790 ;3960 ;3080 ;440  ;Name=umltext;
+                                                 Editable=No;
+                                                 SourceExpr=uml_text }
+    { 1140050;CommandButton;7370;880;1550 ;990  ;Name=btn_next;
+                                                 BitmapPos=Right;
+                                                 Bitmap=1290;
+                                                 CaptionML=DEU=Next;
+                                                 OnPush=BEGIN
+                                                          Beginne_Suche(Eingabe);
+                                                        END;
+                                                         }
+    { 1140052;TextBox   ;9900 ;11000;2090 ;440  ;Editable=No;
+                                                 SourceExpr=ek_artpostennr }
+    { 1140053;Label     ;6600 ;11000;3300 ;440  ;CaptionML=DEU=Artikelpostennr }
+    { 1140054;TextBox   ;9790 ;4510 ;2090 ;440  ;Editable=No;
+                                                 SourceExpr=vk_artpostennr }
+    { 1140055;TextBox   ;3740 ;6710 ;8250 ;440  ;Name=umltext2;
+                                                 Editable=No;
+                                                 SourceExpr=uml_text2 }
+    { 1140057;Label     ;1540 ;880  ;2860 ;880  ;Name=txt_boardini;
+                                                 ForeColor=16711680;
+                                                 FontSize=16;
+                                                 FontBold=Yes;
+                                                 LeaderDots=No;
+                                                 CaptionML=DEU=Board ini }
+    { 1140003;Frame     ;330  ;12320;6380 ;1760 ;Name=frame_zusatz_wv;
+                                                 ShowCaption=No;
+                                                 Border=No }
+    { 1140005;Label     ;440  ;12430;4070 ;880  ;ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 VertAlign=Top;
+                                                 FontBold=Yes;
+                                                 MultiLine=Yes;
+                                                 CaptionML=DEU=System Vertragsnr. }
+    { 1140006;TextBox   ;4620 ;12430;1920 ;440  ;Name=txt_vertragsnr;
+                                                 Editable=No;
+                                                 ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 HorzAlign=Right;
+                                                 SourceExpr=vertragsnr;
+                                                 OnFormat=BEGIN
+                                                            IF vertragsnr = '' THEN EXIT;
+
+                                                            Wartung.GET(vertragsnr);
+                                                            IF (Wartung.Status = Wartung.Status :: System) OR (Wartung.Status = Wartung.Status :: " ") THEN
+                                                              CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 255
+                                                            ELSE
+                                                              IF (Wartung.Status = Wartung.Status :: ACTS) THEN
+                                                                CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 37887
+                                                              ELSE
+                                                                IF (Wartung.Status = Wartung.Status :: ACHAT) THEN
+                                                                  CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 84400
+                                                                ELSE
+                                                                  CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 16744760;
+                                                          END;
+                                                           }
+    { 1140007;TextBox   ;4620 ;12870;1920 ;440  ;Name=txt_ablaufdatum;
+                                                 Editable=No;
+                                                 ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 SourceExpr=ablaufdatum;
+                                                 OnFormat=BEGIN
+                                                            IF (ablaufdatum < WORKDATE) AND (ablaufdatum <> 0D) THEN CurrForm.txt_ablaufdatum.UPDATEFORECOLOR(255)
+                                                              ELSE CurrForm.txt_ablaufdatum.UPDATEFORECOLOR(0)
+                                                          END;
+                                                           }
+    { 1140008;TextBox   ;3960 ;13420;550  ;440  ;Name=txt_wartungsverknpfungen;
+                                                 Editable=No;
+                                                 ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 SourceExpr='('+FORMAT(wartungsverknpfungen)+')' }
+    { 1140009;CommandButton;4620;13310;1870;660 ;ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 CaptionML=DEU=Anzeigen;
+                                                 OnPush=BEGIN
+                                                          IF vertragsnr <> '' THEN
+                                                            BEGIN
+                                                              Wartung.SETFILTER("Wartungsvertragsnr.",vertragsnr);
+                                                              FORM.RUN(50015,Wartung);
+                                                            END;
+                                                        END;
+                                                         }
+    { 1140010;TextBox   ;440  ;13420;3520 ;440  ;Name=txt_alle_vertragsnr;
+                                                 Editable=No;
+                                                 ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 SourceExpr=alle_vertragsnr }
+    { 1140004;Frame     ;6820 ;12320;6160 ;1760 ;Name=frame_zusatz_rma;
+                                                 ShowCaption=No;
+                                                 Border=No }
+    { 1140046;Label     ;6930 ;12430;1540 ;1100 ;ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 VertAlign=Top;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=RMA-Nr. }
+    { 1140056;TextBox   ;8580 ;12430;1920 ;440  ;Editable=No;
+                                                 ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 SourceExpr=rmanr }
+    { 1140058;CommandButton;8580;12980;1870;550 ;ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 CaptionML=DEU=Anzeigen;
+                                                 OnPush=BEGIN
+                                                          IF rmanr <> '' THEN
+                                                            BEGIN
+                                                              RMA.GET(rmanr);
+                                                              IF RMA."Status-Abgeschlossen" THEN
+                                                                FORM.RUN(50088,RMA)
+                                                              ELSE
+                                                                FORM.RUN(50075,RMA);
+                                                            END;
+                                                        END;
+                                                         }
+    { 1140059;TextBox   ;10670;12430;2090 ;440  ;Name=txt_rma;
+                                                 Editable=No;
+                                                 ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 SourceExpr=rma_text }
+    { 1140060;CommandButton;9570;880;3190 ;990  ;CaptionML=DEU=Dateiserver Suche;
+                                                 OnPush=VAR
+                                                          WSHScript@1140000 : Automation "{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B} 1.0:{72C24DD5-D70A-438B-8A42-98424B88AFB8}:'Windows Script Host Object Model'.WshShell";
+                                                        BEGIN
+                                                          CREATE(WSHScript);
+                                                          WSHScript.Exec('H:\software\TOPAS eigen\FindInFiles\FindInFiles.exe ' + Eingabe + ' "file://W2K8R2-FILESRV/Doku/"');
+                                                          CLEAR(WSHScript);
+                                                        END;
+                                                         }
+  }
+  CODE
+  {
+    VAR
+      Eingabe@1140000 : Text[60];
+      Eingabe_2@1140003 : Text[60];
+      Eingabe_3@1140005 : Text[60];
+      Hersteller@1140001 : Code[10];
+      artikelverfolgung@1140002 : Record 32;
+      a@1140004 : Decimal;
+      nichtgefunden@1140006 : Boolean;
+      postennr@1140039 : Integer;
+      durchlauf@1140040 : Integer;
+      DC_NAV_26@1140007 : Record 50018;
+      debitor@1140008 : Record 18;
+      kreditor@1140037 : Record 23;
+      Item@1140036 : Record 27;
+      Lieferschein@1140030 : Record 110;
+      PurchRcptHeader@1140032 : Record 120;
+      RMA@1140015 : Record 50020;
+      RMA_zeile@1140009 : Record 50021;
+      RMA_beteiligte@1140010 : Record 50022;
+      Wartung@1140013 : Record 50011;
+      LizenzTab@1140011 : Record 50024;
+      Berichtstabelle@1140038 : Record 50037;
+      nav_system@1140027 : Text[30];
+      kundennr@1140023 : Code[20];
+      kundenname@1140024 : Text[50];
+      kreditornr@1140025 : Code[20];
+      kreditorname@1140026 : Text[50];
+      seriennr@1140028 : Code[60];
+      vk_belegnr@1140016 : Code[20];
+      ek_belegnr@1140017 : Code[20];
+      vk_datum@1140019 : Date;
+      ek_datum@1140020 : Date;
+      ext_belegnr@1140029 : Code[20];
+      kred_po@1140022 : Code[20];
+      kred_rcptno@1140021 : Code[20];
+      bet_nr@1140031 : Code[20];
+      artikelnr@1140018 : Code[20];
+      vertragsnr@1140012 : Code[20];
+      ablaufdatum@1140044 : Date;
+      rmanr@1140014 : Code[20];
+      vk_artpostennr@1140042 : Integer;
+      ek_artpostennr@1140041 : Integer;
+      rma_text@1140035 : Text[50];
+
+      Text000@1140034 : TextConst
+        'DEU=RMA: %1\\Kunde: %2 / %3\Ersatz fr Belegnr.: %4\Eingangsdatum: %5\Reklamierte Seriennr.: %6';
+      uml_text@1140033 : Text[50];
+      uml_text2@1140043 : Text[100];
+      alle_vertragsnr@1140046 : Code[80];
+      wartungsverknpfungen@1140045 : Integer;
+
+    PROCEDURE Prfe_Autorun@1140010();
+    BEGIN
+      Berichtstabelle.RESET;
+      Berichtstabelle.SETFILTER(Index,'%1','SN_SUCHE');
+      Berichtstabelle.SETFILTER(User,'%1',USERID);
+      IF Berichtstabelle.FINDFIRST THEN
+        BEGIN
+          Eingabe := Berichtstabelle."Feld 1";
+          Beginne_Suche(Eingabe);
+
+          //*******************************************************************************************************
+          //                    Sicherheitsabfrage ob Temp Tabelle auch Berichtstabelle ist
+          //*******************************************************************************************************
+
+          IF Berichtstabelle.TABLECAPTION <> 'Berichtstabelle' THEN
+            ERROR('Eine Sicherheitssperre verhindert die Ausfhrung dieses Berichtes.'+
+                  'Stellen Sie sicher, dass die TABLECAPTION der Berichtstabelle auch auf Berichtstabelle lautet.');
+          Berichtstabelle.DELETEALL;
+        END
+      ELSE
+        EXIT;
+    END;
+
+    PROCEDURE Beginne_Suche@1140000(Eingabe@1140000 : Text[60]);
+    BEGIN
+      Datenblatt_leeren;
+      nichtgefunden:=FALSE;
+      Eingabe:=UPPERCASE(Eingabe);
+
+      artikelverfolgung.RESET();
+      //Eingabe 1:1 suchen
+      IF postennr > 0 THEN
+        artikelverfolgung.SETFILTER("Entry No.",'<%1',postennr);
+      artikelverfolgung.SETFILTER("Document Type",'<>%1',artikelverfolgung."Document Type" :: "Sales Credit Memo");
+      artikelverfolgung.SETFILTER(artikelverfolgung."Serial No.",'%1',Eingabe);
+      IF (artikelverfolgung.FINDLAST()) AND (Eingabe <> '') AND (Eingabe <> ' ') THEN
+        BEGIN
+          Pruefe_Vorgaenger5(artikelverfolgung,artikelverfolgung.COUNT);
+
+          VK_daten_ermitteln(artikelverfolgung);
+          EK_daten_ermitteln(artikelverfolgung);
+        END
+      ELSE
+        BEGIN
+         //Eingabe „nhlich 1:1 suchen
+          IF postennr > 0 THEN
+            artikelverfolgung.SETFILTER("Entry No.",'<%1',postennr);
+         artikelverfolgung.SETFILTER(artikelverfolgung."Serial No.",'%1','*'+Eingabe+'*');
+         IF (artikelverfolgung.FINDLAST()) AND (Eingabe <> '') AND (Eingabe <> ' ') THEN
+           BEGIN
+             Pruefe_Vorgaenger5(artikelverfolgung,artikelverfolgung.COUNT);
+
+             VK_daten_ermitteln(artikelverfolgung);
+             EK_daten_ermitteln(artikelverfolgung);
+           END
+         ELSE
+           BEGIN
+             // l”scht alle Buchstaben und Sonderzeichen aus der Sucheingabe
+             Eingabe_2 :=DELCHR(Eingabe,'=',' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_!();"');
+             artikelverfolgung.RESET();
+             // Eingabe bereinigt suchen
+             IF postennr > 0 THEN
+               artikelverfolgung.SETFILTER("Entry No.",'<%1',postennr);
+             artikelverfolgung.SETFILTER("Document Type",'<>%1',artikelverfolgung."Document Type" :: "Sales Credit Memo");
+             artikelverfolgung.SETFILTER(artikelverfolgung."Serial No.",'%1','*'+Eingabe_2+'*');
+             IF (artikelverfolgung.FINDLAST()) AND (Eingabe_2 <> '') AND (Eingabe_2 <> ' ') THEN
+               BEGIN
+                 Pruefe_Vorgaenger5(artikelverfolgung,artikelverfolgung.COUNT);
+
+                 VK_daten_ermitteln(artikelverfolgung);
+                 EK_daten_ermitteln(artikelverfolgung);
+
+               END
+             ELSE
+               BEGIN
+                  a:=0;
+
+                  // Zwischen die einzelnen Ziffern wird nach und nach ein Leerzeichen eingefgt
+                  // 1.) 123456, 2.) 1 23456, 3. 12 3456, 4. 123 456 usw.
+                  REPEAT
+                    a:=a+1;
+                    artikelverfolgung.RESET();
+                    Eingabe_3:=COPYSTR(Eingabe_2,1,a)+' '+COPYSTR(Eingabe_2,a+1,STRLEN(Eingabe_2));
+                    //Message(eingabe_3);
+                    // Eingabe bereinigt suchen
+                    IF postennr > 0 THEN
+                      artikelverfolgung.SETFILTER("Entry No.",'<%1',postennr);
+                    artikelverfolgung.SETFILTER("Document Type",'<>%1',artikelverfolgung."Document Type" :: "Sales Credit Memo");
+                    artikelverfolgung.SETFILTER(artikelverfolgung."Serial No.",'%1','*'+Eingabe_3+'*');
+                    IF (artikelverfolgung.FINDLAST()) AND (Eingabe_3 <> '') AND (Eingabe_3 <> ' ') THEN
+                      BEGIN
+                         Pruefe_Vorgaenger5(artikelverfolgung,artikelverfolgung.COUNT);
+
+                         VK_daten_ermitteln(artikelverfolgung);
+                         EK_daten_ermitteln(artikelverfolgung);
+
+                         nichtgefunden:=FALSE;
+                      END
+                      ELSE
+                      BEGIN
+                        nichtgefunden:=TRUE;
+                      END;
+                  UNTIL (artikelverfolgung.FINDLAST()) OR (a >= STRLEN(Eingabe_2)-1);
+               END;
+           END;
+        END;
+
+      IF nichtgefunden = TRUE THEN
+        BEGIN
+          nichtgefunden:=FALSE;
+          DC_NAV_26.RESET();
+          // Eingabe 1:1 suchen
+          DC_NAV_26.SETFILTER(DC_NAV_26.Art,'%1',DC_NAV_26.Art::Verkauf);
+          DC_NAV_26.SETFILTER(DC_NAV_26."DC Bauteil",'%1','*'+Eingabe+'*');
+              IF (DC_NAV_26.FINDLAST()) AND (Eingabe <> '' ) AND (Eingabe <> ' ') THEN
+             BEGIN
+               VK_daten26_ermitteln(DC_NAV_26);
+             END
+             ELSE
+             BEGIN
+               // l”scht alle Buchstaben und Sonderzeichen aus der Sucheingabe
+               Eingabe_2 :=DELCHR(Eingabe,'=',' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_!();:"');
+               DC_NAV_26.RESET();
+               // Eingabe bereinigt suchen
+               DC_NAV_26.SETFILTER(DC_NAV_26."DC Bauteil",'%1','*'+Eingabe_2+'*');
+               DC_NAV_26.SETFILTER(DC_NAV_26.Art,'%1',DC_NAV_26.Art::Verkauf);
+               IF (DC_NAV_26.FINDLAST()) AND (Eingabe_2 <> '') AND (Eingabe_2 <> ' ') THEN
+                  BEGIN
+                    VK_daten26_ermitteln(DC_NAV_26);
+                  END
+                  ELSE
+                  BEGIN
+                     a:=0;
+
+                     // Zwischen die einzelnen Ziffern wird nach und nach ein Leerzeichen eingefgt
+                     // 1.) 123456, 2.) 1 23456, 3. 12 3456, 4. 123 456 usw.
+                     REPEAT
+                       a:=a+1;
+                       DC_NAV_26.RESET();
+                       Eingabe_3:=COPYSTR(Eingabe_2,1,a)+' '+COPYSTR(Eingabe_2,a+1,STRLEN(Eingabe_2));
+                       //Message(eingabe_3);
+                       // Eingabe bereinigt suchen
+                       DC_NAV_26.SETFILTER(DC_NAV_26."DC Bauteil",'%1','*'+Eingabe_3+'*');
+                       DC_NAV_26.SETFILTER(DC_NAV_26.Art,'%1',DC_NAV_26.Art::Verkauf);
+                       IF (DC_NAV_26.FINDLAST()) AND (Eingabe_3 <> '') AND (Eingabe_3 <> ' ') THEN
+                          BEGIN
+                             VK_daten26_ermitteln(DC_NAV_26);
+                             nichtgefunden:=FALSE;
+                          END
+                          ELSE
+                          BEGIN
+                            nichtgefunden:=TRUE;
+                          END;
+                     UNTIL (DC_NAV_26.FINDLAST()) OR (a >= STRLEN(Eingabe_2)-1);
+
+             END;
+         END;
+       END;
+
+      IF nichtgefunden = TRUE THEN
+        BEGIN
+          nichtgefunden:=FALSE;
+
+          RMA_zeile.RESET();
+          // Eingabe 1:1 suchen
+          //RMA_zeile.SETFILTER(RMA_zeile.Belegart,'%1',RMA_zeile.Belegart::"vom Hersteller");
+          RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1','*'+Eingabe+'*');
+          IF (RMA_zeile.FINDLAST()) AND (Eingabe <> '') AND (Eingabe <> ' ') THEN
+             BEGIN
+               Nur_RMA_ermitteln(RMA_zeile,'5.0');
+             END
+           ELSE
+             BEGIN
+               // l”scht alle Buchstaben und Sonderzeichen aus der Sucheingabe
+               Eingabe_2 :=DELCHR(Eingabe,'=',' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_!();:"');
+               RMA_zeile.RESET();
+
+               // Eingabe bereinigt suchen
+               RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1','*'+Eingabe_2+'*');
+               //RMA_zeile.SETFILTER(RMA_zeile.Belegart,'%1',RMA_zeile.Belegart::"vom Hersteller");
+               IF (RMA_zeile.FINDLAST()) AND (Eingabe_2 <> '') AND (Eingabe_2 <> ' ') THEN
+                 BEGIN
+                   Nur_RMA_ermitteln(RMA_zeile,'5.0');
+                 END
+               ELSE
+                 BEGIN
+                   a:=0;
+
+                   // Zwischen die einzelnen Ziffern wird nach und nach ein Leerzeichen eingefgt
+                   // 1.) 123456, 2.) 1 23456, 3. 12 3456, 4. 123 456 usw.
+                   REPEAT
+                     a:=a+1;
+                     RMA_zeile.RESET();
+                     Eingabe_3:=COPYSTR(Eingabe_2,1,a)+' '+COPYSTR(Eingabe_2,a+1,STRLEN(Eingabe_2));
+                     //Message(eingabe_3);
+
+                     // Eingabe bereinigt suchen
+                     RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1','*'+Eingabe_3+'*');
+                     //RMA_zeile.SETFILTER(RMA_zeile.Belegart,'%1',RMA_zeile.Belegart::"vom Hersteller");
+                     IF (RMA_zeile.FINDLAST()) AND (Eingabe_3 <> '') AND (Eingabe_3 <> ' ') THEN
+                        BEGIN
+                           Nur_RMA_ermitteln(RMA_zeile,'5.0');
+                           nichtgefunden:=FALSE;
+                        END
+                        ELSE
+                        BEGIN
+                          nichtgefunden:=TRUE;
+                        END;
+                   UNTIL (RMA_zeile.FINDLAST()) OR (a >= STRLEN(Eingabe_2)-1);
+
+                 END;
+             END;
+        END;
+
+      IF nichtgefunden = TRUE THEN
+        BEGIN
+          nichtgefunden:=FALSE;
+          LizenzTab.RESET();
+          // Eingabe 1:1 suchen
+          //LizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+          LizenzTab.SETFILTER(Art,'%1|%2',LizenzTab.Art :: Service,LizenzTab.Art :: System);
+          LizenzTab.SETFILTER("Seriennr.",'%1','*'+Eingabe+'*');
+          IF (LizenzTab.FINDLAST()) AND (Eingabe <> '') AND (Eingabe <> ' ') THEN
+             BEGIN
+               Nur_Wartung_ermitteln(LizenzTab);
+             END
+           ELSE
+             BEGIN
+               // l”scht alle Buchstaben und Sonderzeichen aus der Sucheingabe
+               Eingabe_2 :=DELCHR(Eingabe,'=',' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_!();:"');
+               LizenzTab.RESET();
+               // Eingabe bereinigt suchen
+               //LizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+               LizenzTab.SETFILTER(Art,'%1|%2',LizenzTab.Art :: Service,LizenzTab.Art :: System);
+               LizenzTab.SETFILTER("Seriennr.",'%1','*'+Eingabe_2+'*');
+               IF (LizenzTab.FINDLAST()) AND (Eingabe_2 <> '') AND (Eingabe_2 <> ' ') THEN
+                 BEGIN
+                   Nur_Wartung_ermitteln(LizenzTab);
+                 END
+               ELSE
+                 BEGIN
+                   a:=0;
+
+                   // Zwischen die einzelnen Ziffern wird nach und nach ein Leerzeichen eingefgt
+                   // 1.) 123456, 2.) 1 23456, 3. 12 3456, 4. 123 456 usw.
+                   REPEAT
+                     a:=a+1;
+                     LizenzTab.RESET();
+                     Eingabe_3:=COPYSTR(Eingabe_2,1,a)+' '+COPYSTR(Eingabe_2,a+1,STRLEN(Eingabe_2));
+
+                     // Eingabe bereinigt suchen
+                     //LizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+                     LizenzTab.SETFILTER(Art,'%1|%2',LizenzTab.Art :: Service,LizenzTab.Art :: System);
+                     LizenzTab.SETFILTER("Seriennr.",'%1','*'+Eingabe_3+'*');
+
+                     IF (LizenzTab.FINDLAST()) AND (Eingabe_3 <> '') AND (Eingabe_3 <> ' ') THEN
+                       BEGIN
+                          Nur_Wartung_ermitteln(LizenzTab);
+                          nichtgefunden:=FALSE;
+                       END
+                     ELSE
+                       BEGIN
+                         //Suche nach der Board ini
+                         LizenzTab.RESET;
+                         //LizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+                         LizenzTab.SETFILTER(Art,'%1|%2',LizenzTab.Art :: Service,LizenzTab.Art :: System);
+                         LizenzTab.SETFILTER("Board ini",'%1','*'+Eingabe+'*');
+                         IF (LizenzTab.FINDLAST()) AND (Eingabe <> '') AND (Eingabe <> ' ') THEN
+                           BEGIN
+                              Nur_Wartung_ermitteln(LizenzTab);
+                              CurrForm.txt_boardini.VISIBLE := TRUE;
+                              nichtgefunden:=FALSE;
+                           END
+                         ELSE
+                           BEGIN
+                             nichtgefunden:=TRUE;
+                           END;
+                       END;
+                   UNTIL (LizenzTab.FINDLAST()) OR (a >= STRLEN(Eingabe_2)-1);
+                 END;
+             END;
+        END;
+
+      IF postennr <> 0 THEN
+        CurrForm.btn_next.VISIBLE := TRUE
+      ELSE
+        CurrForm.btn_next.VISIBLE := FALSE;
+
+      IF nichtgefunden = TRUE THEN MESSAGE('Artikel wurde nicht gefunden!!');
+    END;
+
+    PROCEDURE Datenblatt_leeren@1140021();
+    BEGIN
+      CurrForm.frame_zusatz_wv.VISIBLE := FALSE;
+      CurrForm.frame_zusatz_rma.VISIBLE := FALSE;
+      CurrForm.umltext.VISIBLE := FALSE;
+      CurrForm.umltext2.VISIBLE := FALSE;
+      CurrForm.btn_next.VISIBLE := FALSE;
+      CurrForm.txt_boardini.VISIBLE := FALSE;
+      CurrForm.txt_alle_vertragsnr.VISIBLE := FALSE;
+      CurrForm.txt_wartungsverknpfungen.VISIBLE := FALSE;
+
+      nav_system := '';
+      kundennr := '';
+      kundenname := '';
+      kreditornr := '';
+      kreditorname := '';
+      seriennr := '';
+      vk_belegnr := '';
+      ek_belegnr := '';
+      vk_datum := 0D;
+      ek_datum := 0D;
+      ext_belegnr := '';
+      bet_nr := '';
+      kred_po := '';
+      kred_rcptno := '';
+      artikelnr := '';
+      vertragsnr := '';
+      ablaufdatum := 0D;
+      rmanr := '';
+      rma_text := '';
+      uml_text := '';
+      uml_text2 := '';
+      vk_artpostennr := 0;
+      ek_artpostennr := 0;
+      wartungsverknpfungen := 0;
+      alle_vertragsnr := '';
+    END;
+
+    PROCEDURE Pruefe_Vorgaenger5@1140006(artverfolgung@1140000 : Record 32;datenmenge@1140001 : Integer);
+    BEGIN
+      durchlauf += 1;
+      artverfolgung.COPYFILTERS(artikelverfolgung);
+      IF artverfolgung.COUNT > 1 THEN
+        BEGIN
+          artverfolgung.FINDLAST;
+          IF (datenmenge = 2) AND (durchlauf = 1) THEN
+            BEGIN
+              artverfolgung.FINDFIRST;
+              IF artverfolgung."Entry Type" = artverfolgung."Entry Type" :: Purchase THEN
+                BEGIN
+                  CurrForm.btn_next.VISIBLE := FALSE;
+                END
+              ELSE
+                BEGIN
+                  postennr := artikelverfolgung."Entry No.";
+                END;
+            END
+          ELSE
+            BEGIN
+              postennr := artikelverfolgung."Entry No.";
+            END;
+        END
+      ELSE
+        BEGIN
+          postennr := 0;
+        END;
+    END;
+
+    PROCEDURE VK_daten_ermitteln@1140005(ItemEntry@1140000 : Record 32);
+    VAR
+      RMA_zeile@1140001 : Record 50021;
+    BEGIN
+      WITH ItemEntry DO BEGIN
+        IF "Document Type" = "Document Type"::"Sales Shipment" THEN
+          BEGIN
+            nav_system := 'Navision 5.0';
+            kundennr := "Source No.";
+            IF debitor.GET("Source No.") THEN
+              kundenname := debitor.Name;
+            vk_belegnr := "Document No.";
+            vk_datum := "Posting Date";
+            IF Lieferschein.GET("Document No.") THEN
+              ext_belegnr := Lieferschein."External Document No.";
+
+            //Prfung, ob RMA vorhanden
+            RMA_ermitteln("Item No.","Serial No.");
+
+            //Prfung, ob Wartung vorhanden
+            Wartung_ermitteln("Item No.","Serial No.");
+          END;
+      END;
+    END;
+
+    PROCEDURE VK_daten26_ermitteln@1140011(Datecode_26@1140000 : Record 50018);
+    BEGIN
+      WITH Datecode_26 DO BEGIN
+        nav_system := 'Navision 2.6';
+        artikelnr := "Nr.";
+        seriennr := "DC Bauteil";
+        vk_belegnr := Lieferscheinnummer;
+        vk_datum := Buchungsdatum;
+
+        //Prfung, ob RMA vorhanden
+        RMA_ermitteln("Nr.","DC Bauteil");
+
+        //Prfung, ob Wartung vorhanden
+        Wartung_ermitteln("Nr.","DC Bauteil");
+
+      END;
+    END;
+
+    PROCEDURE EK_daten_ermitteln@1140007(ItemEntry@1140000 : Record 32);
+    VAR
+      ItemLedgerEntry@1140003 : Record 32;
+      ItemApplnEntry@1140001 : Record 339;
+      TempItemApplnEntry@1140002 : Record 339;
+      TransItemApplnEntry@1140004 : Record 339;
+    BEGIN
+      WITH ItemEntry DO BEGIN
+        nav_system := 'Navision 5.0';
+        vk_artpostennr := "Entry No.";
+        IF Positive THEN BEGIN
+
+          ek_belegnr := ItemEntry."Document No.";
+          ek_datum := ItemEntry."Document Date";
+
+          IF PurchRcptHeader.GET(ItemEntry."Document No.") THEN
+            BEGIN
+              artikelnr := "Item No.";
+              seriennr := "Serial No.";
+              kreditornr := PurchRcptHeader."Buy-from Vendor No.";
+              kreditorname := PurchRcptHeader."Buy-from Vendor Name";
+              bet_nr := PurchRcptHeader."Order No.";
+              kred_po := PurchRcptHeader."Vendor Order No.";
+              kred_rcptno := PurchRcptHeader."Vendor Shipment No.";
+              ek_artpostennr := "Entry No.";
+            END;
+          END ELSE BEGIN
+            ItemApplnEntry.RESET;
+            ItemApplnEntry.SETCURRENTKEY("Outbound Item Entry No.","Item Ledger Entry No.","Cost Application");
+            ItemApplnEntry.SETRANGE("Outbound Item Entry No.","Entry No.");
+            ItemApplnEntry.SETRANGE("Item Ledger Entry No.","Entry No.");
+            ItemApplnEntry.SETRANGE("Cost Application",TRUE);
+            IF ItemApplnEntry.FINDFIRST THEN
+              BEGIN
+                ItemLedgerEntry.GET(ItemApplnEntry."Inbound Item Entry No.");
+                IF ItemLedgerEntry."Entry Type" <> ItemLedgerEntry."Entry Type" :: Transfer THEN
+                  BEGIN
+                    artikelnr := ItemLedgerEntry."Item No.";
+                    seriennr := ItemLedgerEntry."Serial No.";
+                    ek_artpostennr := ItemLedgerEntry."Entry No.";
+                    ek_belegnr := ItemLedgerEntry."Document No.";
+                    ek_datum := ItemLedgerEntry."Document Date";
+                    IF PurchRcptHeader.GET(ItemLedgerEntry."Document No.") THEN
+                      BEGIN
+                        kreditornr := PurchRcptHeader."Buy-from Vendor No.";
+                        kreditorname := PurchRcptHeader."Buy-from Vendor Name";
+                        bet_nr := PurchRcptHeader."Order No.";
+                        kred_po := PurchRcptHeader."Vendor Order No.";
+                        kred_rcptno := PurchRcptHeader."Vendor Shipment No.";
+                     END;
+                  END
+             ELSE BEGIN
+               TempItemApplnEntry.RESET;
+               TempItemApplnEntry.SETCURRENTKEY("Outbound Item Entry No.","Item Ledger Entry No.","Cost Application");
+               TempItemApplnEntry.SETRANGE("Inbound Item Entry No.",ItemApplnEntry."Inbound Item Entry No.");
+               TempItemApplnEntry.SETRANGE("Item Ledger Entry No.",ItemApplnEntry."Inbound Item Entry No.");
+               TempItemApplnEntry.SETRANGE("Cost Application",TRUE);
+               IF TempItemApplnEntry.FINDFIRST THEN
+                 BEGIN
+                    uml_text := 'Umlagerung: ' + ItemLedgerEntry."Document No.";
+                    ItemLedgerEntry.GET(TempItemApplnEntry."Transferred-from Entry No.");
+                    artikelnr := ItemLedgerEntry."Item No.";
+                    IF ItemLedgerEntry."Serial No." <> ItemEntry."Serial No." THEN
+                      seriennr := ItemLedgerEntry."Serial No." + ' > ' + ItemEntry."Serial No."
+                    ELSE
+                      seriennr := ItemLedgerEntry."Serial No.";
+                    ek_artpostennr := ItemLedgerEntry."Entry No.";
+                    ek_belegnr := ItemLedgerEntry."Document No.";
+                    ek_datum := ItemLedgerEntry."Document Date";
+                    CurrForm.umltext.VISIBLE := TRUE;
+                    IF PurchRcptHeader.GET(ItemLedgerEntry."Document No.") THEN
+                      BEGIN
+                        kreditornr := PurchRcptHeader."Buy-from Vendor No.";
+                        kreditorname := PurchRcptHeader."Buy-from Vendor Name";
+                        bet_nr := PurchRcptHeader."Order No.";
+                        kred_po := PurchRcptHeader."Vendor Order No.";
+                        kred_rcptno := PurchRcptHeader."Vendor Shipment No.";
+                      END;
+
+                  //Prfe auf Umlagerung und gleichzeitiger Žnderung der Seriennr.
+                  TransItemApplnEntry.RESET;
+                  TransItemApplnEntry.SETCURRENTKEY("Outbound Item Entry No.","Item Ledger Entry No.","Cost Application");
+                  TransItemApplnEntry.SETRANGE("Transferred-from Entry No.",TempItemApplnEntry."Inbound Item Entry No.");
+                  TransItemApplnEntry.SETRANGE("Cost Application",TRUE);
+                  IF TransItemApplnEntry.FINDFIRST THEN
+                    BEGIN
+                      ItemLedgerEntry.GET(TransItemApplnEntry."Item Ledger Entry No.");
+                      uml_text2 := 'Umlagerung in ' + ItemLedgerEntry."Serial No." + ' Artikelposten: '
+                      + FORMAT(ItemLedgerEntry."Entry No.");
+                      CurrForm.umltext2.VISIBLE := TRUE;
+                    END;
+
+                 END;
+               END;
+
+             END;
+          END;
+
+          //Prfung, ob RMA vorhanden
+          RMA_ermitteln("Item No.","Serial No.");
+
+          //Prfung, ob Wartung vorhanden
+          Wartung_ermitteln("Item No.","Serial No.");
+
+        END;
+    END;
+
+    PROCEDURE Nur_RMA_ermitteln@1140002(RMA@1140002 : Record 50021;system@1140001 : Code[10]);
+    VAR
+      RMA_zeile@1140000 : Record 50021;
+    BEGIN
+      WITH RMA DO BEGIN
+        IF system = '5.0' THEN
+          nav_system := 'Navision 5.0';
+        IF system = '2.6' THEN
+          nav_system := 'Navision 2.6';
+        IF system = 'UNBEKANNT' THEN
+          nav_system := 'Navision 5.0';
+        RMA_beteiligte.RESET;
+        RMA_beteiligte.SETFILTER(Fhrungsrolle,'%1',TRUE);
+        RMA_beteiligte.SETFILTER(Art,'%1',RMA_beteiligte.Art::Kunde);
+        RMA_beteiligte.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
+        IF RMA_beteiligte.FINDLAST THEN
+          BEGIN
+            RMA_zeile.RESET;
+            RMA_zeile.SETFILTER(RMA_zeile.Belegart,'%1',RMA_zeile.Belegart::"vom Kunden");
+            RMA_zeile.SETFILTER(RMA_zeile."RMA-Nr.",'%1',"RMA-Nr.");
+            RMA_zeile.SETFILTER(RMA_zeile."Belegzeilennr.",'%1',"Belegzeilennr.");
+            RMA_zeile.SETFILTER(RMA_zeile."Datecode Pos.",'%1',"Datecode Pos.");
+            IF RMA_zeile.FINDLAST THEN
+              BEGIN
+                rmanr := RMA_zeile."RMA-Nr.";
+                artikelnr := RMA_zeile."Artikelnr.";
+                seriennr := "SN-Nr. / DC";
+                kundennr := RMA_beteiligte."Debitornr.";
+                kundenname := RMA_beteiligte.Name;
+                MESSAGE(Text000,"RMA-Nr.",RMA_beteiligte."Debitornr.",RMA_beteiligte.Name,"Belegnr.",RMA_zeile.Datum,
+                RMA_zeile."SN-Nr. / DC");
+                IF Belegart = Belegart :: Rechnung THEN
+                  rma_text := FORMAT(Verursacher);
+                IF Belegart = Belegart :: "an Hersteller" THEN
+                  rma_text := FORMAT(Beantragung);
+                IF (Belegart = Belegart :: "vom Hersteller")
+                OR (Belegart = Belegart :: "an Kunden") THEN
+                  rma_text := FORMAT("Maánahme Hersteller");
+                CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
+                Wartung_ermitteln("Artikelnr.","SN-Nr. / DC")
+              END
+            ELSE
+              BEGIN
+                RMA_zeile.RESET;
+                RMA_zeile.SETFILTER(RMA_zeile."RMA-Nr.",'%1',"RMA-Nr.");
+                RMA_zeile.SETFILTER(RMA_zeile."Belegzeilennr.",'%1',"Belegzeilennr.");
+                RMA_zeile.SETFILTER(RMA_zeile."Datecode Pos.",'%1',"Datecode Pos.");
+                IF RMA_zeile.FINDLAST THEN
+                  BEGIN
+                    rmanr := RMA_zeile."RMA-Nr.";
+                    artikelnr := RMA_zeile."Artikelnr.";
+                    seriennr := "SN-Nr. / DC";
+                    kundennr := RMA_beteiligte."Debitornr.";
+                    kundenname := RMA_beteiligte.Name;
+                    MESSAGE(Text000,"RMA-Nr.",RMA_beteiligte."Debitornr.",RMA_beteiligte.Name,"Belegnr.",RMA_zeile.Datum,
+                    RMA_zeile."SN-Nr. / DC");
+                    IF RMA_zeile.Belegart = RMA_zeile.Belegart :: Rechnung THEN
+                      rma_text := FORMAT(RMA_zeile.Verursacher);
+                    IF RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Hersteller" THEN
+                      rma_text := FORMAT(RMA_zeile.Beantragung);
+                    IF (RMA_zeile.Belegart = RMA_zeile.Belegart :: "vom Hersteller")
+                    OR (RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Kunden") THEN
+                      rma_text := FORMAT(RMA_zeile."Maánahme Hersteller");
+                    CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
+                    Wartung_ermitteln("Artikelnr.","SN-Nr. / DC")
+                  END;
+              END;
+          END
+        ELSE
+          BEGIN
+            rmanr := "RMA-Nr.";
+            artikelnr := "Artikelnr.";
+            seriennr := "SN-Nr. / DC";
+            kundennr := "Debitornr.";
+            IF debitor.GET("Debitornr.") THEN
+              kundenname:= debitor.Name;
+            MESSAGE(Text000,"RMA-Nr.","Belegnr.");
+            IF RMA.Belegart = RMA.Belegart :: Rechnung THEN
+              rma_text := FORMAT(RMA.Verursacher);
+            IF RMA.Belegart = RMA.Belegart :: "an Hersteller" THEN
+              rma_text := FORMAT(RMA.Beantragung);
+            IF (RMA.Belegart = RMA.Belegart :: "vom Hersteller")
+            OR (RMA.Belegart = RMA.Belegart :: "an Kunden") THEN
+              rma_text := FORMAT(RMA."Maánahme Hersteller");
+            CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
+            Wartung_ermitteln("Artikelnr.","SN-Nr. / DC")
+          END;
+      END;
+    END;
+
+    PROCEDURE RMA_ermitteln@1140019(Artikel@1140001 : Code[20];SN@1140000 : Code[20]);
+    BEGIN
+      RMA_zeile.RESET;
+      RMA_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
+      RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1',SN);
+      IF RMA_zeile.FINDLAST THEN
+        BEGIN
+          rmanr := RMA_zeile."RMA-Nr.";
+          IF RMA_zeile.Belegart = RMA_zeile.Belegart :: Rechnung THEN
+            rma_text := FORMAT(RMA_zeile.Verursacher);
+          IF RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Hersteller" THEN
+            rma_text := FORMAT(RMA_zeile.Beantragung);
+          IF (RMA_zeile.Belegart = RMA_zeile.Belegart :: "vom Hersteller")
+          OR (RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Kunden") THEN
+            rma_text := FORMAT(RMA_zeile."Maánahme Hersteller");
+          CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
+        END;
+    END;
+
+    PROCEDURE Nur_Wartung_ermitteln@1140003(datensatz_lizenz@1140000 : Record 50024);
+    BEGIN
+      WITH datensatz_lizenz DO BEGIN
+        vertragsnr := "Wartungsvertragsnr.";
+        nav_system := 'Navision 5.0';
+        artikelnr := "Artikelnr.";
+        seriennr := "Seriennr.";
+        kundennr := "Debitornr.";
+        kundenname := Debitorname;
+        vk_belegnr := "Urspr. Lieferscheinnr.";
+        vk_datum := Belegdatum;
+        vertragsnr := "Wartungsvertragsnr.";
+        IF Wartung.GET(vertragsnr) THEN
+          ablaufdatum := Wartung.Vertragsablaufdatum;
+        CurrForm.frame_zusatz_wv.VISIBLE := TRUE;
+      END;
+    END;
+
+    PROCEDURE Wartung_ermitteln@1140027(Artikel@1140003 : Code[20];SN@1140000 : Code[20]);
+    VAR
+      Wartungs_kopf@1140002 : Record 50011;
+      Wartungs_zeile@1140001 : Record 50024;
+    BEGIN
+      Wartungs_zeile.RESET;
+      Wartungs_zeile.SETFILTER(Art,'%1|%2',Wartungs_zeile.Art :: Service,Wartungs_zeile.Art :: System);
+      Wartungs_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
+      Wartungs_zeile.SETFILTER("Seriennr.",'%1',SN);
+      //Wartungs_zeile.SETFILTER(Inaktiv,'%1',FALSE);
+      IF Wartungs_zeile.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            IF alle_vertragsnr <> Wartungs_zeile."Wartungsvertragsnr." THEN
+              BEGIN
+                IF Wartungs_zeile.Art = Wartungs_zeile.Art :: System THEN
+                  BEGIN
+                    IF alle_vertragsnr = '' THEN
+                      BEGIN
+                        alle_vertragsnr := Wartungs_zeile."Wartungsvertragsnr.";
+                        wartungsverknpfungen += 1;
+                      END
+                    ELSE
+                      IF (STRPOS(alle_vertragsnr,Wartungs_zeile."Wartungsvertragsnr.") = 0) AND
+                      (STRLEN(alle_vertragsnr + '|' + Wartungs_zeile."Wartungsvertragsnr.") <= 80) THEN
+                        BEGIN
+                          alle_vertragsnr := alle_vertragsnr + '|' + Wartungs_zeile."Wartungsvertragsnr.";
+                          wartungsverknpfungen += 1;
+                        END;
+                   END;
+               END;
+
+            vertragsnr := Wartungs_zeile."Wartungsvertragsnr.";
+            IF Wartung.GET(Wartungs_zeile."Wartungsvertragsnr.") THEN
+              ablaufdatum := Wartung.Vertragsablaufdatum;
+            CurrForm.frame_zusatz_wv.VISIBLE := TRUE;
+            IF STRPOS(alle_vertragsnr,'|') <> 0 THEN
+              BEGIN
+                CurrForm.txt_alle_vertragsnr.VISIBLE := TRUE;
+                CurrForm.txt_wartungsverknpfungen.VISIBLE := TRUE;
+              END;
+          UNTIL Wartungs_zeile.NEXT = 0;
+        END;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
