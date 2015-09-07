@@ -2,8 +2,8 @@ OBJECT Form 50096 Audiocodes Seriennummer
 {
   OBJECT-PROPERTIES
   {
-    Date=20.03.15;
-    Time=12:25:13;
+    Date=07.09.15;
+    Time=12:39:12;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -206,14 +206,14 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                  Editable=No;
                                                  ParentControl=1140003;
                                                  InFrame=Yes;
-                                                 SourceExpr='('+FORMAT(wartungsverknpfungen)+')' }
+                                                 SourceExpr=FORMAT(wartungsverknpfungen) }
     { 1140009;CommandButton;4620;13310;1870;660 ;ParentControl=1140003;
                                                  InFrame=Yes;
                                                  CaptionML=DEU=Anzeigen;
                                                  OnPush=BEGIN
                                                           IF vertragsnr <> '' THEN
                                                             BEGIN
-                                                              Wartung.SETFILTER("Wartungsvertragsnr.",vertragsnr);
+                                                              Wartung.SETFILTER("Wartungsvertragsnr.",alle_vertragsnr);
                                                               FORM.RUN(50015,Wartung);
                                                             END;
                                                         END;
@@ -919,7 +919,7 @@ OBJECT Form 50096 Audiocodes Seriennummer
     PROCEDURE RMA_ermitteln@1140019(Artikel@1140001 : Code[20];SN@1140000 : Code[20]);
     BEGIN
       RMA_zeile.RESET;
-      RMA_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
+      //RMA_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
       RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1',SN);
       IF RMA_zeile.FINDLAST THEN
         BEGIN
@@ -960,7 +960,7 @@ OBJECT Form 50096 Audiocodes Seriennummer
     BEGIN
       Wartungs_zeile.RESET;
       Wartungs_zeile.SETFILTER(Art,'%1|%2',Wartungs_zeile.Art :: Service,Wartungs_zeile.Art :: System);
-      Wartungs_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
+      //Wartungs_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
       Wartungs_zeile.SETFILTER("Seriennr.",'%1',SN);
       //Wartungs_zeile.SETFILTER(Inaktiv,'%1',FALSE);
       IF Wartungs_zeile.FINDFIRST THEN
