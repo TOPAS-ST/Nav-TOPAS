@@ -152,7 +152,7 @@ IF Art = Art :: Temporär THEN
     HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Auftragszeilennr.");
     HoleTempLizenzTab.SETFILTER(Art,'%1',Art :: Temporär);
     HoleTempLizenzTab.SETFILTER("Seriennr.",'%1',"Seriennr.");
-    IF HoleTempLizenzTab.FINDFIRST THEN
+    IF (HoleTempLizenzTab.FINDFIRST) AND ("Seriennr." <> '') THEN
       ERROR(Text016,FIELDCAPTION("Seriennr."),"Seriennr.");
 
     IF Artikel.GET("Artikelnr.") AND (Artikel."Item Tracking Code" = 'KEINE') THEN
@@ -185,6 +185,19 @@ IF Art = Art :: Temporär THEN
           IF (HoleTempLizenzTab."Nr." <> "Nr.") OR (HoleTempLizenzTab."Belegzeilennr." <> "Belegzeilennr.") THEN
             ERROR(Text028,"Seriennr.",HoleTempLizenzTab."Nr.",HoleTempLizenzTab."Belegzeilennr.",
                   HoleTempLizenzTab."Wartungsvertragsnr.");
+
+        //07.09.2015-ST Prüfung bei Fremderwerben, ob eine Seriennr. auch immer für die gleiche Artikelnr. verwendet wird
+        HoleTempLizenzTab.RESET;
+        HoleTempLizenzTab.SETFILTER("Lfd. Nr.",'<>%1',"Lfd. Nr.");
+        HoleTempLizenzTab.SETFILTER(Art,'%1',Art :: Temporär);
+        HoleTempLizenzTab.SETFILTER("Seriennr.",'%1',"Seriennr.");
+        HoleTempLizenzTab.SETFILTER(Fremderwerb,'%1',TRUE);
+        IF HoleTempLizenzTab.FINDFIRST THEN
+          REPEAT
+            IF (HoleTempLizenzTab."Artikelnr." <> "Artikelnr.") AND ("Seriennr." <> '') THEN
+              ERROR(Text075,HoleTempLizenzTab."Artikelnr.",HoleTempLizenzTab."Auftragsnr.", 
+                    HoleTempLizenzTab."Auftragszeilennr.");
+          UNTIL HoleTempLizenzTab.NEXT = 0;
 
       END;
 
