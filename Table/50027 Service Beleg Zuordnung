@@ -70,6 +70,19 @@ IF Art = Art :: "SUP-AU" THEN
 
     IF (("Belegnr." <> '') AND ("Belegzeilennr." <> 0)) THEN
       Gruppierung := Gruppieren("Belegnr.","Belegzeilennr.",Basisgerät);
+
+    //Re Instatement Fee soll für Arikelpositionen aus dem Auftrag unterbunden werden
+    Artikel.GET("SUP Artikelnr.");
+    IF (STRPOS(Artikel."No. 2",'INSTATEMENT') <> 0) AND (STRPOS(Artikel."No. 2",'FEE') <> 0) THEN
+      BEGIN
+        Auftrag.RESET;
+        Auftrag.SETRANGE(Auftrag."No.","Belegnr.");
+        IF Auftrag.FINDFIRST THEN
+          BEGIN
+            ERROR(Text006);
+          END;
+      END;
+
   END;
 
 Geräte Artikelnr. - OnLookup()
@@ -173,7 +186,7 @@ IF (Ablaufdatum < WORKDATE) AND (Ablaufdatum <> 0D) THEN
 //  Ablaufdatum := CALCDATE(Laufzeit,Startdatum);
 
 IF Ablaufdatum <> 0D THEN
-  Laufzeit := FORMAT(TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum)) + 'M';
+  VALIDATE(Laufzeit,FORMAT(TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum)) + 'M');
 
 IF Startdatum = 0D THEN
   Ablaufdatum := 0D;
@@ -185,7 +198,7 @@ IF (Ablaufdatum = 0D) AND (Startdatum = 0D) THEN
     Opt.SETFILTER("Feld ID",'%1',44);
     Opt.SETFILTER("Nr.",'%1',"SUP Artikelnr.");
     IF Opt.FINDFIRST THEN
-      Laufzeit := Opt.Code;
+      VALIDATE(Laufzeit,Opt.Code);
   END;
 
 Ablaufdatum - OnLookup()
