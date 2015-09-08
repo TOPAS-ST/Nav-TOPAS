@@ -2,8 +2,8 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
 {
   OBJECT-PROPERTIES
   {
-    Date=29.06.15;
-    Time=13:51:24;
+    Date=07.09.15;
+    Time=17:01:34;
     Modified=Yes;
     Version List=Beleg Rechnungskopie --> 50131 !!!;
   }
@@ -116,6 +116,22 @@ OBJECT Report 50076 TOPAS-Rechnung - Logo
                            v_bonusdatum := 0D;
 
                            v_FER_SPL:=FALSE;
+
+                           //2015-09-07 ST Unterdrckt den Ausdruck der Original Rechnung, wenn Kunde keine ben”tigt,
+                           //fr den Batch Job wird die Rechnung aber wieder komplett sichtbar
+                           IF Deb."Original RE nicht drucken" THEN
+                             BEGIN
+                               "Printer selection".RESET;
+                               "Printer selection".SETFILTER("Printer selection"."User ID",'%1',USERID);
+                               "Printer selection".SETFILTER("Printer selection"."Report ID",'%1',50076);
+                               IF "Printer selection".FINDFIRST() THEN
+                                 BEGIN
+                                   IF "Printer selection"."Printer Name" <> 'PDFCreator' THEN
+                                     CurrReport.BREAK;
+                                 END
+                               ELSE
+                                 CurrReport.BREAK;
+                             END;
                          END;
 
         ReqFilterFields=No.,Sell-to Customer No.,No. Printed;
