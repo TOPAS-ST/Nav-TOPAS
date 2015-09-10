@@ -1,0 +1,1279 @@
+OBJECT Report 50051 Meeting - akt. & arch. Ang.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.15;
+    Time=11:37:33;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    LeftMargin=1500;
+    OnPreReport=BEGIN
+                  //*******************************************************************************************************
+                  //                    Sicherheitsabfrage ob Temp Tabelle auch Berichtstabelle ist
+                  //*******************************************************************************************************
+                  IF Berichtstabelle.TABLECAPTION <> 'Berichtstabelle' THEN
+                    ERROR('Eine Sicherheitssperre verhindert die Ausfhrung dieses Berichtes.'+
+                          'Stellen Sie sicher, dass die TABLECAPTION der Berichtstabelle auch auf Berichtstabelle lautet.');
+
+                  Berichtstabelle.RESET;
+                  IF Berichtstabelle.ISEMPTY = FALSE THEN
+                    BEGIN
+                      REPEAT
+                        Berichtstabelle.RESET;
+                        IF Berichtstabelle.ISEMPTY = FALSE THEN
+                          BEGIN
+                            SLEEP(500);
+                            counter += 1;
+                          END;
+
+                        IF counter MOD 30 = 0 THEN
+                          BEGIN
+                            Berichtstabelle.FINDFIRST;
+                            IF CONFIRM('Die Berichtstabelle ist seit %1 durch Anwender %2 gesperrt. Wollen Sie die Anwendung abbrechen?',
+                            TRUE,Berichtstabelle.Uhrzeit,Berichtstabelle.User,counter,TRUE) THEN
+                              ERROR('');
+                          END;
+                      UNTIL Berichtstabelle.ISEMPTY = TRUE;
+                    END;
+
+                  IF nur_archivierte THEN
+                    Arch_Angebote_listen
+                  ELSE
+                    BEGIN
+                      Akt_Angebote_listen;
+                      Arch_Angebote_listen;
+                    END;
+
+                  //*******************************************************************************************************
+                  //         Temp Datensatz erzeugt, damit die Berichtsansicht eine neue Seite fr arch. Angebote
+                  //              ”ffnet und auf dieser neuen Seite der Header nicht zweimal angedruckt wird
+                  //*******************************************************************************************************
+
+                  Berichtstabelle_temp.RESET;
+                  Berichtstabelle_temp.SETFILTER(Berichtstabelle_temp.Tabelle,'%1','ARCH_DEBITOR');
+                  IF Berichtstabelle_temp.FINDFIRST THEN
+                    BEGIN
+                      Berichtstabelle.INIT;
+                        Berichtstabelle.Tabelle := 'TEMP';
+                        Berichtstabelle.Index := 'XXXX';
+                      Berichtstabelle.INSERT;
+                    END;
+                END;
+
+    OnPostReport=BEGIN
+                   IF Berichtstabelle.TABLECAPTION = 'Berichtstabelle' THEN
+                     Berichtstabelle.DELETEALL;
+                 END;
+
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(DEBITOR));
+        DataItemVarName=Debitor;
+        OnPreDataItem=BEGIN
+                        IF sort = sort :: Nr THEN
+                          Debitor.SETCURRENTKEY(Tabelle,Index,"Belegnr.","Zeilennr.");
+                        IF sort = sort :: Name THEN
+                          Debitor.SETCURRENTKEY("Feld 10",Datum,Index);
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18900;
+            SectionHeight=1616;
+            KeepWithNext=No;
+          }
+          CONTROLS
+          {
+            { 1140000;TextBox   ;17400;846  ;880  ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=FORMAT(CurrReport.PAGENO) }
+            { 1140001;Label     ;16500;846  ;1050 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Seite;
+                                                                    ENU=Page] }
+            { 1140002;TextBox   ;0    ;846  ;15900;687  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         MultiLine=Yes;
+                                                         SourceExpr='Verk„ufercode: '+verk„ufer+' Betreuer Innendienst: ' + betreuer + ' Teams: ' + teams + ' Gebietscode: ' + gebietscode + '  Belegdatum: ' + FORMAT(Startdatum) + '..' + FORMAT(Enddatum) +  ' Status: ' + FORMAT(status) + 'Erledigt: ' + FORMAT(erledigt) }
+            { 1140003;Label     ;3600 ;0    ;11050;600  ;HorzAlign=Center;
+                                                         FontSize=14;
+                                                         CaptionML=DEU="Meeting - Angebote " }
+            { 1140004;TextBox   ;16500;0    ;1800 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=USERID }
+            { 1140005;TextBox   ;15150;423  ;3150 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(BELEGKOPF));
+        DataItemVarName=Belegkopf;
+        DataItemLink=Index=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18900;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 1140007;Shape     ;0    ;0    ;18600;150  ;ShapeStyle=HorzLine }
+            { 1140008;TextBox   ;12150;150  ;900  ;423  ;SourceExpr="Feld 6" }
+            { 1140009;TextBox   ;13350;150  ;900  ;423  ;SourceExpr="Feld 7" }
+            { 1140010;TextBox   ;9000 ;150  ;3000 ;423  ;SourceExpr=Debitor."Feld 12" }
+            { 1140011;TextBox   ;1350 ;150  ;3600 ;450  ;SourceExpr=Debitor."Feld 10" }
+            { 1140012;TextBox   ;0    ;150  ;1200 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Index }
+            { 1140013;TextBox   ;7950 ;150  ;900  ;423  ;SourceExpr=Debitor."Feld 6" }
+            { 1140015;TextBox   ;14400;150  ;1455 ;423  ;SourceExpr="Feld 9" }
+            { 1140016;TextBox   ;5100 ;150  ;2700 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         FontBold=No;
+                                                         SourceExpr=Debitor."Feld 13" }
+            { 1140072;TextBox   ;15954;159  ;1455 ;423  ;SourceExpr=Debitor."Feld 19" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 1140014;TextBox   ;13950;150  ;1350 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Datum }
+            { 1140017;Label     ;12600;150  ;1350 ;423  ;CaptionML=DEU=Erstellt am: }
+            { 1140018;TextBox   ;7103 ;150  ;1800 ;423  ;HorzAlign=Center;
+                                                         SourceExpr="Feld 4" }
+            { 1140019;Label     ;5850 ;150  ;1350 ;423  ;CaptionML=DEU=Ang.-Wert: }
+            { 1140020;TextBox   ;1200 ;150  ;1650 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140021;TextBox   ;0    ;150  ;1146 ;423  ;SourceExpr="Belegnr." }
+            { 1140022;Shape     ;0    ;0    ;18600;150  ;ShapeStyle=HorzLine }
+            { 1140023;TextBox   ;3000 ;150  ;2700 ;450  ;SourceExpr="Feld 10" }
+            { 1140024;TextBox   ;10200;150  ;2231 ;423  ;SourceExpr="Feld 12" }
+            { 1140025;TextBox   ;8850 ;150  ;600  ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 2" }
+            { 1140026;Label     ;15450;150  ;1050 ;423  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Wv am: }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(PROJEKT));
+        DataItemVarName=Projekte;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 1140048;TextBox   ;900  ;423  ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Belegnr." }
+            { 1140049;TextBox   ;6750 ;0    ;2850 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 8" }
+            { 1140050;TextBox   ;12750;423  ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 5" }
+            { 1140051;Label     ;0    ;0    ;900  ;423  ;CaptionML=DEU=Projekt: }
+            { 1140052;Label     ;5100 ;0    ;1650 ;423  ;CaptionML=DEU=Projektstatus: }
+            { 1140053;Label     ;10800;423  ;1950 ;423  ;CaptionML=DEU=Projektwert: }
+            { 1140054;TextBox   ;900  ;0    ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 1" }
+            { 1140055;Label     ;5100 ;423  ;1650 ;423  ;CaptionML=DEU=Projektklasse: }
+            { 1140056;TextBox   ;6750 ;423  ;2850 ;423  ;SourceExpr="Feld 9" }
+            { 1140057;Label     ;10800;0    ;1950 ;423  ;CaptionML=DEU=Projektvolumen: }
+            { 1140058;TextBox   ;12750;0    ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 4" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(AUFGABE));
+        DataItemVarName=Aufgaben;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(BEMERKUNG));
+        DataItemVarName=Bemerkung;
+        DataItemLink=Belegnr.=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140059;TextBox   ;2400 ;0    ;1200 ;423  ;SourceExpr=Datum }
+            { 1140060;TextBox   ;3750 ;0    ;14700;423  ;SourceExpr="Feld 1" }
+            { 1140061;TextBox   ;0    ;0    ;2250 ;423  ;SourceExpr="Feld 10" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(BELEGZEILE));
+        DataItemVarName=Belegzeile;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140027;Label     ;1200 ;0    ;1950 ;423  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Artikel }
+            { 1140028;Label     ;6900 ;0    ;1050 ;423  ;HorzGlue=Right;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Menge }
+            { 1140029;Label     ;8250 ;0    ;1200 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Preis }
+            { 1140030;Label     ;11250;0    ;900  ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=DB % }
+            { 1140031;Label     ;16950;0    ;1800 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Lieferzeit }
+            { 1140032;Label     ;12300;0    ;900  ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=DC }
+            { 1140033;Label     ;13632;0    ;1253 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Projektnr. }
+            { 1140034;Label     ;14982;0    ;1500 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Quote-Preis }
+            { 1140035;Label     ;10050;0    ;1050 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Gesamt }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140036;TextBox   ;16500;0    ;2400 ;423  ;SourceExpr="Feld 15" }
+            { 1140037;TextBox   ;11400;0    ;670  ;423  ;HorzAlign=Center;
+                                                         DecimalPlaces=0:2;
+                                                         SourceExpr="Feld 12" }
+            { 1140038;TextBox   ;8100 ;0    ;1152 ;423  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:3;
+                                                         SourceExpr="Feld 5" }
+            { 1140039;TextBox   ;6750 ;0    ;1200 ;423  ;DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140040;TextBox   ;1100 ;0    ;5550 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140041;TextBox   ;150  ;0    ;900  ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 6" }
+            { 1140042;TextBox   ;9750 ;0    ;1350 ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 10" }
+            { 1140043;TextBox   ;9348 ;0    ;552  ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 7" }
+            { 1140044;TextBox   ;12150;0    ;1200 ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140045;TextBox   ;15112;0    ;1200 ;423  ;HorzAlign=Center;
+                                                         SourceExpr="Feld 14" }
+            { 1140046;TextBox   ;13500;0    ;1500 ;423  ;SourceExpr="Feld 8" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 16" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140006;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Endkunde: }
+            { 1140047;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
+                                                         SourceExpr="Feld 16" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 11" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140068;TextBox   ;3300 ;0    ;7650 ;423  ;VertAlign=Bottom;
+                                                         SourceExpr="Feld 11" }
+            { 1140069;Label     ;1200 ;0    ;2100 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=ACS Projektinfos: }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(TEMP));
+        DataItemVarName=NewPage;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18900;
+            SectionHeight=0;
+            KeepWithNext=No;
+            OnPreSection=BEGIN
+                           CurrReport.NEWPAGE;
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_DEBITOR));
+        DataItemVarName=Arch_Debitor;
+        OnPreDataItem=BEGIN
+                        IF sort = sort :: Nr THEN
+                          Arch_Debitor.SETCURRENTKEY(Tabelle,Index,"Belegnr.","Zeilennr.");
+                        IF sort = sort :: Name THEN
+                          Arch_Debitor.SETCURRENTKEY("Feld 10",Datum,Index);
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18900;
+            SectionHeight=1400;
+            KeepWithNext=No;
+            OnPreSection=BEGIN
+                           //CurrReport.NEWPAGE;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140062;TextBox   ;17400;846  ;880  ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=FORMAT(CurrReport.PAGENO) }
+            { 1140063;Label     ;16500;846  ;1050 ;423  ;FontSize=7;
+                                                         CaptionML=[DEU=Seite;
+                                                                    ENU=Page] }
+            { 1140064;TextBox   ;0    ;846  ;15900;423  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         SourceExpr='Verk„ufercode: '+verk„ufer+' Betreuer Innendienst: ' + betreuer + ' Teams: ' + teams + ' Gebietscode: ' + gebietscode + '  Belegdatum: ' + FORMAT(Startdatum) + '..' + FORMAT(Enddatum) +  ' Status: ' + FORMAT(status) }
+            { 1140065;Label     ;3600 ;0    ;11050;600  ;HorzAlign=Center;
+                                                         FontSize=14;
+                                                         CaptionML=DEU="Meeting - archivierte Angebote " }
+            { 1140066;TextBox   ;16500;0    ;1800 ;423  ;HorzAlign=Right;
+                                                         SourceExpr=USERID }
+            { 1140067;TextBox   ;15150;423  ;3150 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_BELEGKOPF));
+        DataItemVarName=Arch_Belegkopf;
+        DataItemLink=Index=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18900;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 1140077;Shape     ;0    ;0    ;18600;150  ;ShapeStyle=HorzLine }
+            { 1140078;TextBox   ;12150;150  ;900  ;423  ;SourceExpr="Feld 6" }
+            { 1140079;TextBox   ;13350;150  ;900  ;423  ;SourceExpr="Feld 7" }
+            { 1140080;TextBox   ;9000 ;150  ;3000 ;423  ;SourceExpr=Arch_Debitor."Feld 12" }
+            { 1140081;TextBox   ;1350 ;150  ;3600 ;450  ;SourceExpr=Arch_Debitor."Feld 10" }
+            { 1140082;TextBox   ;0    ;150  ;1200 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Index }
+            { 1140083;TextBox   ;7950 ;150  ;900  ;423  ;SourceExpr=Arch_Debitor."Feld 6" }
+            { 1140084;TextBox   ;14400;150  ;1455 ;423  ;SourceExpr="Feld 9" }
+            { 1140085;TextBox   ;5100 ;150  ;2700 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         FontBold=No;
+                                                         SourceExpr=Arch_Debitor."Feld 13" }
+            { 1140073;TextBox   ;15954;150  ;1455 ;423  ;SourceExpr=Debitor."Feld 19" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 1140086;TextBox   ;15000;150  ;1350 ;423  ;HorzAlign=Left;
+                                                         SourceExpr=Datum }
+            { 1140087;Label     ;13650;150  ;1350 ;423  ;CaptionML=DEU=Erstellt am: }
+            { 1140088;TextBox   ;8153 ;150  ;1800 ;423  ;HorzAlign=Center;
+                                                         SourceExpr="Feld 4" }
+            { 1140089;Label     ;6900 ;150  ;1350 ;423  ;CaptionML=DEU=Ang.-Wert: }
+            { 1140090;TextBox   ;1350 ;150  ;2400 ;423  ;HorzAlign=Left;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 19" }
+            { 1140091;TextBox   ;0    ;150  ;1242 ;423  ;SourceExpr="Belegnr." }
+            { 1140092;Shape     ;0    ;0    ;18600;150  ;ShapeStyle=HorzLine }
+            { 1140093;TextBox   ;4050 ;150  ;2700 ;423  ;SourceExpr="Feld 10" }
+            { 1140095;TextBox   ;9900 ;150  ;600  ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 2" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_PROJEKT));
+        DataItemVarName=Arch_Projekte;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=846;
+          }
+          CONTROLS
+          {
+            { 1140097;TextBox   ;900  ;423  ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Belegnr." }
+            { 1140098;TextBox   ;6750 ;0    ;2850 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 8" }
+            { 1140099;TextBox   ;12750;423  ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 5" }
+            { 1140100;Label     ;0    ;0    ;900  ;423  ;CaptionML=DEU=Projekt: }
+            { 1140101;Label     ;5100 ;0    ;1650 ;423  ;CaptionML=DEU=Projektstatus: }
+            { 1140102;Label     ;10800;423  ;1950 ;423  ;CaptionML=DEU=Projektwert: }
+            { 1140103;TextBox   ;900  ;0    ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 1" }
+            { 1140104;Label     ;5100 ;423  ;1650 ;423  ;CaptionML=DEU=Projektklasse: }
+            { 1140105;TextBox   ;6750 ;423  ;2850 ;423  ;SourceExpr="Feld 9" }
+            { 1140106;Label     ;10800;0    ;1950 ;423  ;CaptionML=DEU=Projektvolumen: }
+            { 1140107;TextBox   ;12750;0    ;3150 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 4" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_AUFGABE));
+        DataItemVarName=Arch_Aufgaben;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_BEMERKUNG));
+        DataItemVarName=Arch_Bemerkung;
+        DataItemLink=Belegnr.=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140108;TextBox   ;2400 ;0    ;1200 ;423  ;SourceExpr=Datum }
+            { 1140109;TextBox   ;3750 ;0    ;14700;423  ;SourceExpr="Feld 1" }
+            { 1140110;TextBox   ;0    ;0    ;2250 ;423  ;SourceExpr="Feld 10" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_BELEGZEILE));
+        DataItemVarName=Arch_Belegzeile;
+        DataItemLink=Index=FIELD(Belegnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140111;Label     ;1200 ;0    ;1950 ;423  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Artikel }
+            { 1140112;Label     ;6900 ;0    ;1050 ;423  ;HorzGlue=Right;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Menge }
+            { 1140113;Label     ;8250 ;0    ;1200 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Preis }
+            { 1140114;Label     ;11250;0    ;900  ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=DB % }
+            { 1140115;Label     ;16950;0    ;1800 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Lieferzeit }
+            { 1140116;Label     ;12300;0    ;900  ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=DC }
+            { 1140117;Label     ;13632;0    ;1253 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Projektnr. }
+            { 1140118;Label     ;14982;0    ;1500 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Quote-Preis }
+            { 1140119;Label     ;10050;0    ;1050 ;423  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Gesamt }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140120;TextBox   ;16500;0    ;2400 ;423  ;SourceExpr="Feld 15" }
+            { 1140121;TextBox   ;11400;0    ;670  ;423  ;HorzAlign=Center;
+                                                         DecimalPlaces=0:2;
+                                                         SourceExpr="Feld 12" }
+            { 1140122;TextBox   ;8100 ;0    ;1128 ;423  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:3;
+                                                         SourceExpr="Feld 5" }
+            { 1140123;TextBox   ;6750 ;0    ;1200 ;423  ;DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140124;TextBox   ;1100 ;0    ;5550 ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140125;TextBox   ;150  ;0    ;900  ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 6" }
+            { 1140126;TextBox   ;9750 ;0    ;1350 ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 10" }
+            { 1140127;TextBox   ;9348 ;0    ;552  ;423  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 7" }
+            { 1140128;TextBox   ;12150;0    ;1200 ;423  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140129;TextBox   ;15150;0    ;1162 ;423  ;HorzAlign=Center;
+                                                         SourceExpr="Feld 14" }
+            { 1140130;TextBox   ;13500;0    ;1500 ;423  ;SourceExpr="Feld 8" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 16" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140131;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Endkunde: }
+            { 1140132;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
+                                                         SourceExpr="Feld 16" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 11" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140070;TextBox   ;3300 ;0    ;7650 ;423  ;VertAlign=Bottom;
+                                                         SourceExpr="Feld 11" }
+            { 1140071;Label     ;1200 ;0    ;2100 ;423  ;VertAlign=Bottom;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=ACS Projektinfos: }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=11880;
+      Height=8360;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+      { 1140000;TextBox   ;6380 ;1320 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140003;
+                                                   SourceExpr=Enddatum }
+      { 1140001;Label     ;5500 ;1320 ;660  ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=bis }
+      { 1140002;TextBox   ;3520 ;1320 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140000;
+                                                   SourceExpr=Startdatum }
+      { 1140003;TextBox   ;3520 ;2200 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140006;
+                                                   SourceExpr=betreuer }
+      { 1140004;Label     ;330  ;1320 ;2970 ;440  ;InPage=-1;
+                                                   LeaderDots=Yes;
+                                                   CaptionML=DEU=Belegdatum von }
+      { 1140005;Label     ;330  ;2200 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Betreuer Innendienst }
+      { 1140006;TextBox   ;3520 ;2750 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140009;
+                                                   SourceExpr=verk„ufer }
+      { 1140007;Label     ;330  ;2750 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Verk„ufercode }
+      { 1140008;Label     ;330  ;220  ;8910 ;440  ;InPage=-1;
+                                                   FontBold=Yes;
+                                                   CaptionML=DEU=Meeting Angebote und archivierte Angebote }
+      { 1140009;TextBox   ;3520 ;3300 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140011;
+                                                   SourceExpr=teams }
+      { 1140010;Label     ;330  ;3300 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Teams }
+      { 1140011;TextBox   ;3520 ;3850 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140015;
+                                                   SourceExpr=gebietscode }
+      { 1140012;Label     ;330  ;3850 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Gebietscode }
+      { 1140013;Label     ;330  ;4950 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Status }
+      { 1140014;TextBox   ;3520 ;4950 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140021;
+                                                   SourceExpr=status }
+      { 1140015;TextBox   ;3520 ;4400 ;1700 ;440  ;ValidateTableRelation=No;
+                                                   InPage=-1;
+                                                   NextControl=1140014;
+                                                   SourceExpr=hersteller;
+                                                   TableRelation=Manufacturer }
+      { 1140016;Label     ;330  ;4400 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Herstellercode }
+      { 1140017;Label     ;330  ;6380 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Berichtssortierung }
+      { 1140018;OptionButton;3520;6380;3740 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Debitornr.;
+                                                   SourceExpr=sort;
+                                                   OptionValue=Nr }
+      { 1140019;OptionButton;3520;6930;5060 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Debitorname;
+                                                   SourceExpr=sort;
+                                                   OptionValue=Name }
+      { 1140020;Label     ;330  ;5610 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Erledigtstatus }
+      { 1140021;TextBox   ;3520 ;5610 ;3850 ;440  ;ValidateTableRelation=No;
+                                                   InPage=-1;
+                                                   NextControl=1140002;
+                                                   SourceExpr=erledigt;
+                                                   TableRelation=Optionstabelle.Code WHERE (Tabellen ID=CONST(36),
+                                                                                            Feld ID=CONST(50012)) }
+      { 1140022;Label     ;7590 ;5610 ;3850 ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=(gilt nur fr arch. Angebote) }
+      { 1140023;Label     ;330  ;7590 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Nur archivierte }
+      { 1140024;CheckBox  ;3520 ;7590 ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=nur_archivierte }
+    }
+  }
+  CODE
+  {
+    VAR
+      Berichtstabelle@1140000 : Record 50037;
+      Berichtstabelle_temp@1140022 : Record 50037;
+      Customer@1140012 : Record 18;
+      Campaign@1140018 : Record 5071;
+      Comment@1140020 : Record 5061;
+      ToDo@1140019 : Record 5080;
+      Item@1140016 : Record 27;
+      Quotedaten@1140017 : Record 50014;
+      Cont_rel@1140013 : Record 5054;
+      Branche@1140014 : Record 5058;
+      SalesHeader@1140009 : Record 36;
+      ArchSalesHeader@1140024 : Record 5107;
+      SalesLine@1140010 : Record 37;
+      ArchSalesLine@1140025 : Record 5108;
+      VerkTab@1140001 : Record 13;
+      Startdatum@1140005 : Date;
+      Enddatum@1140004 : Date;
+      hersteller@1140011 : Code[40];
+      betreuer@1140003 : Code[40];
+      verk„ufer@1140002 : Code[40];
+      teams@1140006 : Code[40];
+      gebietscode@1140007 : Code[40];
+      erledigt@1140027 : Code[40];
+      status@1140008 : ' ,Offen,Freigegeben,Genehmigung ausstehend,Vorauszahlung ausstehend';
+      belegzeilen_vorhanden@1140015 : Boolean;
+      arch_belegzeilen_vorhanden@1140026 : Boolean;
+      counter@1140021 : Integer;
+      sort@1140023 : 'Nr,Name';
+      nur_archivierte@1140028 : Boolean;
+
+    PROCEDURE Akt_Angebote_listen@1140000();
+    BEGIN
+      //*******************************************************************************************************
+      //                                 Akt. Angebote werden durchsucht
+      //*******************************************************************************************************
+
+      SalesHeader.RESET;
+      IF (Startdatum<>0D) AND (Enddatum=0D) THEN
+        SalesHeader.SETFILTER(SalesHeader."Document Date",'>=%1',Startdatum);
+      IF (Startdatum<>0D) AND (Enddatum<>0D) THEN
+        SalesHeader.SETFILTER(SalesHeader."Document Date",'>=%1&<=%2',Startdatum,Enddatum);
+      IF (Startdatum=0D) AND (Enddatum<>0D) THEN
+        SalesHeader.SETFILTER(SalesHeader."Document Date",'<=%1',Enddatum);
+      SalesHeader.SETFILTER("Betreuer Innendienst",betreuer);
+      SalesHeader.SETFILTER("Salesperson Code",verk„ufer);
+      SalesHeader.SETFILTER(Teams,teams);
+      SalesHeader.SETFILTER("Territory Code",gebietscode);
+      SalesHeader.SETFILTER(SalesHeader."Document Type",'%1',SalesHeader."Document Type" :: Quote);
+      IF SalesHeader.FINDFIRST THEN
+        REPEAT
+          belegzeilen_vorhanden := FALSE;
+
+          SalesLine.RESET;
+          SalesLine.SETFILTER(SalesLine."Document No.",SalesHeader."No.");
+          SalesLine.SETFILTER(SalesLine.Type,'%1',SalesLine.Type :: Item);
+          SalesLine.SETFILTER(SalesLine."Manufacturer Code",hersteller);
+          IF SalesLine.FINDFIRST THEN
+            BEGIN
+              belegzeilen_vorhanden := TRUE;
+
+              Berichtstabelle_temp.RESET;
+              Berichtstabelle_temp.SETFILTER(Tabelle,'%1','DEBITOR');
+              Berichtstabelle_temp.SETFILTER(Index,'%1',SalesHeader."Sell-to Customer No.");
+              IF NOT Berichtstabelle_temp.FINDFIRST THEN
+                BEGIN
+                  //*******************************************************************************************************
+                  //                                     Debitor Daten schreiben
+                  //*******************************************************************************************************
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'DEBITOR';
+                    Berichtstabelle.Index := SalesHeader."Sell-to Customer No.";
+                    Customer.GET(SalesHeader."Sell-to Customer No.");
+                    Berichtstabelle."Feld 6" := Customer."Post Code";
+                    Berichtstabelle."Feld 10" := Customer.Name;
+                    Berichtstabelle."Feld 12" := Customer.City;
+                    Berichtstabelle."Feld 19" := Customer."Country/Region Code";
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+
+                    //*******************************************************************************************************
+                    //           Prfung, ob Bestcker oder H„ndler und ob berhaupt eine Branche hinterlegt ist
+                    //*******************************************************************************************************
+
+                    Cont_rel.RESET;
+                    Cont_rel.SETFILTER(Cont_rel."No.",'%1',Customer."No.");
+                    Cont_rel.SETFILTER(Cont_rel."Business Relation Code",'%1','DEB');
+                    IF Cont_rel.FINDFIRST THEN
+                      BEGIN
+                        Branche.RESET;
+                        Branche.SETFILTER(Branche."Contact No.",'%1',Cont_rel."Contact No.");
+                        IF Branche.FINDFIRST THEN
+                          BEGIN
+                            Branche.SETFILTER(Branche."Industry Group Code",'%1|%2','BESTšCKER','HŽNDLER');
+                            IF Branche.FINDFIRST THEN
+                              BEGIN
+                                Berichtstabelle."Feld 13" := Branche."Industry Group Code";
+                              END;
+                         END
+                       ELSE
+                         Berichtstabelle."Feld 13" := 'Branchen fehlen!'
+                      END;
+                  Berichtstabelle.INSERT;
+                END;
+
+              REPEAT
+                //*******************************************************************************************************
+                //                                      Angebotszeilen schreiben
+                //*******************************************************************************************************
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Tabelle := 'BELEGZEILE';
+                  Berichtstabelle.Index := SalesLine."Document No.";
+                  Berichtstabelle."Belegnr." := SalesLine."Document No.";
+                  Berichtstabelle."Zeilennr." := SalesLine."Line No.";
+                  Berichtstabelle."Feld 3" := SalesLine."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := SalesLine.Quantity;
+                  Berichtstabelle."Feld 5" := SalesLine."Unit Price";
+                  Item.GET(SalesLine."No.");
+                  IF Item.Registrierbar THEN
+                    Berichtstabelle."Feld 6" := 'R   ' + Item.Herstellerkurzname
+                  ELSE
+                    Berichtstabelle."Feld 6" := Item.Herstellerkurzname;
+                  IF SalesHeader."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 7" := '°'
+                  ELSE
+                    Berichtstabelle."Feld 7" := SalesHeader."Currency Code";
+                  Berichtstabelle."Feld 8" := SalesLine."Kampagnennr.";
+                  Berichtstabelle."Feld 10" := FORMAT(SalesLine.Amount);
+                  Berichtstabelle."Feld 11" := SalesLine."System Projektinfos";
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND(SalesLine."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT(SalesLine."DC-Preis (EKW)");
+                  IF Quotedaten.GET(SalesLine."Quotenr.") THEN
+                    Berichtstabelle."Feld 14" := FORMAT(Quotedaten.Quotepreis);
+                  Berichtstabelle."Feld 15" := SalesLine.LZ_Text;
+                  Berichtstabelle."Feld 16" := SalesLine.Endkunde;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+
+              UNTIL SalesLine.NEXT = 0;
+            END;
+
+          //*******************************************************************************************************
+          //     Nachtr„glich alle anderen Daten schreiben, wenn auch wirklich Angebotszeilen vorhanden sind
+          //*******************************************************************************************************
+
+          IF belegzeilen_vorhanden THEN
+            BEGIN
+              //Angebotskopf
+              Berichtstabelle.INIT;
+                Berichtstabelle.Tabelle := 'BELEGKOPF';
+                Berichtstabelle.Index := SalesHeader."Sell-to Customer No.";
+                Berichtstabelle.Datum := SalesHeader."Document Date";
+                Berichtstabelle."Belegnr." := SalesHeader."No.";
+                IF SalesHeader."Currency Code" = '' THEN
+                  Berichtstabelle."Feld 2" := '°'
+                ELSE
+                  Berichtstabelle."Feld 2" :=  SalesHeader."Currency Code";
+                Berichtstabelle."Feld 3" := SalesHeader.Angebotsstatus;
+                SalesHeader.CALCFIELDS(Amount);
+                Berichtstabelle."Feld 4" := SalesHeader.Amount;
+                Berichtstabelle."Feld 6" := SalesHeader."Betreuer Innendienst";
+                Berichtstabelle."Feld 7" := SalesHeader."Salesperson Code";
+                Berichtstabelle."Feld 8" := SalesHeader.Teams;
+                Berichtstabelle."Feld 9" := SalesHeader."Territory Code";
+                Berichtstabelle."Feld 10" := SalesHeader.Kontaktperson;
+                Berichtstabelle."Feld 12" := FORMAT(SalesHeader.Status);
+                Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                Berichtstabelle.User := USERID;
+              Berichtstabelle.INSERT;
+
+              //Projektdaten
+              IF Campaign.GET(SalesHeader."Campaign No.") THEN
+                BEGIN
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'PROJEKT';
+                    Berichtstabelle.Index := SalesHeader."No.";
+                    Berichtstabelle."Belegnr." := Campaign."No.";
+                    Berichtstabelle."Feld 1" := Campaign.Description;
+                    Berichtstabelle."Feld 4" := Campaign.Projektvolumen;
+                    Berichtstabelle."Feld 5" := Campaign.Projektwert;
+                    Berichtstabelle."Feld 8" := Campaign.Projektstatus;
+                    Berichtstabelle."Feld 9" := Campaign.Projektklasse;
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+                  Berichtstabelle.INSERT;
+               END;
+
+              //Aufgaben
+              ToDo.RESET;
+              ToDo.SETFILTER(ToDo."System To-do Type",'%1',ToDo."System To-do Type" :: Organizer);
+              ToDo.SETFILTER("Belegnr.",'%1',SalesHeader."No.");
+              IF ToDo.FINDFIRST THEN
+                BEGIN
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'AUFGABE';
+                    Berichtstabelle.Index := SalesHeader."No.";
+                    Berichtstabelle."Belegnr." := ToDo."No.";
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+                  Berichtstabelle.INSERT;
+
+                  //Bemerkung
+                  Comment.RESET;
+                  Comment.SETFILTER("Table Name",'%1',Comment."Table Name" :: "To-do");
+                  Comment.SETFILTER("No.",'%1',ToDo."No.");
+                  IF Comment.FINDFIRST THEN
+                    REPEAT
+                      Berichtstabelle.INIT;
+                        Berichtstabelle.Tabelle := 'BEMERKUNG';
+                        Berichtstabelle.Index := ToDo."No.";
+                        Berichtstabelle."Belegnr." := Comment."No.";
+                        Berichtstabelle.Datum := Comment.Date;
+                        Berichtstabelle."Zeilennr." := Comment."Line No.";
+                        Berichtstabelle."Feld 1" := Comment.Comment;
+                        IF Comment.Date <> 0D THEN
+                          Berichtstabelle."Feld 10" := 'Bemerkung vom: ';
+                        Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                        Berichtstabelle.User := USERID;
+                      Berichtstabelle.INSERT;
+                    UNTIL Comment.NEXT = 0;
+                END;
+            END;
+
+        UNTIL SalesHeader.NEXT = 0;
+    END;
+
+    PROCEDURE Arch_Angebote_listen@1140001();
+    BEGIN
+      //*******************************************************************************************************
+      //                                Archivierte Angebote werden durchsucht
+      //*******************************************************************************************************
+
+      ArchSalesHeader.RESET;
+      IF (Startdatum<>0D) AND (Enddatum=0D) THEN
+        ArchSalesHeader.SETFILTER(ArchSalesHeader."Document Date",'>=%1',Startdatum);
+      IF (Startdatum<>0D) AND (Enddatum<>0D) THEN
+        ArchSalesHeader.SETFILTER(ArchSalesHeader."Document Date",'>=%1&<=%2',Startdatum,Enddatum);
+      IF (Startdatum=0D) AND (Enddatum<>0D) THEN
+        ArchSalesHeader.SETFILTER(ArchSalesHeader."Document Date",'<=%1',Enddatum);
+      ArchSalesHeader.SETFILTER("Betreuer Innendienst",betreuer);
+      ArchSalesHeader.SETFILTER("Salesperson Code",verk„ufer);
+      ArchSalesHeader.SETFILTER(Teams,teams);
+      ArchSalesHeader.SETFILTER("Territory Code",gebietscode);
+      ArchSalesHeader.SETFILTER(Erledigtstatus,erledigt);
+      ArchSalesHeader.SETFILTER("Document Type",'%1',ArchSalesHeader."Document Type" :: Quote);
+      IF ArchSalesHeader.FINDFIRST THEN
+        REPEAT
+          arch_belegzeilen_vorhanden := FALSE;
+
+          ArchSalesLine.RESET;
+          ArchSalesLine.SETFILTER(ArchSalesLine."Document No.",ArchSalesHeader."No.");
+          ArchSalesLine.SETFILTER(ArchSalesLine.Type,'%1',ArchSalesLine.Type :: Item);
+          ArchSalesLine.SETFILTER(ArchSalesLine."Manufacturer Code",hersteller);
+          IF ArchSalesLine.FINDFIRST THEN
+            BEGIN
+              arch_belegzeilen_vorhanden := TRUE;
+
+              Berichtstabelle_temp.RESET;
+              Berichtstabelle_temp.SETFILTER(Tabelle,'%1','ARCH_DEBITOR');
+              Berichtstabelle_temp.SETFILTER(Index,'%1',ArchSalesHeader."Sell-to Customer No.");
+              IF NOT Berichtstabelle_temp.FINDFIRST THEN
+                BEGIN
+                  //*******************************************************************************************************
+                  //                                     Debitor Daten schreiben
+                  //*******************************************************************************************************
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'ARCH_DEBITOR';
+                    Berichtstabelle.Index := ArchSalesHeader."Sell-to Customer No.";
+                    Customer.GET(ArchSalesHeader."Sell-to Customer No.");
+                    Berichtstabelle."Feld 6" := Customer."Post Code";
+                    Berichtstabelle."Feld 10" := Customer.Name;
+                    Berichtstabelle."Feld 12" := Customer.City;
+                    Berichtstabelle."Feld 19" := Customer."Country/Region Code";
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+
+                    //*******************************************************************************************************
+                    //           Prfung, ob Bestcker oder H„ndler und ob berhaupt eine Branche hinterlegt ist
+                    //*******************************************************************************************************
+
+                    Cont_rel.RESET;
+                    Cont_rel.SETFILTER(Cont_rel."No.",'%1',Customer."No.");
+                    Cont_rel.SETFILTER(Cont_rel."Business Relation Code",'%1','DEB');
+                    IF Cont_rel.FINDFIRST THEN
+                      BEGIN
+                        Branche.RESET;
+                        Branche.SETFILTER(Branche."Contact No.",'%1',Cont_rel."Contact No.");
+                        IF Branche.FINDFIRST THEN
+                          BEGIN
+                            Branche.SETFILTER(Branche."Industry Group Code",'%1|%2','BESTšCKER','HŽNDLER');
+                            IF Branche.FINDFIRST THEN
+                              BEGIN
+                                Berichtstabelle."Feld 13" := Branche."Industry Group Code";
+                              END;
+                         END
+                       ELSE
+                         Berichtstabelle."Feld 13" := 'Branchen fehlen!'
+                      END;
+                  Berichtstabelle.INSERT;
+                END;
+
+              REPEAT
+                //*******************************************************************************************************
+                //                                      Angebotszeilen schreiben
+                //*******************************************************************************************************
+                Berichtstabelle.INIT;
+                  Berichtstabelle.Tabelle := 'ARCH_BELEGZEILE';
+                  Berichtstabelle.Index := ArchSalesLine."Document No.";
+                  Berichtstabelle."Belegnr." := ArchSalesLine."Document No.";
+                  Berichtstabelle."Zeilennr." := ArchSalesLine."Line No.";
+                  Berichtstabelle."Feld 3" := ArchSalesLine."Artikelnr. 2";
+                  Berichtstabelle."Feld 4" := ArchSalesLine.Quantity;
+                  Berichtstabelle."Feld 5" := ArchSalesLine."Unit Price";
+                  IF Item.GET(ArchSalesLine."No.") THEN
+                    BEGIN
+                      IF Item.Registrierbar THEN
+                        Berichtstabelle."Feld 6" := 'R   ' + Item.Herstellerkurzname
+                      ELSE
+                        Berichtstabelle."Feld 6" := Item.Herstellerkurzname;
+                    END;
+                  IF ArchSalesHeader."Currency Code" = '' THEN
+                    Berichtstabelle."Feld 7" := '°'
+                  ELSE
+                    Berichtstabelle."Feld 7" := ArchSalesHeader."Currency Code";
+                  Berichtstabelle."Feld 8" := ArchSalesLine."Kampagnennr.";
+                  Berichtstabelle."Feld 10" := FORMAT(ArchSalesLine.Amount);
+                  Berichtstabelle."Feld 11" := ArchSalesLine."ACS Projektinfos";
+                  Berichtstabelle."Feld 12" := FORMAT(ROUND(ArchSalesLine."Profit %",0.01));
+                  Berichtstabelle."Feld 13" := FORMAT(ArchSalesLine."DC-Preis (EKW)");
+                  IF Quotedaten.GET(ArchSalesLine."Quotenr.") THEN
+                    Berichtstabelle."Feld 14" := FORMAT(Quotedaten.Quotepreis);
+                  Berichtstabelle."Feld 15" := ArchSalesLine.LZ_Text;
+                  Berichtstabelle."Feld 16" := ArchSalesLine.Endkunde;
+                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                  Berichtstabelle.User := USERID;
+                Berichtstabelle.INSERT;
+
+              UNTIL ArchSalesLine.NEXT = 0;
+            END;
+
+          //*******************************************************************************************************
+          //  Nachtr„glich alle anderen Daten schreiben, wenn auch wirklich arch. Angebotszeilen vorhanden sind
+          //*******************************************************************************************************
+
+          IF arch_belegzeilen_vorhanden THEN
+            BEGIN
+              //Arch. Angebotskopf
+              Berichtstabelle.INIT;
+                Berichtstabelle.Tabelle := 'ARCH_BELEGKOPF';
+                Berichtstabelle.Index := ArchSalesHeader."Sell-to Customer No.";
+                Berichtstabelle.Datum := ArchSalesHeader."Document Date";
+                Berichtstabelle."Belegnr." := ArchSalesHeader."No.";
+                IF ArchSalesHeader."Currency Code" = '' THEN
+                  Berichtstabelle."Feld 2" := '°'
+                ELSE
+                  Berichtstabelle."Feld 2" :=  ArchSalesHeader."Currency Code";
+                Berichtstabelle."Feld 3" := ArchSalesHeader.Angebotsstatus;
+                ArchSalesHeader.CALCFIELDS(Amount);
+                Berichtstabelle."Feld 4" := ArchSalesHeader.Amount;
+                Berichtstabelle."Feld 6" := ArchSalesHeader."Betreuer Innendienst";
+                Berichtstabelle."Feld 7" := ArchSalesHeader."Salesperson Code";
+                Berichtstabelle."Feld 8" := ArchSalesHeader.Teams;
+                Berichtstabelle."Feld 9" := ArchSalesHeader."Territory Code";
+                Berichtstabelle."Feld 10" := ArchSalesHeader.Kontaktperson;
+                Berichtstabelle."Feld 12" := FORMAT(ArchSalesHeader.Status);
+                Berichtstabelle."Feld 19" := ArchSalesHeader.Erledigtstatus;
+                Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                Berichtstabelle.User := USERID;
+              Berichtstabelle.INSERT;
+
+              //Projektdaten
+              IF Campaign.GET(ArchSalesHeader."Campaign No.") THEN
+                BEGIN
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'ARCH_PROJEKT';
+                    Berichtstabelle.Index := ArchSalesHeader."No.";
+                    Berichtstabelle."Belegnr." := Campaign."No.";
+                    Berichtstabelle."Feld 1" := Campaign.Description;
+                    Berichtstabelle."Feld 4" := Campaign.Projektvolumen;
+                    Berichtstabelle."Feld 5" := Campaign.Projektwert;
+                    Berichtstabelle."Feld 8" := Campaign.Projektstatus;
+                    Berichtstabelle."Feld 9" := Campaign.Projektklasse;
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+                  Berichtstabelle.INSERT;
+               END;
+
+              //Aufgaben
+              ToDo.RESET;
+              ToDo.SETFILTER(ToDo."System To-do Type",'%1',ToDo."System To-do Type" :: Organizer);
+              ToDo.SETFILTER("Arch. Belegnr.",'%1',ArchSalesHeader."No.");
+              IF ToDo.FINDFIRST THEN
+                BEGIN
+                  Berichtstabelle.INIT;
+                    Berichtstabelle.Tabelle := 'ARCH_AUFGABE';
+                    Berichtstabelle.Index := ArchSalesHeader."No.";
+                    Berichtstabelle."Belegnr." := ToDo."No.";
+                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                    Berichtstabelle.User := USERID;
+                  Berichtstabelle.INSERT;
+
+                  //Bemerkung
+                  Comment.RESET;
+                  Comment.SETFILTER("Table Name",'%1',Comment."Table Name" :: "To-do");
+                  Comment.SETFILTER("No.",'%1',ToDo."No.");
+                  IF Comment.FINDFIRST THEN
+                    REPEAT
+                      Berichtstabelle.INIT;
+                        Berichtstabelle.Tabelle := 'ARCH_BEMERKUNG';
+                        Berichtstabelle.Index := ToDo."No.";
+                        Berichtstabelle."Belegnr." := Comment."No.";
+                        Berichtstabelle.Datum := Comment.Date;
+                        Berichtstabelle."Zeilennr." := Comment."Line No.";
+                        Berichtstabelle."Feld 1" := Comment.Comment;
+                        IF Comment.Date <> 0D THEN
+                          Berichtstabelle."Feld 10" := 'Bemerkung vom: ';
+                        Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                        Berichtstabelle.User := USERID;
+                      Berichtstabelle.INSERT;
+                    UNTIL Comment.NEXT = 0;
+                END;
+            END;
+
+        UNTIL ArchSalesHeader.NEXT = 0;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
