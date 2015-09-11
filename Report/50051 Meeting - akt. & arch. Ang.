@@ -2,8 +2,8 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
 {
   OBJECT-PROPERTIES
   {
-    Date=26.01.15;
-    Time=11:37:33;
+    Date=10.09.15;
+    Time=15:06:22;
     Modified=Yes;
     Version List=;
   }
@@ -198,7 +198,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=846;
+            SectionHeight=850;
           }
           CONTROLS
           {
@@ -250,7 +250,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -276,7 +276,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Header;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -330,7 +330,51 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND ("Feld 16" <> Endkunde_temp));
+                           Endkunde_temp := "Feld 16";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140047;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 16" }
+            { 1140006;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Endkunde: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=450;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND ("Feld 11" <> System_Projektinfo_temp));
+                           System_Projektinfo_temp := "Feld 11";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140068;TextBox   ;3750 ;0    ;7650 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 11" }
+            { 1140069;Label     ;1200 ;0    ;2550 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=System Projektinfos: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -362,40 +406,19 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT("Feld 16" <> '');
+                           IF Item.GET("Feld 19") THEN
+                             CurrReport.SHOWOUTPUT(Item.Herstellerkurzname ='FER')
+                           ELSE
+                             CurrReport.SHOWOUTPUT(FALSE);
                          END;
 
           }
           CONTROLS
           {
-            { 1140006;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
-                                                         FontBold=No;
-                                                         MultiLine=Yes;
-                                                         CaptionML=DEU=Endkunde: }
-            { 1140047;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
-                                                         SourceExpr="Feld 16" }
-          }
-           }
-        { PROPERTIES
-          {
-            SectionType=Body;
-            SectionWidth=18900;
-            SectionHeight=423;
-            OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT("Feld 11" <> '');
-                         END;
-
-          }
-          CONTROLS
-          {
-            { 1140068;TextBox   ;3300 ;0    ;7650 ;423  ;VertAlign=Bottom;
-                                                         SourceExpr="Feld 11" }
-            { 1140069;Label     ;1200 ;0    ;2100 ;423  ;VertAlign=Bottom;
-                                                         FontBold=No;
-                                                         MultiLine=Yes;
-                                                         CaptionML=DEU=ACS Projektinfos: }
+            { 1140074;TextBox   ;1200 ;0    ;13800;423  ;HorzAlign=Left;
+                                                         SourceExpr=Item.Description + ' ' + Item."Description 2" }
           }
            }
       }
@@ -555,7 +578,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=846;
+            SectionHeight=850;
           }
           CONTROLS
           {
@@ -607,7 +630,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -633,7 +656,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Header;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -687,7 +710,51 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND ("Feld 16" <> Endkunde_temp));
+                           Endkunde_temp := "Feld 16";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140132;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 16" }
+            { 1140131;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Endkunde: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=450;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND ("Feld 11" <> System_Projektinfo_temp));
+                           System_Projektinfo_temp := "Feld 11";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140070;TextBox   ;3750 ;0    ;7650 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 11" }
+            { 1140071;Label     ;1200 ;0    ;2550 ;423  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=System Projektinfos: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18900;
+            SectionHeight=450;
           }
           CONTROLS
           {
@@ -719,40 +786,19 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
           {
             SectionType=Body;
             SectionWidth=18900;
-            SectionHeight=423;
+            SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT("Feld 16" <> '');
+                           IF Item.GET("Feld 19") THEN
+                             CurrReport.SHOWOUTPUT(Item.Herstellerkurzname ='FER')
+                           ELSE
+                               CurrReport.SHOWOUTPUT(FALSE);
                          END;
 
           }
           CONTROLS
           {
-            { 1140131;Label     ;1200 ;0    ;1350 ;423  ;VertAlign=Bottom;
-                                                         FontBold=No;
-                                                         MultiLine=Yes;
-                                                         CaptionML=DEU=Endkunde: }
-            { 1140132;TextBox   ;2550 ;0    ;8400 ;423  ;VertAlign=Bottom;
-                                                         SourceExpr="Feld 16" }
-          }
-           }
-        { PROPERTIES
-          {
-            SectionType=Body;
-            SectionWidth=18900;
-            SectionHeight=423;
-            OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT("Feld 11" <> '');
-                         END;
-
-          }
-          CONTROLS
-          {
-            { 1140070;TextBox   ;3300 ;0    ;7650 ;423  ;VertAlign=Bottom;
-                                                         SourceExpr="Feld 11" }
-            { 1140071;Label     ;1200 ;0    ;2100 ;423  ;VertAlign=Bottom;
-                                                         FontBold=No;
-                                                         MultiLine=Yes;
-                                                         CaptionML=DEU=ACS Projektinfos: }
+            { 1140075;TextBox   ;1200 ;0    ;13800;423  ;HorzAlign=Left;
+                                                         SourceExpr=Item.Description + ' ' + Item."Description 2" }
           }
            }
       }
@@ -875,6 +921,8 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
       counter@1140021 : Integer;
       sort@1140023 : 'Nr,Name';
       nur_archivierte@1140028 : Boolean;
+      Endkunde_temp@1140029 : Text[50];
+      System_Projektinfo_temp@1140030 : Text[50];
 
     PROCEDURE Akt_Angebote_listen@1140000();
     BEGIN
@@ -962,11 +1010,13 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
                   Berichtstabelle."Feld 3" := SalesLine."Artikelnr. 2";
                   Berichtstabelle."Feld 4" := SalesLine.Quantity;
                   Berichtstabelle."Feld 5" := SalesLine."Unit Price";
-                  Item.GET(SalesLine."No.");
-                  IF Item.Registrierbar THEN
-                    Berichtstabelle."Feld 6" := 'R   ' + Item.Herstellerkurzname
-                  ELSE
-                    Berichtstabelle."Feld 6" := Item.Herstellerkurzname;
+                  IF Item.GET(SalesLine."No.") THEN
+                    BEGIN
+                      IF Item.Registrierbar THEN
+                        Berichtstabelle."Feld 6" := 'R   ' + Item.Herstellerkurzname
+                      ELSE
+                        Berichtstabelle."Feld 6" := Item.Herstellerkurzname;
+                    END;
                   IF SalesHeader."Currency Code" = '' THEN
                     Berichtstabelle."Feld 7" := '°'
                   ELSE
@@ -980,6 +1030,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
                     Berichtstabelle."Feld 14" := FORMAT(Quotedaten.Quotepreis);
                   Berichtstabelle."Feld 15" := SalesLine.LZ_Text;
                   Berichtstabelle."Feld 16" := SalesLine.Endkunde;
+                  Berichtstabelle."Feld 19" := SalesLine."No.";
                   Berichtstabelle.Uhrzeit := CURRENTDATETIME;
                   Berichtstabelle.User := USERID;
                 Berichtstabelle.INSERT;
@@ -1179,6 +1230,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
                     Berichtstabelle."Feld 14" := FORMAT(Quotedaten.Quotepreis);
                   Berichtstabelle."Feld 15" := ArchSalesLine.LZ_Text;
                   Berichtstabelle."Feld 16" := ArchSalesLine.Endkunde;
+                  Berichtstabelle."Feld 19" := ArchSalesLine."No.";
                   Berichtstabelle.Uhrzeit := CURRENTDATETIME;
                   Berichtstabelle.User := USERID;
                 Berichtstabelle.INSERT;
