@@ -694,7 +694,8 @@ Ship-to Contact - OnValidate()
 Ship-to Contact - OnLookup()
 
 Order Date - OnValidate()
-IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order]) AND
+IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order,"Document Type"::"Blanket Order"]) AND
+//IF ("Document Type" IN ["Document Type"::Quote,"Document Type"::Order]) AND
    NOT ("Order Date" = xRec."Order Date")
 THEN
   PriceMessageIfSalesLinesExist(FIELDCAPTION("Order Date"));
@@ -714,7 +715,8 @@ TestNoSeriesDate(
 
 VALIDATE("Document Date","Posting Date");
 
-IF ("Document Type" IN ["Document Type"::Invoice,"Document Type"::"Credit Memo"]) AND
+IF ("Document Type" IN ["Document Type"::Invoice,"Document Type"::"Credit Memo","Document Type"::"Blanket Order"]) AND
+//IF ("Document Type" IN ["Document Type"::Invoice,"Document Type"::"Credit Memo"]) AND
    NOT ("Posting Date" = xRec."Posting Date")
 THEN
   PriceMessageIfSalesLinesExist(FIELDCAPTION("Posting Date"));
@@ -2493,10 +2495,14 @@ IF "Document Type" IN ["Document Type"::Order,"Document Type"::Invoice,"Document
   "Shipment Date" := WORKDATE;
   "Order Date" := WORKDATE;
 END;
-IF "Document Type" = "Document Type"::"Return Order" THEN
+//TOPAS 2015-09-17 ST
+IF "Document Type" IN ["Document Type"::"Blanket Order","Document Type"::"Return Order"] THEN
+//IF "Document Type" = "Document Type"::"Return Order" THEN
   "Order Date" := WORKDATE;
 
-IF NOT ("Document Type" IN ["Document Type"::"Blanket Order","Document Type"::Quote]) AND
+//TOPAS 2015-09-17 ST
+IF NOT ("Document Type" IN ["Document Type"::Quote]) AND
+//IF NOT ("Document Type" IN ["Document Type"::"Blanket Order","Document Type"::Quote]) AND
    ("Posting Date" = 0D)
 THEN
   "Posting Date" := WORKDATE;
