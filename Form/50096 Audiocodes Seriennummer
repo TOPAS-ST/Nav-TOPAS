@@ -2,15 +2,15 @@ OBJECT Form 50096 Audiocodes Seriennummer
 {
   OBJECT-PROPERTIES
   {
-    Date=07.09.15;
-    Time=12:39:12;
+    Date=24.09.15;
+    Time=14:24:20;
     Modified=Yes;
     Version List=TOPAS;
   }
   PROPERTIES
   {
     Width=13200;
-    Height=14300;
+    Height=15070;
     OnOpenForm=BEGIN
                  Datenblatt_leeren;
 
@@ -189,7 +189,10 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                                 IF (Wartung.Status = Wartung.Status :: ACHAT) THEN
                                                                   CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 84400
                                                                 ELSE
-                                                                  CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 16744760;
+                                                                  IF (Wartung.Status = Wartung.Status :: "Champs Partner") THEN
+                                                                    CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 8388740
+                                                                  ELSE
+                                                                    CurrForm.txt_vertragsnr.UPDATEFORECOLOR := 16744760;
                                                           END;
                                                            }
     { 1140007;TextBox   ;4620 ;12870;1920 ;440  ;Name=txt_ablaufdatum;
@@ -223,15 +226,16 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                  ParentControl=1140003;
                                                  InFrame=Yes;
                                                  SourceExpr=alle_vertragsnr }
-    { 1140004;Frame     ;6820 ;12320;6160 ;1760 ;Name=frame_zusatz_rma;
+    { 1140004;Frame     ;6820 ;12320;6160 ;2640 ;Name=frame_zusatz_rma;
                                                  ShowCaption=No;
                                                  Border=No }
     { 1140046;Label     ;6930 ;12430;1540 ;1100 ;ParentControl=1140004;
                                                  InFrame=Yes;
                                                  VertAlign=Top;
                                                  FontBold=Yes;
-                                                 CaptionML=DEU=RMA-Nr. }
-    { 1140056;TextBox   ;8580 ;12430;1920 ;440  ;Editable=No;
+                                                 MultiLine=Yes;
+                                                 CaptionML=DEU=RMA-Nr. offen }
+    { 1140056;TextBox   ;8580 ;12430;2090 ;440  ;Editable=No;
                                                  ParentControl=1140004;
                                                  InFrame=Yes;
                                                  SourceExpr=rmanr }
@@ -239,6 +243,7 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                  InFrame=Yes;
                                                  CaptionML=DEU=Anzeigen;
                                                  OnPush=BEGIN
+                                                          {
                                                           IF rmanr <> '' THEN
                                                             BEGIN
                                                               RMA.GET(rmanr);
@@ -247,13 +252,40 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                               ELSE
                                                                 FORM.RUN(50075,RMA);
                                                             END;
+                                                          }
+
+                                                          IF rmanr <> '' THEN
+                                                            BEGIN
+                                                              RMA.SETFILTER("RMA-Nr.",rmanr);
+                                                              FORM.RUN(50075,RMA);
+                                                            END;
                                                         END;
                                                          }
-    { 1140059;TextBox   ;10670;12430;2090 ;440  ;Name=txt_rma;
+    { 1140059;TextBox   ;10780;12430;1980 ;440  ;Name=txt_rma;
                                                  Editable=No;
                                                  ParentControl=1140004;
                                                  InFrame=Yes;
                                                  SourceExpr=rma_text }
+    { 1140061;TextBox   ;8580 ;13640;2090 ;440  ;Editable=No;
+                                                 ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 SourceExpr=rmanr_abgeschlossen }
+    { 1140062;CommandButton;8580;14190;1870;550 ;ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 CaptionML=DEU=Anzeigen;
+                                                 OnPush=BEGIN
+                                                          IF rmanr_abgeschlossen <> '' THEN
+                                                            BEGIN
+                                                              RMA.SETFILTER("RMA-Nr.",rmanr_abgeschlossen);
+                                                              FORM.RUN(50088,RMA);
+                                                            END;
+                                                        END;
+                                                         }
+    { 1140063;Label     ;6930 ;13640;1540 ;770  ;ParentControl=1140004;
+                                                 InFrame=Yes;
+                                                 FontBold=Yes;
+                                                 MultiLine=Yes;
+                                                 CaptionML=DEU=abge- schlossen }
     { 1140060;CommandButton;9570;880;3190 ;990  ;CaptionML=DEU=Dateiserver Suche;
                                                  OnPush=VAR
                                                           WSHScript@1140000 : Automation "{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B} 1.0:{72C24DD5-D70A-438B-8A42-98424B88AFB8}:'Windows Script Host Object Model'.WshShell";
@@ -283,7 +315,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
       Lieferschein@1140030 : Record 110;
       PurchRcptHeader@1140032 : Record 120;
       RMA@1140015 : Record 50020;
-      RMA_zeile@1140009 : Record 50021;
       RMA_beteiligte@1140010 : Record 50022;
       Wartung@1140013 : Record 50011;
       LizenzTab@1140011 : Record 50024;
@@ -305,7 +336,8 @@ OBJECT Form 50096 Audiocodes Seriennummer
       artikelnr@1140018 : Code[20];
       vertragsnr@1140012 : Code[20];
       ablaufdatum@1140044 : Date;
-      rmanr@1140014 : Code[20];
+      rmanr@1140014 : Code[80];
+      rmanr_abgeschlossen@1140047 : Code[80];
       vk_artpostennr@1140042 : Integer;
       ek_artpostennr@1140041 : Integer;
       rma_text@1140035 : Text[50];
@@ -341,6 +373,8 @@ OBJECT Form 50096 Audiocodes Seriennummer
     END;
 
     PROCEDURE Beginne_Suche@1140000(Eingabe@1140000 : Text[60]);
+    VAR
+      RMA_zeile@1140001 : Record 50021;
     BEGIN
       Datenblatt_leeren;
       nichtgefunden:=FALSE;
@@ -828,6 +862,7 @@ OBJECT Form 50096 Audiocodes Seriennummer
 
     PROCEDURE Nur_RMA_ermitteln@1140002(RMA@1140002 : Record 50021;system@1140001 : Code[10]);
     VAR
+      RMA_kopf@1140003 : Record 50020;
       RMA_zeile@1140000 : Record 50021;
     BEGIN
       WITH RMA DO BEGIN
@@ -913,17 +948,64 @@ OBJECT Form 50096 Audiocodes Seriennummer
             CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
             Wartung_ermitteln("Artikelnr.","SN-Nr. / DC")
           END;
+
+        //Zusatzanzeige, wenn die SN in mehreren RMA's auftaucht
+        RMA_zeile.RESET;
+        RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1',"SN-Nr. / DC");
+        IF RMA_zeile.FINDFIRST THEN
+          REPEAT
+            RMA_kopf.GET(RMA_zeile."RMA-Nr.");
+            IF RMA_kopf."Status-Abgeschlossen" THEN
+              BEGIN
+                IF rmanr_abgeschlossen = '' THEN
+                  rmanr_abgeschlossen := RMA_zeile."RMA-Nr.";
+                IF (STRPOS(rmanr_abgeschlossen, RMA_zeile."RMA-Nr.") = 0) AND
+                (STRLEN(rmanr_abgeschlossen + '|' + RMA_zeile."RMA-Nr.") <= 80) THEN
+                  rmanr_abgeschlossen := rmanr_abgeschlossen + '|' +  RMA_zeile."RMA-Nr.";
+              END
+            ELSE
+              BEGIN
+                IF rmanr = '' THEN
+                  rmanr := RMA_zeile."RMA-Nr.";
+                IF (STRPOS(rmanr, RMA_zeile."RMA-Nr.") = 0) AND
+                (STRLEN(rmanr + '|' + RMA_zeile."RMA-Nr.") <= 80) THEN
+                  rmanr := rmanr + '|' +  RMA_zeile."RMA-Nr.";
+              END;
+          UNTIL RMA_zeile.NEXT = 0;
+
       END;
     END;
 
     PROCEDURE RMA_ermitteln@1140019(Artikel@1140001 : Code[20];SN@1140000 : Code[20]);
+    VAR
+      RMA_kopf@1140002 : Record 50020;
+      RMA_zeile@1140003 : Record 50021;
     BEGIN
       RMA_zeile.RESET;
       //RMA_zeile.SETFILTER("Artikelnr.",'%1',Artikel);
       RMA_zeile.SETFILTER(RMA_zeile."SN-Nr. / DC",'%1',SN);
-      IF RMA_zeile.FINDLAST THEN
+      IF RMA_zeile.FINDFIRST THEN
         BEGIN
-          rmanr := RMA_zeile."RMA-Nr.";
+          REPEAT
+              RMA_kopf.GET(RMA_zeile."RMA-Nr.");
+              IF RMA_kopf."Status-Abgeschlossen" THEN
+                BEGIN
+                  IF rmanr_abgeschlossen = '' THEN
+                    rmanr_abgeschlossen := RMA_zeile."RMA-Nr.";
+                  IF (STRPOS(rmanr_abgeschlossen, RMA_zeile."RMA-Nr.") = 0) AND
+                  (STRLEN(rmanr_abgeschlossen + '|' + RMA_zeile."RMA-Nr.") <= 80) THEN
+                    rmanr_abgeschlossen := rmanr_abgeschlossen + '|' +  RMA_zeile."RMA-Nr.";
+                END
+              ELSE
+                BEGIN
+                  IF rmanr = '' THEN
+                    rmanr := RMA_zeile."RMA-Nr.";
+                  IF (STRPOS(rmanr, RMA_zeile."RMA-Nr.") = 0) AND
+                  (STRLEN(rmanr + '|' + RMA_zeile."RMA-Nr.") <= 80) THEN
+                    rmanr := rmanr + '|' +  RMA_zeile."RMA-Nr.";
+                END;
+          UNTIL RMA_zeile.NEXT = 0;
+
           IF RMA_zeile.Belegart = RMA_zeile.Belegart :: Rechnung THEN
             rma_text := FORMAT(RMA_zeile.Verursacher);
           IF RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Hersteller" THEN
@@ -932,6 +1014,7 @@ OBJECT Form 50096 Audiocodes Seriennummer
           OR (RMA_zeile.Belegart = RMA_zeile.Belegart :: "an Kunden") THEN
             rma_text := FORMAT(RMA_zeile."Maánahme Hersteller");
           CurrForm.frame_zusatz_rma.VISIBLE := TRUE;
+
         END;
     END;
 
