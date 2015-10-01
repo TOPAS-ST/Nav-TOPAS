@@ -158,6 +158,9 @@ IF Art = Art :: Temporär THEN
     IF Artikel.GET("Artikelnr.") AND (Artikel."Item Tracking Code" = 'KEINE') THEN
       ERROR(Text018);
 
+    IF Artikel.GET("Seriennr.") AND ("Seriennr." <> '') THEN
+      ERROR(Text034);
+
     IF Fremderwerb THEN
       BEGIN
 
@@ -850,6 +853,7 @@ IF Artikelposten.FINDFIRST THEN
     REPEAT
 
       zupruefende_seriennr := Artikelposten."Serial No.";
+      artikelnr := Artikelposten."Item No.";
       urspr_seriennr := '';
       ersetzt_lfdnr := '';
 
@@ -895,6 +899,7 @@ IF Artikelposten.FINDFIRST THEN
                           zupruefende_seriennr := HoleNeueSystemPos."Seriennr.";
                           seriennr_ersetzt := FALSE;
                         END;
+                      artikelnr := HoleNeueSystemPos."Artikelnr.";
                     END
                   ELSE
                     seriennr_ersetzt := FALSE;
@@ -914,6 +919,7 @@ IF Artikelposten.FINDFIRST THEN
               BEGIN
                 zupruefende_seriennr := PrüfeLizenzTab."Seriennr.";
                 urspr_seriennr := PrüfeLizenzTab."Urspr. Seriennr.";
+                artikelnr := PrüfeLizenzTab."Artikelnr.";
               END;
           END;
 
@@ -935,7 +941,8 @@ IF Artikelposten.FINDFIRST THEN
           LizenzTab."Belegzeilennr." := Lieferscheinzeilennr;
           LizenzTab.INSERT(TRUE);
           LizenzTab."Debitornr." := Debnr;
-          LizenzTab.VALIDATE("Artikelnr.",Artikelposten."Item No.");
+          //LizenzTab.VALIDATE("Artikelnr.",Artikelposten."Item No.");
+          LizenzTab.VALIDATE("Artikelnr.", artikelnr);
           LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
           IF Artikelposten."Item Tracking" = Artikelposten."Item Tracking" :: "Serial No." THEN
             LizenzTab.Menge := Artikelposten.Quantity * (-1)
@@ -2758,10 +2765,10 @@ IF Wartungsvertrag.FINDFIRST THEN
     Wartungsvertrag.Verlängerungen := 0;
     temp_service_artikelnr := '';
     Servicepositionen.RESET;
+    Servicepositionen.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
     Servicepositionen.SETRANGE(Art,Servicepositionen.Art :: Service);
     Servicepositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
-    //Servicepositionen.SETRANGE(Basisgerät,TRUE);
-    //Servicepositionen.SETRANGE(Verlängerung,TRUE);
+    Servicepositionen.SETRANGE(Basisgerät,TRUE);
     Servicepositionen.SETRANGE(Inaktiv,FALSE);
     IF Servicepositionen.FINDFIRST THEN
       BEGIN
@@ -3028,6 +3035,8 @@ IF Champs.FINDFIRST THEN
 ELSE
   IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
     EXIT('CHAMPS-RE_INSTATEMENT_FEE');
+  IF SUP_Artikelnr = 'RE_INSTATEMENT_FEE' THEN
+    EXIT('SUPP-REINSTATE-FEE');
 
 NewPosFromRMA(LfdNr : Code[20];AlteSN : Code[20];NeueSN : Code[20];"RMA-Nr" : Code[20];CopyRec : Record "Serviceleist. & Leihstellungen"
 IF CopyRec.Reklamiert = FALSE THEN
@@ -3371,8 +3380,8 @@ CASE SUP_Artikelnr OF
   'ACHAT/SOFTWARE/24#02' : EXIT('ACTS-SUPP-24x7/SO#02');
   'ACHAT-ADV-HWREPLA#01' : EXIT('ACTS-ADV-HWREPLAC#01');
 //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
- 'CHAMPS-BASIC-8X5-#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
- 'CHAMPS-BASIC-8X5-#02' : EXIT('CHAMPS-SUPP-8X5/S#02');
+ 'CHAMPS-BASIC-9X5-#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
+ 'CHAMPS-BASIC-9X5-#02' : EXIT('CHAMPS-SUPP-8X5/S#02');
  'CHAMPS-BASIC-24X7#01' : EXIT('CHAMPS-SUPP-24X7/#01');
  'CHAMPS-BASIC-24X7#02' : EXIT('CHAMPS-SUPP-24X7/#02');
  'CHAMPS-BASIC-AHR/1YR' : EXIT('CHAMPS-ADV-HWREPL#01');
