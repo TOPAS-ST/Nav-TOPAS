@@ -32,6 +32,7 @@ IF Wartungsvertrag.FINDFIRST THEN
     Window.UPDATE(1,Wartungsvertrag."Wartungsvertragsnr.");
     temp_sup_artikelnr := '';
     v_verlängerung := 0;
+    letztes_ablaufdatum := 0D;
 
     IF Klasse = Klasse :: Einzelgerät THEN
       BEGIN
@@ -83,6 +84,7 @@ IF Wartungsvertrag.FINDFIRST THEN
       END;
 
     ServicePositionen.RESET;
+    ServicePositionen.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
     ServicePositionen.SETRANGE(Art,ServicePositionen.Art :: Service);
     ServicePositionen.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
     ServicePositionen.SETRANGE(Basisgerät,TRUE);
@@ -124,12 +126,16 @@ IF Wartungsvertrag.FINDFIRST THEN
             END;
 
           temp_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
+          IF (letztes_ablaufdatum < ServicePositionen."Ablaufdatum Serviceleistung") AND ((ServicePositionen.Benutzername <> '')
+          OR (ServicePositionen."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR') OR (
+          Wartungsvertrag.Status = Wartungsvertrag.Status :: ACTS) OR
+          (Wartungsvertrag.Status = Wartungsvertrag.Status :: ACHAT)) THEN
+            letztes_ablaufdatum := ServicePositionen."Ablaufdatum Serviceleistung";
 
         UNTIL ServicePositionen.NEXT = 0;
 
         //Korrigiert fehlerhafte Vertragsablaufdaten im Wartungskopf, kann bei manuellen Anpassungen/Löschungen geschehen
-        IF (temp_ablaufdatum <> Wartungsvertrag.Vertragsablaufdatum) //AND (Wartungsvertrag."Wartungsvertragsnr." <> 'SV100000')
-        AND (ServicePositionen.Benutzername <> '') THEN
+        IF (letztes_ablaufdatum <> Wartungsvertrag.Vertragsablaufdatum) AND (letztes_ablaufdatum <> 0D) THEN
           BEGIN
             //Window.CLOSE;
             IF Export THEN
@@ -137,12 +143,13 @@ IF Wartungsvertrag.FINDFIRST THEN
                 InfoFileF.CLOSE;
                 InfoFileF2.CLOSE;
               END;
-            Wartungsvertrag.Vertragsablaufdatum := temp_ablaufdatum;
+            Wartungsvertrag.Vertragsablaufdatum := letztes_ablaufdatum;
             MESSAGE('Fehler in Wartungsvertrag %1, Vertragsablaufdatum nicht korrekt. Dieser Fehler wurde korrigiert.',
             Wartungsvertrag."Wartungsvertragsnr.");
           END;
       END;
 
+     IF Wartungsvertrag.Verlängerungen <> v_verlängerung THEN  zähler10 += 1;
      Wartungsvertrag.Verlängerungen := v_verlängerung;
      Wartungsvertrag.MODIFY;
 
@@ -168,6 +175,9 @@ MESSAGE('Statistik %1:\\Es wurden insgesamt %2 Verträge verlängert.\(umfasst a
 'Letzte 7 Tage verlängert: %6\Letzte 7 Tage abgelaufen: %7\\Wartungsverträge gesamt (in- & aktiv): %5\davon AHR / EXTD: %8'+
 '\davon 1YR Service Artikel: %9\davon 3YR Service Artikel: %10',
 statistik_header,zähler,zähler2,zähler3,zähler4,zähler5,zähler6,zähler7,zähler8,zähler9);
+
+IF zähler10 <> 0 THEN
+  MESSAGE('Korrigierte Verträge: %1',zähler10);
 
 Window.CLOSE;
 IF Export THEN
