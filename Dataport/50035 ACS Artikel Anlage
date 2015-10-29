@@ -56,20 +56,29 @@ IF excel_datensätze > 0 THEN
           IF COPYSTR(Artikelname,STRLEN(Artikelname)) =  '.' THEN
             BEGIN
               sonderartikel_schaeffler := TRUE;
+              v_PL_EURO_Pfad := PL_EURO_Schaeffler_Pfad;
+              v_PL_USD_Pfad :=  PL_USD_Schaeffler_Pfad;
               ek_system_währung := '';
               Artikelname := COPYSTR(Artikelname,1,STRLEN(Artikelname)-1);
+              PL_Version_Systeme := PL_Version_Schaeffler;
+              startdatum := 220415D;
+            END
+          ELSE
+            BEGIN
+              v_PL_EURO_Pfad := PL_EURO_Pfad;
+              v_PL_USD_Pfad :=  PL_USD_Pfad;
+              PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
             END;
-          PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
         END;
 
-      IF FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value) <> '' THEN
+      IF (sonderartikel_schaeffler= FALSE) AND (FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value) <> '') THEN
         startdatum := Quelle_Sheet.Range(Spalte_Quelle_Startdatum+Quelle_j).Value;
       klassifizierung := Quelle_Sheet.Range(Spalte_Quelle_Klass+Quelle_j).Value;
       artgruppe := Quelle_Sheet.Range(Spalte_Quelle_Artgruppe+Quelle_j).Value;
 
       IF ek_system_währung = 'USD' THEN
         BEGIN
-          PL_Book := PL_Excel.Workbooks._Open(PL_USD_Pfad,0,TRUE);
+          PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
           PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
           IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
             ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
@@ -78,7 +87,7 @@ IF excel_datensätze > 0 THEN
         BEGIN
           IF ek_system_währung = '' THEN
             BEGIN
-              PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
+              PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
               PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
               IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                 ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
@@ -100,8 +109,10 @@ IF excel_datensätze > 0 THEN
       IF cell_part <> '' THEN
         BEGIN
           cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
-          IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
+          IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
+          AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
           AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge')
+          AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'Quotation')
           AND (STRPOS(FORMAT(PL_Sheet.Range(cell_part).Value),'Contact') = 0) THEN
             excel_msrp := PL_Sheet.Range(cell_part).Value;
           excel_msrp := ROUND(excel_msrp,0.01);
@@ -170,6 +181,8 @@ IF excel_datensätze > 0 THEN
                   Artikel."Item Tracking Code" := 'KEINE';
                   Artikel.Serviceklassifizierung := 'KEINE';
                   Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
+                  Artikel."Gen. Prod. Posting Group" := 'SCHULUNG';
+                  Artikel."VAT Prod. Posting Group" := '19DL';
                 END
               ELSE
                 IF services_artikel = TRUE THEN
@@ -178,6 +191,8 @@ IF excel_datensätze > 0 THEN
                     Artikel."Item Tracking Code" := 'KEINE';
                     Artikel.Serviceklassifizierung := 'KEINE';
                     Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
+                    Artikel."Gen. Prod. Posting Group" := 'SERVICE';
+                    Artikel."VAT Prod. Posting Group" := '19DL';
                   END
                 ELSE
                   BEGIN
@@ -186,7 +201,11 @@ IF excel_datensätze > 0 THEN
                     IF (klassifizierung = 'KEINE') OR (klassifizierung = 'SOFTWARE') THEN
                       BEGIN
                         Artikel."Item Tracking Code" := 'KEINE';
-                        Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
+                        IF (STRPOS(UPPERCASE(Artikelname),'RMK') <> 0) OR (STRPOS(UPPERCASE(Artikelname),'MRK') <> 0)
+                        OR (STRPOS(UPPERCASE(Artikelname),'WALL-MK') <> 0) OR (STRPOS(UPPERCASE(Artikelname),'RMSHL') <> 0) THEN
+                          Artikel.Artikelgruppe := 'ZUBEHÖR'
+                        ELSE
+                          Artikel.Artikelgruppe := 'LIZENZEN/SOFTWARE';
                         IF klassifizierung = 'KEINE' THEN Artikel.Serviceklassifizierung := 'KEINE';
                       END
                     ELSE
@@ -296,6 +315,7 @@ IF excel_datensätze > 0 THEN
               //                              VK-Preise EURO bzw. USD einspielen
               //*********************************************************************************************
 
+              {
               IF ek_system_währung = 'USD' THEN
                 vk_system_währung_einspielen := '';
               IF ek_system_währung = '' THEN
@@ -307,21 +327,20 @@ IF excel_datensätze > 0 THEN
                   IF vk_system_währung_einspielen = '' THEN
                     BEGIN
                       //PL_Book.Close;
-                      PL_Book := PL_Excel.Workbooks._Open(PL_EURO_Pfad,0,TRUE);
+                      PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
                       PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
                       IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
-                        ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.')
-;
+                        ERROR(Text002);
                     END;
 
                   IF vk_system_währung_einspielen = 'USD' THEN
                     BEGIN
                       //PL_Book.Close;
-                      PL_Book := PL_Excel.Workbooks._Open(PL_USD_Pfad,0,TRUE);
+                      PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
                       PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
                       IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
-                        ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.')
-;
+                        ERROR(Text003);
+
                     END;
 
                   cell_services := FindRow('Service',Spalte_PL_PGroup);
@@ -330,8 +349,10 @@ IF excel_datensätze > 0 THEN
                   cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
 
                   excel_msrp := 0;
-                  IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '') AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
+                  IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
+                  AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
                   AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge')
+                  AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'Quotation')
                   AND (STRPOS(FORMAT(PL_Sheet.Range(cell_part).Value),'Contact') = 0) THEN
                     excel_msrp := PL_Sheet.Range(cell_part).Value;
                   excel_msrp := ROUND(excel_msrp,0.01);
@@ -362,6 +383,7 @@ IF excel_datensätze > 0 THEN
 
                   PL_Book.Close;
                 END;
+              }
             END
           ELSE
             Quelle_Sheet.Range('F'+Quelle_j).Value := 'BEREITS ANGELEGT';
