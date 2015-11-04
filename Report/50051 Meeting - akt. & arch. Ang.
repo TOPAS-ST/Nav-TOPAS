@@ -2,8 +2,8 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
 {
   OBJECT-PROPERTIES
   {
-    Date=10.09.15;
-    Time=15:06:22;
+    Date=04.11.15;
+    Time=14:27:31;
     Modified=Yes;
     Version List=;
   }
@@ -251,6 +251,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionType=Body;
             SectionWidth=18900;
             SectionHeight=450;
+            KeepWithNext=No;
           }
           CONTROLS
           {
@@ -332,8 +333,9 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionWidth=18900;
             SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND ("Feld 16" <> Endkunde_temp));
+                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND (("Feld 16" <> Endkunde_temp) OR ("Belegnr." <> Belegnr_temp)));
                            Endkunde_temp := "Feld 16";
+                           Belegnr_temp  := "Belegnr.";
                          END;
 
           }
@@ -354,8 +356,9 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionWidth=18900;
             SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND ("Feld 11" <> System_Projektinfo_temp));
+                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND (("Feld 11" <> System_Projektinfo_temp) OR ("Belegnr." <> Belegnr_temp )));
                            System_Projektinfo_temp := "Feld 11";
+                           Belegnr_temp  := "Belegnr.";
                          END;
 
           }
@@ -631,6 +634,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionType=Body;
             SectionWidth=18900;
             SectionHeight=450;
+            KeepWithNext=No;
           }
           CONTROLS
           {
@@ -712,8 +716,9 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionWidth=18900;
             SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND ("Feld 16" <> Endkunde_temp));
+                           CurrReport.SHOWOUTPUT(("Feld 16" <> '') AND (("Feld 16" <> Endkunde_temp) OR ("Belegnr." <> Belegnr_temp)));
                            Endkunde_temp := "Feld 16";
+                           Belegnr_temp  := "Belegnr.";
                          END;
 
           }
@@ -734,8 +739,9 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
             SectionWidth=18900;
             SectionHeight=450;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND ("Feld 11" <> System_Projektinfo_temp));
+                           CurrReport.SHOWOUTPUT(("Feld 11" <> '') AND (("Feld 11" <> System_Projektinfo_temp) OR ("Belegnr." <> Belegnr_temp )));
                            System_Projektinfo_temp := "Feld 11";
+                           Belegnr_temp  := "Belegnr.";
                          END;
 
           }
@@ -923,6 +929,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
       nur_archivierte@1140028 : Boolean;
       Endkunde_temp@1140029 : Text[50];
       System_Projektinfo_temp@1140030 : Text[50];
+      Belegnr_temp@1140031 : Code[20];
 
     PROCEDURE Akt_Angebote_listen@1140000();
     BEGIN
