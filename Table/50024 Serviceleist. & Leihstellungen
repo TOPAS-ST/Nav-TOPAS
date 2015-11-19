@@ -130,7 +130,8 @@ IF (Art = Art:: Service) AND ("Seriennr." <> '') THEN
         Artikelposten.RESET;
         Artikelposten.SETFILTER(Artikelposten."Document Type",'Verkaufslieferung');
         Artikelposten.SETFILTER(Artikelposten."Document No.",'%1',"Urspr. Lieferscheinnr.");
-        Artikelposten.SETFILTER(Artikelposten."Source No.",'%1',"Debitornr.");
+        Artikelposten.SETFILTER(Artikelposten."Document Line No.",'%1',"Urspr. Lieferscheinzeilennr.");
+        //Artikelposten.SETFILTER(Artikelposten."Source No.",'%1',"Debitornr.");
         Artikelposten.SETFILTER(Artikelposten."Item Tracking",'%1',Artikelposten."Item Tracking"::"Serial No.");
         Artikelposten.SETFILTER(Artikelposten."Serial No.",'%1',"Seriennr.");
         IF NOT Artikelposten.FINDFIRST THEN
@@ -671,11 +672,10 @@ CreateToDo()
 TempToDo.CreateToDoFromLeihstellung(Rec);
 
 Passwort_generieren(Artikelnr : Code[20];Benutzer : Code[40];Seriennr : Code[20];Datum : Date) Passwort : Text[30]
-Artikel.GET(Artikelnr);
+IF Benutzer = '' THEN
+  EXIT('');
 
-IF Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS' THEN
-  IF (Seriennr = '') OR  (Benutzer = '') THEN
-    EXIT('');
+Artikel.GET(Artikelnr);
 
 LizenzTab.RESET;
 LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
@@ -1129,6 +1129,7 @@ ELSE
           END;
       END;
   END;
+
 COMMIT;
 
 CreateSystemFromSalesHeader(VAR AUnr : Code[20];SOR_eingeschlossen : Boolean)
@@ -1144,7 +1145,7 @@ IF Liefkopf.FINDLAST THEN
 
     //SOR Aufträge werden standardmäßig nicht in Systemverträge gewandelt
     IF SOR_eingeschlossen = FALSE THEN
-      IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+      IF (STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0) OR (Liefkopf."Location Code" = 'MUST') THEN
         EXIT;
 
     Liefzeile.RESET;
@@ -1427,7 +1428,8 @@ IF Liefkopf.FINDLAST THEN
                     IF PrüfeSystemLiefzeile.FINDFIRST THEN
                       BEGIN
                         REPEAT
-                          IF (Artikel.GET(PrüfeSystemLiefzeile."No.")) AND (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') THEN
+                          IF (Artikel.GET(PrüfeSystemLiefzeile."No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') 
+                          OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
                             BEGIN
                               PrüfeCHAMPZuordnung.RESET;
                               PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',PrüfeSystemLiefzeile."Order No.");
@@ -1443,7 +1445,6 @@ IF Liefkopf.FINDLAST THEN
                           BEGIN
                             MESSAGE(Text019,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
                             Liefzeile."ACS Projektinfos");
-                            COMMIT;
                             CLEAR(WartungsÜbersicht);
                             WartungsÜbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
                             IF WartungsÜbersicht.FINDFIRST THEN
@@ -1897,7 +1898,7 @@ IF Liefkopf.FINDLAST THEN
  
                         SystemPos.MODIFY;
                         SystemPos.FehlendeSystemZugehoerigkeit(SystemPos."Wartungsvertragsnr.",SystemPos."Lfd. Nr.");
-
+  
                         COMMIT;
                       END
                     ELSE
