@@ -2,8 +2,8 @@ OBJECT Table 27 Item
 {
   OBJECT-PROPERTIES
   {
-    Date=30.09.15;
-    Time=11:57:10;
+    Date=23.11.15;
+    Time=13:35:26;
     Modified=Yes;
     Version List=NAVW15.00,CTM;
   }
@@ -21,9 +21,9 @@ OBJECT Table 27 Item
                //TOPAS 23.09.08-ST
                IF "No." <> xRec."No." THEN BEGIN
                  IF CONFIRM('M”chten Sie Nummer 2 umbenennen?',TRUE) THEN
-                 BEGIN
-                   VALIDATE("No. 2","No.");
-                 END;
+                   VALIDATE("No. 2","No.")
+                 ELSE
+                   VALIDATE("No. 2","No. 2");
                END;
                //TOPAS Ende
 
