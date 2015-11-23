@@ -1524,20 +1524,23 @@ IF Liefkopf.FINDLAST THEN
                         PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
                         PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',AUnr);
                         PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                        PrüfeCHAMPZuordnung.SETFILTER(Basisgerät,'%1',FALSE);
                         IF PrüfeCHAMPZuordnung.FINDFIRST THEN
                           BEGIN
+                            //Dieser Umweg muss genommen werden, um prüfen zu können, ob ein Basissystem in der Kalk. vorliegt
                             CHAMPZuordnungHolen.RESET;
                             CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
                             CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
                             CHAMPZuordnungHolen.SETFILTER(Basisgerät,'%1',TRUE);
                             CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Nr.");
                             CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
-                            IF (CHAMPZuordnungHolen.FINDFIRST) AND (CHAMPZuordnungHolen."Belegnr." = Wartung."Auftragsnr.")
-                            AND (CHAMPZuordnungHolen."Belegzeilennr." = Wartung."Auftragszeilennr.") THEN
-                              BEGIN
-                                SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                                SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
-                              END;
+                            IF CHAMPZuordnungHolen.FINDFIRST THEN
+                              IF (CHAMPZuordnungHolen."Belegnr." = Wartung."Auftragsnr.")
+                              AND (CHAMPZuordnungHolen."Belegzeilennr." = Wartung."Auftragszeilennr.") THEN
+                                BEGIN
+                                  SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                  SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                END
                           END
                         ELSE
                           BEGIN
@@ -3395,3 +3398,4 @@ CASE SUP_Artikelnr OF
 END;
 
 EXIT(SUP_Artikelnr);
+  
