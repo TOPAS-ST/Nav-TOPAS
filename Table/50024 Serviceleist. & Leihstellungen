@@ -2786,9 +2786,8 @@ IF Wartungsvertrag.FINDFIRST THEN
             END;
             temp_ablaufdatum := Servicepositionen."Ablaufdatum Serviceleistung";
         UNTIL Servicepositionen.NEXT = 0;
-
+        Wartungsvertrag.Inaktiv := FALSE;
         Wartungsvertrag.MODIFY;
-
       END;
   END;
 
@@ -3398,4 +3397,3 @@ CASE SUP_Artikelnr OF
 END;
 
 EXIT(SUP_Artikelnr);
-  
