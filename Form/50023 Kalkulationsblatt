@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=22.06.15;
-    Time=12:19:32;
+    Date=20.11.15;
+    Time=14:21:46;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -40,7 +40,7 @@ OBJECT Form 50023 Kalkulationsblatt
                            IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
                            OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')
                            OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
-                           OR (Artikel.Artikelgruppe = 'APSS_OB')) THEN
+                           OR (Artikel.Artikelgruppe = 'APSS_OB') OR (Artikel.Artikelgruppe ='CHAMPS_PARTNER')) THEN
                              BEGIN
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -413,7 +413,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                         END;
                                                          }
     { 1140061;Label     ;2750 ;3300 ;10890;440  ;Name=label_hinweis_kalk_prozentsatz;
-                                                 CaptionML=DEU="Fr ACTS = Rabatt, fr ACHAT = Marge eingeben." }
+                                                 CaptionML=DEU="Fr ACTS + CHAMPS Partner = Rabatt, fr ACHAT = Marge eingeben." }
     { 1140062;TextBox   ;220  ;3300 ;2200 ;440  ;Name=txtbox_kalk_prozentsatz;
                                                  SourceExpr=kalk_prozentsatz;
                                                  OnValidate=BEGIN
@@ -427,6 +427,9 @@ OBJECT Form 50023 Kalkulationsblatt
 
                                                               IF (kalk_prozentsatz > 5) AND (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
                                                                 ERROR(Text017,5);
+
+                                                              IF (kalk_prozentsatz < 20) AND (Artikel.Artikelgruppe = 'CHAMPS_PARTNER') THEN
+                                                                ERROR(Text021,20);
                                                             END;
                                                              }
   }
@@ -512,6 +515,12 @@ OBJECT Form 50023 Kalkulationsblatt
 
       Text020@1140036 : TextConst
         'DEU=Die Laufzeit wurde entsprechend des Wartungsvertrages auf %1 angepasst.';
+
+      Text021@1140037 : TextConst
+        'DEU=Der CHAMPS Partner Rabatt darf den Wert von %1 nicht unterschreiten.';
+
+      Text022@1140038 : TextConst
+        'DEU=Es empfiehlt sich nicht fremderworbene Basissysteme mit derselben Artikelnr. zu splitten. Bitte kumulieren Sie die Ger„te in einer Position und nutzen Sie die Mengen Angabe.';
 
     PROCEDURE HoleArtikelPos@1140007();
     VAR
@@ -1174,6 +1183,9 @@ OBJECT Form 50023 Kalkulationsblatt
               Ger„teArtikel.GET(ChampRelaDoc."Ger„te Artikelnr.");
               IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." <> v_artikelnr) THEN
                 ERROR(Text016);
+              IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." = v_artikelnr)
+              AND (ChampRelaDoc.Fremderwerb = TRUE) THEN
+                ERROR(Text022);
               v_artikelnr := ChampRelaDoc."Ger„te Artikelnr.";
               IF Ger„teArtikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
                 BEGIN
@@ -1820,6 +1832,9 @@ OBJECT Form 50023 Kalkulationsblatt
             CurrForm.Ablaufdatum.VISIBLE(TRUE);
             CurrForm."Vertragsnr. bernommen".VISIBLE(TRUE);
             CurrForm."MSRP Service".VISIBLE(TRUE);
+            Artikel.GET("SUP Artikelnr.");
+            IF Artikel.Artikelgruppe ='CHAMPS_PARTNER' THEN
+              kalk_prozentsatz := 20;
           END;
         'SPL-AU' :
           BEGIN
