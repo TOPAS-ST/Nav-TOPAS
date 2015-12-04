@@ -3653,7 +3653,7 @@ IF AUzeile.FINDFIRST THEN
                     PrüfeAUzeile.RESET;
                     PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
                     PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
-                    PrüfeAUzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
+                    //PrüfeAUzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeAUzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeAUzeile."Qty. to Ship";
                   END
@@ -3662,7 +3662,7 @@ IF AUzeile.FINDFIRST THEN
                     PrüfeLiefzeile.RESET;
                     PrüfeLiefzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
                     PrüfeLiefzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
-                    PrüfeLiefzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
+                    //PrüfeLiefzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeLiefzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeLiefzeile.Quantity;
                   END;
@@ -3713,8 +3713,13 @@ IF AUzeile.FINDFIRST THEN
                 basisgerät_kollision_ok := FALSE;
                 IF ServiceZuordnungHolen.Basisgerät THEN
                   BEGIN
-                    IF Artikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
+                    IF (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') AND (v_artikelnr <>
+                    ServiceZuordnungHolen."Geräte Artikelnr.") THEN
                       menge_basissystem_pos += 1;
+
+                    IF (v_basissystem = ServiceZuordnungHolen."Geräte Artikelnr.")
+                    AND (ServiceZuordnungHolen.Fremderwerb = TRUE) THEN
+                      ERROR(Text138);
 
                     ServiceZuordnungBeleg.RESET;
                     ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
@@ -3776,6 +3781,7 @@ IF AUzeile.FINDFIRST THEN
                                   UNTIL PrüfeServicePos.NEXT = 0;
                              END;
                           END;
+                        v_basissystem := ServiceZuordnungHolen."Geräte Artikelnr.";
                       UNTIL (ServiceZuordnungBeleg.NEXT = 0) OR (basisgerät_kollision_ok);
                   END;
 
