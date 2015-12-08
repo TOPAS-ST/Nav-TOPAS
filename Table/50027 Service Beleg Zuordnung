@@ -231,6 +231,10 @@ Rabatt/Marge - OnValidate()
 
 Rabatt/Marge - OnLookup()
 
+Laufzeit ab Buchungsdatum - OnValidate()
+
+Laufzeit ab Buchungsdatum - OnLookup()
+
 Gruppierung - OnValidate()
 
 Gruppierung - OnLookup()
