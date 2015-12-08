@@ -3,7 +3,7 @@ Documentation()
 
 OnRun()
 
-Zähle_Service_verlängerungen(Klasse : 'Einzelgerät,Mehrgeräte';Export : Boolean)
+Zähle_Service_detailiert(Klasse : 'Einzelgerät,Mehrgeräte';Export : Boolean)
 //***************************************************************************************************
 //    Zählt verschiedene Statistiken zu den Wartungsverträgen z.B. wieviele velängert wurden etc.
 //***************************************************************************************************
@@ -25,8 +25,9 @@ IF Klasse = Klasse :: Einzelgerät THEN
   Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Einzelgerät);
 IF Klasse = Klasse :: Mehrgeräte THEN
   Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Mehrgeräte);
-Wartungsvertrag.SETFILTER(Status,'%1|%2|%3|%4',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
-                          Wartungsvertrag.Status :: ACHAT, Wartungsvertrag.Status :: "Champs Partner");
+//Wartungsvertrag.SETFILTER(Status,'%1|%2|%3|%4',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+//                          Wartungsvertrag.Status :: ACHAT, Wartungsvertrag.Status :: "Champs Partner");
+Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: System);
 IF Wartungsvertrag.FINDFIRST THEN
   REPEAT
     Window.UPDATE(1,Wartungsvertrag."Wartungsvertragsnr.");
@@ -180,6 +181,81 @@ IF zähler10 <> 0 THEN
   MESSAGE('Korrigierte Verträge: %1',zähler10);
 
 Window.CLOSE;
+IF Export THEN
+  BEGIN
+    InfoFileF.CLOSE;
+    InfoFileF2.CLOSE;
+  END;
+
+Zähle_Service_einfach(Klasse : 'Einzelgerät,Mehrgeräte';Export : Boolean)
+//***************************************************************************************************
+//    Zählt verschiedene Statistiken zu den Wartungsverträgen z.B. wieviele velängert wurden etc.
+//***************************************************************************************************
+
+IF Export THEN
+  BEGIN
+    InfoFileF.TEXTMODE := TRUE;
+    InfoFileF.CREATE('C:\Temp\Service_Verlängerungen_alle.txt');
+    InfoFileF2.TEXTMODE := TRUE;
+    InfoFileF2.CREATE('C:\Temp\Service_Verlängerungen_mehrmals.txt');
+    InfoFileF.OPEN('C:\Temp\Service_Verlängerungen.txt');
+    "CR+LF"[2]:=10;
+  END;
+
+zähler := 0;
+zähler2 := 0;
+zähler3 := 0;
+
+Wartungsvertrag.RESET;
+//Wartungsvertrag.SETFILTER(Inaktiv,'%1',FALSE);
+IF Klasse = Klasse :: Einzelgerät THEN
+  Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Einzelgerät);
+IF Klasse = Klasse :: Mehrgeräte THEN
+  Wartungsvertrag.SETFILTER(Klasse,'%1',Wartungsvertrag.Klasse :: Mehrgeräte);
+//Wartungsvertrag.SETFILTER(Status,'%1|%2|%3|%4',Wartungsvertrag.Status :: Auftrag,Wartungsvertrag.Status :: ACTS,
+//                          Wartungsvertrag.Status :: ACHAT, Wartungsvertrag.Status :: "Champs Partner");
+Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: System);
+//Alle Verträge
+IF Wartungsvertrag.FINDFIRST THEN
+  zähler := Wartungsvertrag.COUNT;
+
+//Laufende Verträge, aber nur Erstverträge
+Wartungsvertrag.SETFILTER(Vertragsablaufdatum,'>=%1',WORKDATE);
+Wartungsvertrag.SETFILTER(Verlängerungen,'%1',0);
+IF Wartungsvertrag.FINDFIRST THEN
+  zähler2 := Wartungsvertrag.COUNT;
+
+//Laufende Verträge, verlängerte Verträge
+Wartungsvertrag.SETFILTER(Vertragsablaufdatum,'>=%1',WORKDATE);
+Wartungsvertrag.SETFILTER(Verlängerungen,'>%1',0);
+IF Wartungsvertrag.FINDFIRST THEN
+  zähler3 := Wartungsvertrag.COUNT;
+
+//Abgelaufene Verträge
+Wartungsvertrag.SETFILTER(Vertragsablaufdatum,'<%1',WORKDATE);
+Wartungsvertrag.SETFILTER(Verlängerungen,'>=%1',0);
+IF Wartungsvertrag.FINDFIRST THEN
+  zähler4 := Wartungsvertrag.COUNT;
+
+//abgelaufene Verträge, letzten 7 Tage
+//IF (Wartungsvertrag.Vertragsablaufdatum >= CALCDATE('-1W',TODAY))
+//AND (Wartungsvertrag.Vertragsablaufdatum < TODAY) THEN
+//  zähler5 += 1;
+
+
+IF Klasse = Klasse :: Einzelgerät THEN
+  statistik_header := 'Service';
+IF Klasse = Klasse :: Mehrgeräte THEN
+  statistik_header := 'Flat Geräte';
+
+
+MESSAGE('Statistik %1:\\Es gibt insgesamt %2 Wartungsverträge.\\'+
+'%3 davon sind laufende Verträge\'+
+'         %4 davon sind aktive Erstverträge\'+
+'         %5 dabon sind laufende Verträge mit Verlängerung (min. 1x)\\'+
+'%6 Verträge sind derzeit abgelaufen\\',
+statistik_header,zähler,zähler2+zähler3,zähler2,zähler3,zähler4);
+
 IF Export THEN
   BEGIN
     InfoFileF.CLOSE;
