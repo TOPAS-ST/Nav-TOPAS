@@ -516,13 +516,17 @@ IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
             IF SystemPos."Wartungsvertragsnr." = '' THEN
               ERROR(Text031,FIELDCAPTION(Basisgerät),SystemPos."Seriennr.");
 
-            VergleichSystemPos.RESET;
-            VergleichSystemPos.SETRANGE(Art,VergleichSystemPos.Art :: System);
-            VergleichSystemPos.SETRANGE(Inaktiv,FALSE);
-            VergleichSystemPos.SETRANGE("Wartungsvertragsnr.",SystemPos."Wartungsvertragsnr.");
-            VergleichSystemPos.SETRANGE(Basisgerät,TRUE);
-            IF (VergleichSystemPos.FINDFIRST) AND (VergleichSystemPos.COUNT > 1) THEN
-              ERROR(Text035,VergleichSystemPos.COUNT);
+            Artikel.GET("Artikelnr.");
+            IF Artikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
+              BEGIN
+                VergleichSystemPos.RESET;
+                VergleichSystemPos.SETRANGE(Art,VergleichSystemPos.Art :: System);
+                VergleichSystemPos.SETRANGE(Inaktiv,FALSE);
+                VergleichSystemPos.SETRANGE("Wartungsvertragsnr.",SystemPos."Wartungsvertragsnr.");
+                VergleichSystemPos.SETRANGE(Basisgerät,TRUE);
+                IF (VergleichSystemPos.FINDFIRST) AND (VergleichSystemPos.COUNT > 1) THEN
+                  ERROR(Text035,VergleichSystemPos.COUNT);
+              END;
           END;
 
         TempSystemPos.RESET;
@@ -2971,6 +2975,9 @@ ELSE
 WartungsStartErmitteln("SUP Artikelnr" : Code[20];Startdatum : Date;Buchungsdatum : Date;Wartungsnr : Code[20];Laufzeit_ab_Buchungsdatu
 IF ("SUP Artikelnr"= 'CHAMPS-RE_INSTATE#01') OR ("SUP Artikelnr" = 'RE_INSTATEMENT_FEE') THEN
   EXIT(0D);
+
+IF Laufzeit_ab_Buchungsdatum THEN
+  EXIT(Buchungsdatum);
 
 IF Wartungsnr <> '' THEN
   BEGIN
