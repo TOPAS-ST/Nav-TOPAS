@@ -42,7 +42,11 @@ ELSE
     IF Status = Status :: ACHAT THEN
       überschrift := 'ACHAT'
     ELSE
-      überschrift := 'Wartungsvertrag';
+      IF Status = Status :: "Champs Partner" THEN
+        überschrift := 'CHAMPS Partner'
+      ELSE
+        überschrift := 'Wartungsvertrag';
+
 
 CurrForm.SORSymb.VISIBLE := FALSE;
 IF SOR = TRUE THEN
@@ -250,7 +254,7 @@ IF SystemPos.FINDFIRST THEN
       IF SystemPos.Basisgerät = TRUE THEN
         ERROR(Text003);
 
-      IF SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
+      IF SystemPos.SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
       SystemPos."Belegzeilennr.") = FALSE THEN
         BEGIN
           SystemPos."Wartungsvertragsnr." := '';
@@ -285,6 +289,126 @@ IF TempSystemPos.FINDFIRST THEN
   END
 ELSE
   EXIT(FALSE);
+
+Systeme_aufteilen()
+AlterVertrag.GET("Wartungsvertragsnr.");
+gesamt_systeme    := 0;
+markierte_systeme := 0;
+
+SystemPos.RESET;
+SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+SystemPos.SETRANGE(Basisgerät,TRUE);
+SystemPos.SETRANGE("Wartungsvertragsnr.","Wartungsvertragsnr.");
+IF SystemPos.FINDFIRST THEN
+  gesamt_systeme := SystemPos.COUNT;
+
+SystemPos.RESET;
+SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+SystemPos.SETRANGE("Zum Verschieben markieren",TRUE);
+SystemPos.SETRANGE(Basisgerät,TRUE);
+SystemPos.SETRANGE("Wartungsvertragsnr.","Wartungsvertragsnr.");
+IF SystemPos.FINDFIRST THEN
+  BEGIN
+
+    markierte_systeme := SystemPos.COUNT;
+
+    IF markierte_systeme = gesamt_systeme THEN
+      ERROR(Text009);
+
+    IF CONFIRM(Text010,TRUE,SystemPos.COUNT) THEN
+      REPEAT
+
+        IF SystemPos_aktion_gesperrt(SystemPos."Artikelnr.",SystemPos."Seriennr.",SystemPos."Nr.",
+        SystemPos."Belegzeilennr.") = FALSE THEN
+          BEGIN
+
+            NeuerVertrag.INIT;
+            NeuerVertrag.INSERT(TRUE);
+
+            SystemPos."Wartungsvertragsnr." := NeuerVertrag."Wartungsvertragsnr.";
+            SystemPos."Hauptwartungsvertragsnr." := NeuerVertrag."Hauptwartungsvertragsnr.";
+            SystemPos."Zum Verschieben markieren" := FALSE;
+
+            NeueSystemPos.RESET;
+            NeueSystemPos.SETRANGE(Inaktiv,FALSE);
+            NeueSystemPos.SETRANGE(Art,NeueSystemPos.Art :: System);
+            NeueSystemPos.SETRANGE(Basisgerät,TRUE);
+            NeueSystemPos.SETRANGE("Wartungsvertragsnr.",NeuerVertrag."Wartungsvertragsnr.");
+            IF NeueSystemPos.FINDFIRST THEN
+              BEGIN
+                SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+              END
+            ELSE
+              BEGIN
+                NeueSystemPos.RESET;
+                NeueSystemPos.SETRANGE(Inaktiv,FALSE);
+                NeueSystemPos.SETRANGE(Art,NeueSystemPos.Art :: System);
+                NeueSystemPos.SETRANGE("Wartungsvertragsnr.",NeuerVertrag."Wartungsvertragsnr.");
+                IF NeueSystemPos.FINDFIRST THEN
+                  BEGIN
+                    SystemPos."Gehört zu Lfd. Nr." := NeueSystemPos."Gehört zu Lfd. Nr.";
+                  END
+                ELSE
+                  IF SystemPos.Basisgerät = TRUE THEN
+                    SystemPos."Gehört zu Lfd. Nr." := SystemPos."Lfd. Nr."
+                  ELSE
+                    MESSAGE(Text004,SystemPos."Seriennr.",SystemPos.FIELDCAPTION("Gehört zu Lfd. Nr."));
+              END;
+
+            IF SystemPos.Basisgerät = TRUE THEN
+              BEGIN
+                 NeuerVertrag."Debitornr." := AlterVertrag."Debitornr.";
+                 NeuerVertrag.Basisgerät := SystemPos."Artikelnr.";
+                 NeuerVertrag.Startdatum := AlterVertrag.Startdatum;
+                 NeuerVertrag."Ablauf Gewährleistung" := AlterVertrag."Ablauf Gewährleistung";
+                 NeuerVertrag."Hauptwartungsvertragsnr." := AlterVertrag."Hauptwartungsvertragsnr.";
+                 NeuerVertrag.Status := AlterVertrag.Status;
+                 NeuerVertrag.Klasse := AlterVertrag.Klasse;
+                 NeuerVertrag.Volumen := 1;
+                 NeuerVertrag.Auftragsstatus := AlterVertrag.Auftragsstatus;
+                 NeuerVertrag."Auftragsnr." := AlterVertrag."Auftragsnr.";
+                 NeuerVertrag."Auftragszeilennr." := AlterVertrag."Auftragszeilennr.";
+                 NeuerVertrag."Lieferscheinnr." := AlterVertrag."Lieferscheinnr.";
+                 NeuerVertrag."Lieferscheinzeilennr." := AlterVertrag."Lieferscheinzeilennr.";
+                 NeuerVertrag.SOR := AlterVertrag.SOR;
+                 NeuerVertrag."SOR Option" := AlterVertrag."SOR Option";
+                 NeuerVertrag.Rabatt := AlterVertrag.Rabatt;
+                 NeuerVertrag.MODIFY(TRUE);
+
+                IF AlterVertrag.Klasse = AlterVertrag.Klasse :: Mehrgeräte THEN
+                  BEGIN
+                    AlterVertrag.Volumen -= 1;
+                    AlterVertrag.MODIFY(TRUE);
+                    NeuerVertrag.Volumen += 1;
+                    NeuerVertrag.MODIFY(TRUE);
+                  END;
+
+                DebKontaktBez.RESET;
+                DebKontaktBez.SETFILTER("Business Relation Code",'%1','DEB');
+                DebKontaktBez.SETFILTER("No.",'%1',AlterVertrag."Debitornr.");
+                IF DebKontaktBez.FINDFIRST THEN
+                  BEGIN
+                    Ansprech.RESET;
+                    Ansprech.SETFILTER("Kampagnennr.",'%1',NeuerVertrag."Wartungsvertragsnr.");
+                    Ansprech.SETFILTER("Kontaktnr.",'%1',DebKontaktBez."Contact No.");
+                    IF NOT Ansprech.FINDFIRST THEN
+                      BEGIN
+                        Ansprech.INIT;
+                        Ansprech.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
+                        Ansprech."Kampagnennr." := NeuerVertrag."Wartungsvertragsnr.";
+                        Ansprech.Führungsrolle := TRUE;
+                        Ansprech.INSERT;
+                      END;
+                  END;
+              END;
+
+            SystemPos.MODIFY(TRUE);
+            MESSAGE(Text005,SystemPos."Seriennr.",NeuerVertrag."Wartungsvertragsnr.");
+          END;
+      UNTIL SystemPos.NEXT = 0;
+  END
+ELSE
+  ERROR(Text011);
 
 Angebote_pruefen(ausgabe : Boolean)
 AN_liegt_vor := FALSE;
