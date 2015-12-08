@@ -2039,7 +2039,7 @@ IF Vkliefkopf.FINDLAST THEN
                                        LizenzTab.VALIDATE("Artikelnr.",SeriennrVerfolgung."Item No.");
                                        LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
                                        CHAMPZuordnungHolen.Startdatum, SeriennrVerfolgung."Posting Date",
-                                       CHAMPZuordnungHolen."Wartungsvertragsnr."));
+                                       CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
                                        LizenzTab.Belegdatum := SeriennrVerfolgung."Posting Date";
                                        LizenzTab."Urspr. Buchungsdatum" := SeriennrVerfolgung."Posting Date";
                                        LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
@@ -2106,23 +2106,23 @@ IF Vkliefkopf.FINDLAST THEN
                                                    LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                                    LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                                    LizenzTab."Seriennr.");
-                                                   IF (LizenzTab.Verlängerung = FALSE) AND
-                                                   (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
+                                                   IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D)
+                                                   AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                                      LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                                    ELSE
                                                      IF LizenzTab.Verlängerung = TRUE THEN
-                                                       LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                                       IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
+                                                       OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                         LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+
                                                    LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                                   //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                                   //  BEGIN
-                                                       v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
-                                                       LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
-                                                       ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                                       LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                                       CHAMPZuordnungHolen."Wartungsvertragsnr.");
-                                                       IF v_verlaengerung_ablauf <> 0D THEN
-                                                         LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                                   //   END;
+                                                   v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
+                                                   LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
+                                                   ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
+                                                   LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
+                                                   CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                                   IF v_verlaengerung_ablauf <> 0D THEN
+                                                     LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                                  END;
 
                                                //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2230,7 +2230,7 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab."Abw. Geräte Artikelnr." := CHAMPZuordnungHolen."Abw. Geräte Artikelnr.";
                                 LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
                                 CHAMPZuordnungHolen.Startdatum,Vkliefkopf."Posting Date",
-                                CHAMPZuordnungHolen."Wartungsvertragsnr."));
+                                CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
                                 LizenzTab.Belegdatum := Vkliefzeile."Posting Date";
                                 LizenzTab.Benutzername := LizenzTab.Benutzername_generieren(LizenzTab."Artikelnr.",
                                                           LizenzTab."SUP Artikelnr.",LizenzTab."Seriennr.",
@@ -2294,22 +2294,23 @@ IF Vkliefkopf.FINDLAST THEN
                                             LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
-                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
+                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) 
+                                            AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                               LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                             ELSE
                                               IF LizenzTab.Verlängerung = TRUE THEN
-                                                LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                                IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
+                                                OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                  LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                            //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                            //  BEGIN
-                                                v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
-                                                LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
-                                                ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                                LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                                CHAMPZuordnungHolen."Wartungsvertragsnr.");
-                                                IF v_verlaengerung_ablauf <> 0D THEN
-                                                  LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                            //  END;
+                                            v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
+                                            LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
+                                            ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
+                                            LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
+                                            CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                            IF v_verlaengerung_ablauf <> 0D THEN
+                                              LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2430,7 +2431,7 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab."Abw. Geräte Artikelnr." := CHAMPZuordnungHolen."Abw. Geräte Artikelnr.";
                                 LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
                                 CHAMPZuordnungHolen.Startdatum,Vkliefkopf."Posting Date",
-                                CHAMPZuordnungHolen."Wartungsvertragsnr."));
+                                CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
                                 LizenzTab.Belegdatum := Vkliefzeile."Posting Date";
                                 LizenzTab."Urspr. Buchungsdatum" := Vkliefzeile."Posting Date";
                                 LizenzTab.Benutzername := LizenzTab.Benutzername_generieren(LizenzTab."Artikelnr.",
@@ -2491,22 +2492,23 @@ IF Vkliefkopf.FINDLAST THEN
                                             LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
-                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) THEN
+                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D)
+                                            AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                               LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
                                             ELSE
                                               IF LizenzTab.Verlängerung = TRUE THEN
-                                                LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+                                                IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
+                                                OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                  LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
+
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
-                                            //IF CHAMPZuordnungHolen."Wartungsvertragsnr." <> '' THEN
-                                            //  BEGIN
-                                                v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
-                                                LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
-                                                ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                                LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                                CHAMPZuordnungHolen."Wartungsvertragsnr.");
-                                                IF v_verlaengerung_ablauf <> 0D THEN
-                                                  LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
-                                            //  END;
+                                            v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
+                                            LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
+                                            ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
+                                            LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
+                                            CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                            IF v_verlaengerung_ablauf <> 0D THEN
+                                              LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
@@ -2966,7 +2968,7 @@ ELSE
       EXIT(AktLfdNr);
   END;
 
-WartungsStartErmitteln("SUP Artikelnr" : Code[20];Startdatum : Date;Buchungsdatum : Date;Wartungsnr : Code[20]) : Date
+WartungsStartErmitteln("SUP Artikelnr" : Code[20];Startdatum : Date;Buchungsdatum : Date;Wartungsnr : Code[20];Laufzeit_ab_Buchungsdatu
 IF ("SUP Artikelnr"= 'CHAMPS-RE_INSTATE#01') OR ("SUP Artikelnr" = 'RE_INSTATEMENT_FEE') THEN
   EXIT(0D);
 
