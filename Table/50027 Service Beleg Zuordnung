@@ -169,6 +169,19 @@ IF NOT ServiceZuordnungBeleg.FINDFIRST THEN
         END;
   END;
 
+//2015-12-11 ST Zusatz Berechnung der Re Instatement Fee Monate
+Artikel.GET("SUP Artikelnr.");
+IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+  BEGIN
+    champs_fee_monate := TOPAS_API.CalculateTimeDiff('M',Startdatum,WORKDATE);
+    IF champs_fee_monate < 3 THEN
+      champs_fee_monate := 0
+    ELSE
+      IF champs_fee_monate > 36 THEN
+        champs_fee_monate := 36;
+    VALIDATE(Laufzeit, FORMAT(champs_fee_monate)+ 'M');
+  END;
+
 VALIDATE(Ablaufdatum);
 
 Startdatum - OnLookup()
@@ -176,7 +189,11 @@ Startdatum - OnLookup()
 Ablaufdatum - OnValidate()
 IF "SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN ERROR(Text005);
 
-IF (Ablaufdatum < WORKDATE) AND (Ablaufdatum <> 0D) THEN
+Artikel.GET("SUP Artikelnr.");
+IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+  ERROR(Text007,FIELDCAPTION(Ablaufdatum),FIELDCAPTION(Startdatum));
+
+IF ((Ablaufdatum < WORKDATE) OR (Ablaufdatum < Startdatum)) AND (Ablaufdatum <> 0D) THEN
   ERROR(Text003,FIELDCAPTION(Ablaufdatum));
 
 //IF (xRec.Startdatum <> 0D) AND (Ablaufdatum = 0D) THEN
