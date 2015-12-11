@@ -3043,6 +3043,11 @@ OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLE
 ELSE
   ACTS := FALSE;
 
+IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
+  EXIT('CHAMPS-RE_INSTATEMENT_FEE');
+IF SUP_Artikelnr = 'RE_INSTATEMENT_FEE' THEN
+  EXIT('SUPP-REINSTATE-FEE');
+
 Champs.RESET;
 Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
 IF ACTS THEN
@@ -3054,12 +3059,7 @@ SUP_Artikelnr := ServiceTab.FakeSUPArtikelErmitteln(SUP_Artikelnr);
 Champs.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
 Champs.SETFILTER(Währungscode,'%1',Waehrung);
 IF Champs.FINDFIRST THEN
-  EXIT(Champs."Service Artikelnr.")
-ELSE
-  IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
-    EXIT('CHAMPS-RE_INSTATEMENT_FEE');
-  IF SUP_Artikelnr = 'RE_INSTATEMENT_FEE' THEN
-    EXIT('SUPP-REINSTATE-FEE');
+  EXIT(Champs."Service Artikelnr.");
 
 NewPosFromRMA(LfdNr : Code[20];AlteSN : Code[20];NeueSN : Code[20];"RMA-Nr" : Code[20];CopyRec : Record "Serviceleist. & Leihstellungen"
 IF CopyRec.Reklamiert = FALSE THEN
@@ -3104,7 +3104,9 @@ ServicePreiseNeuKalkulieren(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Laufze
 //2014-06-18 ST Nun auch für Misch ACTS/ACHAT
 //2014-12-09 ST ACTS Schaeffler Projekt
 //2015-03-18 ST ACTS Managed Spare Service
+//2015-04-27 ST CHAMPS zertifizierte Partner
 //2015-05-12 ST APSS One Box
+//2015-12-10 ST CHAMPS Re Instatement Fee
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -3127,6 +3129,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS_MSS := FALSE;
     APSS_OB := FALSE;
     CHAMPS := FALSE;
+    CHAMPS_PARTNER := FALSE;
+    RE_INSTATEMENT_FEE := FALSE;
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') THEN
       ACTS := TRUE
@@ -3147,8 +3151,10 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 CHAMPS_PARTNER := TRUE
               ELSE
                 IF Artikel.Artikelgruppe = 'APSS_OB' THEN
-                  APSS_OB := TRUE;
-
+                  APSS_OB := TRUE
+                ELSE
+                  IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+                    RE_INSTATEMENT_FEE := TRUE;
 
     EVALUATE(kalk_laufzeit,COPYSTR(Laufzeit,1,STRPOS(Laufzeit,'M')-1));
 
@@ -3247,8 +3253,15 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 END;
               END;
 
+            //Re Instatement Fee
+            IF RE_INSTATEMENT_FEE = TRUE THEN
+              BEGIN
+                normal_discount := 0.72;
+                spezial_discount := 1.25;
+              END;
+
             EXIT((ROUND((((Service_PL.MSRP * normal_discount) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit/v_laufzeit))
-            * (additional_discount),rundgs_faktor)) * spezial_discount);
+            * (additional_discount) * (spezial_discount),rundgs_faktor)));
 
           END;
 
@@ -3414,6 +3427,8 @@ CASE SUP_Artikelnr OF
  'APSS-OB-9X5/SOFTW#01' : EXIT('ACTS-SUPP-9X5/SOF#02');
  'APSS-OB-24X7/SOFT#01' : EXIT('ACTS-SUPP-24X7/SO#01');
  'APSS-OB-24X7/SOFT#02' : EXIT('ACTS-SUPP-24X7/SO#02');
+//Re Instatement Fee
+ 'CHAMPS-RE_INSTATE#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
 END;
 
 EXIT(SUP_Artikelnr);
