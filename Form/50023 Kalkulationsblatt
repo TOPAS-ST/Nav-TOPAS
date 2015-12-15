@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=20.11.15;
-    Time=14:21:46;
+    Date=10.12.15;
+    Time=17:04:36;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -154,6 +154,12 @@ OBJECT Form 50023 Kalkulationsblatt
                                                             END;
                                                              }
     { 1140010;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140009;
+                                                 InColumnHeading=Yes }
+    { 1140069;CheckBox  ;24448;5280 ;1839 ;440  ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 SourceExpr="Laufzeit ab Buchungsdatum" }
+    { 1140070;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140069;
                                                  InColumnHeading=Yes }
     { 1140030;TextBox   ;1056 ;2200 ;1500 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
@@ -1970,8 +1976,8 @@ OBJECT Form 50023 Kalkulationsblatt
       IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_PARTNER')
       OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
-      OR (Service_Artikel.Artikelgruppe = 'APSS_OB')
-      OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+      OR (Service_Artikel.Artikelgruppe = 'APSS_OB') OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
+      OR (Service_Artikel.Artikelgruppe = 'CHAMPS_FEE')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
         EXIT(TRUE);
