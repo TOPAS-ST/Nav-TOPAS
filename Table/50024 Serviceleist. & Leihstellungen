@@ -3116,8 +3116,9 @@ IF Runden THEN
 ELSE
   rundgs_faktor := 0.01;
 
+normal_discount := 0;
+additional_discount := 0;
 spezial_discount := 1;
-additional_discount := 1;
 
 Artikel.GET(SUP_Artikelnr);
 IF (Artikel."Software Upgrade Protection" = TRUE) THEN
@@ -3188,11 +3189,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 normal_discount := 0.72;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 1;
-                  2 : additional_discount := 0.95; // -5%
-                  3 : additional_discount := 0.88; // -12%
-                  4 : additional_discount := 0.84; // -16%
-                  5..100 : additional_discount := 0.8; // -20%
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -2%
+                  3 : additional_discount := 0.09; // -9%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
                 END;
               END;
 
@@ -3202,11 +3203,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 normal_discount := 0.8;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 1;
-                  2 : additional_discount := 0.95; // -5%
-                  3 : additional_discount := 0.88; // -12%
-                  4 : additional_discount := 0.84; // -16%
-                  5..100 : additional_discount := 0.8; // -20%
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -2%
+                  3 : additional_discount := 0.09; // -9%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
                 END;
               END;
 
@@ -3216,11 +3217,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 normal_discount := 0.9;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 1;
-                  2 : additional_discount := 0.95; // -5%
-                  3 : additional_discount := 0.88; // -12%
-                  4 : additional_discount := 0.84; // -16%
-                  5..100 : additional_discount := 0.8; // -20%
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -2%
+                  3 : additional_discount := 0.09; // -9%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
                 END;
               END;
 
@@ -3234,11 +3235,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             //ACTS Schaeffler EK Konditionen
             IF ACTS_SCHAEFFLER = TRUE THEN
               BEGIN
-                normal_discount := 1;
-                v_service_laufzeit := kalk_laufzeit DIV 12;
-                CASE v_service_laufzeit OF
-                  0..100 : additional_discount := 0.5 // -50 %;
-                END;
+                normal_discount := 0.5;
               END;
 
             //APSS One Box EK Konditionen
@@ -3247,9 +3244,9 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 normal_discount := 0.7;
                 v_service_laufzeit := kalk_laufzeit DIV 12;
                 CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 1;
-                  2 : additional_discount := 0.95; // -5%
-                  3..100 : additional_discount := 0.88; // -12%
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.05; // -5%
+                  3..100 : additional_discount := 0.12; // -12%
                 END;
               END;
 
@@ -3260,8 +3257,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                 spezial_discount := 1.25;
               END;
 
-            EXIT((ROUND((((Service_PL.MSRP * normal_discount) * Service_PL."Laufzeit in Jahren") * (kalk_laufzeit/v_laufzeit))
-            * (additional_discount) * (spezial_discount),rundgs_faktor)));
+            EXIT((ROUND((((Service_PL.MSRP * (normal_discount - additional_discount)) * Service_PL."Laufzeit in Jahren") *
+                 (kalk_laufzeit/v_laufzeit)) * (spezial_discount),rundgs_faktor)));
 
           END;
 
