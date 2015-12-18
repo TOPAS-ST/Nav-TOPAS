@@ -1460,6 +1460,7 @@ IF Liefkopf.FINDLAST THEN
                           BEGIN
                             MESSAGE(Text019,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
                             Liefzeile."ACS Projektinfos");
+                            COMMIT;
                             CLEAR(WartungsÜbersicht);
                             WartungsÜbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
                             IF WartungsÜbersicht.FINDFIRST THEN
@@ -2073,9 +2074,11 @@ IF Vkliefkopf.FINDLAST THEN
                                        LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(HoleLiefZeile."No.",
                                                                          Vkliefzeile."No.",ek_Währung);
                                        LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",Vkliefzeile."No.",
-                                                                 CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                                                 CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                                 CHAMPZuordnungHolen."Quotenr.");
                                        LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",
-                                       Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                                                   Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'MSRP',
+                                                                   FALSE,ek_Währung,CHAMPZuordnungHolen."Quotenr.");
                                        LizenzTab."Service Währungscode" := ek_Währung;
 
                                        //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -2261,9 +2264,11 @@ IF Vkliefkopf.FINDLAST THEN
                                 Vkliefzeile."No.",ek_Währung);
 
                                 LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                          CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                                          CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                          CHAMPZuordnungHolen."Quotenr.");
                                 LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
+                                                            CHAMPZuordnungHolen."Quotenr.");
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
                                 //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -2458,9 +2463,11 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(LizenzTab."Artikelnr.",
                                 Vkliefzeile."No.",ek_Währung);
                                 LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",
-                                                          Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung);
+                                                          Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                          CHAMPZuordnungHolen."Quotenr.");
                                 LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung);
+                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
+                                                            CHAMPZuordnungHolen."Quotenr.");
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
                                 //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
@@ -3046,7 +3053,7 @@ ELSE
 IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
   EXIT('CHAMPS-RE_INSTATEMENT_FEE');
 IF SUP_Artikelnr = 'RE_INSTATEMENT_FEE' THEN
-  EXIT('SUPP-REINSTATE-FEE');
+  EXIT('RE_INSTATEMENT_FEE');
 
 Champs.RESET;
 Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
@@ -3175,7 +3182,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
     Service_PL.SETFILTER("Artikelnr.",'%1',Artikelnr);
-    SUP_Artikelnr := ServiceTab.FakeSUPArtikelErmitteln(SUP_Artikelnr);
+    SUP_Artikelnr := FakeSUPArtikelErmitteln(SUP_Artikelnr);
     Service_PL.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
     Service_PL.SETFILTER(Währungscode,'%1',Währung);
     IF Service_PL.FINDFIRST THEN
@@ -3200,29 +3207,39 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             //ACTS EK Konditionen
             IF ACTS = TRUE THEN
               BEGIN
-                normal_discount := 0.8;
-                v_service_laufzeit := kalk_laufzeit DIV 12;
-                CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 0;
-                  2 : additional_discount := 0.02; // -2%
-                  3 : additional_discount := 0.09; // -9%
-                  4 : additional_discount := 0.12; // -12%
-                  5..100 : additional_discount := 0.15; // -15%
-                END;
+                IF ServiceQuoteIsValid(Quotenr) = TRUE THEN
+                  normal_discount := 0.62
+                ELSE
+                  BEGIN
+                    normal_discount := 0.8;
+                    v_service_laufzeit := kalk_laufzeit DIV 12;
+                    CASE v_service_laufzeit OF
+                      0..1 : additional_discount := 0;
+                      2 : additional_discount := 0.02; // -2%
+                      3 : additional_discount := 0.09; // -9%
+                      4 : additional_discount := 0.12; // -12%
+                      5..100 : additional_discount := 0.15; // -15%
+                    END;
+                  END;
               END;
 
             //ACTS Managed Spare Service EK Konditionen
             IF ACTS_MSS = TRUE THEN
               BEGIN
-                normal_discount := 0.9;
-                v_service_laufzeit := kalk_laufzeit DIV 12;
-                CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 0;
-                  2 : additional_discount := 0.02; // -2%
-                  3 : additional_discount := 0.09; // -9%
-                  4 : additional_discount := 0.12; // -12%
-                  5..100 : additional_discount := 0.15; // -15%
-                END;
+                IF ServiceQuoteIsValid(Quotenr) = TRUE THEN
+                  normal_discount := 0.85
+                ELSE
+                  BEGIN
+                    normal_discount := 0.9;
+                    v_service_laufzeit := kalk_laufzeit DIV 12;
+                    CASE v_service_laufzeit OF
+                      0..1 : additional_discount := 0;
+                      2 : additional_discount := 0.02; // -2%
+                      3 : additional_discount := 0.09; // -9%
+                      4 : additional_discount := 0.12; // -12%
+                      5..100 : additional_discount := 0.15; // -15%
+                    END;
+                  END;
               END;
 
             //ACHAT EK Konditionen
@@ -3413,19 +3430,36 @@ CASE SUP_Artikelnr OF
   'ACHAT/SOFTWARE/24#02' : EXIT('ACTS-SUPP-24x7/SO#02');
   'ACHAT-ADV-HWREPLA#01' : EXIT('ACTS-ADV-HWREPLAC#01');
 //Manuelle Artikel Filter erspart separate CHAMPS Partner Preisliste
- 'CHAMPS-BASIC-9X5-#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
- 'CHAMPS-BASIC-9X5-#02' : EXIT('CHAMPS-SUPP-8X5/S#02');
- 'CHAMPS-BASIC-24X7#01' : EXIT('CHAMPS-SUPP-24X7/#01');
- 'CHAMPS-BASIC-24X7#02' : EXIT('CHAMPS-SUPP-24X7/#02');
- 'CHAMPS-BASIC-AHR/1YR' : EXIT('CHAMPS-ADV-HWREPL#01');
- 'CHAMPS-BASIC-AHR/3YR' : EXIT('CHAMPS-ADV-HWREPL#02');
+  'CHAMPS-BASIC-9X5-#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
+  'CHAMPS-BASIC-9X5-#02' : EXIT('CHAMPS-SUPP-8X5/S#02');
+  'CHAMPS-BASIC-24X7#01' : EXIT('CHAMPS-SUPP-24X7/#01');
+  'CHAMPS-BASIC-24X7#02' : EXIT('CHAMPS-SUPP-24X7/#02');
+  'CHAMPS-BASIC-AHR/1YR' : EXIT('CHAMPS-ADV-HWREPL#01');
+  'CHAMPS-BASIC-AHR/3YR' : EXIT('CHAMPS-ADV-HWREPL#02');
 //Manuelle Artikel Filter erspart separate APSS One Box Preisliste
- 'APSS-OB-9X5/SOFTWARE' : EXIT('ACTS-SUPP-9X5/SOF#01');
- 'APSS-OB-9X5/SOFTW#01' : EXIT('ACTS-SUPP-9X5/SOF#02');
- 'APSS-OB-24X7/SOFT#01' : EXIT('ACTS-SUPP-24X7/SO#01');
- 'APSS-OB-24X7/SOFT#02' : EXIT('ACTS-SUPP-24X7/SO#02');
+  'APSS-OB-9X5/SOFTWARE' : EXIT('ACTS-SUPP-9X5/SOF#01');
+  'APSS-OB-9X5/SOFTW#01' : EXIT('ACTS-SUPP-9X5/SOF#02');
+  'APSS-OB-24X7/SOFT#01' : EXIT('ACTS-SUPP-24X7/SO#01');
+  'APSS-OB-24X7/SOFT#02' : EXIT('ACTS-SUPP-24X7/SO#02');
 //Re Instatement Fee
- 'CHAMPS-RE_INSTATE#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
+  'CHAMPS-RE_INSTATE#01' : EXIT('CHAMPS-SUPP-8X5/S#01');
+  'RE_INSTATEMENT_FEE'   : EXIT('CHAMPS-SUPP-8X5/S#01');
 END;
 
 EXIT(SUP_Artikelnr);
+
+ServiceQuoteIsValid(quotenr : Code[10]) : Boolean
+IF quotenr = '' THEN EXIT(FALSE);
+
+IF Quote.GET(quotenr) THEN
+  BEGIN
+    IF (Quote.Herstellercode = '57') OR (Quote.Herstellercode = '5710') OR (Quote.Herstellercode = '5720') THEN
+      IF (Quote.Gültigkeitsdatum < WORKDATE) OR (Quote."Gültig ab Datum" > WORKDATE) THEN
+        EXIT(FALSE)
+      ELSE
+        EXIT(TRUE)
+    ELSE
+      EXIT(FALSE);
+  END
+ELSE
+  EXIT(FALSE);
