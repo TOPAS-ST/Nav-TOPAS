@@ -1,0 +1,1207 @@
+OBJECT Form 130 Posted Sales Shipment
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.12.15;
+    Time=13:57:38;
+    Modified=Yes;
+    Version List=NAVW15.00,NAVDACH4.00;
+  }
+  PROPERTIES
+  {
+    Width=16500;
+    Height=10780;
+    CaptionML=[DEU=Geb. Verkaufslieferung;
+               ENU=Posted Sales Shipment];
+    InsertAllowed=No;
+    SourceTable=Table110;
+    OnOpenForm=BEGIN
+                 //TOPAS 09.05.2012-ST
+                 CurrForm.SORSymb.VISIBLE := FALSE;
+               END;
+
+    OnFindRecord=BEGIN
+                   IF FIND(Which) THEN
+                     EXIT(TRUE)
+                   ELSE BEGIN
+                     SETRANGE("No.");
+                     EXIT(FIND(Which));
+                   END;
+                 END;
+
+    OnAfterGetRecord=BEGIN
+                       SETRANGE("No.");
+
+                       //TOPAS 09.05.2012-ST
+                       CurrForm.SORSymb.VISIBLE := FALSE;
+                       IF STRPOS("Payment Terms Code",'SOR') <> 0 THEN
+                         CurrForm.SORSymb.VISIBLE := TRUE;
+
+                       //TOPAS Ende
+                     END;
+
+    OnModifyRecord=BEGIN
+                     CODEUNIT.RUN(CODEUNIT::"Shipment Header - Edit",Rec);
+                     EXIT(FALSE);
+                   END;
+
+  }
+  CONTROLS
+  {
+    { 1   ;TabControl   ;220  ;220  ;16060;6050 ;HorzGlue=Both;
+                                                 PageNamesML=[DEU=Allgemein,Fakturierung,Lieferung,BizTalk;
+                                                              ENU=General,Invoicing,Shipping,BizTalk] }
+    { 2   ;TextBox      ;3850 ;990  ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="No." }
+    { 3   ;Label        ;440  ;990  ;3300 ;440  ;ParentControl=2;
+                                                 InPage=0 }
+    { 6   ;TextBox      ;3850 ;1650 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Customer No." }
+    { 7   ;Label        ;440  ;1650 ;3300 ;440  ;ParentControl=6;
+                                                 InPage=0 }
+    { 52  ;TextBox      ;3850 ;2200 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Customer Name" }
+    { 53  ;Label        ;440  ;2200 ;3300 ;440  ;ParentControl=52;
+                                                 InPage=0 }
+    { 54  ;TextBox      ;3850 ;3305 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Address" }
+    { 55  ;Label        ;440  ;3305 ;3300 ;440  ;ParentControl=54;
+                                                 InPage=0 }
+    { 56  ;TextBox      ;3850 ;3855 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Address 2" }
+    { 57  ;Label        ;440  ;3855 ;3300 ;440  ;ParentControl=56;
+                                                 InPage=0 }
+    { 58  ;TextBox      ;6710 ;4405 ;2640 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 NextControl=60;
+                                                 SourceExpr="Sell-to City" }
+    { 60  ;TextBox      ;3850 ;5065 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Contact" }
+    { 61  ;Label        ;440  ;5065 ;3300 ;440  ;ParentControl=60;
+                                                 InPage=0 }
+    { 14  ;TextBox      ;13310;990  ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Posting Date" }
+    { 15  ;Label        ;9900 ;990  ;3300 ;440  ;ParentControl=14;
+                                                 InPage=0 }
+    { 12  ;TextBox      ;13310;4400 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Salesperson Code" }
+    { 13  ;Label        ;9900 ;4400 ;3300 ;440  ;ParentControl=12;
+                                                 InPage=0 }
+    { 4   ;TextBox      ;13310;3300 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Order No." }
+    { 5   ;Label        ;9900 ;3300 ;3300 ;440  ;ParentControl=4;
+                                                 InPage=0 }
+    { 16  ;TextBox      ;13310;5610 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="No. Printed" }
+    { 17  ;Label        ;9900 ;5610 ;3300 ;440  ;ParentControl=16;
+                                                 InPage=0 }
+    { 8   ;TextBox      ;3850 ;4405 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 NextControl=58;
+                                                 SourceExpr="Sell-to Post Code" }
+    { 59  ;Label        ;440  ;4405 ;3300 ;440  ;ParentControl=8;
+                                                 CaptionML=[DEU=Verk. an PLZ-Code/Ort;
+                                                            ENU=Sell-to Post Code/City] }
+    { 27  ;TextBox      ;13310;1540 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Document Date" }
+    { 39  ;Label        ;9900 ;1540 ;3300 ;440  ;ParentControl=27 }
+    { 76  ;PictureBox   ;6710 ;990  ;440  ;440  ;Focusable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 ShowCaption=No;
+                                                 Border=No;
+                                                 BitmapPos=Center;
+                                                 BitmapList=7,8;
+                                                 SourceExpr=Comment }
+    { 77  ;CommandButton;6710 ;990  ;440  ;440  ;ParentControl=1;
+                                                 InPage=0;
+                                                 ShowCaption=No;
+                                                 BackTransparent=Yes;
+                                                 PushAction=RunObject;
+                                                 ToolTipML=[DEU=Bemerkung;
+                                                            ENU=Comment];
+                                                 RunObject=Form 67;
+                                                 RunFormLinkType=OnUpdate;
+                                                 RunFormLink=Document Type=CONST(Shipment),
+                                                             No.=FIELD(No.) }
+    { 82  ;TextBox      ;13310;4950 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Responsibility Center" }
+    { 83  ;Label        ;9900 ;4950 ;3300 ;440  ;ParentControl=82 }
+    { 84  ;TextBox      ;13310;2090 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Requested Delivery Date" }
+    { 86  ;Label        ;9900 ;2090 ;3300 ;440  ;ParentControl=84 }
+    { 87  ;TextBox      ;13310;2640 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Promised Delivery Date" }
+    { 88  ;Label        ;9900 ;2640 ;3300 ;440  ;ParentControl=87 }
+    { 89  ;TextBox      ;13310;3850 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="External Document No." }
+    { 90  ;Label        ;9900 ;3850 ;3300 ;440  ;ParentControl=89 }
+    { 1140004;TextBox   ;3850 ;2750 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 SourceExpr="Sell-to Customer Name 2" }
+    { 1140005;Label     ;440  ;2750 ;3300 ;440  ;ParentControl=1140004 }
+    { 1140013;TextBox   ;7260 ;990  ;1980 ;1100 ;Name=SORSymb;
+                                                 Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=0;
+                                                 HorzAlign=Center;
+                                                 ForeColor=0;
+                                                 Border=No;
+                                                 FontSize=22;
+                                                 FontBold=Yes;
+                                                 SourceExpr='SOR' }
+    { 18  ;TextBox      ;3850 ;990  ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Customer No." }
+    { 19  ;Label        ;440  ;990  ;3300 ;440  ;ParentControl=18;
+                                                 InPage=1 }
+    { 20  ;TextBox      ;3850 ;1540 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Name" }
+    { 21  ;Label        ;440  ;1540 ;3300 ;440  ;ParentControl=20;
+                                                 InPage=1 }
+    { 22  ;TextBox      ;3850 ;2646 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Address" }
+    { 23  ;Label        ;440  ;2646 ;3300 ;440  ;ParentControl=22;
+                                                 InPage=1 }
+    { 24  ;TextBox      ;3850 ;3196 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Address 2" }
+    { 25  ;Label        ;440  ;3196 ;3300 ;440  ;ParentControl=24;
+                                                 InPage=1 }
+    { 26  ;TextBox      ;6710 ;3190 ;2640 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 NextControl=28;
+                                                 SourceExpr="Bill-to City" }
+    { 28  ;TextBox      ;3850 ;4406 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Contact" }
+    { 29  ;Label        ;440  ;4406 ;3300 ;440  ;ParentControl=28;
+                                                 InPage=1 }
+    { 9   ;TextBox      ;12980;990  ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Shortcut Dimension 1 Code" }
+    { 11  ;Label        ;9570 ;990  ;3300 ;440  ;ParentControl=9 }
+    { 63  ;TextBox      ;12980;1540 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Shortcut Dimension 2 Code" }
+    { 64  ;Label        ;9570 ;1540 ;3300 ;440  ;ParentControl=63 }
+    { 67  ;TextBox      ;3850 ;3746 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 NextControl=26;
+                                                 SourceExpr="Bill-to Post Code" }
+    { 68  ;Label        ;440  ;3746 ;3300 ;440  ;ParentControl=67;
+                                                 CaptionML=[DEU=Rech. an PLZ-Code/Ort;
+                                                            ENU=Bill-to Post Code/City] }
+    { 1140006;TextBox   ;3850 ;2090 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Bill-to Name 2" }
+    { 1140007;Label     ;440  ;2090 ;3300 ;440  ;ParentControl=1140006 }
+    { 1140002;TextBox   ;12980;2200 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=1;
+                                                 SourceExpr="Payment Terms Code" }
+    { 1140003;Label     ;9570 ;2200 ;3300 ;440  ;ParentControl=1140002 }
+    { 30  ;TextBox      ;3850 ;990  ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Code" }
+    { 31  ;Label        ;440  ;990  ;3300 ;440  ;ParentControl=30;
+                                                 InPage=2 }
+    { 32  ;TextBox      ;3850 ;1540 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Name" }
+    { 33  ;Label        ;440  ;1540 ;3300 ;440  ;ParentControl=32;
+                                                 InPage=2 }
+    { 34  ;TextBox      ;3850 ;2645 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Address" }
+    { 35  ;Label        ;440  ;2645 ;3300 ;440  ;ParentControl=34;
+                                                 InPage=2 }
+    { 36  ;TextBox      ;3850 ;3195 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Address 2" }
+    { 37  ;Label        ;440  ;3195 ;3300 ;440  ;ParentControl=36;
+                                                 InPage=2 }
+    { 38  ;TextBox      ;6710 ;3745 ;2640 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 NextControl=40;
+                                                 SourceExpr="Ship-to City" }
+    { 40  ;TextBox      ;3850 ;4405 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Contact" }
+    { 41  ;Label        ;440  ;4405 ;3300 ;440  ;ParentControl=40;
+                                                 InPage=2 }
+    { 42  ;TextBox      ;12980;2640 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Shipment Method Code" }
+    { 43  ;Label        ;9570 ;2640 ;3300 ;440  ;ParentControl=42;
+                                                 InPage=2 }
+    { 44  ;TextBox      ;12980;4840 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Shipment Date" }
+    { 45  ;Label        ;9570 ;4840 ;3300 ;440  ;ParentControl=44;
+                                                 InPage=2 }
+    { 65  ;TextBox      ;12980;990  ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Location Code" }
+    { 66  ;Label        ;9570 ;990  ;3300 ;440  ;ParentControl=65 }
+    { 69  ;TextBox      ;3850 ;3745 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 NextControl=38;
+                                                 SourceExpr="Ship-to Post Code" }
+    { 70  ;Label        ;440  ;3745 ;3300 ;440  ;ParentControl=69;
+                                                 CaptionML=[DEU=Lief. an PLZ-Code/Ort;
+                                                            ENU=Ship-to Post Code/City] }
+    { 62  ;TextBox      ;12980;3190 ;2750 ;440  ;ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Shipping Agent Code" }
+    { 71  ;Label        ;9570 ;3190 ;3300 ;440  ;ParentControl=62 }
+    { 72  ;TextBox      ;12980;4290 ;2750 ;440  ;ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Package Tracking No." }
+    { 73  ;Label        ;9570 ;4290 ;3300 ;440  ;ParentControl=72 }
+    { 95  ;TextBox      ;12980;2090 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Shipping Time" }
+    { 96  ;Label        ;9570 ;2090 ;3300 ;440  ;ParentControl=95 }
+    { 91  ;TextBox      ;12980;1540 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Outbound Whse. Handling Time" }
+    { 92  ;Label        ;9570 ;1540 ;3300 ;440  ;ParentControl=91 }
+    { 93  ;TextBox      ;12980;3740 ;2750 ;440  ;ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Shipping Agent Service Code" }
+    { 94  ;Label        ;9570 ;3740 ;3300 ;440  ;ParentControl=93 }
+    { 1140008;TextBox   ;3850 ;2090 ;5500 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=2;
+                                                 SourceExpr="Ship-to Name 2" }
+    { 1140009;Label     ;440  ;2090 ;3300 ;440  ;ParentControl=1140008 }
+    { 97  ;TextBox      ;3850 ;2750 ;2750 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=3;
+                                                 SourceExpr="Customer Order No." }
+    { 98  ;Label        ;440  ;2750 ;3300 ;440  ;ParentControl=97 }
+    { 99  ;TextBox      ;3850 ;2090 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=3;
+                                                 SourceExpr="Time Sent" }
+    { 100 ;Label        ;660  ;2090 ;3080 ;440  ;ParentControl=99 }
+    { 101 ;TextBox      ;3850 ;1540 ;1650 ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=3;
+                                                 SourceExpr="Date Sent" }
+    { 102 ;Label        ;660  ;1540 ;3080 ;440  ;ParentControl=101 }
+    { 103 ;CheckBox     ;3850 ;990  ;440  ;440  ;Editable=No;
+                                                 ParentControl=1;
+                                                 InPage=3;
+                                                 ShowCaption=No;
+                                                 SourceExpr="BizTalk Shipment Notification" }
+    { 104 ;Label        ;440  ;990  ;3300 ;440  ;ParentControl=103 }
+    { 46  ;SubForm      ;220  ;6490 ;16060;3300 ;Name=SalesShipmLines;
+                                                 HorzGlue=Both;
+                                                 VertGlue=Both;
+                                                 Border=No;
+                                                 SubFormID=Form131;
+                                                 SubFormLink=Document No.=FIELD(No.) }
+    { 47  ;MenuButton   ;1980 ;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 CaptionML=[DEU=&Lieferung;
+                                                            ENU=&Shipment];
+                                                 Menu=MENUITEMS
+                                                 {
+                                                   { ID=48;
+                                                     PushAction=LookupTable;
+                                                     ShortCutKey=F5;
+                                                     CaptionML=[DEU=šbersicht;
+                                                                ENU=List] }
+                                                   { ID=10;
+                                                     PushAction=RunObject;
+                                                     ShortCutKey=F9;
+                                                     CaptionML=[DEU=Statistik;
+                                                                ENU=Statistics];
+                                                     RunObject=Form 396;
+                                                     RunFormLinkType=OnUpdate;
+                                                     RunFormLink=No.=FIELD(No.) }
+                                                   { ID=78;
+                                                     PushAction=RunObject;
+                                                     CaptionML=[DEU=Be&merkungen;
+                                                                ENU=Co&mments];
+                                                     RunObject=Form 67;
+                                                     RunFormLinkType=OnUpdate;
+                                                     RunFormLink=Document Type=CONST(Shipment),
+                                                                 No.=FIELD(No.) }
+                                                   { ID=80;
+                                                     PushAction=RunObject;
+                                                     CaptionML=[DEU=Dimensionen;
+                                                                ENU=Dimensions];
+                                                     RunObject=Form 547;
+                                                     RunFormLinkType=OnUpdate;
+                                                     RunFormLink=Table ID=CONST(110),
+                                                                 Document No.=FIELD(No.),
+                                                                 Line No.=CONST(0) }
+                                                   { ID=107;
+                                                     CaptionML=[DEU=Genehmigungen;
+                                                                ENU=Approvals];
+                                                     OnPush=VAR
+                                                              PostedApprovalEntries@1000 : Form 659;
+                                                            BEGIN
+                                                              PostedApprovalEntries.Setfilters(DATABASE::"Sales Shipment Header","No.");
+                                                              PostedApprovalEntries.RUN;
+                                                            END;
+                                                             }
+                                                 }
+                                                  }
+    { 49  ;CommandButton;9240 ;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 Ellipsis=Yes;
+                                                 CaptionML=[DEU=D&rucken;
+                                                            ENU=&Print];
+                                                 OnPush=BEGIN
+                                                          CurrForm.SETSELECTIONFILTER(SalesShptHeader);
+                                                          SalesShptHeader.PrintRecords(TRUE);
+                                                        END;
+                                                         }
+    { 50  ;CommandButton;11660;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 CaptionML=[DEU=&Navigate;
+                                                            ENU=&Navigate];
+                                                 OnPush=BEGIN
+                                                          Navigate;
+                                                        END;
+                                                         }
+    { 51  ;CommandButton;14080;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 PushAction=FormHelp }
+    { 74  ;MenuButton   ;6820 ;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 CaptionML=[DEU=F&unktion;
+                                                            ENU=F&unctions];
+                                                 Menu=MENUITEMS
+                                                 {
+                                                   { ID=79;
+                                                     CaptionML=[DEU=&Paketverfolgung;
+                                                                ENU=&Track Package];
+                                                     OnPush=BEGIN
+                                                              StartTrackingSite;
+                                                            END;
+                                                             }
+                                                   { ID=1140010;
+                                                     CaptionML=DEU=Etiketten ausdrucken;
+                                                     OnPush=BEGIN
+                                                              Lieferschein := Rec;
+                                                              Lieferschein.SETRECFILTER;
+                                                              REPORT.RUN(50000,TRUE,FALSE,Lieferschein);
+                                                            END;
+                                                             }
+                                                   { ID=75;
+                                                     CaptionML=[DEU=Bedarfsverursacher;
+                                                                ENU=Order Tra&cking];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.ShowTracking;
+                                                            END;
+                                                             }
+                                                   { ID=105;
+                                                     CaptionML=[DEU=BizTalk-Lieferung&sbenachrichtung senden;
+                                                                ENU=&Send BizTalk Shipment Notification];
+                                                     OnPush=VAR
+                                                              BizTalkManagement@1000 : Codeunit 99008508;
+                                                            BEGIN
+                                                              BizTalkManagement.SendShipmentNotification(Rec);
+                                                            END;
+                                                             }
+                                                   { ID=106;
+                                                     CaptionML=[DEU=Warenausgang stornieren;
+                                                                ENU=&Undo Shipment];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.UndoShipmentPosting;
+                                                            END;
+                                                             }
+                                                 }
+                                                  }
+    { 81  ;MenuButton   ;4400 ;10010;2200 ;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 CaptionML=[DEU=&Zeile;
+                                                            ENU=&Line];
+                                                 Menu=MENUITEMS
+                                                 {
+                                                   { ID=85;
+                                                     ShortCutKey=Groá+Strg+D;
+                                                     CaptionML=[DEU=Dimensionen;
+                                                                ENU=Dimensions];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.ShowDimensions;
+                                                            END;
+                                                             }
+                                                   { ID=6500;
+                                                     CaptionML=[DEU=Artikel&verfolgungsposten;
+                                                                ENU=Item &Tracking Entries];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.ShowItemTrackingLines;
+                                                            END;
+                                                             }
+                                                   { ID=1140014;
+                                                     MenuItemType=Separator }
+                                                   { ID=1140016;
+                                                     CaptionML=DEU=&System- / Wartungsvertrag;
+                                                     OnPush=BEGIN
+                                                              //TOPAS 09.05.2012-ST
+                                                              Systemvertrag_aufrufen;
+                                                            END;
+                                                             }
+                                                   { ID=1140012;
+                                                     PushAction=RunObject;
+                                                     CaptionML=DEU=&Champs / Service Positionen;
+                                                     RunObject=Form 50026;
+                                                     RunFormLink=Nr.=FIELD(No.),
+                                                                 Art=FILTER(Service) }
+                                                   { ID=1140015;
+                                                     MenuItemType=Separator }
+                                                   { ID=1140011;
+                                                     CaptionML=DEU=Systemvertrag &anlegen / Positionen zuordnen;
+                                                     OnPush=BEGIN
+                                                              //TOPAS 07.09.2011-ST Automatische Anlage von Systemvertr„gen + Systempositionen => šbernahme von Altdaten
+                                                              Systemvertrag_anlegen;
+                                                            END;
+                                                             }
+                                                   { ID=109;
+                                                     MenuItemType=Separator }
+                                                   { ID=108;
+                                                     CaptionML=[DEU=Artike&lrechnungszeilen;
+                                                                ENU=Item Invoice &Lines];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.ShowItemSalesInvLines;
+                                                            END;
+                                                             }
+                                                   { ID=1140000;
+                                                     MenuItemType=Separator }
+                                                   { ID=1140001;
+                                                     CaptionML=[DEU=&Belegzeilenverfolgung;
+                                                                ENU=Document &Line Tracking];
+                                                     OnPush=BEGIN
+                                                              CurrForm.SalesShipmLines.FORM.ShowDocumentLineTracking;
+                                                            END;
+                                                             }
+                                                 }
+                                                  }
+  }
+  CODE
+  {
+    VAR
+      SalesShptHeader@1000 : Record 110;
+      Lieferschein@1140000 : Record 110;
+
+      Text000@1140007 : TextConst
+        'DEU=Systemvertrag %1 angelegt.';
+
+      Text001@1140006 : TextConst
+        'DEU=ACHTUNG!\\Fr Artikelnr. %1, Zeilennr. %2 konnte kein alleinstehendes ACS Basisger„t oder ein verbundener Champ Artikel im Auftrag gefunden werden. Bitte w„hlen Sie dazu in der folgenden šbersicht einen entsprechenden System- bzw. Wartungsvertrag aus. Wenn Sie sich nicht sicher sind drcken Sie im Anschluss auf Abbrechen, der Vorgang kann ber den Lieferschein erneut ausgefhrt werden.\\Hilfestellung %3: %4';
+
+      Text002@1140005 : TextConst
+        'DEU=Systemvertragserstellung fr Artikelnr. %1, Zeilennr. %2 auf Wunsch abgebrochen.';
+
+      Text003@1140004 : TextConst
+        'DEU=Anzeige von System- bzw. Wartungsvertr„gen nicht m”glich, da noch keine zu diesem Debitorkonto existieren.';
+
+      Text004@1140003 : TextConst
+        'DEU=Die Systemposition %1, Artikel %2, Zeilennr. %3 konnte keinem Systemvertrag zugeordnet werden.\Bitte informieren Sie die IT.';
+
+      Text005@1140002 : TextConst
+        'DEU=Es wurden keine weiteren Aktionen durchgefhrt. Die Position(en) wurde(n) vermutlich schon angelegt.';
+
+      Text006@1140001 : TextConst
+        'DEU=Es konnte kein AudioCodes Artikel gefunden werden.';
+
+      Text007@1140008 : TextConst
+        'DEU=Bei dieser Lieferung wurden %1 champf„hige Ger„te gleichzeitig geliefert, dementsprechend mssen auch genauso viele Systemvertr„ge angelegt werden.\M”chten Sie jetzt fortfahren?';
+
+      Text008@1140009 : TextConst
+        'DEU=Es konnten mehrere System- bzw. Wartungsvertr„ge zu diesem Lieferschein gefunden werden.\M”chten Sie Vetragsnr. %1 aufrufen?';
+
+      Text009@1140010 : TextConst
+        'DEU=Es konnte kein System- bzw. Wartungsvertrag gefunden werden.';
+
+      Text010@1140012 : TextConst
+        'DEU=Die Position %1, Artikel %2 mit der Seriennr. %3, wurde noch nicht zugeordnet.';
+
+      Text011@1140014 : TextConst
+        'DEU=Es konnten mehrere System- bzw. Wartungsvertr„ge (%1) gefunden werden. Sie k”nnen sich nun durch die einzelnen Vertr„ge bewegen.';
+
+    PROCEDURE Systemvertrag_anlegen@1140001();
+    VAR
+      SystemPos@1140020 : Record 50024;
+      SeriennrVerfolgung@1140019 : Record 32;
+      Liefkopf@1140018 : Record 110;
+      Liefzeile@1140017 : Record 111;
+      Auftrag@1140016 : Record 36;
+      PrfeSystemLiefzeile@1140014 : Record 111;
+      Wartung@1140013 : Record 50011;
+      Wartungsšbersicht@1140012 : Record 50011;
+      PrfeHauptWartung@1140011 : Record 50011;
+      CHAMPZuordnungHolen@1140010 : Record 50027;
+      ZuordnungBasisger„t@1140000 : Record 50027;
+      PrfeCHAMPZuordnung@1140026 : Record 50027;
+      Ansprech@1140009 : Record 50005;
+      DebKontaktBez@1140008 : Record 5054;
+      Artikel@1140007 : Record 27;
+      wartungsnr@1140006 : Code[20];
+      hauptwartungsnr@1140005 : Code[20];
+      system_champs_verbindung@1140002 : Boolean;
+      systempos_angelegt@1140025 : Boolean;
+      NoSeriesMgt@1140024 : Codeunit 396;
+      laufende_nummer@1140023 : Code[20];
+      vertraege_anlegen@1140001 : Integer;
+      eingabe@1140022 : Code[10];
+      datensatz_auslassen@1140004 : Boolean;
+      zuletzt_systemchamps@1140028 : Boolean;
+      letzte_system_wartungsnr@1140027 : Code[20];
+      letzte_system_hauptwartungsnr@1140015 : Code[20];
+      ok@1140021 : Boolean;
+      k@1140003 : Integer;
+    BEGIN
+      ////Vorlage => SystemPos.CreateSystemFromSalesHeader("Order No.");
+
+      //***************************************************************************************************
+      //      29.08.2011-ST Neue Funktion: Das System holt sich nach Erstellung des Lieferscheins die
+      //                          entsprechenden Seriennr. aus den Artikelposten
+      //***************************************************************************************************
+
+      systempos_angelegt := FALSE;
+      zuletzt_systemchamps := FALSE;
+      letzte_system_wartungsnr := '';
+      letzte_system_hauptwartungsnr := '';
+
+      Liefkopf.RESET;
+      ////n
+      Liefkopf.SETFILTER("No.",'%1',"No.");
+      ////e
+      IF Liefkopf.FINDLAST THEN
+        BEGIN
+          Liefzeile.RESET;
+          Liefzeile.SETFILTER(Liefzeile."Document No.",'%1',Liefkopf."No.");
+          Liefzeile.SETFILTER("Manufacturer Code",'%1','59');
+          Liefzeile.SETFILTER(Type,'%1',Liefzeile.Type::Item);
+          Liefzeile.SETFILTER(Quantity,'>%1',0);
+          IF Liefzeile.FINDFIRST THEN
+            REPEAT
+
+              wartungsnr := '';
+              hauptwartungsnr := '';
+
+              //neu 10.05.2012-ST, Update in Vorlage ausstehend
+              datensatz_auslassen := FALSE;
+
+              IF Artikel.GET(Liefzeile."No.") THEN
+                BEGIN
+                  IF (Artikel."Software Upgrade Protection" = TRUE)
+                  //OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')
+                  OR (Artikel."No." = 'ADVC-RPLC-SRVC-IN#01')
+                  OR (Artikel."No." = 'STD-SUPP-PROG/YR')
+                  OR (Artikel."No." = 'PREM-SUPP-PROG/YR')
+                  //OR (Artikel."No." = 'RCBK0001')
+                  //OR (Artikel."No." = 'CENTOL10')
+                  //OR (Artikel."No." = 'MCMK00015')
+                  //OR (Artikel."No." = 'MCMK00016')
+                  //OR (Artikel."No." = 'MPRS232')
+                  //OR (Artikel."No." = 'MP-RMSHL')
+                   THEN
+                   datensatz_auslassen := TRUE
+                  ELSE
+                    BEGIN
+                      IF Artikel."Manufacturer Code" <> '59' THEN
+                        datensatz_auslassen := TRUE
+                      ELSE
+                        datensatz_auslassen := FALSE;
+                    END;
+                END
+              ELSE
+                datensatz_auslassen := TRUE;
+
+              IF datensatz_auslassen = FALSE THEN
+              //neu Ende
+                BEGIN
+
+                  //***************************************************************************************************
+                  //                         Generierung des Systemvertrages fr Chassis o.„.
+                  //***************************************************************************************************
+
+                  IF Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS' THEN
+                    BEGIN
+                      Wartung.RESET;
+                      Wartung.SETFILTER("Lieferscheinnr.",'%1',Liefzeile."Document No.");
+                      Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',Liefzeile."Line No.");
+                      IF NOT Wartung.FINDFIRST THEN
+                        BEGIN
+
+                          ////n No. Series wird normalerweise direkt von der Tabelle bernommen bei INSERT(TRUE)
+                          ////n Nur in diesem Sonderfall, sollen nachtr„glich hinzugefgte Positionen
+                          ////n einen anderen Nummernserienkreis bekommen, so dass diese besser auseinander
+                          ////n gehaltn werden k”nnen
+
+                          IF Liefzeile.Quantity > 1 THEN
+                            BEGIN
+                              IF CONFIRM(Text007,TRUE,Liefzeile.Quantity) THEN
+                                vertraege_anlegen := Liefzeile.Quantity
+                              ELSE
+                                ERROR(Text002,Liefzeile."No.",Liefzeile."Line No.");
+                            END
+                          ELSE
+                            BEGIN
+                              vertraege_anlegen  := 1;
+                            END;
+
+                          FOR k := 1 TO  vertraege_anlegen DO
+                            BEGIN
+                              Wartung.INIT;
+                              laufende_nummer:='';
+                              IF Liefkopf."Posting Date" > 010114D THEN
+                                eingabe := 'TOPAS-WART'
+                              ELSE
+                                eingabe := 'TOPAS-WTAL';
+
+                              NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
+                              Wartung."Wartungsvertragsnr." := laufende_nummer;
+                              Wartung."Angelegt von" := USERID;
+                              Wartung."Angelegt am" := WORKDATE;
+                              ////e
+                              Wartung.Status := Wartung.Status :: System;
+                              Wartung.Klasse := Wartung.Klasse :: Einzelger„t;
+                              Wartung.Volumen := 1;
+                              Wartung.Startdatum := Liefkopf."Posting Date";
+                              Wartung."Debitornr." := Liefkopf."Sell-to Customer No.";
+                              IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+                                BEGIN
+                                  Wartung.SOR := TRUE;
+                                  Wartung."SOR Option" := Liefkopf."Payment Terms Code";
+                                END;
+                              //Des Basisger„tes
+                              Wartung."Auftragsnr." := Liefzeile."Order No.";
+                              Wartung."Auftragszeilennr." := Liefzeile."Order Line No.";
+                              Wartung."Lieferscheinnr." := Liefzeile."Document No.";
+                              Wartung."Lieferscheinzeilennr." := Liefzeile."Line No.";
+                              IF Auftrag.GET(Auftrag."Document Type" :: Order,Wartung."Auftragsnr.") THEN
+                                Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Aktuell
+                              ELSE
+                                Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Archiviert;
+
+                              ////n KEIN INSERT(TRUE), damit angepasste Nr. Serie verwendet wird
+                              Wartung.INSERT;
+                              MESSAGE(Text000,Wartung."Wartungsvertragsnr.");
+                              ////e
+
+                              PrfeHauptWartung.RESET;
+                              PrfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                              PrfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                              IF NOT PrfeHauptWartung.FINDFIRST THEN
+                                BEGIN
+                                  Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                  Wartung.MODIFY(TRUE);
+                                END
+                              ELSE
+                                BEGIN
+                                  Wartung."Hauptwartungsvertragsnr." := PrfeHauptWartung."Wartungsvertragsnr.";
+                                  Wartung.MODIFY(TRUE);
+                                END;
+
+                              //neu 10.05.2012-ST, Update in Vorlage ausstehend
+                              zuletzt_systemchamps := TRUE;
+                              letzte_system_wartungsnr := Wartung."Wartungsvertragsnr.";
+                              letzte_system_hauptwartungsnr := Wartung."Hauptwartungsvertragsnr.";
+                              //neu Ende
+
+                              //Anlage der Fhrungsrolle anhand des Debitoren
+                              DebKontaktBez.RESET;
+                              DebKontaktBez.SETFILTER("Business Relation Code",'%1','DEB');
+                              DebKontaktBez.SETFILTER("No.",'%1',Liefkopf."Sell-to Customer No.");
+                              IF DebKontaktBez.FINDFIRST THEN
+                                BEGIN
+                                  Ansprech.RESET;
+                                  Ansprech.SETFILTER("Kampagnennr.",'%1',Wartung."Wartungsvertragsnr.");
+                                  Ansprech.SETFILTER("Kontaktnr.",'%1',DebKontaktBez."Contact No.");
+                                  IF NOT Ansprech.FINDFIRST THEN
+                                    BEGIN
+                                      Ansprech.INIT;
+                                      Ansprech.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
+                                      Ansprech."Kampagnennr." := Wartung."Wartungsvertragsnr.";
+                                      Ansprech.Fhrungsrolle := TRUE;
+                                      Ansprech.INSERT;
+                                    END;
+                                END;
+                            END;
+                        END;
+                    END;
+
+                  //***************************************************************************************************
+                  //                          Generierung des Systemvertrages fr FLAT Ger„te
+                  //***************************************************************************************************
+
+                  IF Artikel.Serviceklassifizierung = 'SYSTEM FLAT' THEN
+                    BEGIN
+                      Wartung.RESET;
+                      Wartung.SETFILTER("Lieferscheinnr.",'%1',Liefzeile."Document No.");
+                      Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',Liefzeile."Line No.");
+                      IF NOT Wartung.FINDFIRST THEN
+                        BEGIN
+                          Wartung.INIT;
+                          Wartung.Status := Wartung.Status :: System;
+                          Wartung.Klasse := Wartung.Klasse :: Mehrger„te;
+                          ////n
+                          laufende_nummer:='';
+                          IF Liefkopf."Posting Date" > 010114D THEN
+                            eingabe := 'TOPAS-WART'
+                          ELSE
+                            eingabe := 'TOPAS-WTAL';
+                          NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
+                          Wartung."Wartungsvertragsnr." := laufende_nummer;
+                          Wartung."Angelegt von" := USERID;
+                          Wartung."Angelegt am" := WORKDATE;
+                          ////e
+                          //Fr Mehrger„te immer 0, da das Volumen sp„ter durch die Einzelpositionen hochgez„hlt wird
+                          Wartung.Volumen := 0;
+                          Wartung.Startdatum := Liefkopf."Posting Date";
+                          Wartung."Debitornr." := Liefkopf."Sell-to Customer No.";
+                          IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+                            BEGIN
+                              Wartung.SOR := TRUE;
+                              Wartung."SOR Option" := Liefkopf."Payment Terms Code";
+                            END;
+                          //Des Basisger„tes
+                          Wartung."Auftragsnr." := Liefzeile."Order No.";
+                          Wartung."Auftragszeilennr." := Liefzeile."Order Line No.";
+                          Wartung."Lieferscheinnr." := Liefzeile."Document No.";
+                          Wartung."Lieferscheinzeilennr." := Liefzeile."Line No.";
+                          IF Auftrag.GET(Auftrag."Document Type" :: Order,Wartung."Auftragsnr.") THEN
+                            Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Aktuell
+                          ELSE
+                            Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Archiviert;
+                          ////n KEIN INSERT(TRUE), damit angepasste Nr. Serie verwendet wird
+                          Wartung.INSERT;
+                          MESSAGE(Text000,Wartung."Wartungsvertragsnr.");
+                          ////e
+
+                          PrfeHauptWartung.RESET;
+                          PrfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                          PrfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                          IF NOT PrfeHauptWartung.FINDFIRST THEN
+                            BEGIN
+                              Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                              Wartung.MODIFY(TRUE);
+                            END
+                          ELSE
+                            BEGIN
+                              Wartung."Hauptwartungsvertragsnr." := PrfeHauptWartung."Wartungsvertragsnr.";
+                              Wartung.MODIFY(TRUE);
+                            END;
+
+                          //neu 10.05.2012-ST, Update in Vorlage ausstehend
+                          zuletzt_systemchamps := FALSE;
+                          //neu Ende
+
+                          //Anlage der Fhrungsrolle anhand des Debitoren
+                          DebKontaktBez.RESET;
+                          DebKontaktBez.SETFILTER("Business Relation Code",'%1','DEB');
+                          DebKontaktBez.SETFILTER("No.",'%1',Liefkopf."Sell-to Customer No.");
+                          IF DebKontaktBez.FINDFIRST THEN
+                            BEGIN
+                              Ansprech.RESET;
+                              Ansprech.SETFILTER("Kampagnennr.",'%1',Wartung."Wartungsvertragsnr.");
+                              Ansprech.SETFILTER("Kontaktnr.",'%1',DebKontaktBez."Contact No.");
+                              IF NOT Ansprech.FINDFIRST THEN
+                                BEGIN
+                                  Ansprech.INIT;
+                                  Ansprech.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
+                                  Ansprech."Kampagnennr." := Wartung."Wartungsvertragsnr.";
+                                  Ansprech.Fhrungsrolle := TRUE;
+                                  Ansprech.INSERT;
+                                END;
+                            END;
+                        END;
+                    END;
+
+                  //***************************************************************************************************
+                  //         Auswahlfenster zum Vorbelegen des Wartungs- bzw. Systemvertrages bei nachtr„glich
+                  //   gelieferten Modulen,Softwarelizenzen etc. ohne jegliche Wartungs oder Systemger„te Positionen
+                  //***************************************************************************************************
+
+                  IF (Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS') AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+                    BEGIN
+                      system_champs_verbindung := FALSE;
+
+                      //Prfe ob der Artikel ohne Champ Zuordnung gebucht wurde
+                      PrfeCHAMPZuordnung.RESET;
+                      PrfeCHAMPZuordnung.SETFILTER(Art,'%1',PrfeCHAMPZuordnung.Art :: "SUP-AU");
+                      PrfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',Liefzeile."Order No.");
+                      PrfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                      IF NOT PrfeCHAMPZuordnung.FINDFIRST THEN
+                        BEGIN
+                          //Prfe ob Systemartikel alleinstehend gebucht wurde
+                          PrfeSystemLiefzeile.RESET;
+                          PrfeSystemLiefzeile.SETFILTER("Document No.",'%1',Liefkopf."No.");
+                          PrfeSystemLiefzeile.SETFILTER(Type,'%1',PrfeSystemLiefzeile.Type :: Item);
+                          PrfeSystemLiefzeile.SETFILTER(Quantity,'>%1',0);
+                          IF PrfeSystemLiefzeile.FINDFIRST THEN
+                            BEGIN
+                              REPEAT
+                                IF (Artikel.GET(PrfeSystemLiefzeile."No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+                                 OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
+                                  BEGIN
+                                    PrfeCHAMPZuordnung.RESET;
+                                    PrfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',PrfeSystemLiefzeile."Order No.");
+                                    PrfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',PrfeSystemLiefzeile."Order Line No.");
+                                    IF NOT PrfeCHAMPZuordnung.FINDFIRST THEN
+                                      BEGIN
+                                        system_champs_verbindung := TRUE;
+                                      END;
+                                  END;
+                              UNTIL PrfeSystemLiefzeile.NEXT = 0;
+
+                              IF system_champs_verbindung = FALSE THEN
+                                BEGIN
+                                  MESSAGE(Text001,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
+                                  Liefzeile."ACS Projektinfos");                                  
+                                  CLEAR(Wartungsšbersicht);
+                                  Wartungsšbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
+                                  IF Wartungsšbersicht.FINDFIRST THEN
+                                    BEGIN
+                                      IF FORM.RUNMODAL(50024,Wartungsšbersicht) = ACTION::LookupOK THEN
+                                        BEGIN
+                                           wartungsnr := Wartungsšbersicht."Wartungsvertragsnr.";
+                                           hauptwartungsnr := Wartungsšbersicht."Hauptwartungsvertragsnr.";
+                                        END
+                                      ELSE
+                                        BEGIN
+                                          MESSAGE(Text002,Liefzeile."No.",Liefzeile."Line No.");
+                                        END;
+                                    END
+                                  ELSE
+                                    MESSAGE(Text003);
+                                END;
+                            END;
+                        END;
+                    END;
+
+                  SeriennrVerfolgung.RESET;
+                  //SeriennrVerfolgung.SETFILTER("Item Tracking",'%1',SeriennrVerfolgung."Item Tracking":: "Serial No.");
+                  SeriennrVerfolgung.SETFILTER("Document No.",'%1',Liefzeile."Document No.");
+                  SeriennrVerfolgung.SETFILTER("Document Line No.",'%1',Liefzeile."Line No.");
+                  IF SeriennrVerfolgung.FINDFIRST THEN
+                    REPEAT
+                      SystemPos.RESET;
+                      SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
+                      SystemPos.SETFILTER("Nr.",'%1',Liefkopf."No.");
+                      SystemPos.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Line No.");
+                      SystemPos.SETFILTER("Artikelnr.",'%1',Liefzeile."No.");
+                      SystemPos.SETFILTER("Seriennr.",'%1',SeriennrVerfolgung."Serial No.");
+                      IF NOT SystemPos.FINDFIRST THEN
+                        BEGIN
+                          SystemPos.RESET;
+                          SystemPos.INIT;
+                          SystemPos.Art := SystemPos.Art :: System;
+                          SystemPos."Nr." := Liefkopf."No.";
+                          ////n KEIN INSERT(TRUE), damit angepasste Nr. Serie verwendet wird
+                          IF (SystemPos.Art = SystemPos.Art :: Service)
+                          OR (SystemPos.Art = SystemPos.Art :: System) THEN
+                            IF Liefkopf."Posting Date" > 010114D THEN
+                              ok := EVALUATE(eingabe,'TOPAS-SERV')
+                            ELSE
+                              ok := EVALUATE(eingabe,'TOPAS-SVAL');
+                          laufende_nummer:='';
+                          NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
+                          SystemPos."Lfd. Nr." := laufende_nummer;
+                          SystemPos."Angelegt von" := USERID;
+                          SystemPos."Angelegt am" := WORKDATE;
+                          SystemPos.INSERT;
+                          ////e
+                          SystemPos.Belegdatum := SeriennrVerfolgung."Posting Date";
+                          SystemPos.VALIDATE("Artikelnr.",Liefzeile."No.");
+                          SystemPos."Seriennr." := SeriennrVerfolgung."Serial No.";
+                          SystemPos."Debitornr." := Liefkopf."Sell-to Customer No.";
+                          SystemPos.Debitorname := Liefkopf."Sell-to Customer Name";
+                          SystemPos.Menge := SeriennrVerfolgung.Quantity * (-1);
+                          SystemPos.Kontakt := Liefkopf."Sell-to Contact";
+                          SystemPos."Name 2" := Liefkopf."Sell-to Customer Name 2";
+                          SystemPos.Adresse := Liefkopf."Sell-to Address";
+                          SystemPos."Adresse 2" := Liefkopf."Sell-to Address 2";
+                          SystemPos."PLZ-Code" := Liefkopf."Sell-to Post Code";
+                          SystemPos.Ort := Liefkopf."Sell-to City";
+                          SystemPos."System Projektinfos" := Liefzeile."ACS Projektinfos";
+                          SystemPos."Auftragsnr." := Liefkopf."Order No.";
+                          SystemPos."Auftragszeilennr." := Liefzeile."Line No.";
+                          SystemPos.Ursprungsland := SeriennrVerfolgung.Ursprungsland;
+                          SystemPos."Belegzeilennr." := Liefzeile."Line No.";
+                          IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+                            BEGIN
+                              SystemPos.SOR := TRUE;
+                              SystemPos."SOR Option" := Liefkopf."Payment Terms Code";
+                            END;
+
+                          IF (wartungsnr <> '') AND (hauptwartungsnr <> '') THEN
+                            BEGIN
+                              SystemPos."Wartungsvertragsnr." := wartungsnr;
+                              SystemPos."Hauptwartungsvertragsnr." := hauptwartungsnr;
+                            END
+                          ELSE
+                            //neu 10.05.2012-ST, Update in Vorlage ausstehend
+                            BEGIN
+                              IF (Artikel.GET(SeriennrVerfolgung."Item No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+                              OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
+                                BEGIN
+                                  SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                  SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                END
+                              ELSE
+                                BEGIN
+                                  IF zuletzt_systemchamps = TRUE THEN
+                                    BEGIN
+                                      IF (SystemPos."Artikelnr." <> 'RCBK0001')
+                                      AND (SystemPos."Artikelnr." <> 'CENTOL10')
+                                      AND (SystemPos."Artikelnr." <> 'MCMK00015')
+                                      AND (SystemPos."Artikelnr." <> 'MCMK00016')
+                                      AND (SystemPos."Artikelnr." <> 'MPRS232')
+                                      AND (SystemPos."Artikelnr." <> 'MP-RMSHL') THEN
+                                        BEGIN
+                                          SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                          SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                        END;
+                                    END
+                                  ELSE
+                                    BEGIN
+                                      IF (SystemPos."Artikelnr." = 'RCBK0001')
+                                      OR (SystemPos."Artikelnr." = 'CENTOL10')
+                                      OR (SystemPos."Artikelnr." = 'MCMK00015')
+                                      OR (SystemPos."Artikelnr." = 'MCMK00016')
+                                      OR (SystemPos."Artikelnr." = 'MPRS232')
+                                      OR (SystemPos."Artikelnr." = 'MP-RMSHL')
+                                      OR ((letzte_system_wartungsnr = '') AND ( letzte_system_hauptwartungsnr = '')) THEN
+                                        BEGIN
+                                          SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                          SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                        END
+                                      ELSE
+                                        BEGIN
+                                          SystemPos."Wartungsvertragsnr." := letzte_system_wartungsnr;
+                                          SystemPos."Hauptwartungsvertragsnr." := letzte_system_hauptwartungsnr;
+                                        END;
+                                    END;
+                                END;
+                            END;
+                            //neu Ende
+
+                          IF (Artikel.GET(SeriennrVerfolgung."Item No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+                          OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
+                            BEGIN
+                              SystemPos.Basisger„t := TRUE;
+                              Wartung.GET(SystemPos."Wartungsvertragsnr.");
+                              Wartung.Basisger„t := SystemPos."Artikelnr.";
+                              Wartung."Ablauf Gew„hrleistung" := CALCDATE('1J-1T',SeriennrVerfolgung."Posting Date");
+                              IF Wartung.Klasse = Wartung.Klasse :: Mehrger„te THEN
+                                Wartung.Volumen += 1;
+                              Wartung.MODIFY(TRUE);
+                            END;
+
+                          IF Wartung.GET(SystemPos."Wartungsvertragsnr.") AND (SystemPos."Wartungsvertragsnr." <> '') THEN
+                            Wartung.MODIFY(TRUE)
+                          ELSE
+                            //Einzel Modul im AU + Champ Kalkulation mit Basisger„t aus LS usw.
+                            BEGIN
+                              CHAMPZuordnungHolen.RESET;
+                              CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
+                              CHAMPZuordnungHolen.SETFILTER("Belegnr.",'%1',Liefkopf."Order No.");
+                              CHAMPZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                              IF CHAMPZuordnungHolen.FINDFIRST THEN
+                                BEGIN
+                                  ZuordnungBasisger„t.RESET;
+                                  ZuordnungBasisger„t.SETFILTER(Art,'%1',ZuordnungBasisger„t.Art :: "SUP-AU");
+                                  ZuordnungBasisger„t.SETFILTER("Nr.",'%1',Liefkopf."Order No.");
+                                  ZuordnungBasisger„t.SETFILTER("Zeilennr.",'%1',CHAMPZuordnungHolen."Zeilennr.");
+                                  ZuordnungBasisger„t.SETFILTER(Basisger„t,'%1',TRUE);
+                                  IF ZuordnungBasisger„t.FINDFIRST THEN
+                                    BEGIN
+                                      Wartung.RESET;
+                                      Wartung.SETFILTER("Lieferscheinnr.",'%1',ZuordnungBasisger„t."Belegnr.");
+                                      Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',ZuordnungBasisger„t."Belegzeilennr.");
+                                      IF Wartung.FINDFIRST THEN
+                                        BEGIN
+                                          SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                          SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                          Wartung.MODIFY(TRUE);
+                                        END;
+                                    END
+                                  ELSE
+                                    MESSAGE(Text004,SystemPos."Lfd. Nr.",SystemPos."Artikelnr.",SystemPos."Belegzeilennr.");
+                                END
+                              ELSE
+                                MESSAGE(Text004,SystemPos."Lfd. Nr.",SystemPos."Artikelnr.",SystemPos."Belegzeilennr.");
+                            END;
+
+                          //Zugeh”rigkeit der Positionen untereinander ermitteln
+                          SystemPos."Geh”rt zu Lfd. Nr." := SystemPos.SystemZugeh”rigkeitErmitteln(Liefkopf."Order No.",
+                                                            SystemPos."Lfd. Nr.",SystemPos."Wartungsvertragsnr.");
+                          SystemPos.MODIFY;
+                          systempos_angelegt := TRUE;
+                        END
+                      ////n
+                      ELSE
+                        BEGIN
+                          IF (SystemPos."Wartungsvertragsnr." = '') AND (wartungsnr <> '') AND (hauptwartungsnr <> '') THEN
+                            BEGIN
+                              SystemPos."Wartungsvertragsnr." := wartungsnr;
+                              SystemPos."Hauptwartungsvertragsnr." := hauptwartungsnr;
+                              SystemPos."Geh”rt zu Lfd. Nr." := SystemPos.SystemZugeh”rigkeitErmitteln(Liefkopf."Order No.",
+                                                                SystemPos."Lfd. Nr.",SystemPos."Wartungsvertragsnr.");
+
+                              SystemPos.MODIFY(TRUE);
+                              systempos_angelegt := TRUE;
+                            END
+                          ELSE
+                            BEGIN
+                              //neu 10.05.2012-ST, Update in Vorlage ausstehend
+                              IF (system_champs_verbindung = TRUE) AND (SystemPos."Wartungsvertragsnr." = '') THEN
+                                BEGIN
+                                  MESSAGE(Text010,SystemPos."Lfd. Nr.",Liefzeile."No.",SystemPos."Seriennr.");
+                                  COMMIT;
+                                  CLEAR(Wartungsšbersicht);
+                                  Wartungsšbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
+                                  IF Wartungsšbersicht.FINDFIRST THEN
+                                    BEGIN
+                                      IF FORM.RUNMODAL(50024,Wartungsšbersicht) = ACTION::LookupOK THEN
+                                        BEGIN
+                                           SystemPos."Wartungsvertragsnr." := Wartungsšbersicht."Wartungsvertragsnr.";
+                                           SystemPos."Hauptwartungsvertragsnr." := Wartungsšbersicht."Hauptwartungsvertragsnr.";
+                                           SystemPos."Geh”rt zu Lfd. Nr." := SystemPos.SystemZugeh”rigkeitErmitteln(Liefkopf."Order No.",
+                                                                             SystemPos."Lfd. Nr.",SystemPos."Wartungsvertragsnr.");
+                                           SystemPos.MODIFY(TRUE);
+                                           systempos_angelegt := TRUE;
+                                        END
+                                      ELSE
+                                        BEGIN
+                                          MESSAGE(Text002,Liefzeile."No.",Liefzeile."Line No.");
+                                        END;
+                                    END
+                                  ELSE
+                                    MESSAGE(Text003);
+                                END;
+                                //neu Ende
+                            END;
+                        END;
+                      ////e
+                    UNTIL SeriennrVerfolgung.NEXT = 0;
+
+              END;
+            UNTIL Liefzeile.NEXT = 0;
+
+      ////n
+            IF systempos_angelegt = FALSE THEN
+              MESSAGE(Text005)
+            ELSE
+              COMMIT;
+        END
+      ELSE
+        MESSAGE(Text006);
+
+      ////e
+    END;
+
+    PROCEDURE Systemvertrag_aufrufen@1140000();
+    VAR
+      Wartungsvertrag@1140002 : Record 50011;
+      Systemvertrag@1140003 : Record 50011;
+      Servicepositionen@1140001 : Record 50024;
+      wartungsnr@1140000 : Code[500];
+    BEGIN
+      //TOPAS 27.06.2012-ST Sprungmarke vom Lieferschein zu den System- bzw. Wartungsvertr„gen
+
+      Servicepositionen.RESET;
+      Servicepositionen.SETFILTER(Servicepositionen."Nr.",'%1',"No.");
+      IF Servicepositionen.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            IF (Servicepositionen."Wartungsvertragsnr." <> '') AND
+            (STRPOS(wartungsnr,Servicepositionen."Wartungsvertragsnr.") = 0) THEN
+              IF wartungsnr = '' THEN wartungsnr := Servicepositionen."Wartungsvertragsnr."
+              ELSE
+                wartungsnr := wartungsnr + '|' + Servicepositionen."Wartungsvertragsnr.";
+          UNTIL Servicepositionen.NEXT = 0;
+          IF wartungsnr <> '' THEN
+            BEGIN
+              Wartungsvertrag.RESET;
+              Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",wartungsnr);
+              IF Wartungsvertrag.FINDFIRST THEN
+                FORM.RUN(50015,Wartungsvertrag);
+              IF Wartungsvertrag.COUNT > 1 THEN
+                MESSAGE(Text011,Wartungsvertrag.COUNT);
+            END
+          ELSE
+            MESSAGE(Text009);
+        END
+      ELSE
+        MESSAGE(Text009);
+    END;
+
+    BEGIN
+    {
+      # TOPAS 27.06.2012-ST - Neue Funktion Systemvertrag_aufrufen()
+      # TOPAS 29.09.2011 ST - Žnderung an der Funktion Systemvertrag_anlegen() , Angleichung an System CreateSystemFromSalesHeader
+      #                       aus T50024
+      # TOPAS 29.08.2011-ST - Neue Funktion Systemvertrag_anlegen()
+    }
+    END.
+  }
+}
+
