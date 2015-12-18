@@ -4501,7 +4501,7 @@ IF ("Blanket Order No." <> '') AND ("Blanket Order Line No." <> 0)  THEN
       END;
   END;
 
-Gen_Service_DC(SUP_Artikelnr : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Runden : Boolean;Währung : Code[20]) : Decimal
+Gen_Service_DC(SUP_Artikelnr : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : Integer;Runden : Boolean;Währung : Code[20];Quotenr : C
 //***************************************************************************************************
 //              TOPAS 2011-07-26 ST  Generiert den DC für den jeweiligen Champ Artikel
 //              TOPAS 2014-01-10 ST  Nun auch für ACTS und ACHAT
@@ -4609,29 +4609,39 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         //ACTS EK Konditionen
         IF ACTS = TRUE THEN
           BEGIN
-            normal_discount := 0.8;
-            v_service_laufzeit := Laufzeit DIV 12;
-            CASE v_service_laufzeit OF
-              0..1 : additional_discount := 0;
-              2 : additional_discount := 0.02; // -2%
-              3 : additional_discount := 0.09; // -9%
-              4 : additional_discount := 0.12; // -12%
-              5..100 : additional_discount := 0.15; // -15%
-            END;
+            IF ServiceTab.ServiceQuoteIsValid(Quotenr) = TRUE THEN
+              normal_discount := 0.62
+            ELSE
+              BEGIN
+                normal_discount := 0.8;
+                v_service_laufzeit := Laufzeit DIV 12;
+                CASE v_service_laufzeit OF
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -2%
+                  3 : additional_discount := 0.09; // -9%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
+                END;
+              END;
           END;
 
         //ACTS Managed Spare Service EK Konditionen
         IF ACTS_MSS = TRUE THEN
           BEGIN
-            normal_discount := 0.9;
-            v_service_laufzeit := Laufzeit DIV 12;
-            CASE v_service_laufzeit OF
-              0..1 : additional_discount := 0;
-              2 : additional_discount := 0.02; // -2%
-              3 : additional_discount := 0.09; // -9%
-              4 : additional_discount := 0.12; // -12%
-              5..100 : additional_discount := 0.15; // -15%
-            END;
+            IF ServiceTab.ServiceQuoteIsValid(Quotenr) = TRUE THEN
+              normal_discount := 0.85
+            ELSE
+              BEGIN
+                normal_discount := 0.9;
+                v_service_laufzeit := Laufzeit DIV 12;
+                CASE v_service_laufzeit OF
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -2%
+                  3 : additional_discount := 0.09; // -9%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
+                END;
+              END;
           END;
 
         //ACHAT EK Konditionen
