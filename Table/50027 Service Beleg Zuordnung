@@ -180,9 +180,9 @@ IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
       IF champs_fee_monate > 36 THEN
         champs_fee_monate := 36;
     VALIDATE(Laufzeit, FORMAT(champs_fee_monate)+ 'M');
-  END;
-
-VALIDATE(Ablaufdatum);
+  END
+ELSE
+  VALIDATE(Ablaufdatum);
 
 Startdatum - OnLookup()
 
@@ -251,6 +251,10 @@ Rabatt/Marge - OnLookup()
 Laufzeit ab Buchungsdatum - OnValidate()
 
 Laufzeit ab Buchungsdatum - OnLookup()
+
+Quotenr. - OnValidate()
+
+Quotenr. - OnLookup()
 
 Gruppierung - OnValidate()
 
