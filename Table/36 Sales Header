@@ -3690,6 +3690,11 @@ IF AUzeile.FINDFIRST THEN
               v_basissystem := '';
 
               REPEAT
+
+                IF (PrüfeServicePos.ServiceQuoteIsValid(ServiceZuordnungHolen."Quotenr.") = FALSE)
+                AND (ServiceZuordnungHolen."Quotenr." <> '') THEN
+                  ERROR(Text123,AUzeile."No.",AUzeile."Line No.",ServiceZuordnungHolen."Quotenr.");
+
                 Artikel.GET(ServiceZuordnungHolen."Geräte Artikelnr.");
                 IF Artikel.Serviceklassifizierung = '' THEN
                   ERROR(Text110,ServiceZuordnungHolen."Geräte Artikelnr.",' (Service Kalkulation)');
@@ -3948,7 +3953,7 @@ IF AUzeile.FINDFIRST THEN
             REPEAT
               service_dc_einzeln_neu := ServiceTab.ServicePreiseNeuKalkulieren(ServiceZuordnungHolen."Geräte Artikelnr.",
                                   ServiceZuordnungHolen."SUP Artikelnr.",ServiceZuordnungHolen.Laufzeit,'DC',FALSE,
-                                  AUzeile.Einkaufswährungscode);
+                                  AUzeile.Einkaufswährungscode,ServiceZuordnungHolen."Quotenr.");
 
               //***************************************************************************************************
               //    Prüft, ob die Service Artikel in der Service Preisliste zu finden ist, wenn nein dann bricht
