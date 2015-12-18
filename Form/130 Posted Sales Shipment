@@ -914,7 +914,8 @@ OBJECT Form 130 Posted Sales Shipment
                               IF system_champs_verbindung = FALSE THEN
                                 BEGIN
                                   MESSAGE(Text001,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
-                                  Liefzeile."ACS Projektinfos");                                  
+                                  Liefzeile."ACS Projektinfos");
+                                  COMMIT;
                                   CLEAR(Wartungsšbersicht);
                                   Wartungsšbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
                                   IF Wartungsšbersicht.FINDFIRST THEN
