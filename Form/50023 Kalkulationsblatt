@@ -2,15 +2,15 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=10.12.15;
-    Time=17:04:36;
+    Date=17.12.15;
+    Time=13:36:36;
     Modified=Yes;
     Version List=TOPAS;
   }
   PROPERTIES
   {
     Width=13750;
-    Height=10890;
+    Height=11440;
     InsertAllowed=No;
     TableBoxID=1140000;
     SourceTable=Table50027;
@@ -73,7 +73,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                           NeueDemoPos;
                                                         END;
                                                          }
-    { 1140000;TableBox  ;220  ;4620 ;13420;5500 ;HorzGlue=Both;
+    { 1140000;TableBox  ;220  ;5170 ;13420;5500 ;HorzGlue=Both;
                                                  VertGlue=Both }
     { 1140001;TextBox   ;0    ;0    ;2100 ;0    ;Editable=No;
                                                  ParentControl=1140000;
@@ -134,6 +134,11 @@ OBJECT Form 50023 Kalkulationsblatt
                                                  InColumn=Yes;
                                                  SourceExpr="Rabatt/Marge" }
     { 1140068;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140067;
+                                                 InColumnHeading=Yes }
+    { 1140073;TextBox   ;4736 ;5940 ;1700 ;440  ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 SourceExpr="Quotenr." }
+    { 1140074;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140073;
                                                  InColumnHeading=Yes }
     { 1140007;TextBox   ;0    ;0    ;2100 ;0    ;ParentControl=1140000;
                                                  InColumn=Yes;
@@ -281,17 +286,17 @@ OBJECT Form 50023 Kalkulationsblatt
                                                                   }
     { 1140046;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140045;
                                                  InColumnHeading=Yes }
-    { 1140011;CommandButton;6600;10230;2200;550 ;HorzGlue=Right;
+    { 1140011;CommandButton;6600;10780;2200;550 ;HorzGlue=Right;
                                                  VertGlue=Bottom;
                                                  Default=Yes;
                                                  PushAction=LookupOK;
                                                  InvalidActionAppearance=Hide }
-    { 1140012;CommandButton;9020;10230;2200;550 ;HorzGlue=Right;
+    { 1140012;CommandButton;9020;10780;2200;550 ;HorzGlue=Right;
                                                  VertGlue=Bottom;
                                                  Cancel=Yes;
                                                  PushAction=LookupCancel;
                                                  InvalidActionAppearance=Hide }
-    { 1140013;CommandButton;11440;10230;2200;550;HorzGlue=Right;
+    { 1140013;CommandButton;11440;10780;2200;550;HorzGlue=Right;
                                                  VertGlue=Bottom;
                                                  PushAction=FormHelp }
     { 1140014;CommandButton;220;1210;2200 ;700  ;Name=btn_alle_pos_holen;
@@ -318,7 +323,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                           TempSeriennrhinzu;
                                                         END;
                                                          }
-    { 1140033;TextBox   ;220  ;3960 ;13420;440  ;Name=label_hinweistext;
+    { 1140033;TextBox   ;220  ;4510 ;13420;440  ;Name=label_hinweistext;
                                                  Editable=No;
                                                  Focusable=No;
                                                  Border=No;
@@ -438,6 +443,10 @@ OBJECT Form 50023 Kalkulationsblatt
                                                                 ERROR(Text021,20);
                                                             END;
                                                              }
+    { 1140071;TextBox   ;220  ;3850 ;2200 ;440  ;SourceExpr=quotenr;
+                                                 TableRelation=Quotedaten WHERE (Herstellercode=FILTER(57|5710|5720),
+                                                                                 Erledigtstatus=FILTER(' ')) }
+    { 1140072;Label     ;2750 ;3850 ;10890;440  ;CaptionML=DEU=Quotenr. angeben }
   }
   CODE
   {
@@ -527,6 +536,7 @@ OBJECT Form 50023 Kalkulationsblatt
 
       Text022@1140038 : TextConst
         'DEU=Es empfiehlt sich nicht fremderworbene Basissysteme mit derselben Artikelnr. zu splitten. Bitte kumulieren Sie die Ger„te in einer Position und nutzen Sie die Mengen Angabe.';
+      quotenr@1140039 : Code[20];
 
     PROCEDURE HoleArtikelPos@1140007();
     VAR
@@ -584,6 +594,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                 ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                 ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                                 ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
+                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 //Laufzeit vorbelegen
                                 Opt.RESET;
                                 Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -633,6 +644,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","Lief-Zeile"."No.");
                                     ChampRelaDoc."Menge kalk." := "Lief-Zeile".Quantity;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     //Laufzeit vorbelegen
                                     Opt.RESET;
@@ -683,6 +695,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
                                     ChampRelaDoc."Menge kalk." := ServicePos.Menge;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
@@ -792,6 +805,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                 ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                 ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                                 ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
+                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 //Laufzeit vorbelegen
                                 Opt.RESET;
                                 Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -841,6 +855,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","Lief-Zeile"."No.");
                                     ChampRelaDoc."Menge kalk." := "Lief-Zeile".Quantity;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     //Laufzeit vorbelegen
                                     Opt.RESET;
@@ -892,6 +907,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
                                     ChampRelaDoc.VALIDATE("Menge kalk.",ServicePos.Menge);
                                     CurrForm."Menge kalk.".UPDATE;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
@@ -1020,6 +1036,7 @@ OBJECT Form 50023 Kalkulationsblatt
                             ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                             ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                             ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
+                            ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                             //Laufzeit vorbelegen
                             Opt.RESET;
                             Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -1072,6 +1089,7 @@ OBJECT Form 50023 Kalkulationsblatt
                 ChampRelaDoc."Belegzeilennr." := PrfeChampRelaDoc."Belegzeilennr." + 11111;
               ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
               ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
+              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Fremderwerb := TRUE;
               ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
               //Laufzeit vorbelegen
@@ -1121,6 +1139,7 @@ OBJECT Form 50023 Kalkulationsblatt
                 ChampRelaDoc."Belegzeilennr." := PrfeChampRelaDoc."Belegzeilennr." + 11111;
               ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
               ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
+              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Fremderwerb := TRUE;
               ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
               //Laufzeit vorbelegen
@@ -1239,7 +1258,7 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
                       champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
                       champ_dc_einzeln := "AU-Zeile".Gen_Service_DC(ChampRelaDoc."SUP Artikelnr.",ChampRelaDoc."Ger„te Artikelnr.",
-                      v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode);
+                      v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode,ChampRelaDoc."Quotenr.");
                       champ_dc_au := champ_dc_au + (ChampRelaDoc."Menge kalk." * champ_dc_einzeln);
                       ChampRelaDoc."Service DC einzeln" := champ_dc_einzeln;
                       ChampRelaDoc."Service DC Gesamt" := champ_dc_einzeln * ChampRelaDoc."Menge kalk.";
@@ -1269,7 +1288,7 @@ OBJECT Form 50023 Kalkulationsblatt
                           ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
                           champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
                           champ_dc_einzeln := "AU-Zeile".Gen_Service_DC(ChampRelaDoc."SUP Artikelnr.",ChampRelaDoc."Ger„te Artikelnr.",
-                          v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode);
+                          v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode,ChampRelaDoc."Quotenr.");
                           champ_dc_au := champ_dc_au + (ChampRelaDoc."Menge kalk." * champ_dc_einzeln);
                           ChampRelaDoc."Service DC einzeln" := champ_dc_einzeln;
                           ChampRelaDoc."Service DC Gesamt" := champ_dc_einzeln * ChampRelaDoc."Menge kalk.";
@@ -1292,7 +1311,7 @@ OBJECT Form 50023 Kalkulationsblatt
                   ChampRelaDoc."Service VK-Preis Zeilenbetrag" := champ_price_einzeln * ChampRelaDoc."Menge kalk.";
                   champ_price_au := champ_price_au + (ChampRelaDoc."Menge kalk." * champ_price_einzeln);
                   champ_dc_einzeln := "AU-Zeile".Gen_Service_DC(ChampRelaDoc."SUP Artikelnr.",ChampRelaDoc."Ger„te Artikelnr.",
-                  v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode);
+                  v_laufzeit,FALSE,Belegzeile.Einkaufsw„hrungscode,ChampRelaDoc."Quotenr.");
                   champ_dc_au := champ_dc_au + (ChampRelaDoc."Menge kalk." * champ_dc_einzeln);
                   ChampRelaDoc."Service DC einzeln" := champ_dc_einzeln;
                   ChampRelaDoc."Service DC Gesamt" := champ_dc_einzeln * ChampRelaDoc."Menge kalk.";
@@ -1662,6 +1681,7 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                       ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",TempChampRelaDoc."Ger„te Artikelnr.");
                       ChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk.";
+                      ChampRelaDoc.VALIDATE("Quotenr.",TempChampRelaDoc."Quotenr.");
                       ChampRelaDoc."Vertragsnr. bernommen" := TempChampRelaDoc."Vertragsnr. bernommen";
                       ChampRelaDoc."Abw. Ger„te Artikelnr." := TempChampRelaDoc."Abw. Ger„te Artikelnr.";
                       ChampRelaDoc."Nachtr„gliche Service Order" := TempChampRelaDoc."Nachtr„gliche Service Order";
@@ -1838,6 +1858,7 @@ OBJECT Form 50023 Kalkulationsblatt
             CurrForm.Ablaufdatum.VISIBLE(TRUE);
             CurrForm."Vertragsnr. bernommen".VISIBLE(TRUE);
             CurrForm."MSRP Service".VISIBLE(TRUE);
+            CurrForm."Quotenr.".VISIBLE(TRUE);
             Artikel.GET("SUP Artikelnr.");
             IF Artikel.Artikelgruppe ='CHAMPS_PARTNER' THEN
               kalk_prozentsatz := 20;
@@ -1867,6 +1888,7 @@ OBJECT Form 50023 Kalkulationsblatt
             CurrForm.Ablaufdatum.VISIBLE(FALSE);
             CurrForm."Vertragsnr. bernommen".VISIBLE(FALSE);
             CurrForm."MSRP Service".VISIBLE(FALSE);
+            CurrForm."Quotenr.".VISIBLE(FALSE);
           END;
       END;
     END;
@@ -1976,8 +1998,8 @@ OBJECT Form 50023 Kalkulationsblatt
       IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_PARTNER')
       OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
-      OR (Service_Artikel.Artikelgruppe = 'APSS_OB') OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
-      OR (Service_Artikel.Artikelgruppe = 'CHAMPS_FEE')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+      OR (Service_Artikel.Artikelgruppe = 'APSS_OB')
+      OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
         EXIT(TRUE);
