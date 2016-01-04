@@ -61,20 +61,10 @@ IF excel_datensätze > 99 THEN
                'bewertet werden?',TRUE) THEN
       BEGIN
 
-        selection := STRMENU(Text001,1);
         Artikel.RESET;
         Artikel.SETFILTER("Manufacturer Code",'%1','69');
-        IF selection = 1 THEN
-          Artikel.SETFILTER(Artikel."Item Tracking Code",'%1','DATECODE');
-        IF selection = 2 THEN
-          Artikel.SETFILTER(Artikel."Item Tracking Code",'<>%1','DATECODE');
         IF Artikel.FINDFIRST THEN
           Artikel.MODIFYALL("Update letzte Preisliste",FALSE);
-
-        CASE selection OF
-
-        1 :
-          BEGIN
 
             //********************************************************************************************
             //                          Überprüfung Syntax Quelldatei - Chips
@@ -94,37 +84,8 @@ IF excel_datensätze > 99 THEN
             IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Chips + '1').Value) <> 'DBC' THEN
               ERROR(Text000,Spalte_DC_Chips);
 
-            //Artikel.SETFILTER(Artikel."Item Tracking Code",'%1','DATECODE');
-
             Preise_updaten('Chips');
 
-          END;
-
-        2 :
-          BEGIN
-
-            //********************************************************************************************
-            //                        Überprüfung Syntax Quelldatei - Evalboards
-            //********************************************************************************************
-
-            IF FORMAT(Quelle_Sheet.Range(Spalte_Part_FullEval + '1').Value) <> 'Full Evaluation System' THEN
-              ERROR(Text000,Spalte_Part_FullEval);
-            IF FORMAT(Quelle_Sheet.Range(Spalte_DC_FullEval + '1').Value) <> 'Price' THEN 
-              ERROR(Text000,Spalte_DC_FullEval);
-            IF FORMAT(Quelle_Sheet.Range(Spalte_Part_MiniEval + '1').Value) <> 'Mini Eval Board' THEN
-              ERROR(Text000,Spalte_Part_MiniEval);
-            IF FORMAT(Quelle_Sheet.Range(Spalte_DC_MiniEval + '1').Value) <> 'Price' THEN 
-              ERROR(Text000,Spalte_DC_MiniEval);
-            IF FORMAT(Quelle_Sheet.Range('G1').Value) <> 'STD Lead time' THEN ERROR(Text000,'G');
-
-            //Artikel.SETFILTER(Artikel."Item Tracking Code",'<>%1','DATECODE');
-
-            Preise_updaten('FullEval');
-            Quelle_j := '2';
-            Preise_updaten('MiniEval');
-
-          END;
-        END;
       END;
   END;
 
@@ -146,7 +107,7 @@ REPEAT
 UNTIL ISCLEAR(Protokoll_Excel) AND ISCLEAR(Protokoll_Book) AND ISCLEAR(Protokoll_Sheet);
 
 Dataport - OnPostDataport()
-MESSAGE('Import der Cirrus/Wolfson Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Änderungen: %2\\'+
+MESSAGE('Import der Cirrus Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Änderungen: %2\\'+
         'Excel Datensätze: %3\',neuer_preis,sonstige_aenderungen,excel_datensätze);
 
 Preise_updaten(PL : Text[30])
