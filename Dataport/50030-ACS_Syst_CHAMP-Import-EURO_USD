@@ -11,12 +11,6 @@ CLEAR(Quelle_Excel);
 CLEAR(Quelle_Sheet);
 CLEAR(Quelle_Book);
 
-// Definiert die zu importierende Datei
-IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
-Quelle_Book := Quelle_Excel.Workbooks._Open(CurrDataport.FILENAME,0,TRUE);
-Quelle_Sheet := Quelle_Excel.ActiveSheet;
-Quelle_j:='1';
-
 geänderte_einträge := 0;
 obsolete_einträge := 0;
 excel_datensätze := 0;
@@ -25,12 +19,21 @@ auswahl := STRMENU(Text100,5);
 IF auswahl = 0 THEN
   EXIT;
 
+// Definiert die zu importierende Datei
+IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+Quelle_Book := Quelle_Excel.Workbooks._Open(CurrDataport.FILENAME,0,FALSE); //Kein Schreibschutz
+Quelle_j:='1';
+
+
+//CHAMPS oder ACTS
 IF (auswahl = 1) OR (auswahl = 2) THEN
   BEGIN
 
     //********************************************************************************************
     //                         Eigentliches Update der CHAMP Artikel
     //********************************************************************************************
+
+    Quelle_Sheet := Quelle_Excel.Worksheets.Item('Einspielen');
 
     excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
     PL_Wäh := FORMAT(Quelle_Sheet.Range(Spalte_Wäh+Quelle_j).Value);
@@ -45,14 +48,14 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
                    'Soll der Status Update letzte Preisliste für alle Artikel zurückgesetzt und neu ' +
                    'bewertet werden?',TRUE) THEN
           BEGIN
-            Champs.RESET;
+            Servicepreise.RESET;
             IF auswahl = 1 THEN
-              Champs.SETRANGE(Art,Champs.Art :: Champs);
+              Servicepreise.SETRANGE(Art,Servicepreise.Art :: Champs);
             IF auswahl = 2 THEN
-              Champs.SETRANGE(Art,Champs.Art :: ACTS);
-            Champs.SETRANGE(Währungscode,PL_Wäh);
-            IF Champs.FINDFIRST THEN
-              Champs.MODIFYALL("Update letzte Preisliste",FALSE);
+              Servicepreise.SETRANGE(Art,Servicepreise.Art :: ACTS);
+            Servicepreise.SETRANGE(Währungscode,PL_Wäh);
+            IF Servicepreise.FINDFIRST THEN
+              Servicepreise.MODIFYALL("Update letzte Preisliste",FALSE);
           END;
       END;
 
@@ -62,7 +65,7 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
         excel_dc := 0;
 
         Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
-        ChampArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
+        ServiceArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
         SUPArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_SUP+Quelle_j).Value);
         IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
           excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
@@ -76,80 +79,89 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
        ELSE
          BEGIN
            //Kennzeichnung der alten Pos., dass die Zuordnung obsolete geworden ist, da Champ Artikelnr. geändert wurde
-           Champs_obsolete.RESET;
+           Artikelnr_obsolete.RESET;
            IF auswahl = 1 THEN
-             Champs_obsolete.SETFILTER(Art,'%1',Champs_obsolete.Art :: Champs);
+             Artikelnr_obsolete.SETFILTER(Art,'%1',Artikelnr_obsolete.Art :: Champs);
            IF auswahl = 2 THEN
-             Champs_obsolete.SETRANGE(Art,Champs_obsolete.Art :: ACTS);
-           Champs_obsolete.SETFILTER("Artikelnr. 2",'%1',Artikelname);
-           Champs_obsolete.SETFILTER("SUP Artikelnr.",'%1',SUPArtikelname);
-           Champs_obsolete.SETFILTER(Währungscode,'%1',PL_Wäh);
-           IF Champs_obsolete.FINDFIRST THEN
+             Artikelnr_obsolete.SETFILTER(Art,'%1',Artikelnr_obsolete.Art :: ACTS);
+           Artikelnr_obsolete.SETFILTER("Artikelnr. 2",'%1',Artikelname);
+           Artikelnr_obsolete.SETFILTER("SUP Artikelnr.",'%1',SUPArtikelname);
+           Artikelnr_obsolete.SETFILTER(Währungscode,'%1',PL_Wäh);
+           Artikelnr_obsolete.SETFILTER("Zuordnung obsolete",'%1',FALSE);
+           IF Artikelnr_obsolete.FINDFIRST THEN
              REPEAT
-               IF Champs_obsolete."Champ Artikelnr." <> ChampArtikelname THEN
+               IF Artikelnr_obsolete."Service Artikelnr." <> ServiceArtikelname THEN
                  BEGIN
-                   Champs_obsolete."Zuordnung obsolete" := TRUE;
-                   Champs_obsolete.MODIFY(TRUE);
+                   Artikelnr_obsolete."Zuordnung obsolete" := TRUE;
+                   Artikelnr_obsolete.MODIFY(TRUE);
                    obsolete_einträge += 1;
+                   Quelle_Sheet.Range('M'+Quelle_j).Value := FORMAT(Quelle_Sheet.Range('M'+Quelle_j).Value) +
+                   Artikelnr_obsolete."Service Artikelnr." + ';';
                  END;
-             UNTIL Champs_obsolete.NEXT = 0;
+             UNTIL Artikelnr_obsolete.NEXT = 0;
 
-           Champs.RESET;
+           Servicepreise.RESET;
            IF auswahl = 1 THEN
-             Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
+             Servicepreise.SETFILTER(Art,'%1',Servicepreise.Art :: Champs);
            IF auswahl = 2 THEN
-             Champs.SETRANGE(Art,Champs.Art :: ACTS);
-           Champs.SETFILTER("Artikelnr. 2",'%1',Artikelname);
-           Champs.SETFILTER("Champ Artikelnr.",'%1',ChampArtikelname);
-           Champs.SETFILTER("SUP Artikelnr.",'%1',SUPArtikelname);
-           Champs.SETFILTER(Währungscode,'%1',PL_Wäh);
-           IF Champs.FINDFIRST THEN
+             Servicepreise.SETFILTER(Art,'%1',Servicepreise.Art :: ACTS);
+           Servicepreise.SETFILTER("Artikelnr. 2",'%1',Artikelname);
+           Servicepreise.SETFILTER("Service Artikelnr.",'%1',ServiceArtikelname);
+           Servicepreise.SETFILTER("SUP Artikelnr.",'%1',SUPArtikelname);
+           Servicepreise.SETFILTER(Währungscode,'%1',PL_Wäh);
+           IF Servicepreise.FINDFIRST THEN
              BEGIN
-               IF ((Champs.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0))
-               OR ((Champs.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0)) THEN
+               IF ((Servicepreise.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0))
+               OR ((Servicepreise.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0)) THEN
                  geänderte_einträge += 1;
 
-               IF (Champs.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0) THEN
+               IF (Servicepreise.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0) THEN
                  BEGIN
-                   Champs.MSRP := ROUND(excel_msrp,0.01);
-                   Champs.MODIFY(TRUE);
+                   Servicepreise.MSRP := ROUND(excel_msrp,0.01);
+                   Servicepreise.MODIFY(TRUE);
                  END;
-               IF (Champs.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0) THEN
+               IF (Servicepreise.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0) THEN
                  BEGIN
-                   Champs.DC := ROUND(excel_dc,0.01);
-                   Champs.MODIFY(TRUE);
+                   Servicepreise.DC := ROUND(excel_dc,0.01);
+                   Servicepreise.MODIFY(TRUE);
                  END;
-               Champs."Update letzte Preisliste" := TRUE;
-               Champs.Preisliste := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
-               Champs.MODIFY;
+               Servicepreise."Update letzte Preisliste" := TRUE;
+               Servicepreise.Preisliste := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
+               IF Servicepreise."Zuordnung obsolete" = TRUE THEN
+                 BEGIN
+                   Servicepreise."Zuordnung obsolete" := FALSE;
+                   obsolete_korrigiert += 1;
+                   Quelle_Sheet.Range('N'+Quelle_j).Value := 'obsolete korrigiert';
+                 END;
+               Servicepreise.MODIFY;
              END
            ELSE
              BEGIN
-               Champs.INIT;
-               Champs."Champ Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
-               Champs."SUP Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_SUP+Quelle_j).Value);
+               Servicepreise.INIT;
+               Servicepreise."Service Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
+               Servicepreise."SUP Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_SUP+Quelle_j).Value);
                Artikel.RESET;
                Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value));
                IF Artikel.FINDFIRST THEN
                  BEGIN
-                   Champs.VALIDATE("Artikelnr.",Artikel."No.");
+                   Servicepreise.VALIDATE("Artikelnr.",Artikel."No.");
                  END
                ELSE
                  BEGIN
-                   //Champs."Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
-                   Champs."Artikelnr. 2" := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+                   //Servicepreise."Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+                   Servicepreise."Artikelnr. 2" := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
                  END;
-               Champs.MSRP := ROUND(excel_msrp,0.01);
-               Champs.DC := ROUND(excel_dc,0.01);
-               Champs."Update letzte Preisliste" := TRUE;
-               Champs.Preisliste := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
-               Champs.Währungscode := PL_Wäh;
-               Champs."Laufzeit in Jahren" := Quelle_Sheet.Range(Spalte_YR+Quelle_j).Value;
+               Servicepreise.MSRP := ROUND(excel_msrp,0.01);
+               Servicepreise.DC := ROUND(excel_dc,0.01);
+               Servicepreise."Update letzte Preisliste" := TRUE;
+               Servicepreise.Preisliste := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
+               Servicepreise.Währungscode := PL_Wäh;
+               Servicepreise."Laufzeit in Jahren" := Quelle_Sheet.Range(Spalte_YR+Quelle_j).Value;
                IF auswahl = 1 THEN
-                 Champs.Art := Champs.Art :: Champs;
+                 Servicepreise.Art := Servicepreise.Art :: Champs;
                IF auswahl = 2 THEN
-                 Champs.Art := Champs.Art :: ACTS;
-               Champs.INSERT(TRUE);
+                 Servicepreise.Art := Servicepreise.Art :: ACTS;
+               Servicepreise.INSERT(TRUE);
                geänderte_einträge += 1;
              END;
 
@@ -171,18 +183,27 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
 
     UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = 15);  // Nach 15 Zeilen ohne Artikel ist Schluss
 
-    //Quelle_Excel.Visible(TRUE);
+    //Quelle_Book.Save;
+    Quelle_Book.Close(TRUE);
+    Quelle_Excel.Quit;
 
     CLEAR(Quelle_Sheet);
     CLEAR(Quelle_Book);
     CLEAR(Quelle_Excel);
 
-    REPEAT
-    UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+    //REPEAT
+    //UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
   END;
 
+
+//Systeme MSRP
 IF auswahl = 3 THEN
   BEGIN
+
+    Quelle_Sheet := Quelle_Excel.Worksheets.Item('Einspielen');
+
+    //Führende Einkaufswährung
+    system_ek_währung := '';
 
     Quelle_j := '2';
     excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
@@ -193,7 +214,7 @@ IF auswahl = 3 THEN
     IF FORMAT(Quelle_Sheet.Range(Spalte_DC+'1').Value) <> 'DC' THEN
       ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC + ' muss DC sein.');
 
-    IF (excel_datensätze > 499) AND (PL_Wäh = 'USD') THEN
+    IF (excel_datensätze > 499) AND (PL_Wäh = system_ek_währung) THEN
       BEGIN
         IF CONFIRM('Es konnte mehr als 500 Einträge in der Quelldatei gefunden werden.\' +
                    'Soll der Status Update letzte Preisliste für alle Artikel zurückgesetzt und neu ' +
@@ -215,8 +236,10 @@ IF auswahl = 3 THEN
         BEGIN
           IF FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value) <> '' THEN
             excel_dc := Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value;
+          excel_dc := ROUND(excel_dc,0.01);
           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
             excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
+          excel_msrp := ROUND(excel_msrp,0.01);
         END
       ELSE
         EOL := TRUE;
@@ -233,7 +256,7 @@ IF auswahl = 3 THEN
       ELSE
         BEGIN
           Kreditor.GET(Kred);
-          IF PL_Wäh = 'USD' THEN
+          IF PL_Wäh = system_ek_währung THEN
             IF PL_Wäh <> Kreditor."Currency Code" THEN
               ERROR(Text001,Kred);
 
@@ -246,7 +269,7 @@ IF auswahl = 3 THEN
               //                                    EK-Preise updaten
               //*********************************************************************************************
 
-              IF PL_Wäh = 'USD' THEN
+              IF PL_Wäh = system_ek_währung THEN
                 BEGIN
                   einkaufspreis.RESET;
                   einkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
@@ -364,27 +387,30 @@ IF auswahl = 3 THEN
 
    UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = 10);  // Nach 10 Zeilen ohne Artikel ist Schluss
 
-   //
    Artikel.RESET;
    Artikel.SETFILTER("Manufacturer Code",'%1','59');
    Artikel.SETFILTER("Update letzte Preisliste",'%1',FALSE);
-   Artikel.SETFILTER(Bezeichnung2_lang,'%1|%2','','*'+'Nicht in der Preisliste' + '*');
+   Artikel.SETFILTER(Bezeichnung2_lang,'%1|%2|%3','','*'+'Nicht in der Preisliste' + '*','*' +'Stand Preisliste' + '*');
    IF Artikel.FINDFIRST THEN 
      Artikel.MODIFYALL(Bezeichnung2_lang,'Nicht in der Preisliste ' + PL_Version_Systeme + ' vorhanden.');
 
-   Quelle_Book.Close;
+    Quelle_Book.Close(FALSE);
+    Quelle_Excel.Quit;
 
    CLEAR(Quelle_Sheet);
    CLEAR(Quelle_Book);
    CLEAR(Quelle_Excel);
 
-   REPEAT
-   UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+   //REPEAT
+   //UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
 
   END;
 
+//Systeme MSRP Schaeffler
 IF auswahl = 4 THEN
   BEGIN
+
+    Quelle_Sheet := Quelle_Excel.Worksheets.Item('Einspielen');
 
     Quelle_j := '2';
     excel_datensätze := Quelle_Sheet.UsedRange.Rows.Count;
@@ -394,17 +420,6 @@ IF auswahl = 4 THEN
       ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_MSRP + ' muss MSRP sein.');
     IF FORMAT(Quelle_Sheet.Range(Spalte_DC+'1').Value) <> 'DC' THEN
       ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC + ' muss DC sein.');
-
-    IF (excel_datensätze > 499) AND (PL_Wäh = 'USD') THEN
-      BEGIN
-        IF CONFIRM('Es konnte mehr als 500 Einträge in der Quelldatei gefunden werden.\' +
-                   'Soll der Status Update letzte Preisliste für alle Artikel zurückgesetzt und neu ' +
-                   'bewertet werden?',TRUE) THEN
-        Artikel.RESET;
-        Artikel.SETFILTER("Manufacturer Code",'%1','59');
-        IF Artikel.FINDFIRST THEN 
-          Artikel.MODIFYALL(Artikel."Update letzte Preisliste",FALSE);
-      END;
 
     REPEAT
 
@@ -417,8 +432,10 @@ IF auswahl = 4 THEN
         BEGIN
           IF FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value) <> '' THEN
             excel_dc := Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value;
+          excel_dc := ROUND(excel_dc,0.01);
           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
             excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
+          excel_msrp := ROUND(excel_msrp,0.01);
         END
       ELSE
         EOL := TRUE;
@@ -566,22 +583,24 @@ IF auswahl = 4 THEN
 
    UNTIL (Max_Datensätze = Quelle_j) OR (leere_zeilen = 10);  // Nach 10 Zeilen ohne Artikel ist Schluss
 
-   //
+   { // Nach Rückstellung auf 4.7.04 von 4.8.11.1 gibt es hier Probleme, da er auch alle anderen Artikel anfassen würde
    Artikel.RESET;
    Artikel.SETFILTER("Manufacturer Code",'%1','59');
    Artikel.SETFILTER("Update letzte Preisliste",'%1',FALSE);
-   Artikel.SETFILTER(Bezeichnung2_lang,'%1|%2','','*'+'Nicht in der Preisliste' + '*');
-   IF Artikel.FINDFIRST THEN 
+   Artikel.SETFILTER(Bezeichnung2_lang,'%1|%2|%3','','*'+'Nicht in der Preisliste' + '*','*' +'Stand Preisliste' + '*');
+   IF Artikel.FINDFIRST THEN
      Artikel.MODIFYALL(Bezeichnung2_lang,'Nicht in der Preisliste ' + PL_Version_Systeme + ' vorhanden.');
+   }
 
-   Quelle_Book.Close;
+   Quelle_Book.Close(FALSE);
+   Quelle_Excel.Quit;
 
    CLEAR(Quelle_Sheet);
    CLEAR(Quelle_Book);
    CLEAR(Quelle_Excel);
 
-   REPEAT
-   UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+   //REPEAT
+   //UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
 
   END;
 
@@ -598,4 +617,5 @@ CASE auswahl OF
 END;
 
 MESSAGE('Import der %1 Artikel abgeschlossen.'+ '\' + 'Neue bzw. geänderte Datensätze: %2\\'+
-        'Excel Datensätze: %3\Obsolete Bezeichnungen: %4',pl_bezeichnung,geänderte_einträge,excel_datensätze,obsolete_einträge);
+        'Excel Datensätze: %3\Obsolete Bezeichnungen: %4 (korrigiert: %5)'
+        ,pl_bezeichnung,geänderte_einträge,excel_datensätze,obsolete_einträge,obsolete_korrigiert);
