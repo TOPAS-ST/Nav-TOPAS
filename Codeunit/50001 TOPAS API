@@ -386,8 +386,8 @@ CLEAR(Quelle_Book);
 CLEAR(Protokoll_Excel);
 
 excel_datensätze := 0;
-Jahrgang := 2015;
-//Jahrgang := DATE2DMY(TODAY,3);
+//Jahrgang := 2015;
+Jahrgang := DATE2DMY(TODAY,3);
 
 Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + FORMAT(Jahrgang)  + '.xlsx';
 
