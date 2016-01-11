@@ -11,6 +11,10 @@ trim_text
 - 2014-04-02 ST released as a new function to trim a text
 
 ================================================================================================================
+GetDefaultPrinter
+- 2015-07-01 ST relased as a new function to get the default system printer
+
+================================================================================================================
 
 OnRun()
 
@@ -382,8 +386,8 @@ CLEAR(Quelle_Book);
 CLEAR(Protokoll_Excel);
 
 excel_datensätze := 0;
-//Jahrgang := 2014;
-Jahrgang := DATE2DMY(TODAY,3);
+Jahrgang := 2015;
+//Jahrgang := DATE2DMY(TODAY,3);
 
 Protokollpfaddatei := Path + Protokoll_Ordner + Protokolldateiname + FORMAT(Jahrgang)  + '.xlsx';
 
@@ -532,14 +536,20 @@ IF File.FINDSET THEN BEGIN
                IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) <= 40 THEN
                  BEGIN
                    //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
-                   IF (LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur_module')
-                   OR (LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur module') THEN
+                   IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur_module') <> 0)
+                   OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur module') <> 0) THEN
                      nur_module := TRUE;
                    IF STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'slave') <> 0 THEN
                      is_slave := TRUE;
                    temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
                    //Sonderfall Mediant 2600
                    Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
+                   //Sonderfall Schaeffler
+                   IF (NOT Artikel.FINDFIRST) AND (STRLEN(temp_artikelnr) <= 20) THEN
+                     BEGIN
+                       Artikel.RESET;
+                       Artikel.SETFILTER("No.",'%1',temp_artikelnr);
+                     END;
                    IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                      BEGIN
                        Spalte_Artikelnr := Spalte[k];
@@ -593,6 +603,12 @@ IF File.FINDSET THEN BEGIN
           IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
             BEGIN
               Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+              //Sonderfall Schaeffler
+              IF (NOT Artikel.FINDFIRST) AND (STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 20) THEN
+                BEGIN
+                  Artikel.RESET;
+                  Artikel.SETFILTER("No.",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                END;
               IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
               OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT'))  THEN
                 BEGIN
@@ -732,8 +748,14 @@ IF File.FINDSET THEN BEGIN
                   IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
                     BEGIN
                       Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
-                      IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND 
-                      (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') THEN
+                      //Sonderfall Schaeffler
+                      IF (NOT Artikel.FINDFIRST) AND 
+                      (STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 20) THEN
+                        BEGIN
+                          Artikel.RESET;
+                          Artikel.SETFILTER("No.",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                        END;
+                      IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') THEN
                         Board_ini := '';
                     END;
                 END;
@@ -863,6 +885,7 @@ IF File.FINDSET THEN BEGIN
             END
           ELSE
             BEGIN
+
               //Sucht die Build ini in der Quelldatei neu!!!!!!!!!!!!!!!!!!
               //****************** In Entwicklung**************************
 
@@ -914,12 +937,18 @@ IF File.FINDSET THEN BEGIN
                              IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) <= 40 THEN
                                BEGIN
                                  //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
-                                 IF (LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur_module')
-                                 OR (LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)) = 'nur module') THEN
+                                 IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur_module') <> 0)
+                                 OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur module') <> 0) THEN
                                    nur_module := TRUE;
                                  temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
                                  //Sonderfall Mediant 2600
                                  Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
+                                 //Sonderfall Schaeffler
+                                 IF (NOT Artikel.FINDFIRST) AND (STRLEN(temp_artikelnr) <= 20) THEN
+                                   BEGIN
+                                     Artikel.RESET;
+                                     Artikel.SETFILTER("No.",'%1',temp_artikelnr);
+                                   END;
                                  IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                                    BEGIN
                                      Spalte_Artikelnr := Spalte[k];
@@ -975,6 +1004,13 @@ IF File.FINDSET THEN BEGIN
                         IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 40 THEN
                           BEGIN
                             Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                            //Sonderfall Schaeffler
+                            IF (NOT Artikel.FINDFIRST) AND 
+                            (STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value)) <= 20) THEN
+                              BEGIN
+                                Artikel.RESET;
+                                Artikel.SETFILTER("No.",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value));
+                              END;
                             IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
                             OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
                               BEGIN
@@ -1082,7 +1118,14 @@ IF File.FINDSET THEN BEGIN
                   IF Spalte_Artikelnr <> '' THEN
                     BEGIN
                       Artikel.SETFILTER("No. 2",'%1',FORMAT(Protokoll_Sheet.Range(Spalte_Artikelnr+temp_Protokoll_j).Value));
-                      IF (Artikel.FINDFIRST) AND (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') THEN
+                      //Sonderfall Schaeffler
+                      IF (NOT Artikel.FINDFIRST) AND 
+                      (STRLEN(FORMAT(Protokoll_Sheet.Range(Spalte_Artikelnr+temp_Protokoll_j).Value)) <= 20) THEN
+                        BEGIN
+                          Artikel.RESET;
+                          Artikel.SETFILTER("No.",'%1',FORMAT(Protokoll_Sheet.Range(Spalte_Artikelnr+temp_Protokoll_j).Value));
+                        END;
+                      IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') THEN
                         BEGIN
                           Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
                           IF (Spalte_BoardIni = '') THEN
@@ -1350,6 +1393,7 @@ EXIT(num);
 OpenFolder(FolderPath : Text[180])
 IF ISCLEAR(WSH) THEN
   CREATE(WSH);
+
 IF NOT WSH.FolderExists(FolderPath) THEN
   BEGIN
     CLEAR(WSH);
@@ -1366,6 +1410,26 @@ IF ISCLEAR(WSHFolder) THEN
   END;
 
 CLEAR(WSH);
+
+NewFolder(FolderPath : Text[180]) : Boolean
+//SHELL(STRSUBSTNO('%1 /c MkDir %2', ENVIRON('COMSPEC'),FolderPath));
+
+IF FolderPath = '' THEN EXIT(FALSE);
+
+IF ISCLEAR(WSH) THEN
+  CREATE(WSH);
+
+IF NOT WSH.FolderExists(FolderPath) THEN
+  BEGIN
+    IF WSH.FolderExists(COPYSTR(FolderPath,1,STRPOS(FolderPath,'\'))) THEN
+      WSH.CreateFolder(FolderPath)
+    ELSE
+      EXIT(FALSE);
+  END;
+
+CLEAR(WSH);
+
+EXIT(TRUE);
 
 CalculateTimeDiff(Type : Code[10];Startdate : Date;Enddate : Date) : Integer
 IF (Startdate = 0D) OR (Enddate = 0D) THEN
