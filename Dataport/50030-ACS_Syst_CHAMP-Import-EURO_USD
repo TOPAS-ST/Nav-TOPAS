@@ -62,15 +62,12 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
     REPEAT
 
         excel_msrp := 0;
-        excel_dc := 0;
 
         Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
-        ServiceArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
+        ServiceArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_Serviceartikelnr+Quelle_j).Value);
         SUPArtikelname := FORMAT(Quelle_Sheet.Range(Spalte_SUP+Quelle_j).Value);
         IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
           excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
-        IF FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value) <> '' THEN
-          excel_dc := Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value;
         PL_Version := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
 
        IF Artikelname = '' THEN
@@ -95,7 +92,7 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
                    Artikelnr_obsolete."Zuordnung obsolete" := TRUE;
                    Artikelnr_obsolete.MODIFY(TRUE);
                    obsolete_einträge += 1;
-                   Quelle_Sheet.Range('M'+Quelle_j).Value := FORMAT(Quelle_Sheet.Range('M'+Quelle_j).Value) +
+                   Quelle_Sheet.Range('L'+Quelle_j).Value := FORMAT(Quelle_Sheet.Range('L'+Quelle_j).Value) +
                    Artikelnr_obsolete."Service Artikelnr." + ';';
                  END;
              UNTIL Artikelnr_obsolete.NEXT = 0;
@@ -111,18 +108,10 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
            Servicepreise.SETFILTER(Währungscode,'%1',PL_Wäh);
            IF Servicepreise.FINDFIRST THEN
              BEGIN
-               IF ((Servicepreise.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0))
-               OR ((Servicepreise.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0)) THEN
-                 geänderte_einträge += 1;
-
                IF (Servicepreise.MSRP <> ROUND(excel_msrp,0.01)) AND (excel_msrp <> 0) THEN
                  BEGIN
+                   geänderte_einträge += 1;
                    Servicepreise.MSRP := ROUND(excel_msrp,0.01);
-                   Servicepreise.MODIFY(TRUE);
-                 END;
-               IF (Servicepreise.DC <> ROUND(excel_dc,0.01)) AND (excel_dc <> 0) THEN
-                 BEGIN
-                   Servicepreise.DC := ROUND(excel_dc,0.01);
                    Servicepreise.MODIFY(TRUE);
                  END;
                Servicepreise."Update letzte Preisliste" := TRUE;
@@ -131,14 +120,14 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
                  BEGIN
                    Servicepreise."Zuordnung obsolete" := FALSE;
                    obsolete_korrigiert += 1;
-                   Quelle_Sheet.Range('N'+Quelle_j).Value := 'obsolete korrigiert';
+                   Quelle_Sheet.Range('M'+Quelle_j).Value := 'obsolete korrigiert';
                  END;
                Servicepreise.MODIFY;
              END
            ELSE
              BEGIN
                Servicepreise.INIT;
-               Servicepreise."Service Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Champ+Quelle_j).Value);
+               Servicepreise."Service Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_Serviceartikelnr+Quelle_j).Value);
                Servicepreise."SUP Artikelnr." := FORMAT(Quelle_Sheet.Range(Spalte_SUP+Quelle_j).Value);
                Artikel.RESET;
                Artikel.SETFILTER("No. 2",'%1',FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value));
@@ -152,7 +141,6 @@ IF (auswahl = 1) OR (auswahl = 2) THEN
                    Servicepreise."Artikelnr. 2" := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
                  END;
                Servicepreise.MSRP := ROUND(excel_msrp,0.01);
-               Servicepreise.DC := ROUND(excel_dc,0.01);
                Servicepreise."Update letzte Preisliste" := TRUE;
                Servicepreise.Preisliste := Quelle_Sheet.Range(Spalte_PL_Version+Quelle_j).Value;
                Servicepreise.Währungscode := PL_Wäh;
@@ -211,8 +199,8 @@ IF auswahl = 3 THEN
 
     IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+'1').Value) <> 'MSRP' THEN
       ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_MSRP + ' muss MSRP sein.');
-    IF FORMAT(Quelle_Sheet.Range(Spalte_DC+'1').Value) <> 'DC' THEN
-      ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC + ' muss DC sein.');
+    IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+'1').Value) <> 'DC' THEN
+      ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC_Systeme + ' muss DC sein.');
 
     IF (excel_datensätze > 499) AND (PL_Wäh = system_ek_währung) THEN
       BEGIN
@@ -234,8 +222,8 @@ IF auswahl = 3 THEN
       Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
       IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> 'EOL' THEN
         BEGIN
-          IF FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value) <> '' THEN
-            excel_dc := Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value;
+          IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value) <> '' THEN
+            excel_dc := Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value;
           excel_dc := ROUND(excel_dc,0.01);
           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
             excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
@@ -418,8 +406,8 @@ IF auswahl = 4 THEN
 
     IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+'1').Value) <> 'MSRP' THEN
       ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_MSRP + ' muss MSRP sein.');
-    IF FORMAT(Quelle_Sheet.Range(Spalte_DC+'1').Value) <> 'DC' THEN
-      ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC + ' muss DC sein.');
+    IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+'1').Value) <> 'DC' THEN
+      ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_DC_Systeme + ' muss DC sein.');
 
     REPEAT
 
@@ -430,8 +418,8 @@ IF auswahl = 4 THEN
       Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
       IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> 'EOS' THEN
         BEGIN
-          IF FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value) <> '' THEN
-            excel_dc := Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value;
+          IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value) <> '' THEN
+            excel_dc := Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value;
           excel_dc := ROUND(excel_dc,0.01);
           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> '' THEN
             excel_msrp := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
