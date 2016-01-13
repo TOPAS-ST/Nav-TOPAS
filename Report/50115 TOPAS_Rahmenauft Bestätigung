@@ -1,0 +1,1829 @@
+OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.11.15;
+    Time=10:36:14;
+    Modified=Yes;
+    Version List=Beleg !!ausfhrbar !!;
+  }
+  PROPERTIES
+  {
+    ShowPrintStatus=No;
+    UseReqForm=Yes;
+    TopMargin=500;
+    BottomMargin=0;
+    RightMargin=100;
+    UseSystemPrinter=Yes;
+    OnInitReport=BEGIN
+                   FIBUEinrichtung.GET;
+                   CurrReport.USEREQUESTFORM(TRUE);
+                 END;
+
+    OnPreReport=BEGIN
+                  //AnzKopien:=1;
+                END;
+
+    PaperSize=A4 210 x 297 mm;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table36;
+        DataItemTableView=SORTING(Document Type,No.)
+                          WHERE(Document Type=CONST(Blanket Order),
+                                Location Code=FILTER(ZENT|KONSI));
+        NewPagePerRecord=Yes;
+        PrintOnlyIfDetail=Yes;
+        ReqFilterHeadingML=DEU=Rahmenauftrag;
+        OnPreDataItem=BEGIN
+                        Firmendaten.GET;
+                        Firmendaten.CALCFIELDS("ISO Logo");
+
+                        FormatAdr.Company(FirmaAdr,Firmendaten);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           //25.04.2012-ST
+                           CurrReport.LANGUAGE := language.GetLanguageID("Language Code");
+
+                           IF "Salesperson Code" = '' THEN BEGIN
+                             CLEAR(VerkEinkPerson);
+                             Verk„uferText := '';
+                           END ELSE BEGIN
+                             VerkEinkPerson.GET("Salesperson Code");
+                             Verk„uferText := 'Verk„ufer';
+                           END;
+                           IF "Your Reference" = '' THEN
+                             ReferenzText := ''
+                           ELSE
+                             ReferenzText := FIELDNAME("Your Reference");
+                           IF "VAT Registration No." = '' THEN
+                             MWStNrText := ''
+                           ELSE
+                             MWStNrText := FIELDNAME("VAT Registration No.");
+                           IF "Currency Code" = '' THEN BEGIN
+                             FIBUEinrichtung.TESTFIELD("LCY Code");
+                             TotalText :='Total';
+                             TotalInklMWStText := 'Total inkl. MWSt';
+                           //  TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                           //  TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',FIBUEinrichtung."LCY Code");
+                           END ELSE BEGIN
+                             TotalText := 'Total';
+                             TotalInklMWStText := 'Total inkl. MWSt';
+                           //  TotalText := STRSUBSTNO('Total %1',"Currency Code");
+                           //  TotalInklMWStText := STRSUBSTNO('Total %1 inkl. MWSt',"Currency Code");
+                           END;
+                           FormatAdr.SalesHeaderBillTo(DebAdr,"Sales Header");
+                           FormatAdr.SalesHeaderSellTo(VerkAdr,"Sales Header");
+                           IF "Payment Terms Code" = '' THEN
+                             ZlgBed.INIT
+                           ELSE
+                             ZlgBed.GET("Payment Terms Code");
+                           IF "Shipment Method Code" = '' THEN
+                             LieferBed.INIT
+                           ELSE
+                             LieferBed.GET("Shipment Method Code");
+
+                           FormatAdr.SalesHeaderShipTo(LieferAnAdr,"Sales Header");
+                           LiefAdrAnzeigen := "Sell-to Customer No." <> "Bill-to Customer No.";
+                           FOR i := 1 TO ARRAYLEN(LieferAnAdr) DO
+                             IF (LieferAnAdr[i] <> VerkAdr[i]) OR (DebAdr[i] <> VerkAdr[i]) THEN
+                               LiefAdrAnzeigen := TRUE;
+
+                           IF "Currency Code" = '' THEN
+                           BEGIN
+                           waehrung:='[ '+'°'+' ]';
+                           waehrung2:='EUR';
+                           END
+                           ELSE
+                           BEGIN
+                           waehrung:='[ '+"Currency Code"+' ]';
+                           waehrung2:="Currency Code";
+                           END;
+
+                           v_FER_SPL:=FALSE;
+                         END;
+
+        ReqFilterFields=No.,Sell-to Customer No.,No. Printed,Order Date;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table18;
+        DataItemVarName=Debito;
+        DataItemLinkReference=Sales Header;
+        DataItemLink=No.=FIELD(Sell-to Customer No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table291;
+        DataItemLink=Code=FIELD(Shipping Agent Code);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table13;
+        DataItemLink=Code=FIELD(Betreuer Innendienst);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        NewPagePerRecord=Yes;
+        DataItemVarName=KopieSchleife;
+        OnPreDataItem=BEGIN
+                        AnzSchleifen := ABS(AnzKopien) + 1;
+                        //AnzSchleifen := ABS(AnzKopien) + 0;
+                        KopieText := '';
+                        SETRANGE(Number,1,AnzSchleifen);
+                        sum_restauftragsbestand:=0;
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           sum_restauftragsbestand:=0;
+
+                           CLEAR(VerkZeile2);
+                           CLEAR(VerkBuchen);
+                           VerkBuchen.GetSalesLines("Sales Header",VerkZeile2,0);
+
+                           IF Number > 1 THEN
+                             BEGIN
+                               CurrReport.PAPERSOURCE(1);
+                             END
+                             ELSE
+                             BEGIN
+                               CurrReport.PAPERSOURCE(3);
+                             END;
+
+                           v_keine_AB := '';
+                           "ab vor wandlung" := '';
+                           "via EMail_adresse":= '';
+                           "via Email_unterschrift" := '';
+                           "via Email" := '';
+
+                           kunde.GET("Sales Header"."Sell-to Customer No.");
+                           IF Number > 1 THEN
+                             BEGIN
+                             KopieText := 'skopie';
+                             IF kunde."AB vor Wandlung" THEN "ab vor wandlung" := 'Achtung erst AB dann Wandeln !!!';
+                             IF "Sales Header"."keine Rahmen-AB an Kunden" THEN v_keine_AB := 'Keine Best„tigung an Kunden !';
+                             IF kunde."AB via EMail" THEN
+                               BEGIN
+                                 "via Email_unterschrift" :='Erledigt von ..............'  ;
+                                 "via Email" := 'Achtung via E-Mail versenden !!!';
+                                 "via EMail_adresse":="Sales Header"."AB via EMail-Adresse";
+                               END;
+                             END;
+
+                           IF Number > 1 THEN
+                             KopieText := 'skopie';
+                           CurrReport.PAGENO := 1;
+
+                           IF "Sales Header"."Document Date" > "Sales Header"."Order Date" THEN
+                           BEGIN
+                           „nderung := 'Žnderungs-';
+                           END ELSE
+                           BEGIN
+                           „nderung :='';
+                           END;
+
+
+
+
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                               BEGIN
+                                  ansp_telefon:="Salesperson/Purchaser"."Phone No.";
+                                  ansp_fax:="Salesperson/Purchaser"."Fax no.";
+                                  ansp_anrede :="Salesperson/Purchaser".Ansprech;
+                               END
+                              ELSE
+                               BEGIN
+                                  ansp_telefon:="Salesperson/Purchaser".Tel_international;
+                                  ansp_fax:="Salesperson/Purchaser".Fax_international;
+                                  ansp_anrede :="Salesperson/Purchaser".Ansprech_eng;
+                               END;
+
+
+
+
+                           IF (("Sales Header"."Shipment Method Code"='ACCOUNT') OR ("Sales Header"."Shipment Method Code"='ACC-ENG'))
+                            THEN
+                             BEGIN
+                               Account:="Sales Header".Spediteuraccount;
+                               END ELSE
+                                 BEGIN
+                               Account:="Shipping Agent".Name
+                                 END;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         IF NOT CurrReport.PREVIEW THEN
+                           VerkDruckZ„hler.RUN("Sales Header");
+                       END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18800;
+            SectionHeight=13000;
+          }
+          CONTROLS
+          {
+            { 98  ;TextBox      ;0    ;5000 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[1] }
+            { 100 ;TextBox      ;0    ;5400 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[2] }
+            { 108 ;TextBox      ;0    ;5800 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[3] }
+            { 116 ;TextBox      ;0    ;6200 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[4] }
+            { 131 ;TextBox      ;0    ;6600 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[5] }
+            { 142 ;TextBox      ;0    ;7000 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[6] }
+            { 146 ;TextBox      ;0    ;7400 ;6300 ;400  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[7] }
+            { 147 ;TextBox      ;0    ;7800 ;6300 ;423  ;FontSize=10;
+                                                         SourceExpr=VerkAdr[8] }
+            { 23  ;TextBox      ;16600;10500;1680 ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO)) }
+            { 7   ;Shape        ;11300;11500;7000 ;1400  }
+            { 28  ;TextBox      ;16600;12200;1300 ;500  ;FontSize=9;
+                                                         SourceExpr=FORMAT("Sales Header"."Document Date",0,1) }
+            { 27  ;TextBox      ;14300;12200;1900 ;500  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Sales Header"."Bill-to Customer No." }
+            { 5   ;Label        ;14300;11700;1800 ;400  ;Name=Kundenummer }
+            { 6   ;Label        ;16600;11700;900  ;400  ;Name=Datum }
+            { 36  ;TextBox      ;11600;12200;2100 ;500  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Sales Header"."No." }
+            { 4   ;Label        ;11600;11700;2100 ;400  ;Name=Auftragsnummer }
+            { 11  ;TextBox      ;10200;10200;2600 ;800  ;FontSize=16;
+                                                         SourceExpr=KopieText }
+            { 30  ;TextBox      ;8100 ;12200;3000 ;500  ;FontSize=9;
+                                                         SourceExpr="Sales Header"."VAT Registration No." }
+            { 10  ;Label        ;5300 ;10200;5500 ;800  ;Name=Auftragsbest„tigung;
+                                                         FontSize=16;
+                                                         CaptionML=DEU=Kontraktbest„tigung }
+            { 18  ;TextBox      ;8100 ;11700;2000 ;400  ;FontSize=7;
+                                                         SourceExpr=MWStNrText }
+            { 12  ;TextBox      ;5200 ;12200;2700 ;500  ;FontSize=9;
+                                                         AutoEnter=No;
+                                                         AssistEdit=No;
+                                                         SourceExpr=Debito."Our Account No.";
+                                                         TableRelation=Customer }
+            { 13  ;Label        ;5200 ;11700;2000 ;400  ;Name=Lieferanten-Nr. }
+            { 38  ;TextBox      ;0    ;12200;5000 ;500  ;FontSize=9;
+                                                         SourceExpr="Sales Header"."External Document No."+' '+"Sales Header"."Your Reference" }
+            { 9   ;Label        ;0    ;11700;2600 ;400  ;Name=Ihre Auftragsangaben }
+            { 60  ;TextBox      ;5300 ;9500 ;5000 ;700  ;HorzAlign=Center;
+                                                         FontSize=16;
+                                                         SourceExpr=„nderung }
+            { 140 ;Label        ;0    ;4400 ;4200 ;300  ;Name=[TOPAS electronic GmbH, ];
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=TOPAS electronic GmbH, }
+            { 141 ;Label        ;2900 ;4400 ;2200 ;300  ;Name=Postfach 11 04 11,;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=Postfach 11 04 11, }
+            { 144 ;Label        ;5100 ;4400 ;4200 ;300  ;Name=30100 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=30100 Hannover }
+            { 185 ;TextBox      ;5200 ;6500 ;8700 ;600  ;BorderColor=0;
+                                                         FontSize=15;
+                                                         FontBold=Yes;
+                                                         SourceExpr="ab vor wandlung" }
+            { 186 ;TextBox      ;5200 ;7100 ;8700 ;600  ;FontSize=15;
+                                                         FontBold=Yes;
+                                                         SourceExpr="via Email" }
+            { 187 ;TextBox      ;5200 ;7700 ;8700 ;600  ;FontSize=15;
+                                                         FontBold=Yes;
+                                                         SourceExpr="via EMail_adresse" }
+            { 188 ;TextBox      ;5200 ;8300 ;8700 ;600  ;FontSize=15;
+                                                         FontBold=Yes;
+                                                         SourceExpr="via Email_unterschrift" }
+            { 192 ;Label        ;16600;10900;900  ;400  ;Name=Kundenummer;
+                                                         CaptionML=DEU=Stand }
+            { 215 ;TextBox      ;17300;10900;980  ;400  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=WORKDATE }
+            { 1140001;TextBox   ;14004;10024;4200 ;300  ;FontBold=Yes;
+                                                         SourceExpr="Salesperson/Purchaser"."E-Mail" }
+            { 1140003;TextBox   ;14004;9124 ;4200 ;300  ;FontBold=Yes;
+                                                         SourceExpr="Salesperson/Purchaser"."first name" + ' ' +"Salesperson/Purchaser".Name }
+            { 1140000;TextBox   ;14004;8824 ;4200 ;300  ;FontBold=Yes;
+                                                         SourceExpr=ansp_anrede }
+            { 1140002;TextBox   ;14804;9424 ;3400 ;300  ;FontBold=Yes;
+                                                         SourceExpr=ansp_telefon }
+            { 1140004;TextBox   ;14804;9724 ;3400 ;300  ;FontBold=Yes;
+                                                         SourceExpr=ansp_fax }
+            { 1140007;Label     ;14004;9424 ;800  ;300  ;CaptionML=[DEU=Tel. :;
+                                                                    ENU=Phone:] }
+            { 1140008;Label     ;14004;9724 ;800  ;300  ;CaptionML=[DEU=Fax :;
+                                                                    ENU=Fax :] }
+            { 1140009;TextBox   ;5212 ;5926 ;8700 ;600  ;BorderColor=0;
+                                                         FontSize=15;
+                                                         FontBold=Yes;
+                                                         SourceExpr=v_keine_AB }
+            { 1140013;Label     ;2855 ;1770 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 1140014;Label     ;9885 ;1344 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 1140015;Label     ;6583 ;1346 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 1140016;Label     ;2855 ;2170 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140017;Label     ;0    ;1312 ;6600 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vertriebsgesellschaft mbH   "] }
+            { 1140018;Label     ;19   ;2170 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 1140019;Label     ;19   ;1770 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 1140036;Label     ;14004;3400 ;4200 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140037;Label     ;14004;3700 ;4200 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR- und USD-Konto: }
+            { 1140038;Label     ;14004;4000 ;4200 ;300  ;Name=SWIFT-BIC.: DEUTDE2HXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140039;Label     ;14004;4300 ;4200 ;300  ;Name=IBAN: DE62250700700030561500;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140040;Label     ;14004;5400 ;4200 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 1140041;Label     ;14004;5700 ;4200 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR-, USD- und JPY-Konto: }
+            { 1140042;Label     ;14004;6000 ;4200 ;300  ;Name=SWIFT-BIC.: DRESDEFF250;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140043;Label     ;14004;6300 ;4200 ;300  ;Name=IBAN: DE30250800200770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140052;Label     ;14004;7400 ;4200 ;300  ;Name=Steuer-Nr.:   25/202/35327;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Steuer-Nr.:   25/202/35327;
+                                                                    ENU=TAX No.:   25/202/35327] }
+            { 1140053;Label     ;14004;7700 ;4200 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=USt.-ID.-Nr.: DE115651057;
+                                                                    ENU=VAT Reg.No.: DE115651057] }
+            { 1140054;Label     ;14004;8000 ;4200 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-Nr.: DE 69202523] }
+            { 1140020;PictureBox;9319 ;2930 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=Yes;
+            PlaceInBottom=Yes;
+            SectionWidth=18800;
+            SectionHeight=1200;
+          }
+          CONTROLS
+          {
+            { 14  ;Label        ;0    ;800  ;18800;400  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=6;
+                                                         CaptionML=DEU=Eigentumsvorbehalt: Insbesondere weisen wir darauf hin, dass die Ware gem„á unserer allgemeinen Gesch„ftsbedingungen bis zur Zahlung in voller H”he unser Eigentum bleibt. }
+            { 15  ;Label        ;0    ;500  ;18800;400  ;HorzAlign=Center;
+                                                         FontName=arial;
+                                                         FontSize=6;
+                                                         CaptionML=DEU=Fr die Ausfhrung dieses Auftrages gelten unsere allgemeinen Gesch„ftsbedingungen }
+            { 16  ;Shape        ;0    ;400  ;18800;300  ;ShapeStyle=HorzLine }
+            { 17  ;Label        ;0    ;0    ;18800;600  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=www.topas.de }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table37;
+        DataItemTableView=SORTING(Document Type,Document No.,Line No.);
+        PrintOnlyIfDetail=Yes;
+        OnPreDataItem=BEGIN
+                        CurrReport.BREAK;
+                      END;
+
+        DataItemLinkReference=Sales Header;
+        DataItemLink=Document Type=FIELD(Document Type),
+                     Document No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=RundungsRahmen;
+        OnPreDataItem=BEGIN
+                        MWSTBetragZeile.DELETEALL;
+                        MehrZeilen := VerkZeile2.FIND('+');
+                        WHILE MehrZeilen AND (VerkZeile2.Description = '') AND
+                              (VerkZeile2."No." = '') AND (VerkZeile2.Quantity = 0) AND
+                              (VerkZeile2.Amount = 0)
+                        DO
+                          MehrZeilen := VerkZeile2.NEXT(-1) <> 0;
+                        IF NOT MehrZeilen THEN
+                          CurrReport.BREAK;
+                        VerkZeile2.SETRANGE("Line No.",0,VerkZeile2."Line No.");
+                        SETRANGE(Number,1,VerkZeile2.COUNT);
+                        CurrReport.CREATETOTALS(VerkZeile2."Outstanding Amount",VerkZeile2."Amount Including VAT",VerkZeile2."Inv. Discount Amount");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           IF Number = 1 THEN
+                             VerkZeile2.FIND('-')
+                           ELSE
+                             VerkZeile2.NEXT;
+                           "Sales Line" := VerkZeile2;
+
+                           MWSTBetragZeile.INIT;
+                           MWSTBetragZeile."VAT %" := "Sales Line"."VAT %";
+                           MWSTBetragZeile."VAT Base" := "Sales Line".Amount;
+                           MWSTBetragZeile."Amount Including VAT" := "Sales Line"."Amount Including VAT";
+                           MWSTBetragZeile.InsertLine;
+
+                            IF v_FER_SPL=FALSE THEN BEGIN
+                              IF (("Sales Line"."Manufacturer Code" ='82') OR ("Sales Line"."Manufacturer Code" = '85')) THEN BEGIN
+                               v_FER_SPL:=TRUE;
+                              END;
+                            END;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         VerkZeile2.DELETEALL;
+                       END;
+
+        DataItemLinkReference=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18800;
+            SectionHeight=1300;
+          }
+          CONTROLS
+          {
+            { 78  ;Label        ;16500;200  ;1900 ;400  ;Name=Gesamtpreis;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Restwert }
+            { 79  ;Label        ;15000;200  ;1500 ;400  ;Name=Einzelpreis;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 80  ;Label        ;13300;600  ;1500 ;400  ;Name=land;
+                                                         HorzGlue=Left;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 81  ;Label        ;13300;200  ;1500 ;400  ;Name=Ursprungs-;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 151 ;Label        ;9700 ;600  ;1700 ;400  ;Name=Menge;
+                                                         HorzGlue=Left;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Restmenge }
+            { 152 ;Label        ;9700 ;200  ;1700 ;400  ;Name=Noch zu lief.;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Kontrakt }
+            { 153 ;Label        ;7900 ;200  ;1400 ;400  ;Name=Bestellte;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Kontrakt }
+            { 154 ;Label        ;7900 ;600  ;1400 ;400  ;Name=Menge;
+                                                         HorzGlue=Left;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 155 ;Label        ;2000 ;200  ;5200 ;400  ;Name=Artikel;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 156 ;Label        ;100  ;200  ;800  ;400  ;Name=Pos.;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 44  ;TextBox      ;15000;600  ;1500 ;400  ;HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         SourceExpr=waehrung2 }
+            { 45  ;TextBox      ;16500;600  ;1900 ;400  ;HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         SourceExpr=waehrung2 }
+            { 46  ;Label        ;1100 ;200  ;500  ;400  ;Name=HK;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 210 ;Label        ;11500;600  ;1700 ;400  ;Name=Menge;
+                                                         HorzGlue=Left;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Disponiert }
+            { 211 ;Label        ;11500;200  ;1700 ;400  ;Name=Noch zu lief.;
+                                                         HorzAlign=Center;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Noch nicht }
+            { 74  ;Shape        ;0    ;0    ;18300;1200  }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=18800;
+            SectionHeight=900;
+          }
+          CONTROLS
+          {
+            { 53  ;Label        ;13125;186  ;2374 ;423  ;Name=Fortsetzung;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 1140022;TextBox   ;15689;193  ;2400 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=sum_restauftragsbestand;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(VerkZeile2.Type = 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 55  ;TextBox      ;1900 ;0    ;16300;423  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type =VerkZeile2.Type::Item) AND (VerkZeile2."No."=''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 216 ;TextBox      ;1900 ;0    ;16300;423  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=600;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type =VerkZeile2.Type::"G/L Account") AND (VerkZeile2."Outstanding Quantity">0));
+                           IF VerkZeile2.Type = VerkZeile2.Type::"G/L Account" THEN
+                             BEGIN
+                               sum_restauftragsbestand:=sum_restauftragsbestand+VerkZeile2.Amount;
+                               SumPorto:=VerkZeile2.Amount;
+                             END;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 56  ;TextBox      ;1900 ;177  ;5200 ;423  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+            { 57  ;TextBox      ;7300 ;177  ;1700 ;400  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line".Quantity }
+            { 59  ;TextBox      ;14700;177  ;1500 ;400  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 61  ;TextBox      ;16330;177  ;1900 ;400  ;FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=ROUND(((VerkZeile2."Outstanding Amount")/(100+mwst)*100)+"Sales Line"."Inv. Discount Amount",0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 58  ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=621;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(VerkZeile2.Type = VerkZeile2.Type::Resource);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 69  ;TextBox      ;0    ;177  ;1000 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."No." }
+            { 70  ;TextBox      ;1900 ;177  ;5200 ;423  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+            { 71  ;TextBox      ;8820 ;177  ;1470 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line".Quantity }
+            { 72  ;TextBox      ;10500;177  ;1050 ;423  ;FontSize=9;
+                                                         SourceExpr="Sales Line"."Unit of Measure" }
+            { 73  ;TextBox      ;11760;177  ;2100 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 75  ;TextBox      ;15540;177  ;2520 ;423  ;FontSize=9;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=ROUND(((VerkZeile2."Outstanding Amount")/(100+mwst)*100),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 68  ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=18800;
+            SectionHeight=1023;
+          }
+          CONTROLS
+          {
+            { 83  ;Label        ;13342;442  ;2348 ;423  ;Name=Fortsetzung;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 1140021;TextBox   ;15770;423  ;2400 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=sum_restauftragsbestand;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=0;
+          }
+          CONTROLS
+          {
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(VerkZeile2."Inv. Discount Amount" <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 86  ;TextBox      ;15780;0    ;2450 ;423  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=Rechn.-Rabatt Betrag;
+                                                         SourceExpr=ROUND(-VerkZeile2."Inv. Discount Amount",0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 85  ;Label        ;11300;0    ;4200 ;423  ;ParentControl=86;
+                                                         FontSize=9 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=185;
+          }
+          CONTROLS
+          {
+            { 24  ;Shape        ;0    ;27   ;18300;100  ;ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=556;
+            OnPreSection=BEGIN
+                            CurrReport.SHOWOUTPUT(v_FER_SPL=FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 19  ;Shape        ;0    ;401  ;18300;100  ;ShapeStyle=HorzLine }
+            { 21  ;Label        ;0    ;26   ;18300;350  ;HorzAlign=Center;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Diese Waren wurden NICHT in der EU hergestellt, sie entsprechen NICHT den Pr„ferenzregeln }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=1899;
+          }
+          CONTROLS
+          {
+            { 76  ;TextBox      ;11174;191  ;3500 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=TotalText }
+            { 51  ;TextBox      ;11174;614  ;3500 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile.VATAmountText }
+            { 77  ;TextBox      ;11174;1291 ;3500 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=TotalInklMWStText }
+            { 40  ;TextBox      ;17174;191  ;1100 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         SourceExpr=waehrung2 }
+            { 41  ;TextBox      ;17174;591  ;1100 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         SourceExpr=waehrung2 }
+            { 43  ;TextBox      ;17174;1291 ;1100 ;423  ;HorzAlign=Center;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=waehrung2 }
+            { 47  ;TextBox      ;14774;191  ;2400 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=sum_restauftragsbestand;
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 165 ;TextBox      ;14774;591  ;2400 ;423  ;FontSize=9;
+                                                         FontBold=No;
+                                                         SourceExpr=ROUND(((sum_restauftragsbestand)/(100)*mwst),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 167 ;TextBox      ;14774;1291 ;2400 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=ROUND((sum_restauftragsbestand)*(100+mwst)/(100),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=925;
+          }
+          CONTROLS
+          {
+            { 31  ;Label        ;0    ;185  ;18300;500  ;FontSize=9;
+                                                         CaptionML=DEU=Informationen zu Lieferterminen und Verfgbarkeit entnehmen Sie bitte den einzelnen Abrufbest„tigungen. }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table27;
+        OnAfterGetRecord=BEGIN
+                           IF "Sales Line".Type = "Sales Line".Type::Item THEN
+                             BEGIN
+                               IF "Sales Line"."VAT %" > 0 THEN         //sonst werden die Textzeilen mit bercksichtigt
+                                 BEGIN
+                                   mwst:="Sales Line"."VAT %"
+                                 END
+                               ELSE
+                                 BEGIN
+                                   mwst:=0;
+                                 END;
+                             END;
+
+                           sum_restauftragsbestand:=sum_restauftragsbestand+ROUND((("Sales Line"."Outstanding Amount")/(100+mwst)*100),0.01);
+                         END;
+
+        DataItemLinkReference=Sales Line;
+        DataItemLink=No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=1200;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND
+                           (VerkZeile2."Shipment Date" = (31122055D)));
+                           "Sales Line".CALCFIELDS("offene Menge aus Rahmen im AU");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 166 ;TextBox      ;14700;200  ;1500 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 168 ;TextBox      ;13500;200  ;1000 ;400  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item."Country/Region of Origin Code" }
+            { 170 ;TextBox      ;9200 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity" }
+            { 171 ;TextBox      ;7300 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line".Quantity }
+            { 172 ;TextBox      ;1900 ;700  ;5200 ;500  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+            { 174 ;TextBox      ;1900 ;200  ;5200 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Artikelnr. 2" }
+            { 175 ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+            { 176 ;TextBox      ;1000 ;200  ;700  ;500  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item.Herstellerkurzname }
+            { 177 ;TextBox      ;0    ;200  ;1000 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Line No." }
+            { 162 ;TextBox      ;16300;200  ;1900 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         CaptionML=DEU=Betrag;
+                                                         DecimalPlaces=2:0;
+                                                         Numeric=Yes;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=ROUND((("Sales Line"."Outstanding Amount")/(100+mwst)*100),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 212 ;TextBox      ;11200;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity"-"Sales Line"."offene Menge aus Rahmen im AU" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=1200;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND
+                           (VerkZeile2."Shipment Date" = (31122053D)));
+                           "Sales Line".CALCFIELDS("offene Menge aus Rahmen im AU");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 48  ;TextBox      ;14700;200  ;1500 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 62  ;TextBox      ;13500;200  ;1000 ;400  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item."Country/Region of Origin Code" }
+            { 65  ;TextBox      ;9200 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity" }
+            { 66  ;TextBox      ;7300 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line".Quantity }
+            { 67  ;TextBox      ;1900 ;700  ;5200 ;500  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+            { 82  ;TextBox      ;1900 ;200  ;5200 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Artikelnr. 2" }
+            { 87  ;TextBox      ;1000 ;200  ;700  ;500  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item.Herstellerkurzname }
+            { 99  ;TextBox      ;0    ;200  ;1000 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Line No." }
+            { 104 ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+            { 159 ;TextBox      ;16300;200  ;1900 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         CaptionML=DEU=Betrag;
+                                                         DecimalPlaces=2:0;
+                                                         Numeric=Yes;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=ROUND((("Sales Line"."Outstanding Amount")/(100+mwst)*100),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 213 ;TextBox      ;11200;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity"-"Sales Line"."offene Menge aus Rahmen im AU" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=1200;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND
+                           (VerkZeile2."Shipment Date" < (31122053D)));
+                           "Sales Line".CALCFIELDS("offene Menge aus Rahmen im AU");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 20  ;TextBox      ;1900 ;700  ;5200 ;500  ;FontSize=8;
+                                                         SourceExpr="Sales Line".Description }
+            { 25  ;TextBox      ;1900 ;200  ;5200 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Artikelnr. 2" }
+            { 26  ;TextBox      ;14700;200  ;1500 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Unit Price";
+                                                         AutoFormatType=2;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 32  ;TextBox      ;13500;200  ;1000 ;400  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item."Country/Region of Origin Code" }
+            { 34  ;TextBox      ;9200 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity" }
+            { 35  ;TextBox      ;7300 ;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line".Quantity }
+            { 37  ;Shape        ;0    ;0    ;18300;100  ;ShapeStyle=HorzLine }
+            { 39  ;TextBox      ;1000 ;200  ;700  ;500  ;HorzAlign=Center;
+                                                         FontSize=8;
+                                                         SourceExpr=Item.Herstellerkurzname }
+            { 42  ;TextBox      ;0    ;200  ;1000 ;500  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Line"."Line No." }
+            { 161 ;TextBox      ;16300;200  ;1900 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         CaptionML=DEU=Betrag;
+                                                         DecimalPlaces=2:0;
+                                                         Numeric=Yes;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=ROUND((("Sales Line"."Outstanding Amount")/(100+mwst)*100),0.01);
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Line"."Currency Code" }
+            { 214 ;TextBox      ;11200;200  ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Line"."Outstanding Quantity"-"Sales Line"."offene Menge aus Rahmen im AU" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2."Description 2" <> '') );
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 63  ;TextBox      ;1900 ;0    ;5200 ;500  ;FontSize=8;
+                                                         SourceExpr="Sales Line"."Description 2" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=300;
+            OnPreSection=BEGIN
+
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND
+                           ("Sales Line"."Cross-Reference No." <> ''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 189 ;Label        ;1900 ;0    ;2300 ;300  ;Name=Ihre Artikelnummer: }
+            { 1140005;TextBox   ;4200 ;0    ;2900 ;300  ;SourceExpr="Sales Line"."Cross-Reference No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=316;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND (Item."Tariff No." <>''));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140011;Label     ;1926 ;0    ;2300 ;300  ;Name=Warentarif-Nr.: }
+            { 1140012;TextBox   ;4191 ;0    ;2900 ;300  ;SourceExpr=Item."Tariff No." }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2.Type = VerkZeile2.Type::Item) AND (Item.NCNR=TRUE));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 231 ;Label        ;1900 ;0    ;15800;423  ;Name=NCNR;
+                                                         HorzAlign=Left;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Dieses Bauteil ist nicht stornier- und nicht retournierbar!;
+                                                                    ENU=This part is non-cancelable and non-returnable!] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT((VerkZeile2."VAT Prod. Posting Group"='13B2') AND (VerkZeile2."Outstanding Quantity">0));
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140010;Label     ;2816 ;212  ;8773 ;423  ;Name=NCNR;
+                                                         HorzAlign=Left;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Steuerschuldbergang gem„á õ 13b Abs.2 Nr.10 i.V.m. Abs.5 UStG !;
+                                                                    ENU=This part is non-cancelable and non-returnable!] }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table37;
+        DataItemTableView=WHERE(Type=FILTER(Item));
+        DataItemVarName=Verkaufsz.;
+        OnAfterGetRecord=BEGIN
+                           liefert:=FORMAT("Verkaufsz."."Shipment Date") ;
+
+                           IF "Verkaufsz."."Shipment Date" = (31122053D) THEN
+                           BEGIN
+                           liefert:='Abruf';
+                           END;
+
+                           IF "Verkaufsz."."Shipment Date" = (31122055D) THEN
+                           BEGIN
+                           liefert:='folgt';
+                           END;
+                         END;
+
+        OnPostDataItem=BEGIN
+                         liefert:='';
+                       END;
+
+        DataItemLinkReference=Sales Line;
+        DataItemLink=Blanket Order No.=FIELD(Document No.),
+                     Blanket Order Line No.=FIELD(Line No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18800;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 199 ;Label        ;800  ;100  ;2359 ;400  ;Name=Ihre Auftragsangaben;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Bereits disponiert }
+            { 200 ;Label        ;3200 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Auftragsnummer }
+            { 201 ;Label        ;7800 ;100  ;1100 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Pos. Nr. }
+            { 202 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Artikel }
+            { 203 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Menge }
+            { 204 ;Label        ;14400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Liefertermin }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Verkaufsz."."Outstanding Quantity" <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 22  ;TextBox      ;9100 ;0    ;3400 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Verkaufsz."."No." }
+            { 149 ;TextBox      ;12500;0    ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Verkaufsz."."Outstanding Quantity" }
+            { 150 ;TextBox      ;3200 ;0    ;2200 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Verkaufsz."."Document No." }
+            { 191 ;TextBox      ;7800 ;0    ;1300 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Verkaufsz."."Line No." }
+            { 169 ;TextBox      ;14400;0    ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr=liefert }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table113;
+        DataItemTableView=WHERE(Type=FILTER(Item));
+        DataItemLinkReference=Sales Line;
+        DataItemLink=Blanket Order No.=FIELD(Document No.),
+                     Blanket Order Line No.=FIELD(Line No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18800;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 198 ;Label        ;800  ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Bereits geliefert }
+            { 193 ;Label        ;3200 ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Rechnungsnummer }
+            { 194 ;Label        ;7800 ;100  ;1200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Pos. Nr. }
+            { 195 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Artikel }
+            { 196 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Menge }
+            { 197 ;Label        ;14300;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Buchungsdatum }
+            { 33  ;Label        ;5600 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=aus Auftrag }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Sales Invoice Line".Quantity <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 205 ;TextBox      ;3200 ;0    ;2200 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Document No." }
+            { 206 ;TextBox      ;7800 ;0    ;1300 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Line No." }
+            { 207 ;TextBox      ;9100 ;0    ;3300 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."No." }
+            { 208 ;TextBox      ;12400;0    ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Invoice Line".Quantity }
+            { 209 ;TextBox      ;14500;0    ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Invoice Line"."Posting Date" }
+            { 64  ;TextBox      ;5600 ;0    ;2000 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Invoice Line"."Order No." }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=4;
+        DataItemTable=Table115;
+        DataItemTableView=SORTING(Blanket Order No.,Blanket Order Line No.)
+                          WHERE(Quantity=FILTER(>0));
+        DataItemLinkReference=Sales Line;
+        DataItemLink=Blanket Order No.=FIELD(Document No.),
+                     Blanket Order Line No.=FIELD(Line No.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18800;
+            SectionHeight=600;
+          }
+          CONTROLS
+          {
+            { 218 ;Label        ;800  ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gutschriften }
+            { 219 ;Label        ;3200 ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Rechnungsnummer }
+            { 220 ;Label        ;7800 ;100  ;1200 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Pos. Nr. }
+            { 221 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=Artikel }
+            { 222 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Menge }
+            { 223 ;Label        ;5600 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=DEU=aus Auftrag }
+            { 224 ;Label        ;14300;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
+                                                         HorzAlign=Right;
+                                                         CaptionML=DEU=Buchungsdatum }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           //Holt das Buchungsdatum aus dem Sales Cr.Memo Header
+                           Buchung:=vkzgutschrift."Posting Date";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 225 ;TextBox      ;3200 ;0    ;2200 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Cr.Memo Line"."Document No." }
+            { 227 ;TextBox      ;7800 ;0    ;1300 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Cr.Memo Line"."Line No." }
+            { 228 ;TextBox      ;9100 ;0    ;3300 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="Sales Cr.Memo Line"."No." }
+            { 229 ;TextBox      ;12400;0    ;1700 ;400  ;HorzAlign=Right;
+                                                         FontSize=8;
+                                                         BlankZero=Yes;
+                                                         SourceExpr="Sales Cr.Memo Line".Quantity }
+            { 1140006;TextBox   ;14300;0    ;1900 ;400  ;SourceExpr=Buchung }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table44;
+        DataItemTableView=SORTING(Document Type,No.,Line No.);
+        DataItemLinkReference=Sales Header;
+        DataItemLink=Document Type=FIELD(Document Type),
+                     No.=FIELD(No.);
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=MWStZ„hler;
+        OnPreDataItem=BEGIN
+                        IF MWSTBetragZeile.COUNT <= 1 THEN
+                          CurrReport.BREAK;
+                        SETRANGE(Number,1,MWSTBetragZeile.COUNT);
+                        CurrReport.CREATETOTALS(MWSTBetragZeile."VAT Base",MWSTBetragZeile."VAT Amount");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           MWSTBetragZeile.GetLine(Number);
+                         END;
+
+        DataItemLinkReference=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18800;
+            SectionHeight=2115;
+            OnPreSection=BEGIN
+                            // Diese Einschr„nkung des Reports wieder entfernen, wenn keine Zeilen mit 16%MWSt vorhanden sind.
+                            // Dies gilt auch fr die n„chsten Zeilen des Reports.
+
+                                CurrReport.SHOWOUTPUT("Sales Header"."No.">'AUR100212');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 93  ;Label        ;0    ;846  ;2100 ;846  ;ParentControl=105;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 94  ;Label        ;2310 ;846  ;2520 ;846  ;ParentControl=106;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 95  ;Label        ;5040 ;846  ;2520 ;846  ;ParentControl=107;
+                                                         HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes }
+            { 52  ;Label        ;0    ;0    ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=MwSt. Betrag Spezifikation }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=18800;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                            CurrReport.SHOWOUTPUT("Sales Header"."No.">'AUR100212');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 101 ;Label        ;0    ;0    ;2100 ;423  ;ParentControl=102;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 102 ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+            { 103 ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                            CurrReport.SHOWOUTPUT("Sales Header"."No.">'AUR100212');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 105 ;TextBox      ;0    ;0    ;2100 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt %;
+                                                         SourceExpr=MWSTBetragZeile."VAT %" }
+            { 106 ;TextBox      ;2310 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Bemessungsgrundlage;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+            { 107 ;TextBox      ;5040 ;0    ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=MWSt Betrag;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=18800;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                             CurrReport.SHOWOUTPUT("Sales Header"."No.">'AUR100212');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 109 ;Label        ;0    ;423  ;2100 ;423  ;ParentControl=110;
+                                                         FontSize=9;
+                                                         LeaderDots=Yes }
+            { 110 ;TextBox      ;2310 ;423  ;2520 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Fortsetzung;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+            { 111 ;TextBox      ;5040 ;423  ;2520 ;423  ;FontSize=9;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18800;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                              CurrReport.SHOWOUTPUT("Sales Header"."No.">'AUR100212');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 113 ;Label        ;0    ;423  ;2100 ;423  ;ParentControl=114;
+                                                         FontSize=9;
+                                                         FontBold=Yes }
+            { 114 ;TextBox      ;2310 ;423  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Total;
+                                                         SourceExpr=MWSTBetragZeile."VAT Base";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+            { 115 ;TextBox      ;5040 ;423  ;2520 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=MWSTBetragZeile."VAT Amount";
+                                                         AutoFormatType=1;
+                                                         AutoFormatExpr="Sales Header"."Currency Code" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total;
+        DataItemLinkReference=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=1600;
+          }
+          CONTROLS
+          {
+            { 117 ;Label        ;0    ;400  ;4200 ;423  ;ParentControl=118;
+                                                         FontSize=9 }
+            { 118 ;TextBox      ;4410 ;400  ;10500;423  ;FontSize=9;
+                                                         CaptionML=DEU=Zahlungsbedingung;
+                                                         SourceExpr=ZlgBed.Description }
+            { 119 ;Label        ;0    ;823  ;4200 ;423  ;ParentControl=120;
+                                                         FontSize=9 }
+            { 120 ;TextBox      ;4410 ;823  ;10500;423  ;FontSize=9;
+                                                         CaptionML=DEU=Lieferbedingung;
+                                                         SourceExpr=LieferBed.Description }
+            { 112 ;Label        ;0    ;1177 ;4200 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Versandart }
+            { 136 ;TextBox      ;4400 ;1177 ;10500;423  ;FontSize=9;
+                                                         CaptionML=DEU=Lieferbedingung;
+                                                         SourceExpr=Account }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=3;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total2;
+        OnPreDataItem=BEGIN
+                        IF NOT LiefAdrAnzeigen THEN
+                          CurrReport.BREAK;
+                      END;
+
+        DataItemLinkReference=SeiteSchleife;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=1000;
+          }
+          CONTROLS
+          {
+            { 121 ;Label        ;0    ;577  ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Lieferadresse: }
+            { 88  ;Label        ;8800 ;577  ;6300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Rechnungsadresse: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT :=
+                             "Sales Header"."Sell-to Customer No." <> "Sales Header"."Bill-to Customer No.";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 123 ;TextBox      ;3360 ;0    ;2100 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr="Sales Header"."Sell-to Customer No." }
+            { 122 ;Label        ;0    ;0    ;3150 ;423  ;ParentControl=123;
+                                                         FontSize=9 }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18800;
+            SectionHeight=3384;
+          }
+          CONTROLS
+          {
+            { 50  ;TextBox      ;0    ;2961 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[8] }
+            { 49  ;TextBox      ;0    ;2538 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[7] }
+            { 129 ;TextBox      ;0    ;2115 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[6] }
+            { 128 ;TextBox      ;0    ;1692 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[5] }
+            { 127 ;TextBox      ;0    ;1269 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[4] }
+            { 126 ;TextBox      ;0    ;846  ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[3] }
+            { 125 ;TextBox      ;0    ;423  ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[2] }
+            { 124 ;TextBox      ;0    ;0    ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=LieferAnAdr[1] }
+            { 173 ;TextBox      ;8800 ;2800 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[8] }
+            { 178 ;TextBox      ;8800 ;2400 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[7] }
+            { 179 ;TextBox      ;8800 ;2000 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[6] }
+            { 180 ;TextBox      ;8800 ;1600 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[5] }
+            { 181 ;TextBox      ;8800 ;1200 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[4] }
+            { 182 ;TextBox      ;8800 ;800  ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[3] }
+            { 183 ;TextBox      ;8800 ;400  ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[2] }
+            { 184 ;TextBox      ;8800 ;0    ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=DebAdr[1] }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=5060;
+      Height=440;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+      { 1   ;TextBox      ;3410 ;0    ;1650 ;440  ;CaptionML=DEU=Anzahl Kopien;
+                                                   SourceExpr=AnzKopien }
+      { 21  ;Label        ;0    ;0    ;3300 ;440  ;ParentControl=1 }
+    }
+  }
+  CODE
+  {
+    VAR
+      waehrung@1140000 : Code[40];
+      waehrung2@1140001 : Code[10];
+      FIBUEinrichtung@1140002 : Record 98;
+      LieferBed@1140003 : Record 10;
+      ZlgBed@1140004 : Record 3;
+      Deb@1140005 : Record 18;
+      Geb@1140006 : Record 286;
+      suchbe@1140007 : Record 27;
+      VerkEinkPerson@1140008 : Record 13;
+      Firmendaten@1140009 : Record 79;
+      MWSTBetragZeile@1140010 : TEMPORARY Record 290;
+      "UnsereKontonr."@1140011 : Record 18;
+      VerkZeile2@1140012 : TEMPORARY Record 37;
+      language@1140051 : Record 8;
+      VerkDruckZ„hler@1140013 : Codeunit 313;
+      FormatAdr@1140014 : Codeunit 365;
+      VerkBuchen@1140015 : Codeunit 80;
+      DebAdr@1140016 : ARRAY [8] OF Text[50];
+      LieferAnAdr@1140017 : ARRAY [8] OF Text[50];
+      FirmaAdr@1140018 : ARRAY [8] OF Text[50];
+      Verk„uferText@1140019 : Text[30];
+      MWStNrText@1140020 : Text[30];
+      ReferenzText@1140021 : Text[30];
+      TotalText@1140022 : Text[50];
+      TotalInklMWStText@1140023 : Text[50];
+      MehrZeilen@1140024 : Boolean;
+      AnzKopien@1140025 : Integer;
+      AnzSchleifen@1140026 : Integer;
+      KopieText@1140027 : Text[30];
+      LiefAdrAnzeigen@1140028 : Boolean;
+      i@1140029 : Integer;
+      liefert@1140031 : Text[30];
+      liefert2@1140032 : Date;
+      mwst@1140033 : Decimal;
+      „nderung@1140034 : Text[30];
+      sum_restauftragsbestand@1140035 : Decimal;
+      AnzPorto@1140036 : Decimal;
+      SumPorto@1140037 : Decimal;
+      VerkAdr@1140038 : ARRAY [8] OF Text[50];
+      "via Email"@1140039 : Text[40];
+      "via Email_unterschrift"@1140040 : Text[40];
+      "via EMail_adresse"@1140041 : Text[40];
+      "ab vor wandlung"@1140042 : Text[40];
+      kunde@1140043 : Record 18;
+      Restmenge1@1140044 : Decimal;
+      Buchung@1140045 : Date;
+      vkzgutschrift@1140046 : Record 114;
+      ansp_anrede@1140047 : Text[30];
+      ansp_telefon@1140048 : Text[30];
+      ansp_fax@1140049 : Text[30];
+      Account@1140050 : Text[90];
+      v_keine_AB@1140030 : Text[30];
+      v_FER_SPL@1140052 : Boolean;
+
+    BEGIN
+    END.
+  }
+}
+
