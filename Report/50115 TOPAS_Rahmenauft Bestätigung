@@ -2,8 +2,8 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
 {
   OBJECT-PROPERTIES
   {
-    Date=20.11.15;
-    Time=10:36:14;
+    Date=13.01.16;
+    Time=15:07:41;
     Modified=Yes;
     Version List=Beleg !!ausfhrbar !!;
   }
@@ -188,6 +188,11 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                            CLEAR(VerkBuchen);
                            VerkBuchen.GetSalesLines("Sales Header",VerkZeile2,0);
 
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                             Titel := 'Kontraktbest„tigung'
+                           ELSE
+                             Titel := 'Contract Confirmation';
+
                            IF Number > 1 THEN
                              BEGIN
                                CurrReport.PAPERSOURCE(1);
@@ -206,7 +211,11 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                            kunde.GET("Sales Header"."Sell-to Customer No.");
                            IF Number > 1 THEN
                              BEGIN
-                             KopieText := 'skopie';
+                             IF CurrReport.LANGUAGE = 1031 THEN
+                               KopieText := 'skopie'
+                             ELSE
+                               KopieText := ' Copy';
+
                              IF kunde."AB vor Wandlung" THEN "ab vor wandlung" := 'Achtung erst AB dann Wandeln !!!';
                              IF "Sales Header"."keine Rahmen-AB an Kunden" THEN v_keine_AB := 'Keine Best„tigung an Kunden !';
                              IF kunde."AB via EMail" THEN
@@ -217,35 +226,32 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                                END;
                              END;
 
-                           IF Number > 1 THEN
-                             KopieText := 'skopie';
                            CurrReport.PAGENO := 1;
 
                            IF "Sales Header"."Document Date" > "Sales Header"."Order Date" THEN
                            BEGIN
-                           „nderung := 'Žnderungs-';
+                             IF CurrReport.LANGUAGE = 1031 THEN
+                               „nderung := 'Žnderungs-'
+                             ELSE
+                               „nderung := 'Change'
                            END ELSE
                            BEGIN
-                           „nderung :='';
+                             „nderung :='';
                            END;
 
 
-
-
                            IF CurrReport.LANGUAGE = 1031 THEN
-                               BEGIN
-                                  ansp_telefon:="Salesperson/Purchaser"."Phone No.";
-                                  ansp_fax:="Salesperson/Purchaser"."Fax no.";
-                                  ansp_anrede :="Salesperson/Purchaser".Ansprech;
-                               END
-                              ELSE
-                               BEGIN
-                                  ansp_telefon:="Salesperson/Purchaser".Tel_international;
-                                  ansp_fax:="Salesperson/Purchaser".Fax_international;
-                                  ansp_anrede :="Salesperson/Purchaser".Ansprech_eng;
-                               END;
-
-
+                             BEGIN
+                               ansp_telefon:="Salesperson/Purchaser"."Phone No.";
+                               ansp_fax:="Salesperson/Purchaser"."Fax no.";
+                               ansp_anrede :="Salesperson/Purchaser".Ansprech;
+                             END
+                           ELSE
+                             BEGIN
+                               ansp_telefon:="Salesperson/Purchaser".Tel_international;
+                               ansp_fax:="Salesperson/Purchaser".Fax_international;
+                               ansp_anrede :="Salesperson/Purchaser".Ansprech_eng;
+                             END;
 
 
                            IF (("Sales Header"."Shipment Method Code"='ACCOUNT') OR ("Sales Header"."Shipment Method Code"='ACC-ENG'))
@@ -284,6 +290,17 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
             PrintOnEveryPage=Yes;
             SectionWidth=18800;
             SectionHeight=13000;
+            OnPreSection=BEGIN
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                              BEGIN
+                                seite:=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO))   ;
+                              END
+                              ELSE
+                              BEGIN
+                                seite:=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO))   ;
+                              END;
+                         END;
+
           }
           CONTROLS
           {
@@ -305,26 +322,29 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                                                          SourceExpr=VerkAdr[8] }
             { 23  ;TextBox      ;16600;10500;1680 ;423  ;HorzAlign=Right;
                                                          FontSize=7;
-                                                         SourceExpr=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO)) }
+                                                         SourceExpr=seite }
             { 7   ;Shape        ;11300;11500;7000 ;1400  }
             { 28  ;TextBox      ;16600;12200;1300 ;500  ;FontSize=9;
                                                          SourceExpr=FORMAT("Sales Header"."Document Date",0,1) }
             { 27  ;TextBox      ;14300;12200;1900 ;500  ;HorzAlign=Left;
                                                          FontSize=9;
                                                          SourceExpr="Sales Header"."Bill-to Customer No." }
-            { 5   ;Label        ;14300;11700;1800 ;400  ;Name=Kundenummer }
-            { 6   ;Label        ;16600;11700;900  ;400  ;Name=Datum }
+            { 5   ;Label        ;14300;11700;1800 ;400  ;Name=Kundenummer;
+                                                         CaptionML=[DEU=Kundennummer;
+                                                                    ENU=Customer] }
+            { 6   ;Label        ;16600;11700;900  ;400  ;Name=Datum;
+                                                         CaptionML=[DEU=Datum;
+                                                                    ENU=Date] }
             { 36  ;TextBox      ;11600;12200;2100 ;500  ;HorzAlign=Left;
                                                          FontSize=9;
                                                          SourceExpr="Sales Header"."No." }
-            { 4   ;Label        ;11600;11700;2100 ;400  ;Name=Auftragsnummer }
-            { 11  ;TextBox      ;10200;10200;2600 ;800  ;FontSize=16;
-                                                         SourceExpr=KopieText }
+            { 4   ;Label        ;11600;11700;2100 ;400  ;Name=Auftragsnummer;
+                                                         CaptionML=[DEU=Auftragsnummer;
+                                                                    ENU=Our Reference] }
+            { 11  ;TextBox      ;4700 ;10200;8100 ;800  ;FontSize=16;
+                                                         SourceExpr=Titel + KopieText }
             { 30  ;TextBox      ;8100 ;12200;3000 ;500  ;FontSize=9;
                                                          SourceExpr="Sales Header"."VAT Registration No." }
-            { 10  ;Label        ;5300 ;10200;5500 ;800  ;Name=Auftragsbest„tigung;
-                                                         FontSize=16;
-                                                         CaptionML=DEU=Kontraktbest„tigung }
             { 18  ;TextBox      ;8100 ;11700;2000 ;400  ;FontSize=7;
                                                          SourceExpr=MWStNrText }
             { 12  ;TextBox      ;5200 ;12200;2700 ;500  ;FontSize=9;
@@ -332,11 +352,15 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                                                          AssistEdit=No;
                                                          SourceExpr=Debito."Our Account No.";
                                                          TableRelation=Customer }
-            { 13  ;Label        ;5200 ;11700;2000 ;400  ;Name=Lieferanten-Nr. }
+            { 13  ;Label        ;5200 ;11700;2000 ;400  ;Name=Lieferanten-Nr.;
+                                                         CaptionML=[DEU=Lieferanten-Nr.;
+                                                                    ENU=Account Code] }
             { 38  ;TextBox      ;0    ;12200;5000 ;500  ;FontSize=9;
                                                          SourceExpr="Sales Header"."External Document No."+' '+"Sales Header"."Your Reference" }
-            { 9   ;Label        ;0    ;11700;2600 ;400  ;Name=Ihre Auftragsangaben }
-            { 60  ;TextBox      ;5300 ;9500 ;5000 ;700  ;HorzAlign=Center;
+            { 9   ;Label        ;0    ;11700;2600 ;400  ;Name=Ihre Auftragsangaben;
+                                                         CaptionML=[DEU=Ihre Auftragsangaben;
+                                                                    ENU=Customer Ref.] }
+            { 60  ;TextBox      ;4700 ;9500 ;5000 ;700  ;HorzAlign=Center;
                                                          FontSize=16;
                                                          SourceExpr=„nderung }
             { 140 ;Label        ;0    ;4400 ;4200 ;300  ;Name=[TOPAS electronic GmbH, ];
@@ -372,15 +396,15 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
             { 215 ;TextBox      ;17300;10900;980  ;400  ;HorzAlign=Right;
                                                          FontSize=7;
                                                          SourceExpr=WORKDATE }
-            { 1140001;TextBox   ;14004;10024;4200 ;300  ;FontBold=Yes;
+            { 1140001;TextBox   ;14000;10000;4200 ;300  ;FontBold=Yes;
                                                          SourceExpr="Salesperson/Purchaser"."E-Mail" }
-            { 1140003;TextBox   ;14004;9124 ;4200 ;300  ;FontBold=Yes;
+            { 1140003;TextBox   ;14000;9100 ;4200 ;300  ;FontBold=Yes;
                                                          SourceExpr="Salesperson/Purchaser"."first name" + ' ' +"Salesperson/Purchaser".Name }
-            { 1140000;TextBox   ;14004;8824 ;4200 ;300  ;FontBold=Yes;
+            { 1140000;TextBox   ;14000;8800 ;4200 ;300  ;FontBold=Yes;
                                                          SourceExpr=ansp_anrede }
-            { 1140002;TextBox   ;14804;9424 ;3400 ;300  ;FontBold=Yes;
+            { 1140002;TextBox   ;14800;9400 ;3400 ;300  ;FontBold=Yes;
                                                          SourceExpr=ansp_telefon }
-            { 1140004;TextBox   ;14804;9724 ;3400 ;300  ;FontBold=Yes;
+            { 1140004;TextBox   ;14800;9700 ;3400 ;300  ;FontBold=Yes;
                                                          SourceExpr=ansp_fax }
             { 1140007;Label     ;14004;9424 ;800  ;300  ;CaptionML=[DEU=Tel. :;
                                                                     ENU=Phone:] }
@@ -493,11 +517,13 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
             { 14  ;Label        ;0    ;800  ;18800;400  ;HorzAlign=Center;
                                                          FontName=<Helvetica>;
                                                          FontSize=6;
-                                                         CaptionML=DEU=Eigentumsvorbehalt: Insbesondere weisen wir darauf hin, dass die Ware gem„á unserer allgemeinen Gesch„ftsbedingungen bis zur Zahlung in voller H”he unser Eigentum bleibt. }
+                                                         CaptionML=[DEU=Eigentumsvorbehalt: Insbesondere weisen wir darauf hin, dass die Ware gem„á unserer allgemeinen Gesch„ftsbedingungen bis zur Zahlung in voller H”he unser Eigentum bleibt.;
+                                                                    ENU=TOPAS shall retain title to goods until it has received payment in full.] }
             { 15  ;Label        ;0    ;500  ;18800;400  ;HorzAlign=Center;
                                                          FontName=arial;
                                                          FontSize=6;
-                                                         CaptionML=DEU=Fr die Ausfhrung dieses Auftrages gelten unsere allgemeinen Gesch„ftsbedingungen }
+                                                         CaptionML=[DEU=Fr die Ausfhrung dieses Auftrages gelten unsere allgemeinen Gesch„ftsbedingungen;
+                                                                    ENU=The execution of orders are subject to our standard terms and condition of sale.] }
             { 16  ;Shape        ;0    ;400  ;18800;300  ;ShapeStyle=HorzLine }
             { 17  ;Label        ;0    ;0    ;18800;600  ;HorzAlign=Center;
                                                          FontName=<Helvetica>;
@@ -583,56 +609,73 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           }
           CONTROLS
           {
-            { 78  ;Label        ;16500;200  ;1900 ;400  ;Name=Gesamtpreis;
+            { 74  ;Shape        ;0    ;0    ;18300;1200  }
+            { 78  ;Label        ;16400;200  ;1900 ;400  ;Name=Gesamtpreis;
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Restwert }
-            { 79  ;Label        ;15000;200  ;1500 ;400  ;Name=Einzelpreis;
+                                                         CaptionML=[DEU=Restwert;
+                                                                    ENU=Residual Value] }
+            { 79  ;Label        ;14900;200  ;1500 ;400  ;Name=Einzelpreis;
                                                          HorzAlign=Center;
                                                          FontSize=7;
-                                                         FontBold=Yes }
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Einzelpreis;
+                                                                    ENU=Unit Price] }
             { 80  ;Label        ;13300;600  ;1500 ;400  ;Name=land;
                                                          HorzGlue=Left;
                                                          HorzAlign=Center;
                                                          FontSize=7;
-                                                         FontBold=Yes }
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=land;
+                                                                    ENU=Origin] }
             { 81  ;Label        ;13300;200  ;1500 ;400  ;Name=Ursprungs-;
                                                          HorzAlign=Center;
                                                          FontSize=7;
-                                                         FontBold=Yes }
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Ursprungs-;
+                                                                    ENU=Country of] }
             { 151 ;Label        ;9700 ;600  ;1700 ;400  ;Name=Menge;
                                                          HorzGlue=Left;
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Restmenge }
+                                                         CaptionML=[DEU=Restmenge;
+                                                                    ENU=Remaining] }
             { 152 ;Label        ;9700 ;200  ;1700 ;400  ;Name=Noch zu lief.;
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Kontrakt }
+                                                         CaptionML=[DEU=Kontrakt;
+                                                                    ENU=Contract] }
             { 153 ;Label        ;7900 ;200  ;1400 ;400  ;Name=Bestellte;
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Kontrakt }
+                                                         CaptionML=[DEU=Kontrakt;
+                                                                    ENU=Contract] }
             { 154 ;Label        ;7900 ;600  ;1400 ;400  ;Name=Menge;
                                                          HorzGlue=Left;
                                                          HorzAlign=Center;
                                                          FontSize=7;
-                                                         FontBold=Yes }
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Menge;
+                                                                    ENU=Quantity] }
             { 155 ;Label        ;2000 ;200  ;5200 ;400  ;Name=Artikel;
                                                          FontSize=7;
-                                                         FontBold=Yes }
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Artikel;
+                                                                    ENU=Part-No.] }
             { 156 ;Label        ;100  ;200  ;800  ;400  ;Name=Pos.;
                                                          FontSize=7;
-                                                         FontBold=Yes }
-            { 44  ;TextBox      ;15000;600  ;1500 ;400  ;HorzAlign=Center;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Pos.;
+                                                                    ENU=Item] }
+            { 44  ;TextBox      ;14900;600  ;1500 ;400  ;HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
                                                          SourceExpr=waehrung2 }
-            { 45  ;TextBox      ;16500;600  ;1900 ;400  ;HorzAlign=Center;
+            { 45  ;TextBox      ;16400;600  ;1900 ;400  ;HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
                                                          SourceExpr=waehrung2 }
@@ -644,13 +687,14 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Disponiert }
+                                                         CaptionML=[DEU=Disponiert;
+                                                                    ENU=Disposed] }
             { 211 ;Label        ;11500;200  ;1700 ;400  ;Name=Noch zu lief.;
                                                          HorzAlign=Center;
                                                          FontSize=7;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Noch nicht }
-            { 74  ;Shape        ;0    ;0    ;18300;1200  }
+                                                         CaptionML=[DEU=Noch nicht;
+                                                                    ENU=Not yet] }
           }
            }
         { PROPERTIES
@@ -661,9 +705,11 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           }
           CONTROLS
           {
-            { 53  ;Label        ;13125;186  ;2374 ;423  ;Name=Fortsetzung;
+            { 53  ;Label        ;13100;200  ;2374 ;423  ;Name=Fortsetzung;
                                                          FontSize=9;
-                                                         LeaderDots=Yes }
+                                                         LeaderDots=Yes;
+                                                         CaptionML=[DEU=Fortsetzung;
+                                                                    ENU=Continuation] }
             { 1140022;TextBox   ;15689;193  ;2400 ;423  ;FontSize=9;
                                                          FontBold=No;
                                                          SourceExpr=sum_restauftragsbestand;
@@ -783,7 +829,9 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           {
             { 83  ;Label        ;13342;442  ;2348 ;423  ;Name=Fortsetzung;
                                                          FontSize=9;
-                                                         LeaderDots=Yes }
+                                                         LeaderDots=Yes;
+                                                         CaptionML=[DEU=Fortsetzung;
+                                                                    ENU=To Be Continued] }
             { 1140021;TextBox   ;15770;423  ;2400 ;423  ;FontSize=9;
                                                          FontBold=No;
                                                          SourceExpr=sum_restauftragsbestand;
@@ -820,7 +868,9 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Sales Line"."Currency Code" }
             { 85  ;Label        ;11300;0    ;4200 ;423  ;ParentControl=86;
-                                                         FontSize=9 }
+                                                         FontSize=9;
+                                                         CaptionML=[DEU=Rechn.-Rabatt Betrag;
+                                                                    ENU=invoice rebate] }
           }
            }
         { PROPERTIES
@@ -849,7 +899,8 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
             { 19  ;Shape        ;0    ;401  ;18300;100  ;ShapeStyle=HorzLine }
             { 21  ;Label        ;0    ;26   ;18300;350  ;HorzAlign=Center;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Diese Waren wurden NICHT in der EU hergestellt, sie entsprechen NICHT den Pr„ferenzregeln }
+                                                         CaptionML=[DEU=Diese Waren wurden NICHT in der EU hergestellt, sie entsprechen NICHT den Pr„ferenzregeln;
+                                                                    ENU=These products were not manufactured in the European Union.] }
           }
            }
         { PROPERTIES
@@ -904,7 +955,8 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           CONTROLS
           {
             { 31  ;Label        ;0    ;185  ;18300;500  ;FontSize=9;
-                                                         CaptionML=DEU=Informationen zu Lieferterminen und Verfgbarkeit entnehmen Sie bitte den einzelnen Abrufbest„tigungen. }
+                                                         CaptionML=[DEU=Informationen zu Lieferterminen und Verfgbarkeit entnehmen Sie bitte den einzelnen Abrufbest„tigungen.;
+                                                                    ENU=Please see information about delivery dates and availability each confirmations.] }
           }
            }
       }
@@ -1141,8 +1193,10 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           }
           CONTROLS
           {
-            { 189 ;Label        ;1900 ;0    ;2300 ;300  ;Name=Ihre Artikelnummer: }
-            { 1140005;TextBox   ;4200 ;0    ;2900 ;300  ;SourceExpr="Sales Line"."Cross-Reference No." }
+            { 189 ;Label        ;1900 ;0    ;2800 ;300  ;Name=Ihre Artikelnummer:;
+                                                         CaptionML=[DEU=Ihre Artikelnummer:;
+                                                                    ENU=Your part number:] }
+            { 1140005;TextBox   ;4700 ;0    ;2900 ;300  ;SourceExpr="Sales Line"."Cross-Reference No." }
           }
            }
         { PROPERTIES
@@ -1157,7 +1211,9 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           }
           CONTROLS
           {
-            { 1140011;Label     ;1926 ;0    ;2300 ;300  ;Name=Warentarif-Nr.: }
+            { 1140011;Label     ;1926 ;0    ;2300 ;300  ;Name=Warentarif-Nr.:;
+                                                         CaptionML=[DEU=Warentarifnummer:;
+                                                                    ENU=Harm. Code:] }
             { 1140012;TextBox   ;4191 ;0    ;2900 ;300  ;SourceExpr=Item."Tariff No." }
           }
            }
@@ -1241,19 +1297,25 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           {
             { 199 ;Label        ;800  ;100  ;2359 ;400  ;Name=Ihre Auftragsangaben;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Bereits disponiert }
+                                                         CaptionML=[DEU=Bereits disponiert;
+                                                                    ENU=Disposed] }
             { 200 ;Label        ;3200 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Auftragsnummer }
+                                                         CaptionML=[DEU=Auftragsnummer;
+                                                                    ENU=Our Reference] }
             { 201 ;Label        ;7800 ;100  ;1100 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Pos. Nr. }
+                                                         CaptionML=[DEU=Pos. Nr.;
+                                                                    ENU=Line No.] }
             { 202 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Artikel }
+                                                         CaptionML=[DEU=Artikel;
+                                                                    ENU=Part No.] }
             { 203 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Menge }
+                                                         CaptionML=[DEU=Menge;
+                                                                    ENU=Quantity] }
             { 204 ;Label        ;14400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Liefertermin }
+                                                         CaptionML=[DEU=Liefertermin;
+                                                                    ENU=Delivery Date] }
           }
            }
         { PROPERTIES
@@ -1310,21 +1372,28 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           {
             { 198 ;Label        ;800  ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Bereits geliefert }
+                                                         CaptionML=[DEU=Bereits geliefert;
+                                                                    ENU=Delivered] }
             { 193 ;Label        ;3200 ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Rechnungsnummer }
+                                                         CaptionML=[DEU=Rechnungsnummer;
+                                                                    ENU=Invoice Number] }
             { 194 ;Label        ;7800 ;100  ;1200 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Pos. Nr. }
+                                                         CaptionML=[DEU=Pos. Nr.;
+                                                                    ENU=Line No.] }
             { 195 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Artikel }
+                                                         CaptionML=[DEU=Artikel;
+                                                                    ENU=Part No.] }
             { 196 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Menge }
+                                                         CaptionML=[DEU=Menge;
+                                                                    ENU=Quantity] }
             { 197 ;Label        ;14300;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Buchungsdatum }
+                                                         CaptionML=[DEU=Buchungsdatum;
+                                                                    ENU=Posting Date] }
             { 33  ;Label        ;5600 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=aus Auftrag }
+                                                         CaptionML=[DEU=aus Auftrag;
+                                                                    ENU=from Order] }
           }
            }
         { PROPERTIES
@@ -1385,21 +1454,28 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           {
             { 218 ;Label        ;800  ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Gutschriften }
+                                                         CaptionML=[DEU=Gutschriften;
+                                                                    ENU=Credit Memos] }
             { 219 ;Label        ;3200 ;100  ;2200 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Rechnungsnummer }
+                                                         CaptionML=[DEU=Rechnungsnummer;
+                                                                    ENU=Invoice Number] }
             { 220 ;Label        ;7800 ;100  ;1200 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Pos. Nr. }
+                                                         CaptionML=[DEU=Pos. Nr.;
+                                                                    ENU=Line No.] }
             { 221 ;Label        ;9100 ;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=Artikel }
+                                                         CaptionML=[DEU=Artikel;
+                                                                    ENU=Part No.] }
             { 222 ;Label        ;12400;100  ;1700 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Menge }
+                                                         CaptionML=[DEU=Menge;
+                                                                    ENU=Quantity] }
             { 223 ;Label        ;5600 ;100  ;2000 ;400  ;Name=Ihre Auftragsangaben;
-                                                         CaptionML=DEU=aus Auftrag }
+                                                         CaptionML=[DEU=aus Auftrag;
+                                                                    ENU=from Order] }
             { 224 ;Label        ;14300;100  ;1900 ;400  ;Name=Ihre Auftragsangaben;
                                                          HorzAlign=Right;
-                                                         CaptionML=DEU=Buchungsdatum }
+                                                         CaptionML=[DEU=Buchungsdatum;
+                                                                    ENU=Posting Date] }
           }
            }
         { PROPERTIES
@@ -1634,19 +1710,24 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           }
           CONTROLS
           {
-            { 117 ;Label        ;0    ;400  ;4200 ;423  ;ParentControl=118;
-                                                         FontSize=9 }
-            { 118 ;TextBox      ;4410 ;400  ;10500;423  ;FontSize=9;
+            { 117 ;Label        ;0    ;300  ;4200 ;423  ;ParentControl=118;
+                                                         FontSize=9;
+                                                         CaptionML=[DEU=Zahlungsbedingung;
+                                                                    ENU="Payment Terms "] }
+            { 118 ;TextBox      ;4400 ;300  ;10500;423  ;FontSize=9;
                                                          CaptionML=DEU=Zahlungsbedingung;
                                                          SourceExpr=ZlgBed.Description }
-            { 119 ;Label        ;0    ;823  ;4200 ;423  ;ParentControl=120;
-                                                         FontSize=9 }
-            { 120 ;TextBox      ;4410 ;823  ;10500;423  ;FontSize=9;
+            { 119 ;Label        ;0    ;700  ;4200 ;423  ;ParentControl=120;
+                                                         FontSize=9;
+                                                         CaptionML=[DEU=Lieferbedingung;
+                                                                    ENU=Delivery Terms] }
+            { 120 ;TextBox      ;4400 ;723  ;10500;423  ;FontSize=9;
                                                          CaptionML=DEU=Lieferbedingung;
                                                          SourceExpr=LieferBed.Description }
-            { 112 ;Label        ;0    ;1177 ;4200 ;423  ;FontSize=9;
-                                                         CaptionML=DEU=Versandart }
-            { 136 ;TextBox      ;4400 ;1177 ;10500;423  ;FontSize=9;
+            { 112 ;Label        ;0    ;1100 ;4200 ;423  ;FontSize=9;
+                                                         CaptionML=[DEU=Versandart;
+                                                                    ENU=Shipping] }
+            { 136 ;TextBox      ;4400 ;1100 ;10500;423  ;FontSize=9;
                                                          CaptionML=DEU=Lieferbedingung;
                                                          SourceExpr=Account }
           }
@@ -1679,10 +1760,12 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
           {
             { 121 ;Label        ;0    ;577  ;6300 ;423  ;FontSize=9;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Lieferadresse: }
+                                                         CaptionML=[DEU=Lieferadresse:;
+                                                                    ENU=Shipping Address:] }
             { 88  ;Label        ;8800 ;577  ;6300 ;423  ;FontSize=9;
                                                          FontBold=Yes;
-                                                         CaptionML=DEU=Rechnungsadresse: }
+                                                         CaptionML=[DEU=Rechnungsadresse:;
+                                                                    ENU=Billing Address:] }
           }
            }
         { PROPERTIES
@@ -1760,9 +1843,11 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
     }
     CONTROLS
     {
-      { 1   ;TextBox      ;3410 ;0    ;1650 ;440  ;CaptionML=DEU=Anzahl Kopien;
+      { 1   ;TextBox      ;3410 ;0    ;1650 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Anzahl Kopien;
                                                    SourceExpr=AnzKopien }
-      { 21  ;Label        ;0    ;0    ;3300 ;440  ;ParentControl=1 }
+      { 21  ;Label        ;0    ;0    ;3300 ;440  ;ParentControl=1;
+                                                   InPage=-1 }
     }
   }
   CODE
@@ -1796,6 +1881,7 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
       MehrZeilen@1140024 : Boolean;
       AnzKopien@1140025 : Integer;
       AnzSchleifen@1140026 : Integer;
+      Titel@1140054 : Text[30];
       KopieText@1140027 : Text[30];
       LiefAdrAnzeigen@1140028 : Boolean;
       i@1140029 : Integer;
@@ -1821,6 +1907,7 @@ OBJECT Report 50115 TOPAS_Rahmenauft.Best„tigung
       Account@1140050 : Text[90];
       v_keine_AB@1140030 : Text[30];
       v_FER_SPL@1140052 : Boolean;
+      seite@1140053 : Text[30];
 
     BEGIN
     END.
