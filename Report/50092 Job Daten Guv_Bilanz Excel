@@ -1,0 +1,4125 @@
+OBJECT Report 50092 Job Daten Guv_Bilanz -> Excel
+{
+  OBJECT-PROPERTIES
+  {
+    Date=14.01.16;
+    Time=14:57:27;
+    Modified=Yes;
+    Version List=fertig;
+  }
+  PROPERTIES
+  {
+    UseReqForm=No;
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   //   Hier sind die Datumsangaben fr die Berichtsauswertung jedes Jahr anzupassen
+                   //   auch in Funktion 'Systeme()' das Datum ( erste Zeile ) „ndern.
+                       PeriodStartDate[1] := 010715D;
+                       var_jahr[1] := 010710D;
+                       Abgrenz_Datum := 300616D;
+                 END;
+
+    OnPreReport=BEGIN
+
+                  Champs;
+                  //Systeme_Test;
+                  //Rohbilanz_Test;
+                  //Dienstleistung;
+                  //Umsatz;
+                  //Hersteller;
+                END;
+
+    OnPostReport=BEGIN
+                   MESSAGE('50092 OK');
+                 END;
+
+    Orientation=Landscape;
+  }
+  DATAITEMS
+  {
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9020;
+      Height=3410;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      Excel@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      k@1140004 : Text[30];
+      j@1140005 : Text[30];
+      i@1140006 : Integer;
+      u@1140120 : Integer;
+      AU_PER@1140007 : Record 50019;
+      AU_PER1@1140008 : Record 50019;
+      vkcode@1140009 : Record 13;
+      vkcode1@1140123 : Record 13;
+      vkz@1140029 : Record 37;
+      VKRK@1140114 : Record 112;
+      VKRZ@1140115 : Record 113;
+      VKGK@1140116 : Record 114;
+      VKGZ@1140117 : Record 115;
+      Artikel@1140118 : Record 27;
+      Belege@1140124 : Record 50010;
+      Herstell@1140119 : Record 5720;
+      PeriodStartDate@1140010 : ARRAY [14] OF Date;
+      PeriodLength@1140026 : DateFormula;
+      var_bal@1140011 : ARRAY [13] OF Decimal;
+      var_bal_total@1140027 : ARRAY [13] OF Decimal;
+      var_balance@1140012 : ARRAY [13] OF Decimal;
+      var_balance_total@1140013 : ARRAY [13] OF Decimal;
+      v_aubest@1140014 : ARRAY [13] OF Decimal;
+      v_aubest_total@1140015 : ARRAY [13] OF Decimal;
+      v_aubest1@1140016 : ARRAY [13] OF Decimal;
+      v_aubest1_total@1140017 : ARRAY [13] OF Decimal;
+      v_summe@1140018 : Decimal;
+      v_summe_total@1140019 : Decimal;
+      v_summe_aur@1140020 : Decimal;
+      v_summe_aur1@1140022 : Decimal;
+      v_sum_aubest@1140021 : Decimal;
+      v_au_wert@1140023 : Decimal;
+      v_aur_wert@1140024 : Decimal;
+      v_sum_au@1140028 : Decimal;
+      v_sum_au_rahmen@1140025 : Decimal;
+      sachkonten@1140030 : Record 15;
+      sachposten@1140032 : Record 17;
+      service@1140093 : Record 50024;
+      lief@1140094 : Record 111;
+      var_balance_gesamt_konto@1140031 : Decimal;
+      var_balance_total_summe@1140033 : Decimal;
+      liefnr@1140092 : Code[10];
+      liefzeilennr@1140091 : Integer;
+      anzahllief@1140090 : Integer;
+      stich_monat@1140089 : Integer;
+      stich_jahr@1140088 : Integer;
+      ablauf_monat@1140087 : Integer;
+      ablauf_jahr@1140086 : Integer;
+      start_monat@1140085 : Integer;
+      start_jahr@1140084 : Integer;
+      LZ_jahr@1140083 : Integer;
+      LZ_monat@1140082 : Integer;
+      LZ_jahr_datum@1140081 : Integer;
+      LZ_monat_datum@1140080 : Integer;
+      LZ_rest@1140079 : Integer;
+      LZ_rest_datum@1140078 : Integer;
+      LZ@1140077 : Integer;
+      Rech_tagessatz@1140076 : Boolean;
+      rech@1140075 : Record 50010;
+      deb@1140074 : Record 18;
+      Sum_ek@1140073 : Decimal;
+      Sum_vk@1140072 : Decimal;
+      LZ_tage@1140071 : Integer;
+      LZ_tage_stich@1140070 : Integer;
+      LZ_tage_abgrenz@1140069 : Decimal;
+      LZ_tage_bewert@1140068 : Integer;
+      frei_lager@1140067 : Boolean;
+      champsauswert@1140066 : Boolean;
+      wartkopf@1140065 : Record 50011;
+      GJ10_11_Neu@1140064 : Decimal;
+      GJ11_12_Neu@1140063 : Decimal;
+      GJ12_13_Neu@1140062 : Decimal;
+      GJ13_14_Neu@1140061 : Decimal;
+      GJ14_15_Neu@1140060 : Decimal;
+      GJ15_16_Neu@1140059 : Decimal;
+      GJ16_17_Neu@1140058 : Decimal;
+      GJ17_18_Neu@1140057 : Decimal;
+      GJ18_19_Neu@1140056 : Decimal;
+      GJ19_20_Neu@1140055 : Decimal;
+      GJ10_11_Verl@1140054 : Decimal;
+      GJ11_12_Verl@1140053 : Decimal;
+      GJ12_13_Verl@1140052 : Decimal;
+      GJ13_14_Verl@1140051 : Decimal;
+      GJ14_15_Verl@1140050 : Decimal;
+      GJ15_16_Verl@1140049 : Decimal;
+      GJ16_17_Verl@1140048 : Decimal;
+      GJ17_18_Verl@1140047 : Decimal;
+      GJ18_19_Verl@1140046 : Decimal;
+      GJ19_20_Verl@1140045 : Decimal;
+      GJ10_11Abgel@1140044 : Decimal;
+      GJ11_12Abgel@1140043 : Decimal;
+      GJ12_13Abgel@1140042 : Decimal;
+      GJ13_14Abgel@1140041 : Decimal;
+      GJ14_15Abgel@1140040 : Decimal;
+      GJ15_16Abgel@1140039 : Decimal;
+      GJ16_17Abgel@1140038 : Decimal;
+      GJ17_18Abgel@1140037 : Decimal;
+      GJ18_19Abgel@1140036 : Decimal;
+      GJ19_20Abgel@1140035 : Decimal;
+      var_jahr@1140034 : ARRAY [30] OF Date;
+      var_startjahr@1140106 : Date;
+      champsstat@1140105 : Boolean;
+      var_sj_eingabe@1140104 : Date;
+      var_jahr_wert@1140103 : ARRAY [30] OF Decimal;
+      LZ_tage_jahr@1140102 : ARRAY [30] OF Integer;
+      var_jahr_gesamt@1140101 : ARRAY [30] OF Decimal;
+      var_jahr_neu@1140100 : ARRAY [30] OF Decimal;
+      var_jahr_verl„ng@1140099 : ARRAY [30] OF Decimal;
+      var_jahr_abgelauf@1140098 : ARRAY [30] OF Decimal;
+      v_rohbilanz@1140097 : Boolean;
+      v_vorl_GuV@1140096 : Boolean;
+      v_AE_per_Periode@1140095 : Boolean;
+      Abgrenzung@1140108 : Boolean;
+      Abgrenz_Datum@1140107 : Date;
+      datum_zeit@1140109 : DateTime;
+      sum_gj_12@1140110 : Decimal;
+      sum_gj_36@1140111 : Decimal;
+      sum_gj_sonst@1140112 : Decimal;
+      sum_gj_gesamt@1140113 : Decimal;
+      Daten_Nav_GuV@1140121 : Text[30];
+      v_sachpostsum@1140122 : Decimal;
+      v_kein_VCode@1140125 : Text[10];
+
+    PROCEDURE Champs@1140003();
+    BEGIN
+
+      CREATE(Excel);
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Sheet.Range('B:O').NumberFormat:='0,00';
+
+      Sheet.Range('A1').Value := 'šbersicht der Champsvertr„ge per '; // šberschriftszeile
+      Sheet.Range('A2').Value := WORKDATE;
+
+      //  PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+
+      FOR i:=1 TO 12 DO
+      BEGIN
+        var_jahr[i+1] := CALCDATE('1J',var_jahr[i]);
+
+
+      Sheet.Range('C4').Value :='GJ '+FORMAT(var_jahr[1]);
+      Sheet.Range('D4').Value :='GJ '+FORMAT(var_jahr[2]);
+      Sheet.Range('E4').Value :='GJ '+FORMAT(var_jahr[3]);
+      Sheet.Range('F4').Value :='GJ '+FORMAT(var_jahr[4]);
+      Sheet.Range('G4').Value :='GJ '+FORMAT(var_jahr[5]);
+      Sheet.Range('H4').Value :='GJ '+FORMAT(var_jahr[6]);
+      Sheet.Range('I4').Value :='GJ '+FORMAT(var_jahr[7]);
+      Sheet.Range('J4').Value :='GJ '+FORMAT(var_jahr[8]);
+      Sheet.Range('K4').Value :='GJ '+FORMAT(var_jahr[9]);
+      Sheet.Range('L4').Value :='GJ '+FORMAT(var_jahr[10]);
+      Sheet.Range('M4').Value :='GJ '+FORMAT(var_jahr[11]);
+      Sheet.Range('N4').Value :='GJ '+FORMAT(var_jahr[12]);
+      END;
+
+
+
+      j := '5';                                   // <- Import in excel ab Zeile 3
+
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      //Service.SETFILTER(Service."Hauptwartungsvertragsnr.",'%1|%2','SV101035','SV101119');
+      //Service.SETFILTER(Service."Hauptwartungsvertragsnr.",'%1','SV101119');
+      //Service.SETFILTER(Service."Hauptwartungsvertragsnr.",'%1','SV101035');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+        LZ_rest:=0;
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+        IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+
+            END
+            ELSE BEGIN
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+
+           FOR i:=1 TO 12 DO
+           BEGIN
+           LZ_tage:= (service."Ablaufdatum Serviceleistung"- service.Lizenzdatum);
+             var_jahr[i+1] := CALCDATE('1J',var_jahr[i]);
+      //  Gesamt im Jahr abgeschlossen
+      //  Hier wird das Buchungsdatum benutzt
+            IF (service.Belegdatum>(var_jahr[i])) AND (service.Belegdatum<(var_jahr[i]+365)) THEN
+             var_jahr_gesamt[i]:=var_jahr_gesamt[i]+(lief.Quantity*lief."VK-Preis (MW)");
+      //  Ende Gesamt im Jahr abgeschlossen
+      //  Gesamt im Jahr neu abgeschlossen
+          IF service.Verl„ngerung=FALSE THEN BEGIN
+            IF (service.Belegdatum>(var_jahr[i])) AND (service.Belegdatum<(var_jahr[i]+365)) THEN
+             var_jahr_neu[i]:=var_jahr_neu[i]+(lief.Quantity*lief."VK-Preis (MW)");
+          END;
+      //  Ende Gesamt im Jahr neu abgeschlossen
+      //  Gesamt im Jahr verl„ngert
+          IF service.Verl„ngerung=TRUE THEN BEGIN
+            IF (service.Belegdatum>(var_jahr[i])) AND (service.Belegdatum<(var_jahr[i]+365)) THEN
+             var_jahr_verl„ng[i]:=var_jahr_verl„ng[i]+(lief.Quantity*lief."VK-Preis (MW)");
+          END;
+      //  Ende Gesamt im Jahr verl„ngert
+      //  Gesamt im Jahr abgelaufen
+           IF (service."Ablaufdatum Serviceleistung">(var_jahr[i])) AND (service."Ablaufdatum Serviceleistung"<(var_jahr[i]+365)) THEN
+             var_jahr_abgelauf[i]:=var_jahr_abgelauf[i]+(lief.Quantity*lief."VK-Preis (MW)");
+      //  Ende Gesamt im Jahr abgelaufen
+
+
+       //   Laufzeitenberechnung  ******************************************************************
+
+                  IF ((service.Lizenzdatum>=(var_jahr[i])) AND (service.Lizenzdatum<=(var_jahr[i]+365))) THEN
+                  BEGIN
+                   LZ_tage_jahr[i]:=var_jahr[i]+365-service.Lizenzdatum;
+                   var_jahr_wert[i]:=var_jahr_wert[i]+((lief.Quantity*lief."VK-Preis (MW)")/LZ_tage*LZ_tage_jahr[i]);
+                  END;
+
+                  IF (service."Ablaufdatum Serviceleistung">(var_jahr[i]+365)) AND ((var_jahr[i])>service.Lizenzdatum) THEN
+                  BEGIN
+                   LZ_tage_jahr[i]:=var_jahr[i]+365-var_jahr[i];
+                   var_jahr_wert[i]:=var_jahr_wert[i]+((lief.Quantity*lief."VK-Preis (MW)")/LZ_tage*LZ_tage_jahr[i]);
+                  END;
+
+
+                  IF ((service."Ablaufdatum Serviceleistung"-1>(var_jahr[i])) AND
+                  (service."Ablaufdatum Serviceleistung"-1<(var_jahr[i]+365))) THEN
+                  BEGIN
+                   LZ_tage_jahr[i]:=service."Ablaufdatum Serviceleistung"-1-var_jahr[i];
+                   var_jahr_wert[i]:=var_jahr_wert[i]+((lief.Quantity*lief."VK-Preis (MW)")/LZ_tage*LZ_tage_jahr[i]);
+                  END;
+
+      //  ENDE Laufzeitenberechnung ******************************************************************
+      //       END;
+      //       END;
+      //       END;
+          END;
+       END;
+      // END;
+      // END;
+       END;
+      END;
+      UNTIL service.NEXT=0;
+      END;
+      Sheet.Range('A6').Value :='Gesamt Jahr';
+      Sheet.Range('C6').Value :=var_jahr_gesamt[1];
+      Sheet.Range('D6').Value :=var_jahr_gesamt[2];
+      Sheet.Range('E6').Value :=var_jahr_gesamt[3];
+      Sheet.Range('F6').Value :=var_jahr_gesamt[4];
+      Sheet.Range('G6').Value :=var_jahr_gesamt[5];
+      Sheet.Range('H6').Value :=var_jahr_gesamt[6];
+      Sheet.Range('I6').Value :=var_jahr_gesamt[7];
+      Sheet.Range('J6').Value :=var_jahr_gesamt[8];
+      Sheet.Range('K6').Value :=var_jahr_gesamt[9];
+      Sheet.Range('L6').Value :=var_jahr_gesamt[10];
+      Sheet.Range('M6').Value :=var_jahr_gesamt[11];
+      Sheet.Range('N6').Value :=var_jahr_gesamt[12];
+
+      Sheet.Range('A7').Value :='Gesamt Jahr neu';
+      Sheet.Range('C7').Value :=var_jahr_neu[1];
+      Sheet.Range('D7').Value :=var_jahr_neu[2];
+      Sheet.Range('E7').Value :=var_jahr_neu[3];
+      Sheet.Range('F7').Value :=var_jahr_neu[4];
+      Sheet.Range('G7').Value :=var_jahr_neu[5];
+      Sheet.Range('H7').Value :=var_jahr_neu[6];
+      Sheet.Range('I7').Value :=var_jahr_neu[7];
+      Sheet.Range('J7').Value :=var_jahr_neu[8];
+      Sheet.Range('K7').Value :=var_jahr_neu[9];
+      Sheet.Range('L7').Value :=var_jahr_neu[10];
+      Sheet.Range('M7').Value :=var_jahr_neu[11];
+      Sheet.Range('N7').Value :=var_jahr_neu[12];
+
+      Sheet.Range('A8').Value :='Gesamt Jahr verl„ngert';
+      Sheet.Range('C8').Value :=var_jahr_verl„ng[1];
+      Sheet.Range('D8').Value :=var_jahr_verl„ng[2];
+      Sheet.Range('E8').Value :=var_jahr_verl„ng[3];
+      Sheet.Range('F8').Value :=var_jahr_verl„ng[4];
+      Sheet.Range('G8').Value :=var_jahr_verl„ng[5];
+      Sheet.Range('H8').Value :=var_jahr_verl„ng[6];
+      Sheet.Range('I8').Value :=var_jahr_verl„ng[7];
+      Sheet.Range('J8').Value :=var_jahr_verl„ng[8];
+      Sheet.Range('K8').Value :=var_jahr_verl„ng[9];
+      Sheet.Range('L8').Value :=var_jahr_verl„ng[10];
+      Sheet.Range('M8').Value :=var_jahr_verl„ng[11];
+      Sheet.Range('N8').Value :=var_jahr_verl„ng[12];
+
+      Sheet.Range('A10').Value :='im Jahr ablaufend';
+      Sheet.Range('C10').Value :=var_jahr_abgelauf[1];
+      Sheet.Range('D10').Value :=var_jahr_abgelauf[2];
+      Sheet.Range('E10').Value :=var_jahr_abgelauf[3];
+      Sheet.Range('F10').Value :=var_jahr_abgelauf[4];
+      Sheet.Range('G10').Value :=var_jahr_abgelauf[5];
+      Sheet.Range('H10').Value :=var_jahr_abgelauf[6];
+      Sheet.Range('I10').Value :=var_jahr_abgelauf[7];
+      Sheet.Range('J10').Value :=var_jahr_abgelauf[8];
+      Sheet.Range('K10').Value :=var_jahr_abgelauf[9];
+      Sheet.Range('L10').Value :=var_jahr_abgelauf[10];
+      Sheet.Range('M10').Value :=var_jahr_abgelauf[11];
+      Sheet.Range('N10').Value :=var_jahr_abgelauf[12];
+       {
+      Sheet.Range('A12').Value :='Verl„ngert in % von Neuvertr„gen';
+      IF ((var_jahr_verl„ng[1]<>0) AND (var_jahr_neu[1]<>0)) THEN
+      Sheet.Range('C12').Value :=(var_jahr_verl„ng[1]/var_jahr_neu[1]*100);
+      IF ((var_jahr_verl„ng[2]<>0) AND (var_jahr_neu[2]<>0)) THEN
+      Sheet.Range('D12').Value :=(var_jahr_verl„ng[2]/var_jahr_neu[2]*100);
+      IF ((var_jahr_verl„ng[3]<>0) AND (var_jahr_neu[3]<>0)) THEN
+      Sheet.Range('E12').Value :=(var_jahr_verl„ng[3]/var_jahr_neu[3]*100);
+      IF ((var_jahr_verl„ng[4]<>0) AND (var_jahr_neu[4]<>0)) THEN
+      Sheet.Range('F12').Value :=(var_jahr_verl„ng[4]/var_jahr_neu[4]*100);
+      IF ((var_jahr_verl„ng[5]<>0) AND (var_jahr_neu[5]<>0)) THEN
+      Sheet.Range('G12').Value :=(var_jahr_verl„ng[5]/var_jahr_neu[5]*100);
+      IF ((var_jahr_verl„ng[6]<>0) AND (var_jahr_neu[6]<>0)) THEN
+      Sheet.Range('H12').Value :=(var_jahr_verl„ng[6]/var_jahr_neu[6]*100);
+      IF ((var_jahr_verl„ng[7]<>0) AND (var_jahr_neu[7]<>0)) THEN
+      Sheet.Range('I12').Value :=(var_jahr_verl„ng[7]/var_jahr_neu[7]*100);
+      IF ((var_jahr_verl„ng[8]<>0) AND (var_jahr_neu[8]<>0)) THEN
+      Sheet.Range('J12').Value :=(var_jahr_verl„ng[8]/var_jahr_neu[8]*100);
+      IF ((var_jahr_verl„ng[9]<>0) AND (var_jahr_neu[9]<>0)) THEN
+      Sheet.Range('K12').Value :=(var_jahr_verl„ng[9]/var_jahr_neu[9]*100);
+      IF ((var_jahr_verl„ng[10]<>0) AND (var_jahr_neu[10]<>0)) THEN
+      Sheet.Range('L12').Value :=(var_jahr_verl„ng[10]/var_jahr_neu[10]*100);
+      IF ((var_jahr_verl„ng[11]<>0) AND (var_jahr_neu[11]<>0)) THEN
+      Sheet.Range('M12').Value :=(var_jahr_verl„ng[11]/var_jahr_neu[11]*100);
+      IF ((var_jahr_verl„ng[12]<>0) AND (var_jahr_neu[12]<>0)) THEN
+      Sheet.Range('N12').Value :=(var_jahr_verl„ng[12]/var_jahr_neu[12]*100);
+       }
+      Sheet.Range('A13').Value :='Verl„ngert in % von Ablaufend';
+      IF ((var_jahr_verl„ng[1]<>0) AND (var_jahr_abgelauf[1]<>0)) THEN
+      Sheet.Range('C13').Value :=(var_jahr_verl„ng[1]/var_jahr_abgelauf[1]*100);
+      IF ((var_jahr_verl„ng[2]<>0) AND (var_jahr_abgelauf[2]<>0)) THEN
+      Sheet.Range('D13').Value :=(var_jahr_verl„ng[2]/var_jahr_abgelauf[2]*100);
+      IF ((var_jahr_verl„ng[3]<>0) AND (var_jahr_abgelauf[3]<>0)) THEN
+      Sheet.Range('E13').Value :=(var_jahr_verl„ng[3]/var_jahr_abgelauf[3]*100);
+      IF ((var_jahr_verl„ng[4]<>0) AND (var_jahr_abgelauf[4]<>0)) THEN
+      Sheet.Range('F13').Value :=(var_jahr_verl„ng[4]/var_jahr_abgelauf[4]*100);
+      IF ((var_jahr_verl„ng[5]<>0) AND (var_jahr_abgelauf[5]<>0)) THEN
+      Sheet.Range('G13').Value :=(var_jahr_verl„ng[5]/var_jahr_abgelauf[5]*100);
+      IF ((var_jahr_verl„ng[6]<>0) AND (var_jahr_abgelauf[6]<>0)) THEN
+      Sheet.Range('H13').Value :=(var_jahr_verl„ng[6]/var_jahr_abgelauf[6]*100);
+      IF ((var_jahr_verl„ng[7]<>0) AND (var_jahr_abgelauf[7]<>0)) THEN
+      Sheet.Range('I13').Value :=(var_jahr_verl„ng[7]/var_jahr_abgelauf[7]*100);
+      IF ((var_jahr_verl„ng[8]<>0) AND (var_jahr_abgelauf[8]<>0)) THEN
+      Sheet.Range('J13').Value :=(var_jahr_verl„ng[8]/var_jahr_abgelauf[8]*100);
+      IF ((var_jahr_verl„ng[9]<>0) AND (var_jahr_abgelauf[9]<>0)) THEN
+      Sheet.Range('K13').Value :=(var_jahr_verl„ng[9]/var_jahr_abgelauf[9]*100);
+      IF ((var_jahr_verl„ng[10]<>0) AND (var_jahr_abgelauf[10]<>0)) THEN
+      Sheet.Range('L13').Value :=(var_jahr_verl„ng[10]/var_jahr_abgelauf[10]*100);
+      IF ((var_jahr_verl„ng[11]<>0) AND (var_jahr_abgelauf[11]<>0)) THEN
+      Sheet.Range('M13').Value :=(var_jahr_verl„ng[11]/var_jahr_abgelauf[11]*100);
+      IF ((var_jahr_verl„ng[12]<>0) AND (var_jahr_abgelauf[12]<>0)) THEN
+      Sheet.Range('N13').Value :=(var_jahr_verl„ng[12]/var_jahr_abgelauf[12]*100);
+
+      Sheet.Range('A14').Value :='Verl„ngert in % von Jahreseingang';
+      IF ((var_jahr_verl„ng[1]<>0) AND (var_jahr_gesamt[1]<>0)) THEN
+      Sheet.Range('C14').Value :=(var_jahr_verl„ng[1]/var_jahr_gesamt[1]*100);
+      IF ((var_jahr_verl„ng[2]<>0) AND (var_jahr_gesamt[2]<>0)) THEN
+      Sheet.Range('D14').Value :=(var_jahr_verl„ng[2]/var_jahr_gesamt[2]*100);
+      IF ((var_jahr_verl„ng[3]<>0) AND (var_jahr_gesamt[3]<>0)) THEN
+      Sheet.Range('E14').Value :=(var_jahr_verl„ng[3]/var_jahr_gesamt[3]*100);
+      IF ((var_jahr_verl„ng[4]<>0) AND (var_jahr_gesamt[4]<>0)) THEN
+      Sheet.Range('F14').Value :=(var_jahr_verl„ng[4]/var_jahr_gesamt[4]*100);
+      IF ((var_jahr_verl„ng[5]<>0) AND (var_jahr_gesamt[5]<>0)) THEN
+      Sheet.Range('G14').Value :=(var_jahr_verl„ng[5]/var_jahr_gesamt[5]*100);
+      IF ((var_jahr_verl„ng[6]<>0) AND (var_jahr_gesamt[6]<>0)) THEN
+      Sheet.Range('H14').Value :=(var_jahr_verl„ng[6]/var_jahr_gesamt[6]*100);
+      IF ((var_jahr_verl„ng[7]<>0) AND (var_jahr_gesamt[7]<>0)) THEN
+      Sheet.Range('I14').Value :=(var_jahr_verl„ng[7]/var_jahr_gesamt[7]*100);
+      IF ((var_jahr_verl„ng[8]<>0) AND (var_jahr_gesamt[8]<>0)) THEN
+      Sheet.Range('J14').Value :=(var_jahr_verl„ng[8]/var_jahr_gesamt[8]*100);
+      IF ((var_jahr_verl„ng[9]<>0) AND (var_jahr_gesamt[9]<>0)) THEN
+      Sheet.Range('K14').Value :=(var_jahr_verl„ng[9]/var_jahr_gesamt[9]*100);
+      IF ((var_jahr_verl„ng[10]<>0) AND (var_jahr_gesamt[10]<>0)) THEN
+      Sheet.Range('L14').Value :=(var_jahr_verl„ng[10]/var_jahr_gesamt[10]*100);
+      IF ((var_jahr_verl„ng[11]<>0) AND (var_jahr_gesamt[11]<>0)) THEN
+      Sheet.Range('M14').Value :=(var_jahr_verl„ng[11]/var_jahr_gesamt[11]*100);
+      IF ((var_jahr_verl„ng[12]<>0) AND (var_jahr_gesamt[12]<>0)) THEN
+      Sheet.Range('N14').Value :=(var_jahr_verl„ng[12]/var_jahr_gesamt[12]*100);
+
+
+
+
+      Sheet.Range('A16').Value :='Auf Laufzeit verteilt';
+      Sheet.Range('C16').Value :=var_jahr_wert[1];
+      Sheet.Range('D16').Value :=var_jahr_wert[2];
+      Sheet.Range('E16').Value :=var_jahr_wert[3];
+      Sheet.Range('F16').Value :=var_jahr_wert[4];
+      Sheet.Range('G16').Value :=var_jahr_wert[5];
+      Sheet.Range('H16').Value :=var_jahr_wert[6];
+      Sheet.Range('I16').Value :=var_jahr_wert[7];
+      Sheet.Range('J16').Value :=var_jahr_wert[8];
+      Sheet.Range('K16').Value :=var_jahr_wert[9];
+      Sheet.Range('L16').Value :=var_jahr_wert[10];
+      Sheet.Range('M16').Value :=var_jahr_wert[11];
+      Sheet.Range('N16').Value :=var_jahr_wert[12];
+
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      service.SETFILTER(service."Ablaufdatum Serviceleistung",'>%1',Abgrenz_Datum);
+      service.SETFILTER(service.Belegdatum,'<=%1',Abgrenz_Datum);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+        LZ_rest:=0;
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+         IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+            END ELSE BEGIN
+
+              LZ_tage:= (service."Ablaufdatum Serviceleistung"- service.Lizenzdatum-1);
+              LZ_tage_stich:=(service."Ablaufdatum Serviceleistung"-Abgrenz_Datum-1);
+              LZ_tage_bewert:=0;
+
+              IF LZ_tage_stich>LZ_tage THEN BEGIN
+              LZ_tage_bewert := LZ_tage;
+              END ELSE BEGIN
+              LZ_tage_bewert := LZ_tage_stich;
+              END;
+
+
+
+
+              Sum_ek:=(Sum_ek+ (ROUND(lief."Unit Cost (LCY)"/ LZ_tage*LZ_tage_bewert*lief.Quantity)));
+              Sum_vk:=(Sum_vk+ (ROUND(lief."VK-Preis (MW)"/ LZ_tage*LZ_tage_bewert*lief.Quantity)));
+      //        Sum_vk:=(Sum_vk+ (ROUND(Lief."Unit Price"/ LZ_tage*LZ_tage_bewert*Lief.Quantity)));
+
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+      //    END;
+      //    END;
+      //    END;
+          END;
+        END;
+      END;
+      //END;
+      //END;
+      UNTIL service.NEXT=0;
+      END;
+
+      Sheet.Range('A20').Value :='Abgrenzung per: ';
+      Sheet.Range('A21').Value :=Abgrenz_Datum;
+      Sheet.Range('A22').Value :='Abgrenz_Ek';
+      Sheet.Range('B22').Value :=FORMAT(Sum_ek);
+      Sheet.Range('A23').Value :='Abgrenz_Vk';
+      Sheet.Range('B23').Value :=FORMAT(Sum_vk);
+      //Excel.Visible(TRUE);
+
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      service.SETFILTER(service."Dauer Serviceleistung",'%1','12M');
+      service.SETFILTER(service.Belegdatum,'%1..%2',PeriodStartDate[1],Abgrenz_Datum);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+         IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+            END ELSE BEGIN
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+               sum_gj_12:=sum_gj_12 + (lief.Quantity* lief."VK-Preis (MW)");
+      //      END;
+      //      END;
+      //      END;
+            END;
+         END;
+      END;
+      //END;
+      //END;
+      UNTIL service.NEXT=0;
+      END;
+      Sheet.Range('A25').Value :='GJ_12M:';
+      Sheet.Range('B25').Value :=FORMAT(sum_gj_12);
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      service.SETFILTER(service."Dauer Serviceleistung",'>%1&<%2','12M','36M');
+
+
+      service.SETFILTER(service.Belegdatum,'%1..%2',PeriodStartDate[1],Abgrenz_Datum);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+         IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+            END ELSE BEGIN
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+               sum_gj_36:=sum_gj_36 + (lief.Quantity* lief."VK-Preis (MW)");
+      //   END;
+      //   END;
+      //   END;
+         END;
+         END;
+      END;
+      //END;
+      //END;
+      UNTIL service.NEXT=0;
+      END;
+      Sheet.Range('A26').Value :='GJ_13-35M:';
+      Sheet.Range('B26').Value :=FORMAT(sum_gj_36);
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      service.SETFILTER(service."Dauer Serviceleistung",'>=%1','36M');
+      service.SETFILTER(service.Belegdatum,'%1..%2',PeriodStartDate[1],Abgrenz_Datum);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+
+         IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+            END ELSE BEGIN
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+             sum_gj_sonst:=sum_gj_sonst + (lief.Quantity* lief."VK-Preis (MW)");
+      //    END;
+      //    END;
+      //    END;
+          END;
+          END;
+      END;
+      //END;
+      //END;
+      UNTIL service.NEXT=0;
+      END;
+      Sheet.Range('A27').Value :='GJ_36M +:';
+      Sheet.Range('B27').Value :=FORMAT(sum_gj_sonst);
+
+      service.RESET;
+      service.SETCURRENTKEY("Wartungsvertragsnr.","Nr.","Belegzeilennr.");
+      service.SETFILTER(service.Art,'%1',service.Art::Service);
+      //service.SETFILTER(service.Lizenzdatum,'>=%1&<=%2',PeriodStartDate[1],Abgrenz_Datum);
+      service.SETFILTER(service.Belegdatum,'>=%1&<=%2',PeriodStartDate[1],Abgrenz_Datum);
+      service.SETFILTER(service.Inaktiv,'%1',FALSE);
+      service.SETFILTER(service."SUP Artikelnr.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+      IF service.FINDFIRST THEN BEGIN
+      REPEAT
+      //IF ((service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#01') OR (service."SUP Artikelnr."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#01') OR (service."SUP Artikelnr."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //END ELSE BEGIN
+      //IF ((service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#01') OR (service."SUP Artikelnr."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //END ELSE BEGIN
+         Artikel.RESET;
+         Artikel.SETFILTER(Artikel."No.",'%1',service."SUP Artikelnr.");
+         Artikel.SETFILTER(Artikel."Manufacturer Code",'<>%1&<>%2','5710','5720');
+         IF Artikel.FINDFIRST THEN BEGIN
+
+        lief.RESET;
+        lief.SETFILTER(lief."Document No.",'%1',service."Nr.");
+        lief.SETFILTER(lief."Line No.",'%1',service."Belegzeilennr.");
+        lief.SETFILTER(lief.Quantity,'<>%1',0);
+        lief.SETFILTER(lief."Manufacturer Code",'<>%1&<>%2','5710','5720');
+        lief.SETFILTER(lief."No.",'<>%1&<>%2','RE_INSTATEMENT_FEE','CHAMPS-RE_INSTATE#01');
+         IF lief.FINDFIRST THEN BEGIN
+      //        IF ((lief."No."='ACTS-ADV-HWREPLAC#01') OR (lief."No."='ACTS-ADV-HWREPLAC#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-24X7/SO#01') OR (lief."No."='ACTS-SUPP-24X7/SO#02')) THEN BEGIN
+      //        END ELSE BEGIN
+      //        IF ((lief."No."='ACTS-SUPP-9X5/SOF#01') OR (lief."No."='ACTS-SUPP-9X5/SOF#02')) THEN BEGIN
+      //        END ELSE BEGIN
+
+            IF (liefnr=lief."Document No.") AND (liefzeilennr=lief."Line No.") THEN BEGIN
+            END ELSE BEGIN
+               liefnr:=lief."Document No.";
+               liefzeilennr:=lief."Line No.";
+               sum_gj_gesamt:=sum_gj_gesamt +(lief.Quantity* lief."VK-Preis (MW)");
+      //      END;
+      //      END;
+      //      END;
+            END;
+         END;
+      END;
+      //END;
+      //END;
+      UNTIL service.NEXT=0;
+      END;
+      Sheet.Range('A28').Value :='GJ_Gesamt:';
+      Sheet.Range('B28').Value :=FORMAT(sum_gj_gesamt);
+
+
+
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Champs.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Champs.xlsx');
+      Book.Close(TRUE);
+
+
+
+      //Excel.Visible(TRUE);
+      //Excel.Quit;
+
+
+      Vorl_GuV;
+    END;
+
+    PROCEDURE Rohbilanz@1140000();
+    BEGIN
+      {    // Diese Version holt die aktuellen Kontosalden (wird z.Zt. nicht ausgefhrt).
+           // Teil 2 grenzt die Buchungsposten bis Ende des GJ ab (wird z.Zt. ausgefhrt).
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+      CREATE(Excel);
+
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Sheet.Range('C:O').NumberFormat:='0,00';
+
+      Sheet.Range('A1').Value :='Nr.';
+      Sheet.Range('B1').Value :='Name';
+      Sheet.Range('C1').Value :='Saldo';
+      j := '2';
+      sachkonten.RESET;
+      sachkonten.CALCFIELDS(Balance);
+      sachkonten.SETFILTER(sachkonten."Balance at Date",'<>%1',0);
+      sachkonten.SETFILTER(sachkonten."Income/Balance",'%1',sachkonten."Income/Balance"::"Balance Sheet");
+      IF sachkonten.FINDFIRST THEN BEGIN
+      sachkonten.CALCFIELDS(Balance);
+
+      REPEAT
+      sachkonten.CALCFIELDS(Balance);
+      IF  sachkonten."No."='9999'THEN BEGIN
+      END ELSE BEGIN
+            Sheet.Range('A'+j).Value := sachkonten."No.";
+            Sheet.Range('B'+j).Value := sachkonten.Name;
+            Sheet.Range('C'+j).Value := sachkonten.Balance;
+      END;
+          j:=INCSTR(j);
+
+
+      UNTIL sachkonten.NEXT=0;
+       END;
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx');
+      Book.Close(TRUE);
+
+      //Excel.Visible(TRUE);
+      }
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+      CREATE(Excel);
+
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Sheet.Range('C:O').NumberFormat:='0,00';
+
+      Sheet.Range('A1').Value :='Nr.';
+      Sheet.Range('B1').Value :='Name';
+      Sheet.Range('C1').Value :='Saldo';
+      j := '2';
+      sachkonten.RESET;
+      //sachkonten.SETFILTER(sachkonten."No.",'%1..%2','0001','3999');
+      sachkonten.SETRANGE(sachkonten."No.",'0001','3999');
+      IF sachkonten.FINDFIRST THEN BEGIN
+
+      REPEAT
+      v_sachpostsum:=0;
+       sachposten.RESET;
+      // sachposten.SETFILTER(sachposten."G/L Account No.",'%1',sachkonten."No.");
+      // sachposten.SETFILTER(sachposten."Posting Date",'%1..%2',010100D,Abgrenz_Datum);
+       sachposten.SETRANGE(sachposten."G/L Account No.",sachkonten."No.");
+       sachposten.SETRANGE(sachposten."Posting Date",010100D,Abgrenz_Datum);
+
+       IF sachposten.FINDFIRST THEN BEGIN
+        REPEAT
+           v_sachpostsum:=v_sachpostsum+sachposten.Amount;
+        UNTIL sachposten.NEXT=0;
+        END;
+        IF v_sachpostsum<>0 THEN BEGIN
+          Sheet.Range('A'+j).Value := sachkonten."No.";
+          Sheet.Range('B'+j).Value := sachkonten.Name;
+          Sheet.Range('C'+j).Value := v_sachpostsum;
+          j:=INCSTR(j);
+        END;
+
+      UNTIL sachkonten.NEXT=0;
+      END;
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx');
+      Book.Close(TRUE);
+
+      //Excel.Visible(TRUE);
+
+      Systeme;
+    END;
+
+    PROCEDURE Vorl_GuV@1140001();
+    BEGIN
+
+      FOR i := 1 TO 13 DO
+        PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+      PeriodStartDate[14] := 31129999D;
+
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+      CREATE(Excel);                                          //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+      Sheet.Names.Add('GUV_KTO','=Tabelle1!$A$2:$A$202');
+      //Compare_Book.Names.Add('GUV_KTO','='+c_sheet_name+'!$A$2:$A$202');
+
+
+      Sheet.StandardWidth := 16;
+      Sheet.Range('A:A').ColumnWidth := 10;
+      Sheet.Range('B:B').ColumnWidth := 30;
+
+      Sheet.Range('A1').Value := 'Konto-Nr.';                          // definiert die beschriftung der berschriftszeile
+      Sheet.Range('B1').Value := 'Kontoname';
+      Sheet.Range('C1').Value := 'Gesamt';
+      Sheet.Range('D1').Value := FORMAT(PeriodStartDate[1]) + '..' +  FORMAT(PeriodStartDate[2]-1);
+      Sheet.Range('E1').Value := FORMAT(PeriodStartDate[2]) + '..' +  FORMAT(PeriodStartDate[3]-1);
+      Sheet.Range('F1').Value := FORMAT(PeriodStartDate[3]) + '..' +  FORMAT(PeriodStartDate[4]-1);
+      Sheet.Range('G1').Value := FORMAT(PeriodStartDate[4]) + '..' +  FORMAT(PeriodStartDate[5]-1);
+      Sheet.Range('H1').Value := FORMAT(PeriodStartDate[5]) + '..' +  FORMAT(PeriodStartDate[6]-1);
+      Sheet.Range('I1').Value := FORMAT(PeriodStartDate[6]) + '..' +  FORMAT(PeriodStartDate[7]-1);
+      Sheet.Range('J1').Value := FORMAT(PeriodStartDate[7]) + '..' +  FORMAT(PeriodStartDate[8]-1);
+      Sheet.Range('K1').Value := FORMAT(PeriodStartDate[8]) + '..' +  FORMAT(PeriodStartDate[9]-1);
+      Sheet.Range('L1').Value := FORMAT(PeriodStartDate[9]) + '..' +  FORMAT(PeriodStartDate[10]-1);
+      Sheet.Range('M1').Value := FORMAT(PeriodStartDate[10]) + '..' + FORMAT( PeriodStartDate[11]-1);
+      Sheet.Range('N1').Value := FORMAT(PeriodStartDate[11]) + '..' + FORMAT(PeriodStartDate[12]-1);
+      Sheet.Range('O1').Value := FORMAT(PeriodStartDate[12]) + '..' + FORMAT(PeriodStartDate[13]-1);
+
+      //datum_zeit:=DateTime;
+      //Sheet.Range('P1').Value := datum_zeit;
+      Sheet.Range('P1').Value :=CURRENTDATETIME;
+
+      j := '2';                                                    // <- Import in excel ab Zeile 2
+
+
+      sachkonten.RESET;
+      //sachkonten.SETFILTER(sachkonten."No.",'%1..%2','4000','7999');
+      sachkonten.SETRANGE(sachkonten."No.",'4000','7999');
+      IF sachkonten.FINDFIRST THEN BEGIN
+
+      REPEAT
+      FOR i:=1 TO 12 DO
+      BEGIN
+        var_balance[i]:=0;
+      END;
+      var_balance_gesamt_konto := 0;
+       sachposten.RESET;
+      // sachposten.SETFILTER(sachposten."G/L Account No.",'%1',sachkonten."No.");
+       sachposten.SETRANGE(sachposten."G/L Account No.",sachkonten."No.");
+        IF sachposten.FINDFIRST THEN BEGIN
+            FOR i:=1 TO 12 DO
+                BEGIN
+      //        sachposten.SETFILTER(sachposten."Posting Date",'%1..%2',PeriodStartDate[i],(PeriodStartDate[i+1] - 1));
+              sachposten.SETRANGE(sachposten."Posting Date",PeriodStartDate[i],(PeriodStartDate[i+1] - 1));
+              IF sachposten.FINDFIRST THEN BEGIN
+              REPEAT
+                  var_balance[i] := var_balance[i] + sachposten.Amount;
+                  var_balance_total[i] := var_balance_total[i] + sachposten.Amount;
+                  var_balance_total_summe := var_balance_total_summe + sachposten.Amount;
+              UNTIL sachposten.NEXT=0;
+              END;
+       var_balance_gesamt_konto := var_balance_gesamt_konto + var_balance[i];
+      //     var_balance_total_summe := var_balance_total_summe + var_balance_total[i];
+
+      //     var_balance_total_summe := var_balance_total_summe + var_balance_gesamt_konto;
+       END;
+          IF var_balance_gesamt_konto<>0 THEN BEGIN
+              Sheet.Range('A'+j).Value := sachkonten."No.";
+              Sheet.Range('B'+j).Value := sachkonten.Name;
+              Sheet.Range('C'+j).Value := var_balance_gesamt_konto;
+              Sheet.Range('D'+j).Value := var_balance[1];
+              Sheet.Range('E'+j).Value := var_balance[2];
+              Sheet.Range('F'+j).Value := var_balance[3];
+              Sheet.Range('G'+j).Value := var_balance[4];
+              Sheet.Range('H'+j).Value := var_balance[5];
+              Sheet.Range('I'+j).Value := var_balance[6];
+              Sheet.Range('J'+j).Value := var_balance[7];
+              Sheet.Range('K'+j).Value := var_balance[8];
+              Sheet.Range('L'+j).Value := var_balance[9];
+              Sheet.Range('M'+j).Value := var_balance[10];
+              Sheet.Range('N'+j).Value := var_balance[11];
+              Sheet.Range('O'+j).Value := var_balance[12];
+        j := INCSTR (j);
+        END;
+        END;
+      UNTIL sachkonten.NEXT=0;
+      END;
+
+
+
+      j := INCSTR(j) ;
+
+      Sheet.Range('B160').Value := 'Summe:';
+      Sheet.Range('C160').Value := var_balance_total_summe;
+      Sheet.Range('D160').Value := var_balance_total[1];
+      Sheet.Range('E160').Value := var_balance_total[2];
+      Sheet.Range('F160').Value := var_balance_total[3];
+      Sheet.Range('G160').Value := var_balance_total[4];
+      Sheet.Range('H160').Value := var_balance_total[5];
+      Sheet.Range('I160').Value := var_balance_total[6];
+      Sheet.Range('J160').Value := var_balance_total[7];
+      Sheet.Range('K160').Value := var_balance_total[8];
+      Sheet.Range('L160').Value := var_balance_total[9];
+      Sheet.Range('M160').Value := var_balance_total[10];
+      Sheet.Range('N160').Value := var_balance_total[11];
+      Sheet.Range('O160').Value := var_balance_total[12];
+
+      IF var_balance_total_summe > 0 THEN
+        Sheet.Range('C150').Font.Color := 255;
+      IF var_balance_total[1] > 0 THEN
+        Sheet.Range('D150').Font.Color := 255;
+      IF var_balance_total[2] > 0 THEN
+        Sheet.Range('E150').Font.Color := 255;
+      IF var_balance_total[3] > 0 THEN
+        Sheet.Range('F150').Font.Color := 255;
+      IF var_balance_total[4] > 0 THEN
+        Sheet.Range('G150').Font.Color := 255;
+      IF var_balance_total[5] > 0 THEN
+        Sheet.Range('H150').Font.Color := 255;
+      IF var_balance_total[6] > 0 THEN
+        Sheet.Range('I150').Font.Color := 255;
+      IF var_balance_total[7] > 0 THEN
+        Sheet.Range('J150').Font.Color := 255;
+      IF var_balance_total[8] > 0 THEN
+        Sheet.Range('K150').Font.Color := 255;
+      IF var_balance_total[9] > 0 THEN
+        Sheet.Range('L150').Font.Color := 255;
+      IF var_balance_total[10] > 0 THEN
+        Sheet.Range('M150').Font.Color := 255;
+      IF var_balance_total[11] > 0 THEN
+        Sheet.Range('N150').Font.Color := 255;
+      IF var_balance_total[12] > 0 THEN
+        Sheet.Range('O150').Font.Color := 255;
+        Sheet.Range('C150').Font.Color := 255;
+
+      //Excel.Visible(TRUE);
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_GuV.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_GuV.xlsx');
+      Book.Close(TRUE);
+
+
+      Rohbilanz;
+    END;
+
+    PROCEDURE Systeme@1140002();
+    BEGIN
+
+      //PeriodStartDate[1] := 010715D;
+
+
+
+
+      FOR i := 1 TO 13 DO
+      PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+
+      PeriodStartDate[14] := 31129999D;
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+
+      Sheet.Range('A11').Value := 'VK-Ums„tze nach Perioden'; // definiert die Beschriftung der berschriftszeile
+
+      Sheet.Range('A12').Value := 'Herstell-Code';
+      Sheet.Range('B12').Value := 'Hersteller';
+      Sheet.Range('C12').Value := 'Gesamt';
+      Sheet.Range('D12').Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E12').Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F12').Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G12').Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H12').Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I12').Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J12').Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K12').Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L12').Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M12').Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N12').Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O12').Value := FORMAT(PeriodStartDate[12]);
+
+      j := '13';                                                    // <- Import in excel ab Zeile 2
+
+
+      ///Hersteller  1 Teil VK
+      //////********************************************************************************************
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+      //  VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+      //  VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //  VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETRANGE(VKRZ."Manufacturer Code",Herstell.Code);
+        VKRZ.SETRANGE(VKRZ."Posting Date",PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+        VKRZ.SETRANGE(VKRZ.Type,VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+              IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+               BEGIN
+                 var_balance[i] := var_balance[i] +( VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                END
+               ELSE
+                BEGIN
+                   IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+                    BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                    var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+
+                    END
+                   ELSE
+                    BEGIN
+                    v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+
+                    END;
+                END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //Sheet.Range('P'+j).Value := v_sum_au;
+
+      Sheet.Range('A1').Value := 'Gesamt';
+      Sheet.Range('B1').Value := 'VK-Rechnung';
+      Sheet.Range('C1').Value := v_summe_total;
+      Sheet.Range('D1').Value := var_balance_total[1];
+      Sheet.Range('E1').Value := var_balance_total[2];
+      Sheet.Range('F1').Value := var_balance_total[3];
+      Sheet.Range('G1').Value := var_balance_total[4];
+      Sheet.Range('H1').Value := var_balance_total[5];
+      Sheet.Range('I1').Value := var_balance_total[6];
+      Sheet.Range('J1').Value := var_balance_total[7];
+      Sheet.Range('K1').Value := var_balance_total[8];
+      Sheet.Range('L1').Value := var_balance_total[9];
+      Sheet.Range('M1').Value := var_balance_total[10];
+      Sheet.Range('N1').Value := var_balance_total[11];
+      Sheet.Range('O1').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+      // Gutschriftszeilen verarbeiten
+
+      Sheet.Range('A'+j).Value := 'VK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+      //          VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+      //          VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+      //          VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETRANGE(VKGZ."Document No.",VKGK."No.");
+                VKGZ.SETRANGE(VKGZ."Manufacturer Code",Herstell.Code);
+                VKGZ.SETRANGE(VKGZ.Type,VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A2').Value := 'Gesamt';
+      Sheet.Range('B2').Value := 'VK_Gutschrift';
+      Sheet.Range('C2').Value := v_summe_total;
+      Sheet.Range('D2').Value := var_balance_total[1];
+      Sheet.Range('E2').Value := var_balance_total[2];
+      Sheet.Range('F2').Value := var_balance_total[3];
+      Sheet.Range('G2').Value := var_balance_total[4];
+      Sheet.Range('H2').Value := var_balance_total[5];
+      Sheet.Range('I2').Value := var_balance_total[6];
+      Sheet.Range('J2').Value := var_balance_total[7];
+      Sheet.Range('K2').Value := var_balance_total[8];
+      Sheet.Range('L2').Value := var_balance_total[9];
+      Sheet.Range('M2').Value := var_balance_total[10];
+      Sheet.Range('N2').Value := var_balance_total[11];
+      Sheet.Range('O2').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      ///Hersteller  2 Teil EK
+      //////********************************************************************************************
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+
+      Sheet.Range('A'+j).Value := 'EK-Ums„tze nach Perioden';
+      j:=INCSTR(j);
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //EK-Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+      //  VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+      //  VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //  VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETRANGE(VKRZ."Manufacturer Code",Herstell.Code);
+        VKRZ.SETRANGE(VKRZ."Posting Date",PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+        VKRZ.SETRANGE(VKRZ.Type,VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'<>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+      //        IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+      //         BEGIN
+                 var_balance[i] := var_balance[i] +(VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+      //          END
+      //         ELSE
+      //          BEGIN
+      //             IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+      //              BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      // var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //              END
+      //             ELSE
+      //              BEGIN
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //              END;
+      //          END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A3').Value := 'Gesamt';
+      Sheet.Range('B3').Value := 'EK-Rechnung';
+      Sheet.Range('C3').Value := v_summe_total;
+      Sheet.Range('D3').Value := var_balance_total[1];
+      Sheet.Range('E3').Value := var_balance_total[2];
+      Sheet.Range('F3').Value := var_balance_total[3];
+      Sheet.Range('G3').Value := var_balance_total[4];
+      Sheet.Range('H3').Value := var_balance_total[5];
+      Sheet.Range('I3').Value := var_balance_total[6];
+      Sheet.Range('J3').Value := var_balance_total[7];
+      Sheet.Range('K3').Value := var_balance_total[8];
+      Sheet.Range('L3').Value := var_balance_total[9];
+      Sheet.Range('M3').Value := var_balance_total[10];
+      Sheet.Range('N3').Value := var_balance_total[11];
+      Sheet.Range('O3').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      // Gutschriftszeilen verarbeiten
+
+      Sheet.Range('A'+j).Value := 'EK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+      //          VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+      //          VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+      //          VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETRANGE(VKGZ."Document No.",VKGK."No.");
+                VKGZ.SETRANGE(VKGZ."Manufacturer Code",Herstell.Code);
+                VKGZ.SETRANGE(VKGZ.Type,VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A4').Value := 'Gesamt';
+      Sheet.Range('B4').Value := 'EK-Gutschrift';
+      Sheet.Range('C4').Value := v_summe_total;
+      Sheet.Range('D4').Value := var_balance_total[1];
+      Sheet.Range('E4').Value := var_balance_total[2];
+      Sheet.Range('F4').Value := var_balance_total[3];
+      Sheet.Range('G4').Value := var_balance_total[4];
+      Sheet.Range('H4').Value := var_balance_total[5];
+      Sheet.Range('I4').Value := var_balance_total[6];
+      Sheet.Range('J4').Value := var_balance_total[7];
+      Sheet.Range('K4').Value := var_balance_total[8];
+      Sheet.Range('L4').Value := var_balance_total[9];
+      Sheet.Range('M4').Value := var_balance_total[10];
+      Sheet.Range('N4').Value := var_balance_total[11];
+      Sheet.Range('O4').Value := var_balance_total[12];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Systeme.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Systeme.xlsx');
+      Book.Close(TRUE);
+
+      Dienstleistung;
+      //Excel.Visible(TRUE);
+      //Excel.Quit;
+    END;
+
+    PROCEDURE Systeme_Test@1140004();
+    BEGIN
+
+      PeriodStartDate[1] := 010715D;
+
+
+
+
+      FOR i := 1 TO 13 DO
+      PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+
+      PeriodStartDate[14] := 31129999D;
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+
+      Sheet.Range('A11').Value := 'VK-Ums„tze nach Perioden'; // definiert die Beschriftung der berschriftszeile
+
+      Sheet.Range('A12').Value := 'Herstell-Code';
+      Sheet.Range('B12').Value := 'Hersteller';
+      Sheet.Range('C12').Value := 'Gesamt';
+      Sheet.Range('D12').Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E12').Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F12').Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G12').Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H12').Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I12').Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J12').Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K12').Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L12').Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M12').Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N12').Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O12').Value := FORMAT(PeriodStartDate[12]);
+
+      j := '13';                                                    // <- Import in excel ab Zeile 2
+
+
+      ///Hersteller  1 Teil VK
+      //////********************************************************************************************
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+        VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+        VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] );
+        VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+              IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+               BEGIN
+                 var_balance[i] := var_balance[i] +( VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                END
+               ELSE
+                BEGIN
+                   IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+                    BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                    var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+
+                    END
+                   ELSE
+                    BEGIN
+                    v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+
+                    END;
+                END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //Sheet.Range('P'+j).Value := v_sum_au;
+
+      //   Zeile 1      *********************************************************************************************
+
+      Sheet.Range('A1').Value := 'Gesamt';
+      Sheet.Range('B1').Value := 'VK-Rechnung';
+      Sheet.Range('C1').Value := v_summe_total;
+      Sheet.Range('D1').Value := var_balance_total[1];
+      Sheet.Range('E1').Value := var_balance_total[2];
+      Sheet.Range('F1').Value := var_balance_total[3];
+      Sheet.Range('G1').Value := var_balance_total[4];
+      Sheet.Range('H1').Value := var_balance_total[5];
+      Sheet.Range('I1').Value := var_balance_total[6];
+      Sheet.Range('J1').Value := var_balance_total[7];
+      Sheet.Range('K1').Value := var_balance_total[8];
+      Sheet.Range('L1').Value := var_balance_total[9];
+      Sheet.Range('M1').Value := var_balance_total[10];
+      Sheet.Range('N1').Value := var_balance_total[11];
+      Sheet.Range('O1').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      //  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      {
+      Sheet.Range('B1').Value := 'VK-Rechnung Test !!!!';
+      j:=INCSTR(j);
+
+      ///Hersteller  1 Teil VK
+      //////********************************************************************************************
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //Rechnungszeilen verarbeiten
+      //{
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+        VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+        VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] );
+        VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'>%1',0);
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+              IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+               BEGIN
+                 var_balance[i] := var_balance[i] +( VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                END
+               ELSE
+                BEGIN
+                   IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+                    BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+       var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                    END
+                   ELSE
+                    BEGIN
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                    END;
+                END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+      //}
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKRK.RESET;
+        VKRK.SETFILTER(VKRK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKRK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKRZ.RESET;
+                VKRZ.SETFILTER(VKRZ."Document No.",'%1',VKRK."No.");
+                VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+                VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+                VKRZ.SETFILTER(VKRZ.Quantity,'<>%1',0);
+                VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKRZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                    IF VKRK."Currency Factor" = 0 THEN BEGIN
+                          var_balance[u] := var_balance[u] + (VKRZ."Unit Price"*VKRZ.Quantity*(-1));
+                          v_summe:=v_summe + (VKRZ."Unit Price"*VKRZ.Quantity*(-1));
+                          v_summe_total:= v_summe_total + (VKRZ."Unit Price"*VKRZ.Quantity*(-1));
+                          var_balance_total[u] := var_balance_total[u] + (VKRZ."Unit Price"*VKRZ.Quantity*(-1));
+                     END ELSE BEGIN
+                          var_balance[u] := var_balance[u] + (VKRZ."Unit Price"*VKRZ.Quantity*(-1)/VKRK."Currency Factor");
+                          v_summe:=v_summe + (VKRZ."Unit Price"*VKRZ.Quantity*(-1)/VKRK."Currency Factor");
+                          v_summe_total:= v_summe_total + (VKRZ."Unit Price"*VKRZ.Quantity*(-1)/VKRK."Currency Factor");
+                          var_balance_total[u] := var_balance_total[u] + (VKRZ."Unit Price"*VKRZ.Quantity*(-1)/VKRK."Currency Factor");
+                     END;
+                  UNTIL VKRZ.NEXT = 0;
+                 END;
+            UNTIL VKRK.NEXT = 0;
+        END;
+       END;
+
+
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //   Zeile 5     **********************************************************************************
+
+      Sheet.Range('A5').Value := 'Gesamt';
+      Sheet.Range('B5').Value := 'VK-Rechnung';
+      Sheet.Range('C5').Value := v_summe_total;
+      Sheet.Range('D5').Value := var_balance_total[1];
+      Sheet.Range('E5').Value := var_balance_total[2];
+      Sheet.Range('F5').Value := var_balance_total[3];
+      Sheet.Range('G5').Value := var_balance_total[4];
+      Sheet.Range('H5').Value := var_balance_total[5];
+      Sheet.Range('I5').Value := var_balance_total[6];
+      Sheet.Range('J5').Value := var_balance_total[7];
+      Sheet.Range('K5').Value := var_balance_total[8];
+      Sheet.Range('L5').Value := var_balance_total[9];
+      Sheet.Range('M5').Value := var_balance_total[10];
+      Sheet.Range('N5').Value := var_balance_total[11];
+      Sheet.Range('O5').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+      }
+       //   ENDE   TEST  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      // Gutschriftszeilen verarbeiten
+
+      Sheet.Range('A'+j).Value := 'VK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+                VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+                VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+                VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //  Zeile 2        *********************************************************************************
+
+      Sheet.Range('A2').Value := 'Gesamt';
+      Sheet.Range('B2').Value := 'VK_Gutschrift';
+      Sheet.Range('C2').Value := v_summe_total;
+      Sheet.Range('D2').Value := var_balance_total[1];
+      Sheet.Range('E2').Value := var_balance_total[2];
+      Sheet.Range('F2').Value := var_balance_total[3];
+      Sheet.Range('G2').Value := var_balance_total[4];
+      Sheet.Range('H2').Value := var_balance_total[5];
+      Sheet.Range('I2').Value := var_balance_total[6];
+      Sheet.Range('J2').Value := var_balance_total[7];
+      Sheet.Range('K2').Value := var_balance_total[8];
+      Sheet.Range('L2').Value := var_balance_total[9];
+      Sheet.Range('M2').Value := var_balance_total[10];
+      Sheet.Range('N2').Value := var_balance_total[11];
+      Sheet.Range('O2').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      ///Hersteller  2 Teil EK
+      // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'EK-Ums„tze nach Perioden';
+      j:=INCSTR(j);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //EK-Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+        VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+        VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] );
+        VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'<>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+      //        IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+      //         BEGIN
+                 var_balance[i] := var_balance[i] +(VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+      //          END
+      //         ELSE
+      //          BEGIN
+      //             IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+      //              BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      // var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //              END
+      //             ELSE
+      //              BEGIN
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //              END;
+      //          END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //   Zeile 3      *****************************************************************************************************
+
+      Sheet.Range('A3').Value := 'Gesamt';
+      Sheet.Range('B3').Value := 'EK-Rechnung';
+      Sheet.Range('C3').Value := v_summe_total;
+      Sheet.Range('D3').Value := var_balance_total[1];
+      Sheet.Range('E3').Value := var_balance_total[2];
+      Sheet.Range('F3').Value := var_balance_total[3];
+      Sheet.Range('G3').Value := var_balance_total[4];
+      Sheet.Range('H3').Value := var_balance_total[5];
+      Sheet.Range('I3').Value := var_balance_total[6];
+      Sheet.Range('J3').Value := var_balance_total[7];
+      Sheet.Range('K3').Value := var_balance_total[8];
+      Sheet.Range('L3').Value := var_balance_total[9];
+      Sheet.Range('M3').Value := var_balance_total[10];
+      Sheet.Range('N3').Value := var_balance_total[11];
+      Sheet.Range('O3').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      // Gutschriftszeilen verarbeiten
+
+      Sheet.Range('A'+j).Value := 'EK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+                VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+                VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+                VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //   Zeile 4     ******************************************************************************************************
+
+      Sheet.Range('A4').Value := 'Gesamt';
+      Sheet.Range('B4').Value := 'EK-Gutschrift';
+      Sheet.Range('C4').Value := v_summe_total;
+      Sheet.Range('D4').Value := var_balance_total[1];
+      Sheet.Range('E4').Value := var_balance_total[2];
+      Sheet.Range('F4').Value := var_balance_total[3];
+      Sheet.Range('G4').Value := var_balance_total[4];
+      Sheet.Range('H4').Value := var_balance_total[5];
+      Sheet.Range('I4').Value := var_balance_total[6];
+      Sheet.Range('J4').Value := var_balance_total[7];
+      Sheet.Range('K4').Value := var_balance_total[8];
+      Sheet.Range('L4').Value := var_balance_total[9];
+      Sheet.Range('M4').Value := var_balance_total[10];
+      Sheet.Range('N4').Value := var_balance_total[11];
+      Sheet.Range('O4').Value := var_balance_total[12];
+
+
+
+      //  ab hier TEST mit Belege-Tabelle   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      //{
+      v_sum_au:=0;
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+
+      // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'Test Daten aus Belege-Tabelle';
+        j:=INCSTR(j);
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        rech.RESET;
+        rech.SETFILTER(rech.Herstellercode,'%1',Herstell.Code);
+        rech.SETFILTER(rech.Belegdatum,'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        rech.SETFILTER(rech.Belegart,'%1',rech.Belegart::Invoice);
+        rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      //  rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3|%4','ZENT','KONSI','IDT','ERSATZ');
+        rech.SETFILTER(rech.Menge,'<>%1',0);
+
+        IF rech.FINDFIRST THEN BEGIN
+            REPEAT
+                   var_balance[u] := var_balance[u] + (rech."Betrag MW ohne Mwst.");
+                   v_summe:=v_summe + (rech."Betrag MW ohne Mwst.");
+                   v_summe_total:= v_summe_total + (rech."Betrag MW ohne Mwst.");
+                   v_sum_au:=v_sum_au + (rech.Menge*rech."Einstandspreis MW");
+                   var_balance_total[u] := var_balance_total[u] + (rech."Betrag MW ohne Mwst.");
+            UNTIL rech.NEXT = 0;
+        END;
+       END;
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'BELEG VK-Rechnung';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('P'+j).Value := v_sum_au;
+
+      // Zeile  5        ****************************************************************************************
+
+      Sheet.Range('A5').Value := 'Gesamt';
+      Sheet.Range('B5').Value := 'BELEG VK-Rechnung';
+      Sheet.Range('C5').Value := v_summe_total;
+      Sheet.Range('D5').Value := var_balance_total[1];
+      Sheet.Range('E5').Value := var_balance_total[2];
+      Sheet.Range('F5').Value := var_balance_total[3];
+      Sheet.Range('G5').Value := var_balance_total[4];
+      Sheet.Range('H5').Value := var_balance_total[5];
+      Sheet.Range('I5').Value := var_balance_total[6];
+      Sheet.Range('J5').Value := var_balance_total[7];
+      Sheet.Range('K5').Value := var_balance_total[8];
+      Sheet.Range('L5').Value := var_balance_total[9];
+      Sheet.Range('M5').Value := var_balance_total[10];
+      Sheet.Range('N5').Value := var_balance_total[11];
+      Sheet.Range('O5').Value := var_balance_total[12];
+
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+
+      // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'Test Daten aus Belege-Tabelle';
+        j:=INCSTR(j);
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        rech.RESET;
+        rech.SETFILTER(rech.Herstellercode,'%1',Herstell.Code);
+        rech.SETFILTER(rech.Belegdatum,'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        rech.SETFILTER(rech.Belegart,'%1',rech.Belegart::"Credit Memo");
+        rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      //  rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3|%4','ZENT','KONSI','IDT','ERSATZ');
+        rech.SETFILTER(rech.Menge,'<>%1',0);
+
+        IF rech.FINDFIRST THEN BEGIN
+            REPEAT
+                   var_balance[u] := var_balance[u] + (rech."Betrag MW ohne Mwst."*(-1));
+                   v_summe:=v_summe + (rech."Betrag MW ohne Mwst."*(-1));
+                   v_summe_total:= v_summe_total + (rech."Betrag MW ohne Mwst."*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (rech."Betrag MW ohne Mwst."*(-1));
+            UNTIL rech.NEXT = 0;
+        END;
+       END;
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'BELEG VK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //  Zeile 6         ****************************************************************************************
+
+      Sheet.Range('A6').Value := 'Gesamt';
+      Sheet.Range('B6').Value := 'BELEG VK-Gutschrift';
+      Sheet.Range('C6').Value := v_summe_total;
+      Sheet.Range('D6').Value := var_balance_total[1];
+      Sheet.Range('E6').Value := var_balance_total[2];
+      Sheet.Range('F6').Value := var_balance_total[3];
+      Sheet.Range('G6').Value := var_balance_total[4];
+      Sheet.Range('H6').Value := var_balance_total[5];
+      Sheet.Range('I6').Value := var_balance_total[6];
+      Sheet.Range('J6').Value := var_balance_total[7];
+      Sheet.Range('K6').Value := var_balance_total[8];
+      Sheet.Range('L6').Value := var_balance_total[9];
+      Sheet.Range('M6').Value := var_balance_total[10];
+      Sheet.Range('N6').Value := var_balance_total[11];
+      Sheet.Range('O6').Value := var_balance_total[12];
+
+
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+      //  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'Test Daten aus Belege-Tabelle';
+        j:=INCSTR(j);
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        rech.RESET;
+        rech.SETFILTER(rech.Herstellercode,'%1',Herstell.Code);
+        rech.SETFILTER(rech.Belegdatum,'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        rech.SETFILTER(rech.Belegart,'%1',rech.Belegart::Invoice);
+        rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      //  rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3|%4','ZENT','KONSI','IDT','ERSATZ');
+        rech.SETFILTER(rech.Menge,'<>%1',0);
+
+        IF rech.FINDFIRST THEN BEGIN
+            REPEAT
+                   var_balance[u] := var_balance[u] + (rech.Menge*rech."Einstandspreis MW");
+                   v_summe:=v_summe + (rech.Menge*rech."Einstandspreis MW");
+                   v_summe_total:= v_summe_total + (rech.Menge*rech."Einstandspreis MW");
+                   var_balance_total[u] := var_balance_total[u] + (rech.Menge*rech."Einstandspreis MW");
+            UNTIL rech.NEXT = 0;
+        END;
+       END;
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'BELEG EK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //   Zeile 7             **********************************************************************************************
+
+      Sheet.Range('A7').Value := 'Gesamt';
+      Sheet.Range('B7').Value := 'BELEG EK-Rechnung';
+      Sheet.Range('C7').Value := v_summe_total;
+      Sheet.Range('D7').Value := var_balance_total[1];
+      Sheet.Range('E7').Value := var_balance_total[2];
+      Sheet.Range('F7').Value := var_balance_total[3];
+      Sheet.Range('G7').Value := var_balance_total[4];
+      Sheet.Range('H7').Value := var_balance_total[5];
+      Sheet.Range('I7').Value := var_balance_total[6];
+      Sheet.Range('J7').Value := var_balance_total[7];
+      Sheet.Range('K7').Value := var_balance_total[8];
+      Sheet.Range('L7').Value := var_balance_total[9];
+      Sheet.Range('M7').Value := var_balance_total[10];
+      Sheet.Range('N7').Value := var_balance_total[11];
+      Sheet.Range('O7').Value := var_balance_total[12];
+
+        j:=INCSTR(j);
+       j:=INCSTR(j);
+       j:=INCSTR(j);
+
+      //  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'Test Daten aus Belege-Tabelle';
+        j:=INCSTR(j);
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        rech.RESET;
+        rech.SETFILTER(rech.Herstellercode,'%1',Herstell.Code);
+        rech.SETFILTER(rech.Belegdatum,'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        rech.SETFILTER(rech.Belegart,'%1',rech.Belegart::"Credit Memo");
+        rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3','ZENT','KONSI','ERSATZ');
+      //  rech.SETFILTER(rech.Lagerortcode,'%1|%2|%3|%4','ZENT','KONSI','IDT','ERSATZ');
+        rech.SETFILTER(rech.Menge,'<>%1',0);
+
+        IF rech.FINDFIRST THEN BEGIN
+            REPEAT
+                   var_balance[u] := var_balance[u] + (rech.Menge*rech."Einstandspreis MW"*(-1));
+                   v_summe:=v_summe + (rech.Menge*rech."Einstandspreis MW"*(-1));
+                   v_summe_total:= v_summe_total + (rech.Menge*rech."Einstandspreis MW"*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (rech.Menge*rech."Einstandspreis MW"*(-1));
+            UNTIL rech.NEXT = 0;
+        END;
+       END;
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'BELEG EK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //  Zeile 8     **********************************************************************************************
+      Sheet.Range('A8').Value := 'Gesamt';
+      Sheet.Range('B8').Value := 'BELEG EK-Gutschrift';
+      Sheet.Range('C8').Value := v_summe_total;
+      Sheet.Range('D8').Value := var_balance_total[1];
+      Sheet.Range('E8').Value := var_balance_total[2];
+      Sheet.Range('F8').Value := var_balance_total[3];
+      Sheet.Range('G8').Value := var_balance_total[4];
+      Sheet.Range('H8').Value := var_balance_total[5];
+      Sheet.Range('I8').Value := var_balance_total[6];
+      Sheet.Range('J8').Value := var_balance_total[7];
+      Sheet.Range('K8').Value := var_balance_total[8];
+      Sheet.Range('L8').Value := var_balance_total[9];
+      Sheet.Range('M8').Value := var_balance_total[10];
+      Sheet.Range('N8').Value := var_balance_total[11];
+      Sheet.Range('O8').Value := var_balance_total[12];
+
+
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      Sheet.Range('A'+j).Value := 'TEST  EK-Ums„tze nach Perioden';
+      j:=INCSTR(j);
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1|%2|%3','59','82','85');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //EK-Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+        VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+        VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] );
+        VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'<>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+              IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+               BEGIN
+                 var_balance[i] := var_balance[i] +(VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                END
+               ELSE
+                BEGIN
+                   IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+                    BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+       var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                    END
+                   ELSE
+                    BEGIN
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                    END;
+                END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //   Zeile 9   *******************************************************************************************************************
+
+      Sheet.Range('A9').Value := 'Gesamt';
+      Sheet.Range('B9').Value := 'EK-Rechnung';
+      Sheet.Range('C9').Value := v_summe_total;
+      Sheet.Range('D9').Value := var_balance_total[1];
+      Sheet.Range('E9').Value := var_balance_total[2];
+      Sheet.Range('F9').Value := var_balance_total[3];
+      Sheet.Range('G9').Value := var_balance_total[4];
+      Sheet.Range('H9').Value := var_balance_total[5];
+      Sheet.Range('I9').Value := var_balance_total[6];
+      Sheet.Range('J9').Value := var_balance_total[7];
+      Sheet.Range('K9').Value := var_balance_total[8];
+      Sheet.Range('L9').Value := var_balance_total[9];
+      Sheet.Range('M9').Value := var_balance_total[10];
+      Sheet.Range('N9').Value := var_balance_total[11];
+      Sheet.Range('O9').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      //}
+
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Systeme_test.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Systeme_test.xlsx');
+      Book.Close(TRUE);
+      //Excel.Visible(TRUE);
+      Excel.Quit;
+    END;
+
+    PROCEDURE Rohbilanz_Test@1140005();
+    BEGIN
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+      CREATE(Excel);
+
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Sheet.Range('C:O').NumberFormat:='0,00';
+
+      Sheet.Range('A1').Value :='Nr.';
+      Sheet.Range('B1').Value :='Name';
+      Sheet.Range('C1').Value :='Saldo';
+      j := '2';
+      sachkonten.RESET;
+      sachkonten.SETFILTER(sachkonten."No.",'%1..%2','0001','3999');
+      IF sachkonten.FINDFIRST THEN BEGIN
+
+      REPEAT
+      v_sachpostsum:=0;
+       sachposten.RESET;
+       sachposten.SETFILTER(sachposten."G/L Account No.",'%1',sachkonten."No.");
+       sachposten.SETFILTER(sachposten."Posting Date",'%1..%2',010100D,Abgrenz_Datum);
+        IF sachposten.FINDFIRST THEN BEGIN
+        REPEAT
+           v_sachpostsum:=v_sachpostsum+sachposten.Amount;
+        UNTIL sachposten.NEXT=0;
+        END;
+        IF v_sachpostsum<>0 THEN BEGIN
+          Sheet.Range('A'+j).Value := sachkonten."No.";
+          Sheet.Range('B'+j).Value := sachkonten.Name;
+          Sheet.Range('C'+j).Value := v_sachpostsum;
+          j:=INCSTR(j);
+        END;
+
+      UNTIL sachkonten.NEXT=0;
+      END;
+
+      //IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx')THEN;
+      //Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Bil.xlsx');
+      //Book.Close(TRUE);
+
+      Excel.Visible(TRUE);
+    END;
+
+    PROCEDURE Dienstleistung@1140006();
+    BEGIN
+      //PeriodStartDate[1] := 010715D;
+
+
+
+
+      FOR i := 1 TO 13 DO
+      PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+
+      PeriodStartDate[14] := 31129999D;
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+      j := '20';                                                    // <- Import in excel ab Zeile 2
+      Sheet.Range('A'+j).Value := 'VK-Ums„tze nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+        j:=INCSTR(j);
+
+
+
+      ///Hersteller  1 Teil VK
+      //////********************************************************************************************
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'52|53|57*|86|87|96');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4','5720','5730','57','5710');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4|%5','52','53','57','5710','96');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+      //  VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+      //  VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //  VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETRANGE(VKRZ."Manufacturer Code",Herstell.Code);
+        VKRZ.SETRANGE(VKRZ."Posting Date",PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+        VKRZ.SETRANGE(VKRZ.Type,VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+              IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+               BEGIN
+                 var_balance[i] := var_balance[i] +( VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."VK-Preis (MW)"*VKRZ.Quantity);
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                END
+               ELSE
+                BEGIN
+                   IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+                    BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+                  v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+                    var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+
+                    END
+                   ELSE
+                    BEGIN
+                    v_sum_au:=v_sum_au + ((VKRZ.Quantity)*(VKRZ."Unit Cost (LCY)"));
+                      var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+                      var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+
+                    END;
+                END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+
+      // Anzeigen wenn AE vorliegt
+      IF v_summe <> 0 THEN BEGIN
+      //  Sheet.Range('A'+j).Value := Herstell.Code;
+      //  Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      //IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      //END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      //Sheet.Range('P'+j).Value := v_sum_au;
+
+      Sheet.Range('A1').Value := 'Gesamt';
+      Sheet.Range('B1').Value := 'VK-Rechnung';
+      Sheet.Range('C1').Value := v_summe_total;
+      Sheet.Range('D1').Value := var_balance_total[1];
+      Sheet.Range('E1').Value := var_balance_total[2];
+      Sheet.Range('F1').Value := var_balance_total[3];
+      Sheet.Range('G1').Value := var_balance_total[4];
+      Sheet.Range('H1').Value := var_balance_total[5];
+      Sheet.Range('I1').Value := var_balance_total[6];
+      Sheet.Range('J1').Value := var_balance_total[7];
+      Sheet.Range('K1').Value := var_balance_total[8];
+      Sheet.Range('L1').Value := var_balance_total[9];
+      Sheet.Range('M1').Value := var_balance_total[10];
+      Sheet.Range('N1').Value := var_balance_total[11];
+      Sheet.Range('O1').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+      // Gutschriftszeilen verarbeiten
+
+      j := '40';
+      Sheet.Range('A'+j).Value := 'VK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'52|53|57*|86|87|96');
+      //Herstell.SETFILTER(Herstell.Code,'57*');
+      //Herstell.SETFILTER(Herstell.Code,'%1*','57');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4','5720','5730','57','5710');
+
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4|%5','52','53','57','5710','96');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+      //          VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+      //          VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+      //          VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETRANGE(VKGZ."Document No.",VKGK."No.");
+                VKGZ.SETRANGE(VKGZ."Manufacturer Code",Herstell.Code);
+                VKGZ.SETRANGE(VKGZ.Type,VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."VK-Preis (MW)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+
+      IF v_summe <> 0 THEN BEGIN
+      //  Sheet.Range('A'+j).Value := Herstell.Code;
+      //  Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      //IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      //END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'VK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A2').Value := 'Gesamt';
+      Sheet.Range('B2').Value := 'VK_Gutschrift';
+      Sheet.Range('C2').Value := v_summe_total;
+      Sheet.Range('D2').Value := var_balance_total[1];
+      Sheet.Range('E2').Value := var_balance_total[2];
+      Sheet.Range('F2').Value := var_balance_total[3];
+      Sheet.Range('G2').Value := var_balance_total[4];
+      Sheet.Range('H2').Value := var_balance_total[5];
+      Sheet.Range('I2').Value := var_balance_total[6];
+      Sheet.Range('J2').Value := var_balance_total[7];
+      Sheet.Range('K2').Value := var_balance_total[8];
+      Sheet.Range('L2').Value := var_balance_total[9];
+      Sheet.Range('M2').Value := var_balance_total[10];
+      Sheet.Range('N2').Value := var_balance_total[11];
+      Sheet.Range('O2').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      ///Hersteller  2 Teil EK
+      //////********************************************************************************************
+
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+       j := '60';
+      Sheet.Range('A'+j).Value := 'EK-Ums„tze nach Perioden';
+      j:=INCSTR(j);
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'52|53|57*|86|87|96');
+      //Herstell.SETFILTER(Herstell.Code,'57*');
+      //Herstell.SETFILTER(Herstell.Code,'%1*','57');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4','5720','5730','57','5710');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4|%5','52','53','57','5710','96');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      //EK-Rechnungszeilen verarbeiten
+
+      FOR i := 1 TO 12 DO
+       BEGIN
+        VKRZ.RESET;
+      //  VKRZ.SETFILTER(VKRZ."Manufacturer Code",'%1',Herstell.Code);
+      //  VKRZ.SETFILTER(VKRZ."Posting Date",'%1..%2',PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+      //  VKRZ.SETFILTER(VKRZ.Type,'%1',VKRZ.Type::Item);
+        VKRZ.SETRANGE(VKRZ."Manufacturer Code",Herstell.Code);
+        VKRZ.SETRANGE(VKRZ."Posting Date",PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+        VKRZ.SETRANGE(VKRZ.Type,VKRZ.Type::Item);
+        VKRZ.SETFILTER(VKRZ.Quantity,'<>%1',0);
+        VKRZ.SETFILTER(VKRZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+        IF VKRZ.FINDFIRST THEN BEGIN
+            REPEAT
+      //        IF  VKRZ."VK-Preis (MW)"=VKRZ."Unit Price" THEN
+      //         BEGIN
+                 var_balance[i] := var_balance[i] +(VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe:=v_summe + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  v_summe_total:= v_summe_total + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+                  var_balance_total[i] := var_balance_total[i] + (VKRZ."Unit Cost (LCY)"*VKRZ.Quantity);
+      //          END
+      //         ELSE
+      //          BEGIN
+      //             IF VKRZ.Einkaufsw„hrungsfaktor <> 0 THEN
+      //              BEGIN
+      //  Diese Zeile stimmt nur, wenn Einkaufrechnungsfaktor identisch mit Verkaufsw„hrungsfaktor aus dem VK-Kopf  **********************
+
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      // var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") / (VKRZ.Einkaufsw„hrungsfaktor)* (VKRZ.Quantity));
+      //              END
+      //             ELSE
+      //              BEGIN
+      //                var_balance[i] := var_balance[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe:=v_summe + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                v_summe_total:= v_summe_total + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //                var_balance_total[i] := var_balance_total[i] + ((VKRZ."Unit Price") * (VKRZ.Quantity));
+      //              END;
+      //          END;
+
+           UNTIL VKRZ.NEXT = 0;
+        END ELSE BEGIN
+          var_balance[i] := 0;
+        END;
+      END;
+
+
+      //FOR i := 1 TO 12 DO
+      //BEGIN
+      //  var_balance_total[i] := var_balance_total[i] + var_balance[i];
+      //END;
+
+      // Anzeigen wenn AE vorliegt
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+
+      IF v_summe <> 0 THEN BEGIN
+      //  Sheet.Range('A'+j).Value := Herstell.Code;
+      //  Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      //IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      //END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      //Salesperson/Purchaser - OnPostDataItem()
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Rechnungen';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A3').Value := 'Gesamt';
+      Sheet.Range('B3').Value := 'EK-Rechnung';
+      Sheet.Range('C3').Value := v_summe_total;
+      Sheet.Range('D3').Value := var_balance_total[1];
+      Sheet.Range('E3').Value := var_balance_total[2];
+      Sheet.Range('F3').Value := var_balance_total[3];
+      Sheet.Range('G3').Value := var_balance_total[4];
+      Sheet.Range('H3').Value := var_balance_total[5];
+      Sheet.Range('I3').Value := var_balance_total[6];
+      Sheet.Range('J3').Value := var_balance_total[7];
+      Sheet.Range('K3').Value := var_balance_total[8];
+      Sheet.Range('L3').Value := var_balance_total[9];
+      Sheet.Range('M3').Value := var_balance_total[10];
+      Sheet.Range('N3').Value := var_balance_total[11];
+      Sheet.Range('O3').Value := var_balance_total[12];
+      j:=INCSTR(j);
+      j:=INCSTR(j);
+
+      // Gutschriftszeilen verarbeiten
+      j := '80';
+      Sheet.Range('A'+j).Value := 'EK-Gutschriften nach Perioden'; // definiert die Beschriftung der berschriftszeile
+        j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Herstell-Code';
+      Sheet.Range('B'+j).Value := 'Hersteller';
+      Sheet.Range('C'+j).Value := 'Gesamt';
+      Sheet.Range('D'+j).Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E'+j).Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F'+j).Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G'+j).Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H'+j).Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I'+j).Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J'+j).Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K'+j).Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L'+j).Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M'+j).Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N'+j).Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O'+j).Value := FORMAT(PeriodStartDate[12]);
+
+      v_summe_total:=0;
+      var_balance_total[1]:=0;
+      var_balance_total[2]:=0;
+      var_balance_total[3]:=0;
+      var_balance_total[4]:=0;
+      var_balance_total[5]:=0;
+      var_balance_total[6]:=0;
+      var_balance_total[7]:=0;
+      var_balance_total[8]:=0;
+      var_balance_total[9]:=0;
+      var_balance_total[10]:=0;
+      var_balance_total[11]:=0;
+      var_balance_total[12]:=0;
+
+
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'52|53|57*|86|87|96');
+      //Herstell.SETFILTER(Herstell.Code,'57*');
+      //Herstell.SETFILTER(Herstell.Code,'%1*','57');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4','5720','5730','57','5710');
+      //Herstell.SETFILTER(Herstell.Code,'%1|%2|%3|%4|%5','52','53','57','5710','96');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+
+      v_summe:=0;
+      var_balance[1]:=0;
+      var_balance[2]:=0;
+      var_balance[3]:=0;
+      var_balance[4]:=0;
+      var_balance[5]:=0;
+      var_balance[6]:=0;
+      var_balance[7]:=0;
+      var_balance[8]:=0;
+      var_balance[9]:=0;
+      var_balance[10]:=0;
+      var_balance[11]:=0;
+      var_balance[12]:=0;
+
+      FOR u := 1 TO 12 DO
+       BEGIN
+        VKGK.RESET;
+        VKGK.SETFILTER(VKGK."Posting Date",'%1..%2',PeriodStartDate[u],PeriodStartDate[u+1] - 1);
+        IF VKGK.FINDFIRST THEN BEGIN
+            REPEAT
+               VKGZ.RESET;
+      //          VKGZ.SETFILTER(VKGZ."Document No.",'%1',VKGK."No.");
+      //          VKGZ.SETFILTER(VKGZ."Manufacturer Code",'%1',Herstell.Code);
+      //          VKGZ.SETFILTER(VKGZ.Type,'%1',VKRZ.Type::Item);
+                VKGZ.SETRANGE(VKGZ."Document No.",VKGK."No.");
+                VKGZ.SETRANGE(VKGZ."Manufacturer Code",Herstell.Code);
+                VKGZ.SETRANGE(VKGZ.Type,VKRZ.Type::Item);
+                VKGZ.SETFILTER(VKGZ.Quantity,'<>%1',0);
+                VKGZ.SETFILTER(VKGZ."Location Code",'%1|%2|%3','ZENT','KONSI','ERSATZ');
+                 IF VKGZ.FINDFIRST THEN BEGIN
+                  REPEAT
+                   var_balance[u] := var_balance[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe:=v_summe + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   v_summe_total:= v_summe_total + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                   var_balance_total[u] := var_balance_total[u] + (VKGZ."Unit Cost (LCY)"*VKGZ.Quantity*(-1));
+                  UNTIL VKGZ.NEXT = 0;
+                 END;
+            UNTIL VKGK.NEXT = 0;
+        END;
+       END;
+        Sheet.Range('A'+j).Value := Herstell.Code;
+        Sheet.Range('B'+j).Value := Herstell.Name;
+
+      IF v_summe <> 0 THEN BEGIN
+      //  Sheet.Range('A'+j).Value := Herstell.Code;
+      //  Sheet.Range('B'+j).Value := Herstell.Name;
+        Sheet.Range('C'+j).Value := v_summe;
+        Sheet.Range('D'+j).Value := var_balance[1];
+        Sheet.Range('E'+j).Value := var_balance[2];
+        Sheet.Range('F'+j).Value := var_balance[3];
+        Sheet.Range('G'+j).Value := var_balance[4];
+        Sheet.Range('H'+j).Value := var_balance[5];
+        Sheet.Range('I'+j).Value := var_balance[6];
+        Sheet.Range('J'+j).Value := var_balance[7];
+        Sheet.Range('K'+j).Value := var_balance[8];
+        Sheet.Range('L'+j).Value := var_balance[9];
+        Sheet.Range('M'+j).Value := var_balance[10];
+        Sheet.Range('N'+j).Value := var_balance[11];
+        Sheet.Range('O'+j).Value := var_balance[12];
+      END;
+
+      //IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      //END;
+
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      j:=INCSTR(j);
+      Sheet.Range('A'+j).Value := 'Gesamt';
+      Sheet.Range('B'+j).Value := 'EK-Gutschriften';
+      Sheet.Range('C'+j).Value := v_summe_total;
+      Sheet.Range('D'+j).Value := var_balance_total[1];
+      Sheet.Range('E'+j).Value := var_balance_total[2];
+      Sheet.Range('F'+j).Value := var_balance_total[3];
+      Sheet.Range('G'+j).Value := var_balance_total[4];
+      Sheet.Range('H'+j).Value := var_balance_total[5];
+      Sheet.Range('I'+j).Value := var_balance_total[6];
+      Sheet.Range('J'+j).Value := var_balance_total[7];
+      Sheet.Range('K'+j).Value := var_balance_total[8];
+      Sheet.Range('L'+j).Value := var_balance_total[9];
+      Sheet.Range('M'+j).Value := var_balance_total[10];
+      Sheet.Range('N'+j).Value := var_balance_total[11];
+      Sheet.Range('O'+j).Value := var_balance_total[12];
+
+      Sheet.Range('A4').Value := 'Gesamt';
+      Sheet.Range('B4').Value := 'EK-Gutschrift';
+      Sheet.Range('C4').Value := v_summe_total;
+      Sheet.Range('D4').Value := var_balance_total[1];
+      Sheet.Range('E4').Value := var_balance_total[2];
+      Sheet.Range('F4').Value := var_balance_total[3];
+      Sheet.Range('G4').Value := var_balance_total[4];
+      Sheet.Range('H4').Value := var_balance_total[5];
+      Sheet.Range('I4').Value := var_balance_total[6];
+      Sheet.Range('J4').Value := var_balance_total[7];
+      Sheet.Range('K4').Value := var_balance_total[8];
+      Sheet.Range('L4').Value := var_balance_total[9];
+      Sheet.Range('M4').Value := var_balance_total[10];
+      Sheet.Range('N4').Value := var_balance_total[11];
+      Sheet.Range('O4').Value := var_balance_total[12];
+
+
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Dienstleistung.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Dienstleistung.xlsx');
+      Book.Close(TRUE);
+      //Excel.Visible(TRUE);
+      //Excel.Quit;
+      Umsatz;
+    END;
+
+    PROCEDURE Umsatz@1140007();
+    BEGIN
+
+      FOR i := 1 TO 13 DO
+      PeriodStartDate[i + 1] := CALCDATE('1M',PeriodStartDate[i]);
+      PeriodStartDate[14] := 31129999D;
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+
+
+      CREATE (Excel);                                              //erzeugt excel
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+
+
+      Sheet.Range('A1').Value := 'Umsatzerl”se Verk„ufercode nach Perioden'; // definiert die Beschriftung der berschriftszeile
+
+      Sheet.Range('A2').Value := 'Verk„ufer';
+      Sheet.Range('B2').Value := 'Betreuer';
+      Sheet.Range('C2').Value := 'Gesamt';
+      Sheet.Range('D2').Value := FORMAT(PeriodStartDate[1]);
+      Sheet.Range('E2').Value := FORMAT(PeriodStartDate[2]);
+      Sheet.Range('F2').Value := FORMAT(PeriodStartDate[3]);
+      Sheet.Range('G2').Value := FORMAT(PeriodStartDate[4]);
+      Sheet.Range('H2').Value := FORMAT(PeriodStartDate[5]);
+      Sheet.Range('I2').Value := FORMAT(PeriodStartDate[6]);
+      Sheet.Range('J2').Value := FORMAT(PeriodStartDate[7]);
+      Sheet.Range('K2').Value := FORMAT(PeriodStartDate[8]);
+      Sheet.Range('L2').Value := FORMAT(PeriodStartDate[9]);
+      Sheet.Range('M2').Value := FORMAT(PeriodStartDate[10]);
+      Sheet.Range('N2').Value := FORMAT(PeriodStartDate[11]);
+      Sheet.Range('O2').Value := FORMAT(PeriodStartDate[12]);
+
+      j := '3';                                                    // <- Import in excel ab Zeile 2
+
+
+
+
+      ///salesperson  1 Teil
+      //////********************************************************************************************
+
+
+      vkcode.RESET;
+      vkcode.SETRANGE(vkcode.Mobiligence_Verteiler,'A','B');
+      IF vkcode.FINDFIRST THEN BEGIN
+      REPEAT
+          vkcode1.RESET;
+          vkcode1.SETRANGE(vkcode1.Mobiligence_Verteiler,'A','B');
+          IF vkcode1.FINDFIRST THEN BEGIN
+          REPEAT
+
+
+              v_summe:=0;
+              var_balance[1]:=0;
+              var_balance[2]:=0;
+              var_balance[3]:=0;
+              var_balance[4]:=0;
+              var_balance[5]:=0;
+              var_balance[6]:=0;
+              var_balance[7]:=0;
+              var_balance[8]:=0;
+              var_balance[9]:=0;
+              var_balance[10]:=0;
+              var_balance[11]:=0;
+              var_balance[12]:=0;
+
+              FOR i := 1 TO 12 DO
+               BEGIN
+                Belege.RESET;
+                Belege.SETRANGE(Belege.Verk„ufercode,vkcode.Code);
+                Belege.SETRANGE(Belege."Betreuer Innendienst",vkcode1.Code);
+                Belege.SETRANGE(Belege.Belegdatum,PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+                Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+                IF Belege.FINDFIRST THEN BEGIN
+                    REPEAT
+                     IF Belege.Belegart=Belege.Belegart::Invoice THEN BEGIN
+                      var_balance[i] := var_balance[i] + Belege."Betrag MW ohne Mwst.";
+                      v_summe:=v_summe + Belege."Betrag MW ohne Mwst.";
+                      v_summe_total:= v_summe_total + Belege."Betrag MW ohne Mwst.";
+                     END;
+                     IF Belege.Belegart=Belege.Belegart::"Credit Memo" THEN BEGIN
+                      var_balance[i] := var_balance[i] + (Belege."Betrag MW ohne Mwst."*(-1));
+                      v_summe:=v_summe + (Belege."Betrag MW ohne Mwst."*(-1));
+                      v_summe_total:= v_summe_total + (Belege."Betrag MW ohne Mwst."*(-1));
+                     END;
+
+                   UNTIL Belege.NEXT = 0;
+                   END;
+                  END;
+
+
+                          FOR i := 1 TO 12 DO
+                          BEGIN
+                            var_balance_total[i] := var_balance_total[i] + var_balance[i];
+                          END;
+                        // Anzeigen wenn AE vorliegt
+                        IF v_summe <> 0 THEN BEGIN
+                          Sheet.Range('A'+j).Value := vkcode.Code;
+                          Sheet.Range('B'+j).Value := vkcode1.Code;
+                          Sheet.Range('C'+j).Value := v_summe;
+                          Sheet.Range('D'+j).Value := var_balance[1];
+                          Sheet.Range('E'+j).Value := var_balance[2];
+                          Sheet.Range('F'+j).Value := var_balance[3];
+                          Sheet.Range('G'+j).Value := var_balance[4];
+                          Sheet.Range('H'+j).Value := var_balance[5];
+                          Sheet.Range('I'+j).Value := var_balance[6];
+                          Sheet.Range('J'+j).Value := var_balance[7];
+                          Sheet.Range('K'+j).Value := var_balance[8];
+                          Sheet.Range('L'+j).Value := var_balance[9];
+                          Sheet.Range('M'+j).Value := var_balance[10];
+                          Sheet.Range('N'+j).Value := var_balance[11];
+                          Sheet.Range('O'+j).Value := var_balance[12];
+                            j:=INCSTR(j);
+                         END;
+
+          //           END;
+                  UNTIL vkcode1.NEXT=0;
+                  END;
+
+      IF v_summe <> 0 THEN BEGIN
+        j:=INCSTR(j);
+      END;
+
+
+      UNTIL vkcode.NEXT=0;
+      END;
+      //  j:=INCSTR(j);
+      //  j:=INCSTR(j);
+      //  j:=INCSTR(j);
+      Sheet.Range('A37').Value := 'Umsatz Gesamt Monat';
+      Sheet.Range('C37').Value := v_summe_total;
+      Sheet.Range('D37').Value := var_balance_total[1];
+      Sheet.Range('E37').Value := var_balance_total[2];
+      Sheet.Range('F37').Value := var_balance_total[3];
+      Sheet.Range('G37').Value := var_balance_total[4];
+      Sheet.Range('H37').Value := var_balance_total[5];
+      Sheet.Range('I37').Value := var_balance_total[6];
+      Sheet.Range('J37').Value := var_balance_total[7];
+      Sheet.Range('K37').Value := var_balance_total[8];
+      Sheet.Range('L37').Value := var_balance_total[9];
+      Sheet.Range('M37').Value := var_balance_total[10];
+      Sheet.Range('N37').Value := var_balance_total[11];
+      Sheet.Range('O37').Value := var_balance_total[12];
+        j:=INCSTR(j);
+
+
+
+          Belege.RESET;
+          Belege.SETRANGE(Belege.Belegdatum,PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+          Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+          Belege.SETFILTER(Belege.Verk„ufercode,'%1','');
+      //    Belege.SETRANGE(Belege."Betreuer Innendienst",vkcode1.Code);
+          IF Belege.FINDFIRST THEN BEGIN
+           v_kein_VCode:=Belege."Belegnr.";
+          END;
+
+          Belege.RESET;
+          Belege.SETRANGE(Belege.Belegdatum,PeriodStartDate[i],PeriodStartDate[i+1] - 1);
+          Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
+          Belege.SETFILTER(Belege."Betreuer Innendienst",'%1','');
+
+          IF Belege.FINDFIRST THEN BEGIN
+           v_kein_VCode:=Belege."Belegnr.";
+          END;
+
+        IF v_kein_VCode='' THEN BEGIN
+        END ELSE BEGIN
+        Sheet.Range('A'+j).Value := 'Es gibt Belege ohne Verk„ufer und/oder Bearbeiter Code' + v_kein_VCode;
+        END;
+
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_UM.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_UM.xlsx');
+      Book.Close(TRUE);
+
+      //Excel.Visible(TRUE);
+      //Excel.Quit;
+      Hersteller;
+    END;
+
+    PROCEDURE Hersteller@1140008();
+    BEGIN
+
+      CLEAR(Excel);
+      REPEAT
+      UNTIL ISCLEAR(Excel);
+      CREATE(Excel);
+
+      Book := Excel.Workbooks.Add(-4167);                          //legt neue datei in excel an
+      Sheet := Excel.ActiveSheet;                                  //definiert aktives worksheet
+      Sheet.Range('C:O').NumberFormat:='0,00';
+
+      Sheet.Range('A1').Value :='Hersteller Code';
+      Sheet.Range('B1').Value :='Hersteller Name';
+      Sheet.Range('C1').Value :='Hersteller Kurzbezeichnung';
+      j := '2';
+      Herstell.RESET;
+      Herstell.SETFILTER(Herstell.Code,'%1..%2','00','9999');
+      IF Herstell.FINDFIRST THEN BEGIN
+      REPEAT
+          Sheet.Range('A'+j).Value := Herstell.Code;
+          Sheet.Range('B'+j).Value := Herstell.Name;
+          Sheet.Range('C'+j).Value := Herstell.Herstellerkurzname;
+          j:=INCSTR(j);
+      UNTIL Herstell.NEXT=0;
+      END;
+
+      IF ERASE('F:\Tausch\Nav\Daten\Daten_Nav_Hersteller.xlsx')THEN;
+      Book.SaveAs('F:\Tausch\Nav\Daten\Daten_Nav_Hersteller.xlsx');
+      Book.Close(TRUE);
+
+      //Excel.Visible(TRUE);
+      Excel.Quit;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
