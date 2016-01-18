@@ -2,8 +2,8 @@ OBJECT Table 38 Purchase Header
 {
   OBJECT-PROPERTIES
   {
-    Date=14.01.16;
-    Time=12:43:19;
+    Date=18.01.16;
+    Time=16:24:53;
     Modified=Yes;
     Version List=NAVW15.00,NAVDACH5.00;
   }
@@ -3052,9 +3052,17 @@ OBJECT Table 38 Purchase Header
       SalesLine@1140001 : Record 37;
       ArchSalesLine@1140002 : Record 5108;
       PurchLine@1140003 : Record 39;
+      PurchLine2@1140006 : Record 39;
+      NextLineNo@1140005 : Integer;
     BEGIN
       IF OrderDocNo = '' THEN EXIT;
 
+      PurchLine.SETRANGE("Document Type",PurchLine."Document Type" :: Order);
+      PurchLine.SETRANGE("Document No.",PurchDocNo);
+      IF PurchLine.FINDFIRST THEN
+        ERROR('Die Bestellung ist nicht leer.');
+
+      NextLineNo := 0;
       SalesLine.RESET;
       SalesLine.SETFILTER(Type,'%1',SalesLine.Type :: Item);
       SalesLine.SETFILTER("Document No.",'%1',OrderDocNo);
@@ -3064,10 +3072,14 @@ OBJECT Table 38 Purchase Header
           PurchLine.INIT;
           PurchLine."Document Type" := PurchLine."Document Type" :: Order;
           PurchLine."Document No." := PurchDocNo;
+          PurchLine."Line No." := NextLineNo + 10000;
           PurchLine.Type := PurchLine.Type :: Item;
           PurchLine.VALIDATE("No.",SalesLine."No.");
           PurchLine.VALIDATE(Quantity,SalesLine."Outstanding Quantity");
           PurchLine.INSERT(TRUE);
+          PurchLine2.COPYFILTERS(PurchLine);
+          IF PurchLine2.FINDLAST THEN
+             NextLineNo := PurchLine2."Line No.";
         UNTIL SalesLine.NEXT = 0
       ELSE
         BEGIN
@@ -3077,6 +3089,17 @@ OBJECT Table 38 Purchase Header
           ArchSalesLine.SETFILTER(Quantity,'>%1',0);
           IF ArchSalesLine.FINDFIRST THEN
             REPEAT
+              PurchLine.INIT;
+              PurchLine."Document Type" := PurchLine."Document Type" :: Order;
+              PurchLine."Document No." := PurchDocNo;
+              PurchLine."Line No." := NextLineNo + 10000;
+              PurchLine.Type := PurchLine.Type :: Item;
+              PurchLine.VALIDATE("No.",ArchSalesLine."No.");
+              PurchLine.VALIDATE(Quantity,ArchSalesLine.Quantity);
+              PurchLine.INSERT(TRUE);
+              PurchLine2.COPYFILTERS(PurchLine);
+              IF PurchLine2.FINDLAST THEN
+                 NextLineNo := PurchLine2."Line No.";
             UNTIL ArchSalesLine.NEXT = 0;
         END;
     END;
