@@ -47,11 +47,14 @@ ELSE
       ELSE
         überschrift := 'Wartungsvertrag';
 
-
 CurrForm.SORSymb.VISIBLE := FALSE;
 IF SOR = TRUE THEN
   CurrForm.SORSymb.VISIBLE := TRUE;
 
+IF Debitor.GET("Debitornr.") THEN
+  betreuer := Debitor."Betreuer Innendienst"
+ELSE
+  betreuer := '';
 
 //Record Links
 CurrForm.Link.VISIBLE := FALSE;
