@@ -2,8 +2,8 @@ OBJECT Report 50094 Auslaufende Vertr„ge
 {
   OBJECT-PROPERTIES
   {
-    Date=15.01.15;
-    Time=09:33:23;
+    Date=18.01.16;
+    Time=14:12:22;
     Modified=Yes;
     Version List=;
   }
@@ -45,7 +45,7 @@ OBJECT Report 50094 Auslaufende Vertr„ge
                    REPEAT
                    UNTIL ISCLEAR(Excel);
 
-                   TOPAS_API.SendMailWithFile('Administrativ','','ml@topas.de','if@topas.de','rl@topas.de','','',
+                   TOPAS_API.SendMailWithFile('Administrativ','','ml@topas.de','tk@topas.de','rl@topas.de','','',
                    Wartungsvertrag.GETFILTER(Vertragsablaufdatum),Protokollpfaddatei,vertraege_abgelaufen);
 
                    //Fr Testzwecke
@@ -60,7 +60,7 @@ OBJECT Report 50094 Auslaufende Vertr„ge
       {
         DataItemTable=Table50011;
         DataItemTableView=SORTING(Debitornr.,Vertragsablaufdatum,Wartungsvertragsnr.)
-                          WHERE(Status=FILTER(Auftrag|ACTS|ACHAT));
+                          WHERE(Status=FILTER(Auftrag|ACTS|ACHAT|Champs Partner));
         OnAfterGetRecord=BEGIN
                            Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
                            Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
@@ -83,6 +83,56 @@ OBJECT Report 50094 Auslaufende Vertr„ge
                                Sheet.Range('J'+j).Value := SystemPos."Board ini";
                                Sheet.Range('K'+j).Value := SystemPos."Nr.";
                              END;
+
+                           IF Debitor.GET( Wartungsvertrag."Debitornr.") THEN
+                             Sheet.Range('L'+j).Value := Debitor."Betreuer Innendienst";
+
+                           AN_liegt_vor := FALSE;
+                           v_datum := 0D;
+                           v_belegnr := '';
+                           ServicePos.RESET;
+                           ServicePos.ASCENDING(FALSE);
+                           ServicePos.SETRANGE("Wartungsvertragsnr.",Wartungsvertrag."Wartungsvertragsnr.");
+                           ServicePos.SETRANGE(Art,ServicePos.Art :: Service);
+                           ServicePos.SETRANGE(Basisger„t,TRUE);
+                           //ServicePos.SETRANGE(Inaktiv,FALSE);
+                           IF ServicePos.FINDFIRST THEN
+                             BEGIN
+                               ServiceZuordnung.RESET;
+                               ServiceZuordnung.SETRANGE("Belegnr.",ServicePos."Urspr. Lieferscheinnr.");
+                               ServiceZuordnung.SETRANGE("Belegzeilennr.",ServicePos."Urspr. Lieferscheinzeilennr.");
+                               IF ServiceZuordnung.FINDFIRST THEN
+                                 REPEAT
+                                   SalesHeader.SETRANGE("Document Type",SalesHeader."Document Type" :: Quote);
+                                   SalesHeader.SETRANGE("No.",ServiceZuordnung."Nr.");
+                                   IF SalesHeader.FINDFIRST THEN
+                                     IF CALCDATE('-3M',WORKDATE) < SalesHeader."Document Date" THEN
+                                       BEGIN
+                                         AN_liegt_vor := TRUE;
+                                         v_datum := SalesHeader."Document Date";
+                                         v_belegnr := SalesHeader."No.";
+                                       END;
+
+                                   ArchSalesHeader.SETRANGE("Document Type",ArchSalesHeader."Document Type" :: Quote);
+                                   ArchSalesHeader.SETRANGE("No.",ServiceZuordnung."Nr.");
+                                   IF ArchSalesHeader.FINDFIRST THEN
+                                     IF CALCDATE('-3M',WORKDATE) < ArchSalesHeader."Document Date" THEN
+                                       BEGIN
+                                         AN_liegt_vor := TRUE;
+                                         v_datum := ArchSalesHeader."Document Date";
+                                         v_belegnr := ArchSalesHeader."No.";
+                                       END;
+
+                                 UNTIL (ServiceZuordnung.NEXT = 0) OR (AN_liegt_vor);
+                             END;
+
+                           IF AN_liegt_vor THEN
+                             BEGIN
+                               Sheet.Range('M'+j).Value := 'Ja';
+                               Sheet.Range('N'+j).Value := v_belegnr + ' (' + FORMAT(v_datum) + ')';
+                             END
+                           ELSE
+                             Sheet.Range('M'+j).Value := 'Nein';
 
                            j := INCSTR(j);
                          END;
@@ -182,6 +232,10 @@ OBJECT Report 50094 Auslaufende Vertr„ge
       PrintToExcel@1140012 : Boolean;
       TempWartungsvertrag@1140003 : Record 50011;
       lieferscheinzeile@1140000 : Record 111;
+      Debitor@1140024 : Record 18;
+      ServiceZuordnung@1140027 : Record 50027;
+      SalesHeader@1140028 : Record 36;
+      ArchSalesHeader@1140029 : Record 5107;
       artikel2@1140001 : Code[60];
       endkundezeile@1140002 : Text[80];
       filter_startdatum@1140004 : Text[30];
@@ -192,11 +246,15 @@ OBJECT Report 50094 Auslaufende Vertr„ge
       "show_ext-referenz"@1140009 : Boolean;
       Protokollpfaddatei@1140018 : Text[250];
       SystemPos@1140010 : Record 50024;
+      ServicePos@1140026 : Record 50024;
       board_ini@1140011 : Code[20];
       monat_ablaufdatum_ab@1140020 : Integer;
       jahr_ablaufdatum_ab@1140022 : Integer;
       vertragsablaufdatum_ab@1140023 : Date;
       vertraege_abgelaufen@1140021 : Boolean;
+      AN_liegt_vor@1140025 : Boolean;
+      v_datum@1140030 : Date;
+      v_belegnr@1140031 : Code[20];
 
     PROCEDURE ExcelKopf@1140002();
     BEGIN
@@ -244,7 +302,9 @@ OBJECT Report 50094 Auslaufende Vertr„ge
       Sheet.Range('I4').Value := 'SN Chassis';
       Sheet.Range('J4').Value := 'Board ini';
       Sheet.Range('K4').Value := 'Lieferscheinnr. Chassis';
-      Sheet.Range('A4:K4').Font.Bold := TRUE;
+      Sheet.Range('L4').Value := 'Betreuer Innendienst';
+      Sheet.Range('M4').Value := 'Angebot letzte 3 Monate';
+      Sheet.Range('A4:M4').Font.Bold := TRUE;
       Book.SaveAs(Protokollpfaddatei,51);
     END;
 
