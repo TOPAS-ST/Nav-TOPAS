@@ -1217,6 +1217,8 @@ IF Liefkopf.FINDLAST THEN
                     Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
                     Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
                     Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
+                    Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
+                    Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                     Wartung.INSERT(TRUE);
 
                     PrüfeHauptWartung.RESET;
@@ -1382,6 +1384,8 @@ IF Liefkopf.FINDLAST THEN
                     Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
                     Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
                     Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
+                    Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
+                    Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                     Wartung.INSERT(TRUE);
 
                     PrüfeHauptWartung.RESET;
@@ -1712,6 +1716,8 @@ IF Liefkopf.FINDLAST THEN
                             Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
                             Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
                             Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
+                            Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
+                            Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                             Wartung.INSERT(TRUE);
 
                             PrüfeHauptWartung.RESET;
@@ -3318,6 +3324,8 @@ WITH Wartung DO BEGIN
       Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
       Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
       Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
+      Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
+      Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
       Wartung.MODIFY(TRUE);
     END;
 END;
