@@ -1,0 +1,711 @@
+OBJECT Report 50179 TOPAS Champs / ACTS Ordering
+{
+  OBJECT-PROPERTIES
+  {
+    Date=17.02.15;
+    Time=12:57:01;
+    Modified=Yes;
+    Version List=fertig;
+  }
+  PROPERTIES
+  {
+    TopMargin=500;
+    BottomMargin=300;
+    LeftMargin=1700;
+    RightMargin=50;
+    OnInitReport=BEGIN
+                   FIBUEinrichtung.GET;
+                 END;
+
+    PaperSize=A4 210 x 297 mm;
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            PrintOnEveryPage=Yes;
+            PlaceInBottom=Yes;
+            SectionWidth=18655;
+            SectionHeight=723;
+          }
+          CONTROLS
+          {
+            { 1140035;Label     ;0    ;0    ;18500;600  ;HorzAlign=Center;
+                                                         FontName=<Helvetica>;
+                                                         FontSize=9;
+                                                         CaptionML=DEU=www.topas.de }
+            { 1140036;Shape     ;0    ;300  ;18500;423  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50024;
+        DataItemTableView=SORTING(Wartungsvertragsnr.,Service Artikelnr.)
+                          WHERE(Art=FILTER(Service),
+                                Inaktiv=FILTER(No));
+        OnPreDataItem=BEGIN
+                        Firmendaten.GET;
+                        Firmendaten.CALCFIELDS("ISO Logo");
+
+                        Nummer := 0;
+                        champ_price := 0;
+                        TotalText := '';
+
+                        //CurrReport.CREATETOTALS(champ_price_total);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           PurchHeader.RESET;
+                           PurchHeader.SETFILTER("No.",'%1',"Serviceleist. & Leihstellungen"."BET-Nr.");
+                           IF PurchHeader.FINDFIRST THEN
+                             BEGIN
+                               w„hcode  := PurchHeader."Currency Code";
+                               termcode := PurchHeader."Payment Terms Code";
+                               shipcode := PurchHeader."Shipment Method Code";
+                               orderno  := PurchHeader."No.";
+                               vendorno := PurchHeader."Buy-from Vendor No.";
+                               docdate  := PurchHeader."Document Date";
+                               FormatAdr.PurchHeaderBuyFrom(EinkVonAdr,PurchHeader);
+                             END
+                           ELSE
+                             BEGIN
+                               PurchShipHeader.RESET;
+                               PurchShipHeader.SETFILTER("Order No.",'%1',"Serviceleist. & Leihstellungen"."BET-Nr.");
+                               IF PurchShipHeader.FINDLAST THEN
+                                 BEGIN
+                                   w„hcode  := PurchShipHeader."Currency Code";
+                                   termcode := PurchShipHeader."Payment Terms Code";
+                                   shipcode := PurchShipHeader."Shipment Method Code";
+                                   orderno  := PurchShipHeader."Order No.";
+                                   vendorno := PurchShipHeader."Buy-from Vendor No.";
+                                   docdate  := PurchShipHeader."Document Date";
+                                   FormatAdr.PurchRcptBuyFrom(EinkVonAdr,PurchShipHeader);
+                                 END
+                               ELSE
+                                 ERROR('Bestellung konnte nicht gefunden werden.');
+                             END;
+
+                           champ_price_total := champ_price_total + (Menge * "Service DC");
+
+                           IF termcode = '' THEN
+                             ZlgBed.INIT
+                           ELSE
+                             ZlgBed.GET(termcode);
+
+                           IF shipcode = '' THEN
+                             LieferBed.INIT
+                           ELSE
+                             LieferBed.GET(shipcode);
+
+                           IF w„hcode = '' THEN BEGIN
+                             FIBUEinrichtung.TESTFIELD("LCY Code");
+                             TotalText := STRSUBSTNO('Total %1',FIBUEinrichtung."LCY Code");
+                           END ELSE BEGIN
+                             TotalText := STRSUBSTNO('Total %1',w„hcode);
+                           END;
+
+                           Artikel.GET("SUP Artikelnr.");
+                           IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+                             header_zusatz := 'Champs'
+                           ELSE
+                             IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
+                             OR (Artikel.Artikelgruppe = 'ACHAT') THEN
+                               header_zusatz := 'ACTS'
+                             ELSE
+                               header_zusatz := '';
+
+                           seriennr := '';
+                           IF "Seriennr." <> '' THEN
+                             seriennr := "Seriennr."
+                           ELSE
+                             BEGIN
+                               Artikel.GET("Artikelnr.");
+                               IF Artikel.Serviceklassifizierung = 'SOFTWARE' THEN
+                                 BEGIN
+                                   ChampOrderPos.RESET;
+                                   ChampOrderPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                                   ChampOrderPos.SETFILTER(Basisger„t,'%1',TRUE);
+                                   ChampOrderPos.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr.");
+                                   ChampOrderPos.SETFILTER("Geh”rt zu Lfd. Nr.",'%1',"Geh”rt zu Lfd. Nr.");
+                                   IF ChampOrderPos.FINDFIRST THEN
+                                     seriennr := ChampOrderPos."Seriennr.";
+                                 END;
+                             END;
+
+                           IF STRPOS(seriennr,'S/N: ') = 1 THEN
+                             seriennr := COPYSTR(seriennr,STRLEN('S/N: ')+1);
+
+                           IF STRPOS(seriennr,'S/N:') = 1 THEN
+                             seriennr := COPYSTR(seriennr,STRLEN('S/N:')+1);
+
+
+                           IF Fremderwerb THEN
+                             seriennr := seriennr + '*';
+                         END;
+
+        ReqFilterFields=BET-Nr.;
+        GroupTotalFields=Service Artikelnr.;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18655;
+            SectionHeight=11200;
+          }
+          CONTROLS
+          {
+            { 1140004;Shape     ;9900 ;9600 ;8400 ;1400  }
+            { 1140006;TextBox   ;16600;8400 ;1680 ;400  ;HorzAlign=Right;
+                                                         FontSize=9;
+                                                         SourceExpr=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO)) }
+            { 1140007;TextBox   ;16400;10400;1500 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=docdate }
+            { 1140008;TextBox   ;10100;10400;2300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=orderno }
+            { 1140010;TextBox   ;13300;10400;2300 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=vendorno }
+            { 1140011;TextBox   ;0    ;5200 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[1] }
+            { 1140012;TextBox   ;0    ;5623 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[2] }
+            { 1140013;TextBox   ;0    ;6046 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[3] }
+            { 1140014;TextBox   ;0    ;6469 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[4] }
+            { 1140015;TextBox   ;0    ;6892 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[5] }
+            { 1140016;TextBox   ;0    ;7315 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[6] }
+            { 1140017;TextBox   ;0    ;7738 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[7] }
+            { 1140018;TextBox   ;0    ;8161 ;6300 ;423  ;FontSize=9;
+                                                         SourceExpr=EinkVonAdr[8] }
+            { 1140019;Label     ;0    ;4400 ;1680 ;423  ;Name=TOPAS electronic;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 1140020;Label     ;1470 ;4400 ;2400 ;423  ;Name=Vertriebsgesellschaft mbH;
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=Vertriebsgesellschaft mbH, }
+            { 1140021;Label     ;3900 ;4400 ;2800 ;423  ;Name=[  Grosser Kolonnenweg 18C3,];
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3, }
+            { 1140022;Label     ;6400 ;4400 ;1800 ;423  ;Name=30179 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=5;
+                                                         CaptionML=DEU=" 30163 Hannover" }
+            { 1140023;Image     ;13130;1249 ;5250 ;1269 ;Bitmap=f:\daten neu\gemeinsame ordner\logo`s\topas\top_gelb.bmp }
+            { 1140040;Label     ;10100;9800 ;2310 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=Ordernumber }
+            { 1140041;Label     ;9900 ;9200 ;8400 ;423  ;HorzAlign=Center;
+                                                         CaptionML=DEU=Please confirm with our PO-No. }
+            { 1140042;Label     ;13300;9800 ;2310 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=your Account No. }
+            { 1140043;Label     ;16400;9800 ;1050 ;423  ;FontSize=8;
+                                                         CaptionML=DEU=Date }
+            { 1140079;Label     ;0    ;1333 ;6600 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vertriebsgesellschaft mbH   "] }
+            { 1140082;Label     ;19   ;1791 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 1140083;Label     ;19   ;2191 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 1140084;Label     ;2855 ;1791 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 1140085;Label     ;2855 ;2191 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140086;Label     ;6583 ;1367 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 1140087;Label     ;9885 ;1365 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 1140024;TextBox   ;4694 ;7761 ;8189 ;842  ;FontSize=20;
+                                                         FontBold=No;
+                                                         SourceExpr=header_zusatz + ' Purchase Order' }
+            { 1140045;Label     ;13732;2937 ;4200 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140090;Label     ;13732;3237 ;4200 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR- und USD-Konto: }
+            { 1140091;Label     ;13732;3537 ;4200 ;300  ;Name=SWIFT-BIC.: DEUTDE2HXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140092;Label     ;13732;3837 ;4200 ;300  ;Name=IBAN: DE62250700700030561500;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140093;Label     ;13732;4937 ;4200 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 1140094;Label     ;13732;5237 ;4200 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR-, USD- und JPY-Konto: }
+            { 1140095;Label     ;13732;5537 ;4200 ;300  ;Name=SWIFT-BIC.: DRESDEFF250;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140096;Label     ;13732;5837 ;4200 ;300  ;Name=IBAN: DE30250800200770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140097;Label     ;13732;6937 ;4200 ;300  ;Name=Steuer-Nr.:   25/202/35327;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Steuer-Nr.:   25/202/35327;
+                                                                    ENU=TAX No.:   25/202/35327] }
+            { 1140098;Label     ;13732;7237 ;4200 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=USt.-ID.-Nr.: DE115651057;
+                                                                    ENU=VAT Reg.No.: DE115651057] }
+            { 1140099;Label     ;13732;7537 ;4200 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-Nr.: DE 69202523] }
+            { 1140058;PictureBox;9296 ;2572 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18655;
+            SectionHeight=800;
+          }
+          CONTROLS
+          {
+            { 1140001;Shape     ;0    ;100  ;18300;600   }
+            { 1140049;Label     ;1100 ;200  ;2900 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Partnumber }
+            { 1140050;Label     ;100  ;200  ;821  ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Item }
+            { 1140081;Label     ;13027;200  ;1600 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Quantity }
+            { 1140003;Label     ;15000;200  ;1600 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Unit Price }
+            { 1140047;Label     ;5900 ;200  ;2200 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Customer }
+            { 1140060;Label     ;17200;200  ;1000 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Total }
+            { 1140065;Label     ;10280;200  ;1697 ;400  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Duration }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransHeader;
+            SectionWidth=18655;
+            SectionHeight=900;
+          }
+          CONTROLS
+          {
+            { 1140029;Label     ;14100;200  ;2200 ;423  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Continuation }
+            { 1140027;TextBox   ;16400;200  ;1500 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=champ_price_total }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=GroupHeader;
+            SectionWidth=18655;
+            SectionHeight=700;
+            OnPreSection=BEGIN
+                           Nummer += 1;
+
+                           endkunde := '';
+                           Wartung.GET("Wartungsvertragsnr.");
+                           endkunde := Wartung.Endkunde;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140000;TextBox   ;1100 ;200  ;5300 ;423  ;FontSize=9;
+                                                         SourceExpr="Service Artikelnr." }
+            { 1140005;TextBox   ;100  ;200  ;644  ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Nummer }
+            { 1140056;TextBox   ;6598 ;200  ;5500 ;423  ;FontSize=9;
+                                                         SourceExpr=Debitorname }
+            { 1140066;TextBox   ;12300;200  ;5600 ;423  ;FontSize=9;
+                                                         SourceExpr=endkunde }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=TransFooter;
+            SectionWidth=18655;
+            SectionHeight=700;
+          }
+          CONTROLS
+          {
+            { 1140032;Label     ;13500;200  ;2800 ;423  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=To Be Continued }
+            { 1140033;TextBox   ;16400;200  ;1500 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=champ_price_total }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18655;
+            SectionHeight=1300;
+          }
+          CONTROLS
+          {
+            { 1140026;Shape     ;0    ;300  ;18300;50   ;ShapeStyle=HorzLine }
+            { 1140028;TextBox   ;14000;600  ;2300 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=TotalText }
+            { 1140030;TextBox   ;16400;600  ;1500 ;423  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr=champ_price_total }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table27;
+        DataItemTableView=SORTING(No.);
+        DataItemLink=No.=FIELD(Artikelnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18655;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140052;TextBox   ;5200 ;0    ;4300 ;423  ;FontSize=9;
+                                                         SourceExpr=seriennr }
+            { 1140080;TextBox   ;1400 ;0    ;3000 ;423  ;FontSize=9;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Artikelnr. 2" }
+            { 1140009;Label     ;4600 ;0    ;600  ;423  ;FontSize=9;
+                                                         CaptionML=DEU=SN: }
+            { 1140031;TextBox   ;14500;0    ;1500 ;423  ;FontSize=9;
+                                                         SourceExpr="Serviceleist. & Leihstellungen"."Service DC" }
+            { 1140061;TextBox   ;16400;0    ;1500 ;423  ;FontSize=9;
+                                                         SourceExpr="Serviceleist. & Leihstellungen".Menge*"Serviceleist. & Leihstellungen"."Service DC" }
+            { 1140063;TextBox   ;9700 ;0    ;3000 ;423  ;FontSize=9;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr=FORMAT("Serviceleist. & Leihstellungen".Lizenzdatum)+'...'+FORMAT("Serviceleist. & Leihstellungen"."Ablaufdatum Serviceleistung") }
+            { 1140002;TextBox   ;13103;0    ;800  ;423  ;FontSize=9;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Serviceleist. & Leihstellungen".Menge }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=KopieSchleife;
+        OnAfterGetRecord=BEGIN
+                           //IF (STRPOS("Serviceleist. & Leihstellungen"."SUP Artikelnr.",'ACTS')=0) THEN CurrReport.SKIP;
+                         END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=SeiteSchleife;
+        OnPreDataItem=BEGIN
+                        CurrReport.CREATETOTALS(champ_price_total);
+                      END;
+
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50023;
+        DataItemTableView=SORTING(Nr.,Art,Artikelnr.,Zeilennr.)
+                          WHERE(Art=FILTER(Wartungsvertrag),
+                                Andruck=FILTER(Text unten));
+        DataItemVarName=TOPAS Bemerkungen unten;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number);
+        DataItemVarName=Bemerkung;
+        OnPreDataItem=BEGIN
+                        Wartungs_Bemerkung.SETRANGE("Nr.","Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
+                        Wartungs_Bemerkung.SETRANGE(Art,Wartungs_Bemerkung.Art :: Wartungsvertrag);
+                        Wartungs_Bemerkung.SETRANGE(Andruck,Wartungs_Bemerkung.Andruck :: "Text unten");
+                        SETRANGE(Number,1,Wartungs_Bemerkung.COUNT);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           IF Number = 1 THEN
+                             Wartungs_Bemerkung.FINDFIRST
+                           ELSE
+                             Wartungs_Bemerkung.NEXT;
+                           "TOPAS Bemerkungen unten" := Wartungs_Bemerkung;
+                         END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18655;
+            SectionHeight=446;
+          }
+          CONTROLS
+          {
+            { 1140046;TextBox   ;1100 ;0    ;16200;446  ;FontSize=9;
+                                                         FontBold=Yes;
+                                                         SourceExpr="TOPAS Bemerkungen unten".Bemerkung }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table2000000026;
+        DataItemTableView=SORTING(Number)
+                          WHERE(Number=CONST(1));
+        DataItemVarName=Total;
+      }
+      SECTIONS
+      {
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50011;
+        DataItemTableView=SORTING(Wartungsvertragsnr.);
+        DataItemLinkReference=Serviceleist. & Leihstellungen;
+        DataItemLink=Wartungsvertragsnr.=FIELD(Wartungsvertragsnr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18655;
+            SectionHeight=2600;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(STRPOS("Serviceleist. & Leihstellungen"."SUP Artikelnr.",'ACTS')<>0);
+
+                           IF Wartungsvertrag.Endkunde = '' THEN
+                             CurrReport.SHOWOUTPUT(FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140051;Label     ;1101 ;200  ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=End Customer: }
+            { 1140053;TextBox   ;1101 ;728  ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag.Endkunde }
+            { 1140054;TextBox   ;1101 ;1159 ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde Adresse" }
+            { 1140055;TextBox   ;1100 ;1591 ;1697 ;423  ;HorzAlign=Left;
+                                                         FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde PLZ-Code" }
+            { 1140057;TextBox   ;2803 ;1590 ;5674 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde Ort" }
+            { 1140088;TextBox   ;1101 ;1998 ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde Land" }
+            { 1140089;Label     ;9991 ;200  ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=End Customer Contact: }
+            { 1140025;TextBox   ;10039;728  ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde Kontakt" }
+            { 1140039;TextBox   ;10039;1159 ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde Telefonnr." }
+            { 1140044;TextBox   ;10039;1566 ;7376 ;423  ;FontSize=9;
+                                                         SourceExpr=Wartungsvertrag."Endkunde E-Mail" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18655;
+            SectionHeight=3700;
+          }
+          CONTROLS
+          {
+            { 1140034;Label     ;1100 ;400  ;2900 ;423  ;FontSize=9;
+                                                         CaptionML=DEU="Terms of Payment: " }
+            { 1140037;TextBox   ;4000 ;400  ;13600;400  ;FontSize=9;
+                                                         SourceExpr=ZlgBed.Description }
+            { 1140038;Label     ;1100 ;3000 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Germany }
+            { 1140048;Label     ;1100 ;2600 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=30163 Hannover }
+            { 1140059;Label     ;1100 ;2200 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=Grosser Kolonnenweg 18C3 }
+            { 1140062;Label     ;1100 ;1800 ;7400 ;400  ;FontSize=9;
+                                                         CaptionML=DEU=TOPAS electronic Vertriebsgesellschaft mbH }
+            { 1140064;Label     ;1100 ;1300 ;7400 ;500  ;FontSize=9;
+                                                         CaptionML=DEU=Bill to: }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9020;
+      Height=3410;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      Debitor@1140007 : Record 18;
+      Artikel@1140008 : Record 27;
+      Firmendaten@1140009 : Record 79;
+      FIBUEinrichtung@1140006 : Record 98;
+      Champs@1140001 : Record 50028;
+      Wartung@1140032 : Record 50011;
+      LieferBed@1140003 : Record 10;
+      ZlgBed@1140002 : Record 3;
+      SalesHeader@1140018 : Record 36;
+      PurchHeader@1140014 : Record 38;
+      PurchShipHeader@1140022 : Record 120;
+      ChampOrderPos@1140030 : Record 50024;
+      Opt@1140027 : Record 50001;
+      Wartungs_Bemerkung@1140033 : Record 50023;
+      EinkVonAdr@1140019 : ARRAY [8] OF Text[50];
+      FormatAdr@1140020 : Codeunit 365;
+      TotalText@1140004 : Text[50];
+      champ_price@1140000 : Decimal;
+      champ_price_total@1140013 : Decimal;
+      Nummer@1140005 : Integer;
+      w„hcode@1140015 : Code[20];
+      termcode@1140021 : Code[20];
+      shipcode@1140023 : Code[20];
+      orderno@1140025 : Code[20];
+      vendorno@1140024 : Code[20];
+      laufzeit@1140028 : Code[10];
+      seriennr@1140029 : Code[40];
+      docdate@1140026 : Date;
+      ansp_name@1140016 : Text[100];
+      ansp_anrede@1140012 : Text[50];
+      ansp_telefon@1140011 : Text[50];
+      ansp_fax@1140010 : Text[50];
+      ansp_email@1140017 : Text[80];
+      header_zusatz@1140031 : Text[30];
+      endkunde@1140034 : Text[50];
+
+    BEGIN
+    END.
+  }
+}
+
