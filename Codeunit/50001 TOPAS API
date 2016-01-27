@@ -516,7 +516,10 @@ IF File.FINDSET THEN BEGIN
     max_leere_zeilen := 30;
     fehler_in_syntax := FALSE;
     nur_module := FALSE;
+    schaeffler := FALSE;
     is_slave := FALSE;
+    set := FALSE;
+    anzahl_systeme_set := 0;
 
     temp_artikelnr := '';
     temp_seriennr := '';
@@ -539,8 +542,14 @@ IF File.FINDSET THEN BEGIN
                    IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur_module') <> 0)
                    OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur module') <> 0) THEN
                      nur_module := TRUE;
+                   IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'schaeffler') <> 0)
+                   OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'schaeffler') <> 0) THEN
+                     schaeffler := TRUE;
                    IF STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'slave') <> 0 THEN
                      is_slave := TRUE;
+                   IF STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'set') <> 0 THEN
+                     set := TRUE;
+
                    temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
                    //Sonderfall Mediant 2600
                    Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
@@ -552,7 +561,9 @@ IF File.FINDSET THEN BEGIN
                      END;
                    IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                      BEGIN
-                       Spalte_Artikelnr := Spalte[k];
+                       //Damit die Spalte_Artikelnr nicht durch benachbarte Artikelnr. überschrieben wird
+                       IF Spalte_Artikelnr = '' THEN
+                         Spalte_Artikelnr := Spalte[k];
                        //Kann sein, dass die Seriennr. nicht benachbart steht
                        FOR i:= 1 TO 4 DO
                          BEGIN
@@ -593,6 +604,9 @@ IF File.FINDSET THEN BEGIN
             END;
         END;
 
+      IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range('A'+Quelle_j).Value)),'set') <> 0) THEN
+        anzahl_systeme_set := 0;
+
       //*********************************************************************************************
       //                                    Inhalt auslesen
       //*********************************************************************************************
@@ -612,6 +626,8 @@ IF File.FINDSET THEN BEGIN
               IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
               OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT'))  THEN
                 BEGIN
+                  IF set THEN
+                    anzahl_systeme_set += 1;
                   temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value);
                   temp_seriennr := FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value);
                   IF (FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value) <> temp_seriennr)
@@ -760,6 +776,7 @@ IF File.FINDSET THEN BEGIN
                     END;
                 END;
             END;
+
         END;
 
       //*********************************************************************************************
@@ -779,14 +796,23 @@ IF File.FINDSET THEN BEGIN
 
       Quelle_j:=INCSTR(Quelle_j);                                    // nächste Zeile Importdatei
 
+      IF (anzahl_systeme_set > 1) AND (set) THEN
+        BEGIN
+          Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Set';
+          Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
+        END;
+
       IF (leere_zeilen = max_leere_zeilen) AND ((Spalte_BoardIni = '')
       OR ((temp_seriennr <> '') AND (temp_artikelnr <> '') AND (Board_ini = ''))) THEN
         BEGIN
           Protokoll_Sheet.Range('A'+Protokoll_j).Value := temp_artikelnr;
           Protokoll_Sheet.Range('B'+Protokoll_j).Value := temp_seriennr;
-          IF nur_module THEN
+          IF (nur_module) OR (schaeffler) THEN
             BEGIN
-             Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Nur Module';
+             IF nur_module THEN
+               Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Nur Module';
+             IF schaeffler THEN
+               Protokoll_Sheet.Range('D'+Protokoll_j).Value := 'Schaeffler';
              Protokoll_Sheet.Range('E'+Protokoll_j).Value := 'OK';
             END
           ELSE
@@ -924,9 +950,12 @@ IF File.FINDSET THEN BEGIN
                   Quelle_j := '1';
                   max_leere_zeilen := 30;
                   nur_module := FALSE;
+                  schaeffler := FALSE;
+                  set := FALSE;
                   system_in_excel_gefunden := FALSE;
                   system_eingetragen := FALSE;
                   Board_ini := '';
+                  anzahl_systeme_set := 0;
 
                   REPEAT
 
@@ -940,6 +969,13 @@ IF File.FINDSET THEN BEGIN
                                  IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur_module') <> 0)
                                  OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'nur module') <> 0) THEN
                                    nur_module := TRUE;
+                                 //Ausnahme, wenn nur Module in der Excelliste stehen, dann wird der Status auf OK gesetzt
+                                 IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'schaeffler') <> 0)
+                                 OR (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'schaeffler') <> 0) THEN
+                                   schaeffler := TRUE;
+                                 IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value)),'set') <> 0) THEN
+                                   set := TRUE;
+
                                  temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte[k]+Quelle_j).Value);
                                  //Sonderfall Mediant 2600
                                  Artikel.SETFILTER("No. 2",'%1',temp_artikelnr);
@@ -951,7 +987,9 @@ IF File.FINDSET THEN BEGIN
                                    END;
                                  IF (Artikel.FINDFIRST) AND (Artikel."No." <> '') THEN
                                    BEGIN
-                                     Spalte_Artikelnr := Spalte[k];
+                                     //Damit die Spalte_Artikelnr nicht durch benachbarte Artikelnr. überschrieben wird
+                                     IF Spalte_Artikelnr = '' THEN
+                                       Spalte_Artikelnr := Spalte[k];
                                      //Kann sein, dass die Seriennr. nicht benachbart steht
                                      FOR i:= 1 TO 4 DO
                                        BEGIN
@@ -993,6 +1031,9 @@ IF File.FINDSET THEN BEGIN
                           END;
                       END;
 
+                    IF (STRPOS(LOWERCASE(FORMAT(Quelle_Sheet.Range('A'+Quelle_j).Value)),'set') <> 0) THEN
+                      anzahl_systeme_set := 0;
+
                     //*********************************************************************************************
                     //                                    Inhalt auslesen
                     //*********************************************************************************************
@@ -1015,8 +1056,11 @@ IF File.FINDSET THEN BEGIN
                             OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
                               BEGIN
                                 anzahl_systeme_quelle += 1;
+                                IF set THEN
+                                  anzahl_systeme_set += 1;
                                 temp_artikelnr := FORMAT(Quelle_Sheet.Range(Spalte_Artikelnr+Quelle_j).Value);
-                                temp_seriennr := FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value);
+                                IF (set = FALSE) OR ((set) AND (anzahl_systeme_set = anzahl_systeme_prot)) THEN
+                                  temp_seriennr := FORMAT(Quelle_Sheet.Range(Spalte_Seriennr+Quelle_j).Value);
                                 IF (anzahl_systeme_quelle = anzahl_systeme_prot) THEN
                                   BEGIN
                                     Protokoll_Sheet.Range('A'+temp_Protokoll_j).Value := temp_artikelnr;
@@ -1029,7 +1073,8 @@ IF File.FINDSET THEN BEGIN
                           BEGIN
                             IF ((STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD') <> 0)
                             OR (STRPOS((UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_BoardIni+Quelle_j).Value))),'BOARD:') <> 0))
-                            AND (anzahl_systeme_quelle = anzahl_systeme_prot) THEN
+                            AND ((anzahl_systeme_quelle = anzahl_systeme_prot)
+                            OR  ((set = TRUE) AND (anzahl_systeme_prot = 1))) THEN
                               BEGIN
 
                                 EVALUATE(Board_ini,FORMAT(Quelle_Sheet.Range(Spalte_BoardIni_inhalt+Quelle_j).Value));
@@ -1077,15 +1122,40 @@ IF File.FINDSET THEN BEGIN
                                   END;
 
                                 temp_artikelnr := '';
-                                temp_seriennr := '';
-                                Board_ini := '';
+
+                                IF set THEN
+                                  BEGIN
+                                    IF (anzahl_systeme_prot >= anzahl_systeme_set) AND (anzahl_systeme_set > 1) THEN
+                                      BEGIN
+                                        temp_seriennr := '';
+                                        Board_ini := '';
+                                      END;
+                                  END
+                                ELSE
+                                  BEGIN
+                                    temp_seriennr := '';
+                                    Board_ini := '';
+                                  END;
                               END;
+
+                            IF (anzahl_systeme_set > 1) AND (anzahl_systeme_prot >= anzahl_systeme_set) AND (set) THEN
+                              BEGIN
+                                Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := 'Set';
+                                Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                              END;
+
                           END;
 
                         IF nur_module THEN
                           BEGIN
-                           Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := 'Nur Module';
-                           Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                            Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := 'Nur Module';
+                            Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
+                          END;
+
+                        IF schaeffler THEN
+                          BEGIN
+                            Protokoll_Sheet.Range('D'+temp_Protokoll_j).Value := 'Schaeffler';
+                            Protokoll_Sheet.Range('E'+temp_Protokoll_j).Value := 'OK';
                           END;
 
                         Protokoll_Sheet.Range('G'+temp_Protokoll_j).Font.Color := 0;
