@@ -1502,7 +1502,7 @@ CLEAR(WSH);
 EXIT(TRUE);
 
 CalculateTimeDiff(Type : Code[10];Startdate : Date;Enddate : Date) : Integer
-IF (Startdate = 0D) OR (Enddate = 0D) THEN
+IF (Startdate = 0D) OR (Enddate = 0D) OR (Startdate >= Enddate) THEN
   EXIT(0);
 
 CASE Type OF
