@@ -2,8 +2,8 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
 {
   OBJECT-PROPERTIES
   {
-    Date=17.02.15;
-    Time=12:57:01;
+    Date=20.01.16;
+    Time=12:17:31;
     Modified=Yes;
     Version List=fertig;
   }
@@ -134,7 +134,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                            ELSE
                              BEGIN
                                Artikel.GET("Artikelnr.");
-                               IF Artikel.Serviceklassifizierung = 'SOFTWARE' THEN
+                               IF (Artikel.Serviceklassifizierung = 'SOFTWARE') OR (Artikel.Serviceklassifizierung = 'KEINE') THEN
                                  BEGIN
                                    ChampOrderPos.RESET;
                                    ChampOrderPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
@@ -481,6 +481,30 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                                          SourceExpr="Serviceleist. & Leihstellungen".Menge }
           }
            }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18655;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           IF Quote.GET("Serviceleist. & Leihstellungen"."Quotenr.") THEN
+                             quotenr := Quote."Quotenr. Hersteller"
+                           ELSE
+                             quotenr := '';
+
+                           CurrReport.SHOWOUTPUT(quotenr <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140069;Label     ;4600 ;0    ;1100 ;423  ;FontSize=9;
+                                                         CaptionML=DEU=Quote: }
+            { 1140070;TextBox   ;5700 ;0    ;2100 ;423  ;FontSize=9;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr=quotenr }
+          }
+           }
       }
        }
     { PROPERTIES
@@ -682,6 +706,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
       ChampOrderPos@1140030 : Record 50024;
       Opt@1140027 : Record 50001;
       Wartungs_Bemerkung@1140033 : Record 50023;
+      Quote@1140036 : Record 50014;
       EinkVonAdr@1140019 : ARRAY [8] OF Text[50];
       FormatAdr@1140020 : Codeunit 365;
       TotalText@1140004 : Text[50];
@@ -703,6 +728,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
       ansp_email@1140017 : Text[80];
       header_zusatz@1140031 : Text[30];
       endkunde@1140034 : Text[50];
+      quotenr@1140035 : Code[10];
 
     BEGIN
     END.
