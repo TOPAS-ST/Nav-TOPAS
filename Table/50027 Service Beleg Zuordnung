@@ -135,6 +135,8 @@ IF xRec."Menge kalk." <> "Menge kalk." THEN
 Menge kalk. - OnLookup()
 
 Laufzeit - OnValidate()
+PrüfeServiceQuote(Laufzeit,"Quotenr.");
+
 IF STRPOS(Laufzeit,'M') = 0 THEN
   ERROR('Im Feld %1 muss auch immer die Angabe M (Monate) enthalten sein.',FIELDCAPTION(Laufzeit));
 
@@ -253,6 +255,7 @@ Laufzeit ab Buchungsdatum - OnValidate()
 Laufzeit ab Buchungsdatum - OnLookup()
 
 Quotenr. - OnValidate()
+PrüfeServiceQuote(Laufzeit,"Quotenr.");
 
 Quotenr. - OnLookup()
 
@@ -287,6 +290,12 @@ ELSE
     NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
     EXIT('LS_' + laufende_nummer);
   END;
+
+PrüfeServiceQuote(kalk_laufzeit : Code[20];kalk_quotenr : Code[10])
+//Zunächst für AudioCodes Quotes gedacht, gelten grundsätzlich nur für Service-Laufzeiten von max. 1 Jahr
+EVALUATE(v_laufzeit,COPYSTR(kalk_laufzeit,1,STRPOS(kalk_laufzeit,'M')-1));
+IF (kalk_quotenr <> '') AND (v_laufzeit > 12) THEN
+  ERROR(Text008);
 
 Gruppieren(Belegnr : Code[20];Belegzeile : Integer;Basisgerät : Boolean) : Text[50]
 IF (Belegnr = '') OR (Belegzeile = 0) THEN
