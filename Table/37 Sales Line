@@ -4665,8 +4665,10 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             v_service_laufzeit := Laufzeit DIV 12;
             CASE v_service_laufzeit OF
               0..1 : additional_discount := 0;
-              2 : additional_discount := 0.05; // -5%
-              3..100 : additional_discount := 0.12; // -12%
+              2 : additional_discount := 0.02; // -5%
+              3 : additional_discount := 0.09; // -12%
+              4 : additional_discount := 0.12; // -12%
+              5..100 : additional_discount := 0.15; // -15%
             END;
           END;
 
@@ -4810,6 +4812,14 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
              IF APSS_OB = TRUE THEN
                BEGIN
+                 v_service_laufzeit := Laufzeit DIV 12;
+                 CASE v_service_laufzeit OF
+                   0..1 : normal_discount := 1;
+                   2 : normal_discount := 0.98; // -2%
+                   3 : normal_discount := 0.91; // -9%
+                   4 : normal_discount := 0.88; // -12%
+                   5..100 : normal_discount := 0.85; // -15%
+                 END;
                  v_prozentsatz := 100 - Kalk_Prozentsatz;
                END;
 
