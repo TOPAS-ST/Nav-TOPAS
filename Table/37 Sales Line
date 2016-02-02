@@ -4843,8 +4843,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
              IF RE_INSTATEMENT_FEE = TRUE THEN
                BEGIN
-                 v_prozentsatz := 100;
-                 normal_discount := 0.8;
+                 v_prozentsatz := 100 - Kalk_Prozentsatz;
+                 normal_discount := 1;
                  marge := 0.8; //Fee 1.25 umgerechnet
                END;
 
