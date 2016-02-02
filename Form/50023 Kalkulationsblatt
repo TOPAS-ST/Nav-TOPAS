@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=17.12.15;
-    Time=13:36:36;
+    Date=02.02.16;
+    Time=10:19:34;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -40,7 +40,8 @@ OBJECT Form 50023 Kalkulationsblatt
                            IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
                            OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')
                            OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
-                           OR (Artikel.Artikelgruppe = 'APSS_OB') OR (Artikel.Artikelgruppe ='CHAMPS_PARTNER')) THEN
+                           OR (Artikel.Artikelgruppe = 'APSS_OB') OR (Artikel.Artikelgruppe ='CHAMPS_PARTNER')
+                           OR (Artikel.Artikelgruppe = 'CHAMPS_FEE')) THEN
                              BEGIN
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -441,6 +442,9 @@ OBJECT Form 50023 Kalkulationsblatt
 
                                                               IF (kalk_prozentsatz < 20) AND (Artikel.Artikelgruppe = 'CHAMPS_PARTNER') THEN
                                                                 ERROR(Text021,20);
+
+                                                              IF (kalk_prozentsatz <> 0) AND (kalk_prozentsatz <> 20) AND (Artikel.Artikelgruppe = 'CHAMPS_FEE') THEN
+                                                                ERROR(Text023,Artikel.Artikelgruppe,20);
                                                             END;
                                                              }
     { 1140071;TextBox   ;220  ;3850 ;2200 ;440  ;SourceExpr=quotenr;
@@ -537,6 +541,9 @@ OBJECT Form 50023 Kalkulationsblatt
       Text022@1140038 : TextConst
         'DEU=Es empfiehlt sich nicht fremderworbene Basissysteme mit derselben Artikelnr. zu splitten. Bitte kumulieren Sie die Ger„te in einer Position und nutzen Sie die Mengen Angabe.';
       quotenr@1140039 : Code[20];
+
+      Text023@1140040 : TextConst
+        'DEU=Der %1 Rabatt darf nur den Wert %2 oder 0 annehmen.';
 
     PROCEDURE HoleArtikelPos@1140007();
     VAR
@@ -1682,6 +1689,7 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",TempChampRelaDoc."Ger„te Artikelnr.");
                       ChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk.";
                       ChampRelaDoc.VALIDATE("Quotenr.",TempChampRelaDoc."Quotenr.");
+                      ChampRelaDoc."Laufzeit ab Buchungsdatum" := TempChampRelaDoc."Laufzeit ab Buchungsdatum";
                       ChampRelaDoc."Vertragsnr. bernommen" := TempChampRelaDoc."Vertragsnr. bernommen";
                       ChampRelaDoc."Abw. Ger„te Artikelnr." := TempChampRelaDoc."Abw. Ger„te Artikelnr.";
                       ChampRelaDoc."Nachtr„gliche Service Order" := TempChampRelaDoc."Nachtr„gliche Service Order";
@@ -1998,7 +2006,7 @@ OBJECT Form 50023 Kalkulationsblatt
       IF (Basis = TRUE) AND ((Service_Artikel.Artikelgruppe = 'CHAMPS') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_PARTNER')
       OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
-      OR (Service_Artikel.Artikelgruppe = 'APSS_OB')
+      OR (Service_Artikel.Artikelgruppe = 'APSS_OB') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_FEE')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
