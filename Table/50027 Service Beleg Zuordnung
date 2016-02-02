@@ -293,6 +293,8 @@ ELSE
 
 PrüfeServiceQuote(kalk_laufzeit : Code[20];kalk_quotenr : Code[10])
 //Zunächst für AudioCodes Quotes gedacht, gelten grundsätzlich nur für Service-Laufzeiten von max. 1 Jahr
+IF (kalk_quotenr = '') OR (kalk_laufzeit = '') THEN EXIT;
+
 EVALUATE(v_laufzeit,COPYSTR(kalk_laufzeit,1,STRPOS(kalk_laufzeit,'M')-1));
 IF (kalk_quotenr <> '') AND (v_laufzeit > 12) THEN
   ERROR(Text008);
