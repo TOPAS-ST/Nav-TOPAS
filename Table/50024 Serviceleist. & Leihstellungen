@@ -489,14 +489,18 @@ IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
         IF TempSystemPos.FINDFIRST THEN
           BEGIN
             REPEAT
-            SystemPos.RESET;
-            SystemPos.SETRANGE(Art,SystemPos.Art :: System);
-            SystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
-            SystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
-            SystemPos.SETRANGE("Artikelnr.",TempSystemPos."Artikelnr.");
-            SystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
-            IF (SystemPos.FINDFIRST) AND (SystemPos."Wartungsvertragsnr." <> '') THEN
-                    ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
+              SystemPos.RESET;
+              SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+              SystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
+              SystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
+              SystemPos.SETRANGE("Artikelnr.",TempSystemPos."Artikelnr.");
+              SystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
+              IF SystemPos.FINDFIRST THEN
+                BEGIN
+                  Artikel.GET(SystemPos."Artikelnr.");
+                  IF (SystemPos."Wartungsvertragsnr." <> '') AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+                      ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
+                END;
             UNTIL TempSystemPos.NEXT = 0;
           END;
       END
@@ -548,7 +552,9 @@ IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
                 REPEAT
                   IF (TempSystemPos.Fremderwerb = TRUE) AND (TempSystemPos.Verlängerung = FALSE) THEN
                     BEGIN
-                      IF (TempSystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." <> '') THEN
+                      Artikel.GET(TempSystemPos."Artikelnr.");
+                      IF (TempSystemPos.Basisgerät = TRUE) AND (SystemPos."Wartungsvertragsnr." <> '') 
+                      AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
                         ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
                     END
                   ELSE
@@ -1259,18 +1265,18 @@ IF Liefkopf.FINDLAST THEN
                        CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
                        IF CHAMPZuordnungHolen.FINDFIRST THEN
                          REPEAT
-                           UnzugeordneteSystemPos.RESET;
-                           UnzugeordneteSystemPos.SETFILTER(Art,'%1',Art :: System);
-                           UnzugeordneteSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
-                           UnzugeordneteSystemPos.SETFILTER("Auftragsnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                           UnzugeordneteSystemPos.SETFILTER("Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
-                           UnzugeordneteSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
-                           IF UnzugeordneteSystemPos.FINDFIRST THEN
+                           OffeneSystemPos.RESET;
+                           OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
+                           OffeneSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
+                           OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
+                           OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                           OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
+                           IF OffeneSystemPos.FINDFIRST THEN
                              REPEAT
-                               UnzugeordneteSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                               UnzugeordneteSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
-                               UnzugeordneteSystemPos.MODIFY;
-                             UNTIL UnzugeordneteSystemPos.NEXT = 0;
+                               OffeneSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                               OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                               OffeneSystemPos.MODIFY;
+                             UNTIL OffeneSystemPos.NEXT = 0;
                          UNTIL CHAMPZuordnungHolen.NEXT = 0;
                      END;
 
@@ -1296,30 +1302,30 @@ IF Liefkopf.FINDLAST THEN
                         CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
                         IF CHAMPZuordnungHolen.FINDFIRST THEN
                           REPEAT
-                            UnzugeordneteSystemPos.RESET;
-                            UnzugeordneteSystemPos.SETFILTER(Art,'%1',Art :: System);
-                            UnzugeordneteSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
-                            UnzugeordneteSystemPos.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                            UnzugeordneteSystemPos.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
-                            UnzugeordneteSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
-                            IF UnzugeordneteSystemPos.FINDFIRST THEN
+                            OffeneSystemPos.RESET;
+                            OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
+                            OffeneSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
+                            OffeneSystemPos.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
+                            OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                            OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
+                            IF OffeneSystemPos.FINDFIRST THEN
                               REPEAT
                                 TempSystemPos.RESET;
                                 TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
                                 TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
-                                TempSystemPos.SETFILTER("Nr.",'%1',UnzugeordneteSystemPos."Nr.");
-                                TempSystemPos.SETFILTER("Belegzeilennr.",'%1',UnzugeordneteSystemPos."Belegzeilennr.");
-                                TempSystemPos.SETFILTER("Artikelnr.",'%1',UnzugeordneteSystemPos."Artikelnr.");
-                                TempSystemPos.SETFILTER("Seriennr.",'%1',UnzugeordneteSystemPos."Seriennr.");
+                                TempSystemPos.SETFILTER("Nr.",'%1',OffeneSystemPos."Nr.");
+                                TempSystemPos.SETFILTER("Belegzeilennr.",'%1',OffeneSystemPos."Belegzeilennr.");
+                                TempSystemPos.SETFILTER("Artikelnr.",'%1',OffeneSystemPos."Artikelnr.");
+                                TempSystemPos.SETFILTER("Seriennr.",'%1',OffeneSystemPos."Seriennr.");
                                 IF TempSystemPos.FINDFIRST THEN
                                   BEGIN
-                                    UnzugeordneteSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                                    UnzugeordneteSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
-                                    UnzugeordneteSystemPos.MODIFY;
-                                    MESSAGE('Pos. %1 nachträglich zugeordnet in %2 %3',UnzugeordneteSystemPos."Lfd. Nr.",
+                                    OffeneSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                    OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                    OffeneSystemPos.MODIFY;
+                                    MESSAGE('Pos. %1 nachträglich zugeordnet in %2 %3',OffeneSystemPos."Lfd. Nr.",
                                     Wartung.TABLECAPTION,Wartung."Wartungsvertragsnr.");
                                   END;
-                              UNTIL UnzugeordneteSystemPos.NEXT = 0;
+                              UNTIL OffeneSystemPos.NEXT = 0;
                           UNTIL CHAMPZuordnungHolen.NEXT = 0;
                       END;
 
@@ -1362,7 +1368,7 @@ IF Liefkopf.FINDLAST THEN
                     Wartung.INIT;
                     Wartung.Status := Wartung.Status :: System;
                     Wartung.Klasse := Wartung.Klasse :: Mehrgeräte;
-                    //Für Merhgeräte immer 0, da das Volumen später durch die Einzelpositionen hochgezählt wird
+                    //Für Mehrgeräte immer 0, da das Volumen später durch die Einzelpositionen hochgezählt wird
                     Wartung.Volumen := 0;
                     Wartung.Startdatum := Liefkopf."Posting Date";
                     Wartung."Debitornr." := Liefkopf."Sell-to Customer No.";
@@ -1690,141 +1696,154 @@ IF Liefkopf.FINDLAST THEN
                         //                                  Generierung des Systemvertrages
                         //***************************************************************************************************
 
-                        Wartung.RESET;
-                        Wartung.SETFILTER("Lieferscheinnr.",'%1',HoleTempLizenzTab."Nr.");
-                        Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',HoleTempLizenzTab."Belegzeilennr.");
-                        IF NOT Wartung.FINDFIRST THEN
+                        IF PrüfeWartungsAnlageAktion(HoleTempLizenzTab."Artikelnr.", HoleTempLizenzTab.Fremderwerb,
+                           CHAMPZuordnungHolen) THEN
                           BEGIN
-                            Wartung.INIT;
-                            Wartung.Status := Wartung.Status :: System;
-                            Wartung.Klasse := Wartung.Klasse :: Einzelgerät;
-                            Wartung.Volumen := 1;
-                            Wartung.Startdatum := Liefkopf."Posting Date";
-                            Wartung."Debitornr." := Liefkopf."Sell-to Customer No.";
-                            IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+                            Wartung.RESET;
+                            Wartung.SETFILTER("Lieferscheinnr.",'%1',HoleTempLizenzTab."Nr.");
+                            Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',HoleTempLizenzTab."Belegzeilennr.");
+                            IF NOT Wartung.FINDFIRST THEN
                               BEGIN
-                                Wartung.SOR := TRUE;
-                                Wartung."SOR Option" := Liefkopf."Payment Terms Code";
-                              END;
-                            //Des Basisgerätes
-                            Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Archiviert;
-                            Wartung."Auftragsnr." := HoleTempLizenzTab."Urspr. Auftragsnr.";
-                            Wartung."Auftragszeilennr." := HoleTempLizenzTab."Urspr. Auftragszeilennr.";
-                            Wartung."Lieferscheinnr." := HoleTempLizenzTab."Nr.";
-                            Wartung."Lieferscheinzeilennr." := HoleTempLizenzTab."Belegzeilennr.";
-                            Wartung.Endkunde := Liefkopf.Endkunde;
-                            Wartung."Endkunde Adresse" := Liefkopf."Endkunde Adresse";
-                            Wartung."Endkunde PLZ-Code" := Liefkopf."Endkunde PLZ-Code";
-                            Wartung."Endkunde Ort"  := Liefkopf."Endkunde Ort";
-                            Wartung."Endkunde Land" := Liefkopf."Endkunde Land";
-                            Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
-                            Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
-                            Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
-                            Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
-                            Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
-                            Wartung.INSERT(TRUE);
-
-                            PrüfeHauptWartung.RESET;
-                            PrüfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
-                            PrüfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
-                            IF NOT PrüfeHauptWartung.FINDFIRST THEN
-                              BEGIN
-                                Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                                Wartung.MODIFY(TRUE);
-                              END
-                            ELSE
-                              BEGIN
-                                Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
-                                Wartung.MODIFY(TRUE);
-                              END;
-
-                            //***************************************************************************************************
-                            //    Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und vorträglich Module etc. 
-                            //       im AU gebucht werden, die auch in der Champ Kalkulation zusammengehörig sind, dann
-                            //         werden verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
-                            //***************************************************************************************************
-
-                            PrüfeCHAMPZuordnung.RESET;
-                            PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                            PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                            PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
-                            PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-                            IF PrüfeCHAMPZuordnung.FINDFIRST THEN
-                              BEGIN
-                                REPEAT
-                                  UnzugeordneteSystemPos.RESET;
-                                  UnzugeordneteSystemPos.SETFILTER(Art,'%1',Art :: System);
-                                  UnzugeordneteSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Auftragsnr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Auftragszeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
-                                  IF UnzugeordneteSystemPos.FINDFIRST THEN
-                                    REPEAT
-                                      UnzugeordneteSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                                      UnzugeordneteSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
-                                      UnzugeordneteSystemPos.MODIFY;
-                                    UNTIL UnzugeordneteSystemPos.NEXT = 0;
-                                UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
-                              END;
-
-                            //***************************************************************************************************
-                            //         Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und mind. ein Modul
-                            //        aus unseren Lieferungen stammt und alle in einer Champ Kalkulation aufgestellt sind,
-                            //          dann werden die verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
-                            //***************************************************************************************************
-
-                            PrüfeCHAMPZuordnung.RESET;
-                            PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                            PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                            PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
-                            PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-                            IF PrüfeCHAMPZuordnung.FINDFIRST THEN
-                              BEGIN
-                                REPEAT
-                                  UnzugeordneteSystemPos.RESET;
-                                  UnzugeordneteSystemPos.SETFILTER(Art,'%1',Art :: System);
-                                  UnzugeordneteSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Belegzeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
-                                  UnzugeordneteSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
-                                  IF UnzugeordneteSystemPos.FINDFIRST THEN
-                                    REPEAT
-                                      TempSystemPos.RESET;
-                                      TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
-                                      TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
-                                      TempSystemPos.SETFILTER("Nr.",'%1',UnzugeordneteSystemPos."Nr.");
-                                      TempSystemPos.SETFILTER("Belegzeilennr.",'%1',UnzugeordneteSystemPos."Belegzeilennr.");
-                                      TempSystemPos.SETFILTER("Artikelnr.",'%1',UnzugeordneteSystemPos."Artikelnr.");
-                                      TempSystemPos.SETFILTER("Seriennr.",'%1',UnzugeordneteSystemPos."Seriennr.");
-                                      IF TempSystemPos.FINDFIRST THEN
-                                        BEGIN
-                                          UnzugeordneteSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                                          UnzugeordneteSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
-                                          UnzugeordneteSystemPos.MODIFY;
-                                        END;
-                                    UNTIL UnzugeordneteSystemPos.NEXT = 0;
-                                UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
-                              END;
-
-                            //***************************************************************************************************
-                            //                         Anlage der Führungsrolle anhand des Debitoren
-                            //***************************************************************************************************
-
-                            DebKontaktBez.RESET;
-                            DebKontaktBez.SETFILTER("Business Relation Code",'%1','DEB');
-                            DebKontaktBez.SETFILTER("No.",'%1',Liefkopf."Sell-to Customer No.");
-                            IF DebKontaktBez.FINDFIRST THEN
-                              BEGIN
-                                Ansprech.RESET;
-                                Ansprech.SETFILTER("Kampagnennr.",'%1',Wartung."Wartungsvertragsnr.");
-                                Ansprech.SETFILTER("Kontaktnr.",'%1',DebKontaktBez."Contact No.");
-                                IF NOT Ansprech.FINDFIRST THEN
+                                Wartung.INIT;
+                                Wartung.Status := Wartung.Status :: System;
+                                Artikel.GET(HoleTempLizenzTab."Artikelnr.");
+                                IF Artikel.Serviceklassifizierung = 'SYSTEM FLAT' THEN
                                   BEGIN
-                                    Ansprech.INIT;
-                                    Ansprech.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
-                                    Ansprech."Kampagnennr." := Wartung."Wartungsvertragsnr.";
-                                    Ansprech.Führungsrolle := TRUE;
-                                    Ansprech.INSERT;
+                                    Wartung.Klasse := Wartung.Klasse :: Mehrgeräte;
+                                    Wartung.Volumen := 0;
+                                  END
+                                ELSE
+                                  BEGIN
+                                    Wartung.Klasse := Wartung.Klasse :: Einzelgerät;
+                                    Wartung.Volumen := 1;
+                                  END;
+                                Wartung.Startdatum := Liefkopf."Posting Date";
+                                Wartung."Debitornr." := Liefkopf."Sell-to Customer No.";
+                                IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
+                                  BEGIN
+                                    Wartung.SOR := TRUE;
+                                    Wartung."SOR Option" := Liefkopf."Payment Terms Code";
+                                  END;
+                                //Des Basisgerätes
+                                Wartung.Auftragsstatus := Wartung.Auftragsstatus :: Archiviert;
+                                Wartung."Auftragsnr." := HoleTempLizenzTab."Urspr. Auftragsnr.";
+                                Wartung."Auftragszeilennr." := HoleTempLizenzTab."Urspr. Auftragszeilennr.";
+                                Wartung."Lieferscheinnr." := HoleTempLizenzTab."Nr.";
+                                Wartung."Lieferscheinzeilennr." := HoleTempLizenzTab."Belegzeilennr.";
+                                Wartung.Endkunde := Liefkopf.Endkunde;
+                                Wartung."Endkunde Adresse" := Liefkopf."Endkunde Adresse";
+                                Wartung."Endkunde PLZ-Code" := Liefkopf."Endkunde PLZ-Code";
+                                Wartung."Endkunde Ort"  := Liefkopf."Endkunde Ort";
+                                Wartung."Endkunde Land" := Liefkopf."Endkunde Land";
+                                Wartung."Endkunde Kontakt" := Liefkopf."Endkunde Kontakt";
+                                Wartung."Endkunde Telefonnr." := Liefkopf."Endkunde Telefonnr.";
+                                Wartung."Endkunde E-Mail" := Liefkopf."Endkunde E-Mail";
+                                Wartung."Systemhaus Kontakt" := Liefkopf."Systemhaus Kontakt";
+                                Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
+                                Wartung.INSERT(TRUE);
+
+                                PrüfeHauptWartung.RESET;
+                                PrüfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                                PrüfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                                IF NOT PrüfeHauptWartung.FINDFIRST THEN
+                                  BEGIN
+                                    Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                    Wartung.MODIFY(TRUE);
+                                  END
+                                ELSE
+                                  BEGIN
+                                    Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
+                                    Wartung.MODIFY(TRUE);
+                                  END;
+
+                                //************************************************************************************************
+                                //    Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und vorträglich Module etc. 
+                                //       im AU gebucht werden, die auch in der Champ Kalkulation zusammengehörig sind, dann
+                                //         werden verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
+                                //************************************************************************************************
+
+                                PrüfeCHAMPZuordnung.RESET;
+                                PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                                PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
+                                PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
+                                PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+                                IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                                  BEGIN
+                                    REPEAT
+                                      OffeneSystemPos.RESET;
+                                      OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
+                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
+                                      OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
+                                      OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
+                                      OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
+                                      IF OffeneSystemPos.FINDFIRST THEN
+                                        REPEAT
+                                          OffeneSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                          OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                          OffeneSystemPos.MODIFY;
+                                        UNTIL OffeneSystemPos.NEXT = 0;
+                                    UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
+                                  END;
+
+                                //************************************************************************************************
+                                //         Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und mind. ein Modul
+                                //        aus unseren Lieferungen stammt und alle in einer Champ Kalkulation aufgestellt sind,
+                                //          dann werden die verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
+                                //************************************************************************************************
+
+                                PrüfeCHAMPZuordnung.RESET;
+                                PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                                PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
+                                PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
+                                PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+                                IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                                  BEGIN
+                                    REPEAT
+                                      OffeneSystemPos.RESET;
+                                      OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
+                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
+                                      OffeneSystemPos.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
+                                      OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
+                                      OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
+                                      IF OffeneSystemPos.FINDFIRST THEN
+                                        REPEAT
+                                          TempSystemPos.RESET;
+                                          TempSystemPos.SETFILTER(Art,'%1',TempSystemPos.Art :: Temporär);
+                                          TempSystemPos.SETFILTER(Vormerkung,'%1',TRUE);
+                                          TempSystemPos.SETFILTER("Nr.",'%1',OffeneSystemPos."Nr.");
+                                          TempSystemPos.SETFILTER("Belegzeilennr.",'%1',OffeneSystemPos."Belegzeilennr.");
+                                          TempSystemPos.SETFILTER("Artikelnr.",'%1',OffeneSystemPos."Artikelnr.");
+                                          TempSystemPos.SETFILTER("Seriennr.",'%1',OffeneSystemPos."Seriennr.");
+                                          IF TempSystemPos.FINDFIRST THEN
+                                            BEGIN
+                                              OffeneSystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
+                                              OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                                              OffeneSystemPos.MODIFY;
+                                            END;
+                                        UNTIL OffeneSystemPos.NEXT = 0;
+                                    UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
+                                  END;
+
+                                //************************************************************************************************
+                                //                         Anlage der Führungsrolle anhand des Debitoren
+                                //************************************************************************************************
+
+                                DebKontaktBez.RESET;
+                                DebKontaktBez.SETFILTER("Business Relation Code",'%1','DEB');
+                                DebKontaktBez.SETFILTER("No.",'%1',Liefkopf."Sell-to Customer No.");
+                                IF DebKontaktBez.FINDFIRST THEN
+                                  BEGIN
+                                    Ansprech.RESET;
+                                    Ansprech.SETFILTER("Kampagnennr.",'%1',Wartung."Wartungsvertragsnr.");
+                                    Ansprech.SETFILTER("Kontaktnr.",'%1',DebKontaktBez."Contact No.");
+                                    IF NOT Ansprech.FINDFIRST THEN
+                                      BEGIN
+                                        Ansprech.INIT;
+                                        Ansprech.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
+                                        Ansprech."Kampagnennr." := Wartung."Wartungsvertragsnr.";
+                                        Ansprech.Führungsrolle := TRUE;
+                                        Ansprech.INSERT;
+                                      END;
                                   END;
                               END;
                           END;
@@ -1873,17 +1892,6 @@ IF Liefkopf.FINDLAST THEN
                             SystemPos."SOR Option" := Liefkopf."Payment Terms Code";
                           END;
 
-                        IF (Artikel.GET(HoleTempLizenzTab."Artikelnr.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
-                        OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
-                          BEGIN
-                            SystemPos.Basisgerät := TRUE;
-                            Wartung.GET(SystemPos."Wartungsvertragsnr.");
-                            Wartung.Basisgerät := SystemPos."Artikelnr.";
-                            IF Wartung.Klasse = Wartung.Klasse :: Mehrgeräte THEN
-                              Wartung.Volumen += 1;
-                            Wartung.MODIFY(TRUE);
-                          END;
-
                         IF Wartung.GET(SystemPos."Wartungsvertragsnr.") AND (SystemPos."Wartungsvertragsnr." <> '') THEN
                           Wartung.MODIFY(TRUE)
                         ELSE
@@ -1914,6 +1922,19 @@ IF Liefkopf.FINDLAST THEN
                           BEGIN
                             SystemPos."Wartungsvertragsnr." := CHAMPZuordnungHolen."Wartungsvertragsnr.";
                             SystemPos."Hauptwartungsvertragsnr." := CHAMPZuordnungHolen."Wartungsvertragsnr.";
+                          END;
+
+                        IF (Artikel.GET(HoleTempLizenzTab."Artikelnr.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
+                        OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
+                          BEGIN
+                            SystemPos.Basisgerät := TRUE;
+                            IF Wartung.GET(SystemPos."Wartungsvertragsnr.") THEN
+                              BEGIN
+                                Wartung.Basisgerät := SystemPos."Artikelnr.";
+                                IF Wartung.Klasse = Wartung.Klasse :: Mehrgeräte THEN
+                                  Wartung.Volumen += 1;
+                                Wartung.MODIFY(TRUE);
+                              END;
                           END;
 
                         SystemPos.MODIFY;
@@ -3480,3 +3501,25 @@ IF Quote.GET(quotenr) THEN
   END
 ELSE
   EXIT(FALSE);
+
+PrüfeWartungsAnlageAktion(artikelnr : Code[20];fremdbezug : Boolean;Kalkulation : Record "Service Beleg Zuordnung") : Boolean
+IF (Artikel.GET(artikelnr)) AND (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') AND (fremdbezug) THEN
+  BEGIN
+    WITH Kalkulation DO
+      BEGIN
+        SETRANGE("Nr.","Nr.");
+        SETRANGE("Zeilennr.","Zeilennr.");
+        SETRANGE(Basisgerät,TRUE);
+        SETRANGE(Fremderwerb,FALSE);
+        IF FINDFIRST THEN
+          EXIT(FALSE);
+
+        Wartungsvertrag.RESET;
+        Wartungsvertrag.SETRANGE(Basisgerät,"Geräte Artikelnr.");
+        Wartungsvertrag.SETRANGE("Lieferscheinnr.","Belegnr.");
+        IF Wartungsvertrag.FINDFIRST THEN
+          EXIT(FALSE);
+      END;
+  END;
+
+EXIT(TRUE);
