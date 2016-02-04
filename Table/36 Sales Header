@@ -2374,6 +2374,14 @@ Endkunde E-Mail - OnValidate()
 
 Endkunde E-Mail - OnLookup()
 
+Systemhaus Kontakt - OnValidate()
+
+Systemhaus Kontakt - OnLookup()
+
+Systemhaus E-Mail - OnValidate()
+
+Systemhaus E-Mail - OnLookup()
+
 Virtuelle Systeme - OnValidate()
 
 Virtuelle Systeme - OnLookup()
@@ -3687,7 +3695,9 @@ IF AUzeile.FINDFIRST THEN
               menge_kalk_ges := 0;
               menge_auswahl_ges := 0;
               menge_basissystem_pos := 0;
+              menge_basissysteme_fremd := 0;
               v_basissystem := '';
+              v_belegnr_fremd := '';
 
               REPEAT
 
@@ -3723,8 +3733,12 @@ IF AUzeile.FINDFIRST THEN
                     ServiceZuordnungHolen."Geräte Artikelnr.") THEN
                       menge_basissystem_pos += 1;
 
-                    IF (v_basissystem = ServiceZuordnungHolen."Geräte Artikelnr.")
-                    AND (ServiceZuordnungHolen.Fremderwerb = TRUE) THEN
+                    IF (Artikel.Serviceklassifizierung = 'SYSTEM FLAT') AND (ServiceZuordnungHolen.Fremderwerb = TRUE) 
+                    AND (v_belegnr_fremd <> ServiceZuordnungHolen."Belegnr.") THEN
+                      menge_basissysteme_fremd += 1;
+
+                    IF (v_basissystem = ServiceZuordnungHolen."Geräte Artikelnr.") AND (ServiceZuordnungHolen.Fremderwerb = TRUE)
+                    AND (menge_basissysteme_fremd > 1) THEN
                       ERROR(Text138);
 
                     ServiceZuordnungBeleg.RESET;
@@ -3792,6 +3806,8 @@ IF AUzeile.FINDFIRST THEN
                              END;
                           END;
                         v_basissystem := ServiceZuordnungHolen."Geräte Artikelnr.";
+                        IF ServiceZuordnungBeleg.Fremderwerb THEN
+                          v_belegnr_fremd := ServiceZuordnungHolen."Belegnr.";
                       UNTIL (ServiceZuordnungBeleg.NEXT = 0) OR (basisgerät_kollision_ok);
                   END;
 
