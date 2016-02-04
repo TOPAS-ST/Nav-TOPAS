@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=02.02.16;
-    Time=10:19:34;
+    Date=03.02.16;
+    Time=14:16:22;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -1176,11 +1176,16 @@ OBJECT Form 50023 Kalkulationsblatt
       champ_dc_au@1140009 : Decimal;
       champ_dc_einzeln@1140008 : Decimal;
       v_artikelnr@1140013 : Code[20];
+      v_belegnr_fremd@1140016 : Code[20];
       v_laufzeit@1140006 : Integer;
       v_zeilennr@1140000 : Integer;
       anzahl_basissysteme@1140014 : Integer;
+      anzahl_basissysteme_fremd@1140015 : Integer;
       ACTS@1140003 : Boolean;
     BEGIN
+      anzahl_basissysteme := 0;
+      anzahl_basissysteme_fremd := 0;
+
       IF Rec.HASFILTER THEN
         BEGIN
 
@@ -1213,10 +1218,12 @@ OBJECT Form 50023 Kalkulationsblatt
           ELSE
             REPEAT
               Ger„teArtikel.GET(ChampRelaDoc."Ger„te Artikelnr.");
+              IF (Ger„teArtikel.Serviceklassifizierung = 'SYSTEM FLAT') AND (ChampRelaDoc.Fremderwerb = TRUE) THEN
+                anzahl_basissysteme_fremd += 1;
               IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." <> v_artikelnr) THEN
                 ERROR(Text016);
-              IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." = v_artikelnr)
-              AND (ChampRelaDoc.Fremderwerb = TRUE) THEN
+              IF (v_artikelnr <> '') AND (ChampRelaDoc."Ger„te Artikelnr." = v_artikelnr) AND (ChampRelaDoc.Fremderwerb = TRUE)
+              AND (ChampRelaDoc."Belegnr." <> v_belegnr_fremd) AND (anzahl_basissysteme_fremd > 1) THEN
                 ERROR(Text022);
               v_artikelnr := ChampRelaDoc."Ger„te Artikelnr.";
               IF Ger„teArtikel.Serviceklassifizierung <> 'SYSTEM FLAT' THEN
@@ -1225,7 +1232,10 @@ OBJECT Form 50023 Kalkulationsblatt
                   IF anzahl_basissysteme > 1 THEN
                     ERROR(Text016);
                 END;
-              UNTIL ChampRelaDoc.NEXT = 0;
+              IF ChampRelaDoc.Fremderwerb THEN
+                v_belegnr_fremd := ChampRelaDoc."Belegnr.";
+            UNTIL ChampRelaDoc.NEXT = 0;
+
 
           champ_price_au := 0;
           champ_dc_au := 0;
