@@ -1,0 +1,1627 @@
+OBJECT Form 50103 Preislisten Importe Excel
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04.02.16;
+    Time=17:31:16;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    Width=9790;
+    Height=7150;
+  }
+  CONTROLS
+  {
+    { 1140000;TabControl;220  ;220  ;9350 ;6160 ;HorzGlue=Both;
+                                                 VertGlue=Both;
+                                                 PageNamesML=DEU=Allgemein }
+    { 1140002;OptionButton;550;2970 ;3740 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr=preisliste;
+                                                 OptionValue=GSI }
+    { 1140003;OptionButton;550;3740 ;3740 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr=preisliste;
+                                                 OptionValue=FER }
+    { 1140004;OptionButton;550;4510 ;3740 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr=preisliste;
+                                                 OptionValue=ICP }
+    { 1140005;TextBox   ;2530 ;1870 ;5280 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr=speicherort;
+                                                 OnLookup=BEGIN
+                                                            Open_WinApplct(speicherort);
+                                                          END;
+
+                                                 OnAssistEdit=BEGIN
+                                                                speicherort := Save_FileDialog;
+                                                              END;
+                                                               }
+    { 1140006;Label     ;550  ;1870 ;1870 ;440  ;ParentControl=1140005;
+                                                 CaptionML=DEU=Datei }
+    { 1140007;Label     ;550  ;1320 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Preislisten Pfad angeben }
+    { 1140008;CommandButton;7150;5610;2200;550  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=Import;
+                                                 OnPush=BEGIN
+                                                          CASE preisliste OF
+
+                                                            preisliste :: GSI : GSI_Import;
+                                                            preisliste :: FER : FER_Import;
+                                                            preisliste :: ICP : ICP_Import;
+
+                                                          END;
+                                                        END;
+                                                         }
+    { 1140009;CheckBox  ;3080 ;5610 ;440  ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 ShowCaption=No;
+                                                 SourceExpr=testlauf }
+    { 1140010;Label     ;3630 ;5610 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=Testlauf }
+    { 1140001;CommandButton;7370;6490;2200;550  ;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 PushAction=FormHelp }
+  }
+  CODE
+  {
+    VAR
+      Artikel@1140033 : Record 27;
+      einkaufspreis@1140032 : Record 7012;
+      verkaufspreis@1140006 : Record 7002;
+      Geh„use@1140005 : Record 50000;
+      Quelle_Excel@1140031 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Quelle_Book@1140030 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Quelle_Sheet@1140029 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      Quelle_j@1140028 : Text[7];
+      Protokoll_Excel@1140027 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Protokoll_Book@1140026 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Protokoll_Sheet@1140025 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      Protokoll_j@1140024 : Text[7];
+      Artikelname@1140023 : Text[50];
+      PL_PACKAGE@1140004 : Text[30];
+      PL_REG@1140020 : Text[30];
+      PL_MOQ@1140019 : Decimal;
+      PL_VPE@1140003 : Decimal;
+      PL_MSRP@1140007 : Decimal;
+      PL_DC@1140018 : Decimal;
+      PL_DISTI_TEXT@1140016 : Text[120];
+      hilfs_PL_DISTI_TEXT@1140015 : Text[120];
+      a@1140014 : Integer;
+      selection@1140013 : Integer;
+      leere_zeilen@1140012 : Integer;
+      excel_datens„tze@1140011 : Integer;
+      neuer_preis@1140010 : Integer;
+      sonstige_aenderungen@1140009 : Integer;
+      update_job@1140008 : Boolean;
+      speicherort@1140002 : Text[250];
+      preisliste@1140000 : ',GSI,FER,ICP';
+
+      Text100@1140001 : TextConst
+        'DEU=Die Datei oder der Pfad %1 konnte nicht gefunden werden.';
+      testlauf@1140017 : Boolean;
+      cr@1140021 : Char;
+
+    PROCEDURE GSI_Import@1140000();
+    VAR
+
+      Spalte_Part@1140012 : TextConst
+        'DEU=A';
+
+      Spalte_DC@1140011 : TextConst
+        'DEU=O';
+
+      Spalte_Reg@1140009 : TextConst
+        'DEU=P';
+
+      Spalte_MOQ@1140008 : TextConst
+        'DEU=E';
+
+      Spalte_VPE@1140003 : TextConst
+        'DEU=D';
+
+      Spalte_Package@1140004 : TextConst
+        'DEU=C';
+
+      Max_Datens„tze@1140002 : TextConst
+        'DEU=20000';
+
+      Text000@1140001 : TextConst
+        'DEU=Fehler in der Syntax der Quelldatei.\Spalte: %1';
+      „nderung@1140013 : Boolean;
+      k@1140000 : Integer;
+    BEGIN
+      CLEAR(Quelle_Excel);
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+
+      CLEAR(Protokoll_Excel);
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+
+      //********************************************************************************************
+      //                               Excel Datei Definitionen
+      // *******************************************************************************************
+
+      // Definiert die zu importierende Datei
+      IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Quelle_Book := Quelle_Excel.Workbooks._Open(speicherort,0,TRUE);
+      Quelle_Sheet := Quelle_Excel.ActiveSheet;
+      Quelle_j := '10';
+
+      //********************************************************************************************
+      //                              šberprfung Syntax Quelldatei
+      //********************************************************************************************
+
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Part + '15').Value) <> 'Device' THEN
+        ERROR(Text000,Spalte_Part);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Package + '15').Value) <> 'Package' THEN
+        ERROR(Text000,Spalte_Package);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Reg + '15').Value) <> 'Reg' THEN
+        ERROR(Text000,Spalte_Reg);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_MOQ + '14').Value) <> 'Min' THEN
+        ERROR(Text000,Spalte_MOQ);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_VPE + '14').Value) <> 'Tray' THEN
+        ERROR(Text000,Spalte_VPE);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_DC + '15').Value) <> 'Cost' THEN
+        ERROR(Text000,Spalte_DC);
+
+      neuer_preis := 0;
+      sonstige_aenderungen := 0;
+      excel_datens„tze := 0;
+
+      //********************************************************************************************
+      //                               Definiert die Protokolldatei
+      //********************************************************************************************
+
+      CREATE (Protokoll_Excel);                                              // erzeugt excel
+      Protokoll_Book := Protokoll_Excel.Workbooks.Add(-4167);                // legt neue datei in excel an
+      Protokoll_Sheet := Protokoll_Excel.ActiveSheet;                        // definiert aktives worksheet
+      Protokoll_j:='2';
+
+      Protokoll_Sheet.Range('A'+'1').Value:= 'Artikelnr';                    // šberschriften der 2. Datei
+      Protokoll_Sheet.Range('A:A').ColumnWidth := 20;
+      Protokoll_Sheet.Range('B'+'1').Value:= 'DC alt';
+      Protokoll_Sheet.Range('C'+'1').Value:= 'DC neu';
+      Protokoll_Sheet.Range('D'+'1').Value:= 'Differenz';
+      Protokoll_Sheet.Range('E'+'1').Value:= 'LB';
+      Protokoll_Sheet.Range('F'+'1').Value:= 'BB';
+      Protokoll_Sheet.Range('G'+'1').Value:= 'AN';
+      Protokoll_Sheet.Range('H'+'1').Value:= 'AU';
+      Protokoll_Sheet.Range('I'+'1').Value:= 'AUR';
+      Protokoll_Sheet.Range('J'+'1').Value:= 'VPE';
+      Protokoll_Sheet.Range('K'+'1').Value:= 'MOQ';
+      Protokoll_Sheet.Range('L'+'1').Value:= 'REG';
+      Protokoll_Sheet.Range('M'+'1').Value:= 'PACKAGE';
+      Protokoll_Sheet.Range('A1:M1').Interior.ColorIndex := 15;
+      Protokoll_Sheet.Range('A1:M1').Font.Bold := TRUE;
+
+
+      //********************************************************************************************
+      //                                          Update der Artikel
+      //********************************************************************************************
+
+      EVALUATE(a,Quelle_j);
+      excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count - a + 1;
+
+      IF excel_datens„tze > 99 THEN
+        BEGIN
+          IF CONFIRM('Es konnte mehr als 100 Eintr„ge in der Quelldatei gefunden werden.\' +
+                     'Soll der Status Update letzte Preisliste fr alle Artikel zurckgesetzt und neu ' +
+                     'bewertet werden?',TRUE) THEN
+            BEGIN
+
+              IF testlauf = FALSE THEN
+                BEGIN
+                  Artikel.RESET;
+                  Artikel.SETFILTER("Manufacturer Code",'%1','54');
+                  IF Artikel.FINDFIRST THEN
+                    Artikel.MODIFYALL("Update letzte Preisliste",FALSE);
+                END;
+
+              FOR k := 1 TO 4 DO
+                BEGIN
+
+                  Quelle_j:='10';
+                  Quelle_Sheet := Quelle_Book.Worksheets.Item(k);
+
+                  REPEAT
+
+                     IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value)) <= 40 THEN
+                       Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+
+                     IF Artikelname = '' THEN
+                       BEGIN
+                       END
+                     ELSE
+                       BEGIN
+                         Artikel.RESET;
+                         Artikel.SETFILTER("No. 2",'%1',Artikelname);
+                         IF Artikel.FINDFIRST THEN
+                           BEGIN
+
+                             PL_PACKAGE := FORMAT(Quelle_Sheet.Range(Spalte_Package+Quelle_j).Value);
+                             PL_DISTI_TEXT := FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value);
+                             PL_REG := FORMAT(Quelle_Sheet.Range(Spalte_Reg+Quelle_j).Value);
+                             IF (FORMAT(Quelle_Sheet.Range(Spalte_VPE+Quelle_j).Value) <> '') THEN
+                               EVALUATE(PL_VPE,FORMAT(Quelle_Sheet.Range(Spalte_VPE+Quelle_j).Value))
+                             ELSE
+                               PL_VPE := 0;
+                             IF (FORMAT(Quelle_Sheet.Range(Spalte_MOQ+Quelle_j).Value) <> '') AND
+                             (FORMAT(Quelle_Sheet.Range(Spalte_MOQ+Quelle_j).Value) <> 'TBA') THEN
+                               EVALUATE(PL_MOQ,FORMAT(Quelle_Sheet.Range(Spalte_MOQ+Quelle_j).Value))
+                             ELSE
+                               PL_MOQ := 0;
+
+                             IF (STRLEN(DELCHR(PL_DISTI_TEXT,'=','ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')) =
+                             (STRLEN(PL_DISTI_TEXT))) THEN
+                               BEGIN
+                                  //falls sich 1000er Trennzeichen eingeschlichen hat wird dies entfernt
+                                  IF STRLEN(COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1)) > 2 THEN
+                                    PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','.');
+
+                                  IF STRPOS(PL_DISTI_TEXT, ',') <> 0  THEN
+                                     BEGIN
+                                       PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, ',')-1)
+                                                  +',' +COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, ',')+1);
+                                     END;
+                                  IF STRPOS(PL_DISTI_TEXT, '.') <> 0  THEN
+                                     BEGIN
+                                       PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, '.')-1)
+                                                  +','+COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1);
+                                     END;
+                                  IF PL_DISTI_TEXT = '' THEN PL_DISTI_TEXT := '0';
+
+                                  // Wenn manuell das Dollar Zeichen in die Zeile geraten ist
+                                  IF STRPOS(PL_DISTI_TEXT,'$') <> 0 THEN
+                                    BEGIN
+                                      //PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','$');
+                                      hilfs_PL_DISTI_TEXT := PL_DISTI_TEXT;
+                                      hilfs_PL_DISTI_TEXT := DELCHR(hilfs_PL_DISTI_TEXT,'<>=',' ');
+                                      hilfs_PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=',DELCHR(PL_DISTI_TEXT,'=','.,0123456789'));
+                                      PL_DISTI_TEXT := hilfs_PL_DISTI_TEXT;
+                                    END;
+
+                                  EVALUATE(PL_DC,PL_DISTI_TEXT);
+                                  PL_DC := ROUND(PL_DC,0.01);
+                               END
+                             ELSE
+                               PL_DC := 0;
+
+                             „nderung := FALSE;
+
+                             //*********************************************************************************************
+                             //                                    EK-Preise updaten
+                             //*********************************************************************************************
+
+                             einkaufspreis.RESET;
+                             einkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                             //einkaufspreis.SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                             IF einkaufspreis.FINDLAST THEN
+                               BEGIN
+                                 IF (einkaufspreis."Direct Unit Cost" <> PL_DC) AND (PL_DC <> 0) THEN
+                                   BEGIN
+                                     Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                     Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
+                                     Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
+                                     Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                                     Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
+                                     Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
+                                     Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
+                                     Protokoll_Sheet.Range('F'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Purch. Order");
+                                     Protokoll_Sheet.Range('G'+Protokoll_j).Value := FORMAT(Artikel."Menge in Angebot");
+                                     Protokoll_Sheet.Range('H'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Sales Order");
+                                     Protokoll_Sheet.Range('I'+Protokoll_j).Value := FORMAT(Artikel."Menge im Rahmen");
+
+                                     IF testlauf = FALSE THEN
+                                       BEGIN
+                                         einkaufspreis."Direct Unit Cost" := PL_DC;
+                                         einkaufspreis.MODIFY(TRUE);
+                                         Artikel.MODIFY(TRUE);
+                                       END;
+
+                                     neuer_preis += 1;
+                                     „nderung := TRUE;
+
+                                   END;
+                               END;
+
+                             //*********************************************************************************************
+                             //                                       VPE berprfen
+                             //*********************************************************************************************
+
+                             IF (Artikel.Verpackungsmenge <> PL_VPE) AND (PL_VPE <> 0) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel.Mindestbestellmenge := PL_VPE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'x';
+                               END;
+
+                             //*********************************************************************************************
+                             //                                       MOQ berprfen
+                             //*********************************************************************************************
+
+                             IF (Artikel.Mindestbestellmenge <> PL_MOQ) AND (PL_MOQ <> 0) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel.Mindestbestellmenge := PL_MOQ;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('K'+Protokoll_j).Value := 'x';
+                               END;
+
+                             //*********************************************************************************************
+                             //                                    Registrierbar berprfen
+                             //*********************************************************************************************
+
+                             IF (STRPOS(UPPERCASE(PL_REG),'Y') <> 0) AND (Artikel.Registrierbar = FALSE) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel.Registrierbar := TRUE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('L'+Protokoll_j).Value := 'x';
+                               END;
+                             IF (STRPOS(UPPERCASE(PL_REG),'N') <> 0) AND (Artikel.Registrierbar = TRUE) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel.Registrierbar := FALSE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('L'+Protokoll_j).Value := 'x';
+                               END;
+
+
+                             //*********************************************************************************************
+                             //                                      Package berprfen
+                             //*********************************************************************************************
+
+                             IF (PL_PACKAGE <> '') AND (Artikel.Geh„use <> PL_PACKAGE) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     IF NOT Geh„use.GET(PL_PACKAGE) THEN
+                                       BEGIN
+                                         Geh„use.INIT;
+                                         Geh„use.Code := PL_PACKAGE;
+                                         Geh„use.INSERT;
+                                       END;
+                                     Artikel.Geh„use := PL_PACKAGE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('M'+Protokoll_j).Value := 'x';
+                               END;
+
+                             {
+                             //*********************************************************************************************
+                             //                                     Lead Free berprfen
+                             //*********************************************************************************************
+
+                             IF (STRPOS(UPPERCASE(PL_LF),'ROHS AND LEAD FREE') <> 0) AND (Artikel."Lead Free" = FALSE) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel."Lead Free" := TRUE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 sonstige_aenderungen += 1;
+                                 „nderung := TRUE;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('N'+Protokoll_j).Value := 'x';
+
+                               END;
+                             IF (STRPOS(UPPERCASE(PL_LF),'NO') <> 0) AND (Artikel."Lead Free" = TRUE) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel."Lead Free" := FALSE;
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+                                 „nderung := TRUE;
+                                 sonstige_aenderungen += 1;
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('N'+Protokoll_j).Value := 'x';
+                               END;
+                             }
+
+                             IF „nderung = TRUE THEN Protokoll_j := INCSTR(Protokoll_j);
+
+                             IF PL_DC <> 0 THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     Artikel."Update letzte Preisliste":=TRUE;
+                                     Artikel.MODIFY;
+                                   END;
+                               END;
+
+                           END;
+
+                       END;
+
+                    //*********************************************************************************************
+                    //                                       Abbruchbedingung
+                    //*********************************************************************************************
+
+                    // Wenn in der Quelldatei 15 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+                    IF Artikelname = '' THEN                                       // erkennt das Ende   der Excel Datei
+                       BEGIN
+                         leere_zeilen := leere_zeilen+1;
+                       END
+                       ELSE
+                       BEGIN
+                         leere_zeilen :=0;
+                       END;
+
+                    Quelle_j:=INCSTR(Quelle_j);                                    // n„chste Zeile Importdatei
+
+                  UNTIL (Max_Datens„tze = Quelle_j) OR (leere_zeilen = 15);  // Nach 15 Zeilen ohne Artikel ist Schluss
+                END;
+            END;
+        END;
+
+      Quelle_Excel.Visible(TRUE);
+      Protokoll_Excel.Visible(TRUE);
+
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+      CLEAR(Quelle_Excel);
+
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+      CLEAR(Protokoll_Excel);
+
+      REPEAT
+      UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+
+      REPEAT
+      UNTIL ISCLEAR(Protokoll_Excel) AND ISCLEAR(Protokoll_Book) AND ISCLEAR(Protokoll_Sheet);
+
+      MESSAGE('Import der Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Žnderungen: %2\\'+
+              'Excel Datens„tze: %3 (Ausgewerte Tabs: 1)\',neuer_preis,sonstige_aenderungen,excel_datens„tze);
+    END;
+
+    PROCEDURE FER_Import@1140005();
+    VAR
+
+      Spalte_Part@1140012 : TextConst
+        'DEU=B';
+
+      Spalte_DC@1140011 : TextConst
+        'DEU=F';
+
+      Spalte_MSRP@1140004 : TextConst
+        'DEU=G';
+
+      Max_Datens„tze@1140002 : TextConst
+        'DEU=5000';
+
+      Text000@1140001 : TextConst
+        'DEU=Fehler in der Syntax der Quelldatei.\Spalte: %1';
+      „nderung@1140013 : Boolean;
+    BEGIN
+      CLEAR(Quelle_Excel);
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+
+      CLEAR(Protokoll_Excel);
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+
+      //********************************************************************************************
+      //                               Excel Datei Definitionen
+      // *******************************************************************************************
+
+      // Definiert die zu importierende Datei
+      IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Quelle_Book := Quelle_Excel.Workbooks._Open(speicherort,0,TRUE);
+      Quelle_Sheet := Quelle_Excel.ActiveSheet;
+      Quelle_j := '2';
+
+      //********************************************************************************************
+      //                              šberprfung Syntax Quelldatei
+      //********************************************************************************************
+
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Part + '1').Value) <> 'Art-Nr' THEN
+        ERROR(Text000,Spalte_Part);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_DC + '1').Value) <> 'DistiEK' THEN
+        ERROR(Text000,Spalte_DC);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP + '1').Value) <> 'EVP' THEN
+        ERROR(Text000,Spalte_MSRP);
+
+      neuer_preis := 0;
+      sonstige_aenderungen := 0;
+      excel_datens„tze := 0;
+
+      //********************************************************************************************
+      //                               Definiert die Protokolldatei
+      //********************************************************************************************
+
+      CREATE (Protokoll_Excel);                                              // erzeugt excel
+      Protokoll_Book := Protokoll_Excel.Workbooks.Add(-4167);                // legt neue datei in excel an
+      Protokoll_Sheet := Protokoll_Excel.ActiveSheet;                        // definiert aktives worksheet
+      Protokoll_j:='2';
+
+      Protokoll_Sheet.Range('A'+'1').Value:= 'Artikelnr';                    // šberschriften der 2. Datei
+      Protokoll_Sheet.Range('A:A').ColumnWidth := 20;
+      Protokoll_Sheet.Range('B'+'1').Value:= 'DC alt';
+      Protokoll_Sheet.Range('C'+'1').Value:= 'DC neu';
+      Protokoll_Sheet.Range('D'+'1').Value:= 'Differenz';
+      Protokoll_Sheet.Range('E'+'1').Value:= 'LB';
+      Protokoll_Sheet.Range('F'+'1').Value:= 'BB';
+      Protokoll_Sheet.Range('G'+'1').Value:= 'AN';
+      Protokoll_Sheet.Range('H'+'1').Value:= 'AU';
+      Protokoll_Sheet.Range('I'+'1').Value:= 'AUR';
+      Protokoll_Sheet.Range('A1:I1').Interior.ColorIndex := 15;
+      Protokoll_Sheet.Range('A1:I1').Font.Bold := TRUE;
+
+      //********************************************************************************************
+      //                                          Update der Artikel
+      //********************************************************************************************
+
+      EVALUATE(a,Quelle_j);
+      excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count - a + 1;
+
+      IF excel_datens„tze > 49 THEN
+        BEGIN
+          IF CONFIRM('Es konnte mehr als 50 Eintr„ge in der Quelldatei gefunden werden.\' +
+                     'Soll der Status Update letzte Preisliste fr alle Artikel zurckgesetzt und neu ' +
+                     'bewertet werden?',TRUE) THEN
+            BEGIN
+
+              IF testlauf = FALSE THEN
+                BEGIN
+                  Artikel.RESET;
+                  Artikel.SETFILTER("Manufacturer Code",'%1','85');
+                  IF Artikel.FINDFIRST THEN
+                    Artikel.MODIFYALL("Update letzte Preisliste",FALSE);
+                END;
+
+              REPEAT
+
+                 IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value)) <= 40 THEN
+                   Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+
+                 IF Artikelname = '' THEN
+                   BEGIN
+                   END
+                 ELSE
+                   BEGIN
+                     Artikel.RESET;
+                     Artikel.SETFILTER("No. 2",'%1',Artikelname);
+                     IF Artikel.FINDFIRST THEN
+                       BEGIN
+
+                         PL_DISTI_TEXT := FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value);
+                         IF (STRLEN(DELCHR(PL_DISTI_TEXT,'=','ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')) =
+                         (STRLEN(PL_DISTI_TEXT))) THEN
+                           BEGIN
+                              //falls sich 1000er Trennzeichen eingeschlichen hat wird dies entfernt
+                              IF STRLEN(COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1)) > 2 THEN
+                                PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','.');
+
+                              IF STRPOS(PL_DISTI_TEXT, ',') <> 0  THEN
+                                 BEGIN
+                                   PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, ',')-1)
+                                              +',' +COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, ',')+1);
+                                 END;
+                              IF STRPOS(PL_DISTI_TEXT, '.') <> 0  THEN
+                                 BEGIN
+                                   PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, '.')-1)
+                                              +','+COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1);
+                                 END;
+                              IF PL_DISTI_TEXT = '' THEN PL_DISTI_TEXT := '0';
+
+                              // Wenn manuell das Dollar Zeichen in die Zeile geraten ist
+                              IF STRPOS(PL_DISTI_TEXT,'$') <> 0 THEN
+                                BEGIN
+                                  //PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','$');
+                                  hilfs_PL_DISTI_TEXT := PL_DISTI_TEXT;
+                                  hilfs_PL_DISTI_TEXT := DELCHR(hilfs_PL_DISTI_TEXT,'<>=',' ');
+                                  hilfs_PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=',DELCHR(PL_DISTI_TEXT,'=','.,0123456789'));
+                                  PL_DISTI_TEXT := hilfs_PL_DISTI_TEXT;
+                                END;
+
+                              EVALUATE(PL_DC,PL_DISTI_TEXT);
+                              PL_DC := ROUND(PL_DC,0.01);
+                           END
+                         ELSE
+                           PL_DC := 0;
+
+                         PL_MSRP := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
+                         PL_MSRP := ROUND(PL_MSRP,0.01);
+
+                         „nderung := FALSE;
+
+                         //*********************************************************************************************
+                         //                                    EK-Preise updaten
+                         //*********************************************************************************************
+
+                         einkaufspreis.RESET;
+                         einkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                         //einkaufspreis.SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                         IF einkaufspreis.FINDLAST THEN
+                           BEGIN
+                             IF (einkaufspreis."Direct Unit Cost" <> PL_DC) AND (PL_DC <> 0) THEN
+                               BEGIN
+                                 Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                                 Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
+                                 Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
+                                 Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                                 Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
+                                 Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
+                                 Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
+                                 Protokoll_Sheet.Range('F'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Purch. Order");
+                                 Protokoll_Sheet.Range('G'+Protokoll_j).Value := FORMAT(Artikel."Menge in Angebot");
+                                 Protokoll_Sheet.Range('H'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Sales Order");
+                                 Protokoll_Sheet.Range('I'+Protokoll_j).Value := FORMAT(Artikel."Menge im Rahmen");
+
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     einkaufspreis."Direct Unit Cost" := PL_DC;
+                                     einkaufspreis.MODIFY(TRUE);
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+
+                                 neuer_preis += 1;
+                                 „nderung := TRUE;
+
+                               END;
+                           END;
+
+                         //*********************************************************************************************
+                         //                                    VK-Preise updaten
+                         //*********************************************************************************************
+
+                         verkaufspreis.RESET;
+                         verkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                         IF verkaufspreis.FINDLAST THEN
+                           BEGIN
+                             IF (verkaufspreis."Unit Price" <> PL_MSRP) AND (PL_MSRP <> 0) THEN
+                               BEGIN
+                                 IF testlauf = FALSE THEN
+                                   BEGIN
+                                     verkaufspreis."Unit Price" := PL_MSRP;
+                                     verkaufspreis.MODIFY(TRUE);
+                                     Artikel.MODIFY(TRUE);
+                                   END;
+
+                                 neuer_preis += 1;
+                                 „nderung := TRUE;
+
+                               END;
+                           END;
+
+                         IF „nderung = TRUE THEN Protokoll_j := INCSTR(Protokoll_j);
+
+                         IF PL_DC <> 0 THEN
+                           BEGIN
+                             IF testlauf = FALSE THEN
+                               BEGIN
+                                 Artikel."Update letzte Preisliste":=TRUE;
+                                 Artikel.MODIFY;
+                               END;
+                           END;
+
+                       END;
+
+                   END;
+
+                //*********************************************************************************************
+                //                                       Abbruchbedingung
+                //*********************************************************************************************
+
+                // Wenn in der Quelldatei 15 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+                IF Artikelname = '' THEN                                       // erkennt das Ende   der Excel Datei
+                   BEGIN
+                     leere_zeilen := leere_zeilen+1;
+                   END
+                   ELSE
+                   BEGIN
+                     leere_zeilen :=0;
+                   END;
+
+                Quelle_j:=INCSTR(Quelle_j);                                    // n„chste Zeile Importdatei
+
+              UNTIL (Max_Datens„tze = Quelle_j) OR (leere_zeilen = 15);  // Nach 15 Zeilen ohne Artikel ist Schluss
+
+            END;
+        END;
+
+      Quelle_Excel.Visible(TRUE);
+      Protokoll_Excel.Visible(TRUE);
+
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+      CLEAR(Quelle_Excel);
+
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+      CLEAR(Protokoll_Excel);
+
+      REPEAT
+      UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+
+      REPEAT
+      UNTIL ISCLEAR(Protokoll_Excel) AND ISCLEAR(Protokoll_Book) AND ISCLEAR(Protokoll_Sheet);
+
+      MESSAGE('Import der Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Žnderungen: %2\\'+
+              'Excel Datens„tze: %3 (Ausgewerte Tabs: 1)\',neuer_preis,sonstige_aenderungen,excel_datens„tze);
+    END;
+
+    PROCEDURE ICP_Import@1140002();
+    VAR
+
+      Spalte_Part@1140012 : TextConst
+        'DEU=C';
+
+      Spalte_DC@1140011 : TextConst
+        'DEU=E';
+
+      Max_Datens„tze@1140002 : TextConst
+        'DEU=100';
+
+      Text000@1140001 : TextConst
+        'DEU=Fehler in der Syntax der Quelldatei.\Spalte: %1';
+      save_artikelname@1140005 : Code[80];
+      temp_artikelname@1140003 : Code[40];
+      „nderung@1140013 : Boolean;
+      k@1140000 : Integer;
+      i@1140004 : Integer;
+    BEGIN
+      CLEAR(Quelle_Excel);
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+
+      CLEAR(Protokoll_Excel);
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+
+      //********************************************************************************************
+      //                               Excel Datei Definitionen
+      // *******************************************************************************************
+
+      // Definiert die zu importierende Datei
+      IF CREATE (Quelle_Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Quelle_Book := Quelle_Excel.Workbooks._Open(speicherort,0,TRUE);
+      Quelle_Sheet := Quelle_Book.Worksheets.Item('LAN');
+      Quelle_j := '10';
+
+      //********************************************************************************************
+      //                              šberprfung Syntax Quelldatei
+      //********************************************************************************************
+
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Part + '9').Value) <> 'PART NO.' THEN
+        ERROR(Text000,Spalte_Part);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_DC + '9').Value) <> 'PRICE' THEN
+        ERROR(Text000,Spalte_DC);
+
+      neuer_preis := 0;
+      sonstige_aenderungen := 0;
+      excel_datens„tze := 0;
+
+      //********************************************************************************************
+      //                               Definiert die Protokolldatei
+      //********************************************************************************************
+
+      CREATE (Protokoll_Excel);                                              // erzeugt excel
+      Protokoll_Book := Protokoll_Excel.Workbooks.Add(-4167);                // legt neue datei in excel an
+      Protokoll_Sheet := Protokoll_Excel.ActiveSheet;                        // definiert aktives worksheet
+      Protokoll_j:='2';
+
+      Protokoll_Sheet.Range('A'+'1').Value:= 'Artikelnr';                    // šberschriften der 2. Datei
+      Protokoll_Sheet.Range('A:A').ColumnWidth := 20;
+      Protokoll_Sheet.Range('B'+'1').Value:= 'DC alt';
+      Protokoll_Sheet.Range('C'+'1').Value:= 'DC neu';
+      Protokoll_Sheet.Range('D'+'1').Value:= 'Differenz';
+      Protokoll_Sheet.Range('E'+'1').Value:= 'LB';
+      Protokoll_Sheet.Range('F'+'1').Value:= 'BB';
+      Protokoll_Sheet.Range('G'+'1').Value:= 'AN';
+      Protokoll_Sheet.Range('H'+'1').Value:= 'AU';
+      Protokoll_Sheet.Range('I'+'1').Value:= 'AUR';
+      Protokoll_Sheet.Range('J'+'1').Value:= 'Status';
+      Protokoll_Sheet.Range('J:J').ColumnWidth := 20;
+      Protokoll_Sheet.Range('A1:J1').Interior.ColorIndex := 15;
+      Protokoll_Sheet.Range('A1:J1').Font.Bold := TRUE;
+
+      //********************************************************************************************
+      //                                          Update der Artikel
+      //********************************************************************************************
+
+      EVALUATE(a,Quelle_j);
+      excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count - a + 1;
+
+      IF excel_datens„tze > 19 THEN
+        BEGIN
+          IF CONFIRM('Es konnte mehr als 20 Eintr„ge in der Quelldatei gefunden werden.\' +
+                     'Soll der Status Update letzte Preisliste fr alle Artikel zurckgesetzt und neu ' +
+                     'bewertet werden?',TRUE) THEN
+            BEGIN
+
+              IF testlauf = FALSE THEN
+                BEGIN
+                  Artikel.RESET;
+                  Artikel.SETFILTER("Manufacturer Code",'%1','30');
+                  IF Artikel.FINDFIRST THEN
+                    Artikel.MODIFYALL("Update letzte Preisliste",FALSE);
+                END;
+
+              REPEAT
+
+                 IF STRLEN(FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value)) <= 40 THEN
+                   BEGIN
+                     Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+                     Artikelname := DELCHR(Artikelname,'<',FORMAT(cr));
+                     Artikelname := DELCHR(Artikelname,'>',FORMAT(cr));
+                   END;
+
+                 IF Artikelname = '' THEN
+                   BEGIN
+                   END
+                 ELSE
+                   BEGIN
+                     //Ben”tigt, um zwei Artikel in einer Zeile mit Trennstrich '/' auszuwerten
+                     cr := 32;
+                     save_artikelname := Artikelname;
+                     IF (STRPOS(save_artikelname,'/') <> 0 )THEN
+                       i := 2
+                     ELSE
+                       i := 1;
+
+                     FOR k:= 1 TO i DO
+                       BEGIN
+                         IF i > 1 THEN
+                           BEGIN
+                             temp_artikelname := '';
+                             IF k = 1 THEN
+                               BEGIN
+                                 temp_artikelname := COPYSTR(save_artikelname, 1, STRPOS(save_artikelname, '/') - 1);
+                                 Artikel.SETFILTER("No. 2",'%1',temp_artikelname);
+                                 IF NOT Artikel.FINDFIRST THEN
+                                   BEGIN
+                                     temp_artikelname := temp_artikelname + COPYSTR(save_artikelname,
+                                                         STRPOS(save_artikelname,FORMAT(cr)));
+
+                                   END;
+                               END;
+                             IF k = 2 THEN
+                               BEGIN
+                                 temp_artikelname := COPYSTR(save_artikelname, STRPOS(save_artikelname, '/') + 1);
+                                 Artikel.SETFILTER("No. 2",'%1',temp_artikelname);
+                                 IF NOT Artikel.FINDFIRST THEN
+                                   BEGIN
+                                     temp_artikelname := DELCHR(COPYSTR(Artikelname, 1, STRPOS(save_artikelname, '/') - 1),'=',
+                                                       COPYSTR(temp_artikelname,1,STRPOS(temp_artikelname, FORMAT(cr)) - 1)) +
+                                                       COPYSTR(temp_artikelname,STRPOS(temp_artikelname, '/') + 1);
+                                   END;
+                               END;
+                             Artikelname := temp_artikelname;
+                           END;
+
+                         Artikel.RESET;
+                         Artikel.SETFILTER("No. 2",'%1',Artikelname);
+                         IF Artikel.FINDFIRST THEN
+                           BEGIN
+
+                             PL_DISTI_TEXT := FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value);
+                             IF STRPOS(PL_DISTI_TEXT,FORMAT(cr)) <> 0 THEN
+                               PL_DISTI_TEXT := COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT,FORMAT(cr))-1);
+                             IF (STRLEN(DELCHR(PL_DISTI_TEXT,'=','ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ')) =
+                             (STRLEN(PL_DISTI_TEXT))) THEN
+                               BEGIN
+                                  //falls sich 1000er Trennzeichen eingeschlichen hat wird dies entfernt
+                                  IF STRLEN(COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1)) > 2 THEN
+                                    PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','.');
+
+                                  IF STRPOS(PL_DISTI_TEXT, ',') <> 0  THEN
+                                     BEGIN
+                                       PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, ',')-1)
+                                                  +',' +COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, ',')+1);
+                                     END;
+                                  IF STRPOS(PL_DISTI_TEXT, '.') <> 0  THEN
+                                     BEGIN
+                                       PL_DISTI_TEXT:= COPYSTR(PL_DISTI_TEXT,1,STRPOS(PL_DISTI_TEXT, '.')-1)
+                                                  +','+COPYSTR(PL_DISTI_TEXT,STRPOS(PL_DISTI_TEXT, '.')+1);
+                                     END;
+                                  IF PL_DISTI_TEXT = '' THEN PL_DISTI_TEXT := '0';
+
+                                  // Wenn manuell das Dollar Zeichen in die Zeile geraten ist
+                                  IF STRPOS(PL_DISTI_TEXT,'$') <> 0 THEN
+                                    BEGIN
+                                      //PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=','$');
+                                      hilfs_PL_DISTI_TEXT := PL_DISTI_TEXT;
+                                      hilfs_PL_DISTI_TEXT := DELCHR(hilfs_PL_DISTI_TEXT,'<>=',' ');
+                                      hilfs_PL_DISTI_TEXT := DELCHR(PL_DISTI_TEXT,'=',DELCHR(PL_DISTI_TEXT,'=','.,0123456789'));
+                                      PL_DISTI_TEXT := hilfs_PL_DISTI_TEXT;
+                                    END;
+
+                                  EVALUATE(PL_DC,PL_DISTI_TEXT);
+                                  PL_DC := ROUND(PL_DC,0.01);
+                               END
+                             ELSE
+                               PL_DC := 0;
+
+                             „nderung := FALSE;
+
+                             Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                             Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
+
+                             //*********************************************************************************************
+                             //                                    EK-Preise updaten
+                             //*********************************************************************************************
+
+                             einkaufspreis.RESET;
+                             einkaufspreis.SETFILTER("Item No.",'%1',Artikel."No.");
+                             //einkaufspreis.SETFILTER("Vendor No.",'%1',Artikel."Vendor No.");
+                             IF einkaufspreis.FINDLAST THEN
+                               BEGIN
+                                 IF (einkaufspreis."Direct Unit Cost" <> PL_DC) AND (PL_DC <> 0) THEN
+                                   BEGIN
+                                     Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
+                                     Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
+                                     Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                                     Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
+                                     Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
+                                     Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
+                                     Protokoll_Sheet.Range('F'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Purch. Order");
+                                     Protokoll_Sheet.Range('G'+Protokoll_j).Value := FORMAT(Artikel."Menge in Angebot");
+                                     Protokoll_Sheet.Range('H'+Protokoll_j).Value := FORMAT(Artikel."Qty. on Sales Order");
+                                     Protokoll_Sheet.Range('I'+Protokoll_j).Value := FORMAT(Artikel."Menge im Rahmen");
+
+                                     IF testlauf = FALSE THEN
+                                       BEGIN
+                                         einkaufspreis."Direct Unit Cost" := PL_DC;
+                                         einkaufspreis.MODIFY(TRUE);
+                                         Artikel.MODIFY(TRUE);
+                                       END;
+
+                                     neuer_preis += 1;
+                                     „nderung := TRUE;
+
+                                   END
+                                 ELSE
+                                   BEGIN
+                                     Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
+                                     Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'OK';
+                                   END;
+                               END;
+
+                               IF PL_DC <> 0 THEN
+                                 BEGIN
+                                   IF testlauf = FALSE THEN
+                                     BEGIN
+                                       Artikel."Update letzte Preisliste":=TRUE;
+                                       Artikel.MODIFY;
+                                     END;
+                                 END;
+
+                             Protokoll_j := INCSTR(Protokoll_j);
+
+                           END
+                         ELSE
+                           BEGIN
+                             Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                             Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'nicht gefunden';
+                             Protokoll_j := INCSTR(Protokoll_j);
+                           END;
+
+                       END;
+
+                   END;
+
+                //*********************************************************************************************
+                //                                       Abbruchbedingung
+                //*********************************************************************************************
+
+                // Wenn in der Quelldatei 15 Leere Zeilen hintereinander kommen, ist das Dateiende erreicht
+                IF Artikelname = '' THEN                                       // erkennt das Ende   der Excel Datei
+                   BEGIN
+                     leere_zeilen := leere_zeilen+1;
+                   END
+                   ELSE
+                   BEGIN
+                     leere_zeilen :=0;
+                   END;
+
+                Quelle_j:=INCSTR(Quelle_j);                                    // n„chste Zeile Importdatei
+
+              UNTIL (Max_Datens„tze = Quelle_j) OR (leere_zeilen = 15);  // Nach 15 Zeilen ohne Artikel ist Schluss
+
+            END;
+        END;
+
+      Quelle_Excel.Visible(TRUE);
+      Protokoll_Excel.Visible(TRUE);
+
+      CLEAR(Quelle_Sheet);
+      CLEAR(Quelle_Book);
+      CLEAR(Quelle_Excel);
+
+      CLEAR(Protokoll_Sheet);
+      CLEAR(Protokoll_Book);
+      CLEAR(Protokoll_Excel);
+
+      REPEAT
+      UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
+
+      REPEAT
+      UNTIL ISCLEAR(Protokoll_Excel) AND ISCLEAR(Protokoll_Book) AND ISCLEAR(Protokoll_Sheet);
+
+      MESSAGE('Import der Artikel abgeschlossen.'+ '\\' + 'Neue Preise: %1\Sonstige Žnderungen: %2\\'+
+              'Excel Datens„tze: %3 (Ausgewerte Tabs: 1)\',neuer_preis,sonstige_aenderungen,excel_datens„tze);
+    END;
+
+    PROCEDURE Open_WinApplct@1140003(VAR field@1140002 : Text[180]);
+    VAR
+      WinApplct@1140000 : Automation "{50A7E9B0-70EF-11D1-B75A-00A0C90564FE} 1.0:{13709620-C279-11CE-A49E-444553540000}:'Microsoft Shell Controls And Automation'.Shell";
+      Filename@1140001 : Text[260];
+    BEGIN
+      CREATE(WinApplct);
+      Filename := field;
+      IF NOT EXISTS(Filename) THEN
+        ERROR(Text100,Filename);
+
+      WinApplct.Open(Filename);
+    END;
+
+    PROCEDURE Save_FileDialog@1140001() : Text[250];
+    VAR
+      DialogMgt@1140002 : Codeunit 412;
+      DialogDefaultFileType@1140001 : ' ,Text,Excel,Word,Custom,PDF';
+      DialogAction@1140000 : 'Open,Save';
+      Speicherort@1140003 : Text[250];
+    BEGIN
+      EXIT(
+        DialogMgt.OpenFile(
+         'Dokument ausw„hlen',
+         Speicherort,
+         DialogDefaultFileType::Custom,
+         'Alle Dateien (*.*)|*.*',
+         DialogAction::Save));
+    END;
+
+    EVENT Protokoll_Sheet@1140025::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::PivotTableUpdate@2156(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::PivotTableAfterValueChange@2886(TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::PivotTableBeforeCommitChanges@2892(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Sheet@1140025::PivotTableChangeSync@2894(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::WindowResize@1554(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::WindowActivate@1556(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::WindowDeactivate@1557(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::PivotTableCloseConnection@2158(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::PivotTableOpenConnection@2159(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::Sync@2266(SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::BeforeXmlImport@2283(Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::AfterXmlImport@2285(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::RowsetComplete@2610(Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::AfterSave@2900(Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Book@1140026::NewChart@2901(Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::NewWorkbook@1565(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookOpen@1567(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookActivate@1568(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookDeactivate@1569(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookNewSheet@1573(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookAddinInstall@1574(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WindowResize@1554(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WindowActivate@1556(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WindowDeactivate@1557(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookPivotTableCloseConnect@2160(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookSync@2289(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookBeforeXmlImport@2290(Wb@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookAfterXmlImport@2291(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::WorkbookRowsetComplete@2611(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::AfterCalculate@2612();
+    BEGIN
+    END;
+
+    EVENT Protokoll_Excel@1140027::ProtectedViewWindowDeactivate@2910(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::PivotTableUpdate@2156(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::PivotTableAfterValueChange@2886(TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::PivotTableBeforeCommitChanges@2892(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Sheet@1140029::PivotTableChangeSync@2894(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::WindowResize@1554(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::WindowActivate@1556(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::WindowDeactivate@1557(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::PivotTableCloseConnection@2158(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::PivotTableOpenConnection@2159(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::Sync@2266(SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::AfterXmlImport@2285(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::RowsetComplete@2610(Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::AfterSave@2900(Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Book@1140030::NewChart@2901(Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::NewWorkbook@1565(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookOpen@1567(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookActivate@1568(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookDeactivate@1569(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookBeforeSave@1571(Wb@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookNewSheet@1573(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookAddinInstall@1574(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WindowResize@1554(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WindowActivate@1556(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WindowDeactivate@1557(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookPivotTableOpenConnecti@2161(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookSync@2289(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookAfterXmlImport@2291(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookRowsetComplete@2611(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::AfterCalculate@2612();
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::ProtectedViewWindowDeactivate@2910(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookAfterSave@2911(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Quelle_Excel@1140031::WorkbookNewChart@2912(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
