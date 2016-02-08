@@ -1,0 +1,251 @@
+OBJECT Codeunit 82 Sales-Post + Print
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.09.14;
+    Time=14:53:13;
+    Modified=Yes;
+    Version List=NAVW15.00,NAVDACH4.00.02;
+  }
+  PROPERTIES
+  {
+    TableNo=36;
+    OnRun=BEGIN
+            SalesHeader.COPY(Rec);
+            Code;
+            Rec := SalesHeader;
+          END;
+
+  }
+  CODE
+  {
+    VAR
+
+      Text000@1000 : TextConst
+        'DEU=&Liefern,&Fakturieren,Liefern &und fakturieren',
+        'ENU=&Ship,&Invoice,Ship &and Invoice';
+
+      Text001@1001 : TextConst
+        'DEU=M”chten Sie die %1 buchen und drucken?',
+        'ENU=Do you want to post and print the %1?';
+
+      Text002@1002 : TextConst
+        'DEU=&Liefern,&Fakturieren,Liefern &und fakturieren',
+        'ENU=&Receive,&Invoice,Receive &and Invoice';
+      SalesHeader@1003 : Record 36;
+      SalesLine@1140001 : Record 37;
+      Cust@1140002 : Record 18;
+      TotalSalesLineLCY@1140003 : Decimal;
+      SalesShptHeader@1004 : Record 110;
+      SalesInvHeader@1005 : Record 112;
+      SalesCrMemoHeader@1006 : Record 114;
+      ReturnRcptHeader@1007 : Record 6660;
+      ReportSelection@1008 : Record 77;
+      SalesPost@1009 : Codeunit 80;
+      Selection@1010 : Integer;
+      EBPPSetup@1150001 : Record 3010501;
+
+      Text100@1140000 : TextConst
+        'DEU=Sie drfen nicht gleichzeitig Liefern & Fakturieren beim Lagerortcode KONSI.';
+      LizenzTab@1140006 : Record 50024;
+      Packkontrolle@1140007 : Record 50038;
+      AUnr@1140005 : Code[20];
+      TOPAS_Buchungen_prfen@1140004 : Boolean;
+
+    LOCAL PROCEDURE Code@2();
+    BEGIN
+      //TOPAS 01.03.2011-ST SUP Lizenz Generierung
+      TOPAS_Buchungen_prfen := FALSE;
+      AUnr := '';
+      //TOPAS Ende
+
+      WITH SalesHeader DO BEGIN
+        CASE "Document Type" OF
+          "Document Type"::Order:
+            BEGIN
+
+              //TOPAS 23.09.2011-ST CHAMPS
+              AUnr := SalesHeader."No.";
+              //TOPAS Ende
+
+              Selection := STRMENU(Text000,3);
+              IF Selection = 0 THEN
+                EXIT;
+
+              Ship := Selection IN [1,3];
+              Invoice := Selection IN [2,3];
+              //TOPAS 09.09.09-ST
+              IF (Selection IN [3,3]) AND (SalesHeader."Location Code" = 'KONSI') THEN
+                ERROR(Text100);
+
+              IF (Selection IN [1,3]) OR (Selection IN [3,3]) THEN
+                TOPAS_Buchungen_prfen := TRUE;
+
+              // Zusatz Kreditlimitberprfung
+              IF (Selection IN [2,3]) OR (Selection IN [3,3]) THEN
+                BEGIN
+                  TotalSalesLineLCY := 0;
+                  Cust.GET(SalesHeader."Sell-to Customer No.");
+                  Cust.CALCFIELDS (Cust."Balance (LCY)");
+                  SalesLine.RESET;
+                  SalesLine.SETFILTER(SalesLine."Document No.",'%1',SalesHeader."No.");
+                  SalesLine.SETFILTER(SalesLine."Qty. to Invoice",'>%1',0);
+                  IF SalesLine.FINDFIRST THEN
+                    BEGIN
+                      REPEAT
+                        IF SalesLine."VAT %" = 19 THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)"*1.19;
+                        IF SalesLine."VAT %"  = 7 THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)"*1.07;
+                        IF (SalesLine."VAT %" <> 19) AND (SalesLine."VAT %" <> 7) THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)";
+                      UNTIL SalesLine.NEXT = 0;
+                    END;
+                  IF Cust."Balance (LCY)" + TotalSalesLineLCY > Cust."Credit Limit (LCY)" THEN
+                     ERROR ('Fr Debitor %1 bersteigt die Summe aus \\' +
+                            'Saldo (MW)                                     = %2 und \\' +
+                            'aktuellem Rechnungsbetrag (MW) = %3 das\\' +
+                            'Kreditlimit (MW)                              = %4.', Cust."No.",
+                             Cust."Balance (LCY)", TotalSalesLineLCY,
+                             Cust."Credit Limit (LCY)");
+
+                END;
+              //TOPAS Ende
+            END;
+          "Document Type"::"Return Order":
+            BEGIN
+              Selection := STRMENU(Text002,3);
+              IF Selection = 0 THEN
+                EXIT;
+              Receive := Selection IN [1,3];
+              Invoice := Selection IN [2,3];
+            END ELSE
+              IF NOT
+                CONFIRM(
+                  Text001,FALSE,
+                  "Document Type")
+              THEN
+                EXIT;
+        END;
+
+        SalesPost.RUN(SalesHeader);
+
+        GetReport(SalesHeader);
+        COMMIT;
+
+        //TOPAS 01.03.2011-ST Champ Lizenz Generierung, Žnderung 07.09.2011-ST
+        //Freischaltung am 09.09.2011-ST
+        IF TOPAS_Buchungen_prfen = TRUE THEN
+          BEGIN
+
+            //TOPAS 02.01.2012-ST Packdaten holen
+            Packkontrolle.HolePackDaten(AUnr);
+
+            LizenzTab.RESET;
+            LizenzTab.CreateSystemFromSalesHeader(AUnr,FALSE);
+            LizenzTab.CreateServiceFromSalesHeader(AUnr,FALSE);
+          END;
+        //TOPAS Ende
+
+      END;
+    END;
+
+    PROCEDURE GetReport@3(VAR SalesHeader@1000 : Record 36);
+    BEGIN
+      WITH SalesHeader DO BEGIN
+        CASE "Document Type" OF
+          "Document Type"::Order:
+            BEGIN
+              IF Ship THEN BEGIN
+                SalesShptHeader."No." := "Last Shipping No.";
+                SalesShptHeader.SETRECFILTER;
+                PrintReport(ReportSelection.Usage::"S.Shipment");
+              END;
+              IF Invoice THEN BEGIN
+                IF EBPPSetup.FIND('-') THEN
+                  IF EBPPSetup.CheckEBPPPrint("Document Type"::Invoice,"Last Posting No.","Bill-to Customer No.",FALSE) THEN
+                    EXIT;
+                SalesInvHeader."No." := "Last Posting No.";
+                SalesInvHeader.SETRECFILTER;
+                PrintReport(ReportSelection.Usage::"S.Invoice");
+              END;
+            END;
+          "Document Type"::Invoice:
+            BEGIN
+              IF EBPPSetup.FIND('-') THEN
+                IF EBPPSetup.CheckEBPPPrint("Document Type"::Invoice,"Last Posting No.","Bill-to Customer No.",FALSE) THEN
+                  EXIT;
+
+              IF "Last Posting No." = '' THEN
+                SalesInvHeader."No." := "No."
+              ELSE
+                SalesInvHeader."No." := "Last Posting No.";
+              SalesInvHeader.SETRECFILTER;
+              PrintReport(ReportSelection.Usage::"S.Invoice");
+            END;
+          "Document Type"::"Return Order":
+            BEGIN
+              IF Receive THEN BEGIN
+                ReturnRcptHeader."No." := "Last Return Receipt No.";
+                ReturnRcptHeader.SETRECFILTER;
+                PrintReport(ReportSelection.Usage::"S.Ret.Rcpt.");
+              END;
+              IF Invoice THEN BEGIN
+                IF EBPPSetup.FIND('-') THEN
+                  IF EBPPSetup.CheckEBPPPrint("Document Type"::"Return Order","Last Posting No.","Bill-to Customer No.",FALSE) THEN
+                    EXIT;
+
+                SalesCrMemoHeader."No." := "Last Posting No.";
+                SalesCrMemoHeader.SETRECFILTER;
+                PrintReport(ReportSelection.Usage::"S.Cr.Memo");
+              END;
+            END;
+          "Document Type"::"Credit Memo":
+            BEGIN
+              IF EBPPSetup.FIND('-') THEN
+                IF EBPPSetup.CheckEBPPPrint("Document Type"::"Credit Memo","Last Posting No.","Bill-to Customer No.",FALSE) THEN
+                  EXIT;
+
+              IF "Last Posting No." = '' THEN
+                SalesCrMemoHeader."No." := "No."
+              ELSE
+                SalesCrMemoHeader."No." := "Last Posting No.";
+              SalesCrMemoHeader.SETRECFILTER;
+              PrintReport(ReportSelection.Usage::"S.Cr.Memo");
+            END;
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE PrintReport@1(ReportUsage@1000 : Integer);
+    BEGIN
+      ReportSelection.RESET;
+      ReportSelection.SETRANGE(Usage,ReportUsage);
+      ReportSelection.FINDSET;
+      REPEAT
+        ReportSelection.TESTFIELD("Report ID");
+        CASE ReportUsage OF
+          ReportSelection.Usage::"SM.Invoice":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,SalesInvHeader);
+          ReportSelection.Usage::"SM.Credit Memo":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,SalesCrMemoHeader);
+          ReportSelection.Usage::"S.Invoice":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,SalesInvHeader);
+          ReportSelection.Usage::"S.Cr.Memo":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,SalesCrMemoHeader);
+          ReportSelection.Usage::"S.Shipment":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,SalesShptHeader);
+          ReportSelection.Usage::"S.Ret.Rcpt.":
+            REPORT.RUN(ReportSelection."Report ID",FALSE,FALSE,ReturnRcptHeader);
+        END;
+      UNTIL ReportSelection.NEXT = 0;
+    END;
+
+    BEGIN
+    {
+      TOPAS 070911 ST: - Champ Modul Integration unter Funktion Code()
+    }
+    END.
+  }
+}
+
