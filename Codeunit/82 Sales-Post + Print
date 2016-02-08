@@ -2,8 +2,8 @@ OBJECT Codeunit 82 Sales-Post + Print
 {
   OBJECT-PROPERTIES
   {
-    Date=19.09.14;
-    Time=14:53:13;
+    Date=08.02.16;
+    Time=13:31:07;
     Modified=Yes;
     Version List=NAVW15.00,NAVDACH4.00.02;
   }
@@ -79,7 +79,13 @@ OBJECT Codeunit 82 Sales-Post + Print
                 ERROR(Text100);
 
               IF (Selection IN [1,3]) OR (Selection IN [3,3]) THEN
-                TOPAS_Buchungen_prfen := TRUE;
+                BEGIN
+                  SalesLine.RESET;
+                  SalesLine.SETFILTER(SalesLine."Document No.",'%1',SalesHeader."No.");
+                  SalesLine.SETFILTER(SalesLine."Qty. to Ship",'>%1',0);
+                  IF SalesLine.FINDFIRST THEN
+                    TOPAS_Buchungen_prfen := TRUE;
+                END;
 
               // Zusatz Kreditlimitberprfung
               IF (Selection IN [2,3]) OR (Selection IN [3,3]) THEN
