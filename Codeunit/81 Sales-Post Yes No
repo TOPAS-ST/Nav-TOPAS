@@ -1,0 +1,148 @@
+OBJECT Codeunit 81 Sales-Post (Yes/No)
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.03.14;
+    Time=16:52:51;
+    Modified=Yes;
+    Version List=NAVW15.00;
+  }
+  PROPERTIES
+  {
+    TableNo=36;
+    OnRun=BEGIN
+            SalesHeader.COPY(Rec);
+            Code;
+            Rec := SalesHeader;
+          END;
+
+  }
+  CODE
+  {
+    VAR
+
+      Text000@1000 : TextConst
+        'DEU=&Liefern,&Fakturieren,Liefern &und fakturieren',
+        'ENU=&Ship,&Invoice,Ship &and Invoice';
+
+      Text001@1001 : TextConst
+        'DEU=M”chten Sie die %1 buchen?',
+        'ENU=Do you want to post the %1?';
+
+      Text002@1002 : TextConst
+        'DEU=&Liefern,&Fakturieren,Liefern &und fakturieren',
+        'ENU=&Receive,&Invoice,Receive &and Invoice';
+      SalesHeader@1003 : Record 36;
+      SalesLine@1140001 : Record 37;
+      Cust@1140003 : Record 18;
+      LizenzTab@1140006 : Record 50024;
+      TotalSalesLineLCY@1140002 : Decimal;
+      SalesPost@1004 : Codeunit 80;
+      Selection@1005 : Integer;
+
+      Text100@1140000 : TextConst
+        'DEU=Sie drfen nicht gleichzeitig Liefern & Fakturieren beim Lagerortcode KONSI.';
+      Packkontrolle@1140007 : Record 50038;
+      AUnr@1140005 : Code[20];
+      TOPAS_Buchungen_prfen@1140004 : Boolean;
+
+    LOCAL PROCEDURE Code@1();
+    BEGIN
+      //TOPAS 01.03.2011-ST SUP Lizenz Generierung
+      TOPAS_Buchungen_prfen :=  FALSE;
+      AUnr := '';
+      //TOPAS Ende
+
+      WITH SalesHeader DO BEGIN
+        CASE "Document Type" OF
+          "Document Type"::Order:
+            BEGIN
+
+              //TOPAS 23.09.2011-ST
+              AUnr := SalesHeader."No.";
+              //TOPAS Ende
+
+              Selection := STRMENU(Text000,3);
+              IF Selection = 0 THEN
+                EXIT;
+
+              Ship := Selection IN [1,3];
+              Invoice := Selection IN [2,3];
+              //TOPAS 09.09.09-ST
+              IF (Selection IN [3,3]) AND (SalesHeader."Location Code" = 'KONSI') THEN
+                ERROR(Text100);
+
+              IF (Selection IN [1,3]) OR (Selection IN [3,3]) THEN
+                TOPAS_Buchungen_prfen := TRUE;
+
+              // Zusatz Kreditlimitberprfung
+              IF (Selection IN [2,3]) OR (Selection IN [3,3]) THEN
+                BEGIN
+                  TotalSalesLineLCY := 0;
+                  Cust.GET(SalesHeader."Sell-to Customer No.");
+                  Cust.CALCFIELDS (Cust."Balance (LCY)");
+                  SalesLine.RESET;
+                  SalesLine.SETFILTER(SalesLine."Document No.",'%1',SalesHeader."No.");
+                  SalesLine.SETFILTER(SalesLine."Qty. to Invoice",'>%1',0);
+                  IF SalesLine.FINDFIRST THEN
+                    BEGIN
+                      REPEAT
+                        IF SalesLine."VAT %" = 19 THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)"*1.19;
+                        IF SalesLine."VAT %"  = 7 THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)"*1.07;
+                        IF (SalesLine."VAT %" <> 19) AND (SalesLine."VAT %" <> 7) THEN
+                          TotalSalesLineLCY := TotalSalesLineLCY + SalesLine."Qty. to Invoice (Base)" * SalesLine."VK-Preis (MW)";
+                      UNTIL SalesLine.NEXT = 0;
+                    END;
+                  IF Cust."Balance (LCY)" + TotalSalesLineLCY > Cust."Credit Limit (LCY)" THEN
+                     ERROR ('Fr Debitor %1 bersteigt die Summe aus \\' +
+                            'Saldo (MW)                                     = %2 und \\' +
+                            'aktuellem Rechnungsbetrag (MW) = %3 das\\' +
+                            'Kreditlimit (MW)                              = %4.', Cust."No.",
+                             Cust."Balance (LCY)", TotalSalesLineLCY,
+                             Cust."Credit Limit (LCY)");
+
+                END;
+              //TOPAS Ende
+            END;
+          "Document Type"::"Return Order":
+            BEGIN
+              Selection := STRMENU(Text002,3);
+              IF Selection = 0 THEN
+                EXIT;
+              Receive := Selection IN [1,3];
+              Invoice := Selection IN [2,3];
+            END ELSE
+              IF NOT
+                 CONFIRM(
+                   Text001,FALSE,
+                   "Document Type")
+              THEN
+                EXIT;
+        END;
+        SalesPost.RUN(SalesHeader);
+        COMMIT;
+
+        //TOPAS 01.03.2011-ST Champ Lizenz Generierung, Žnderung 07.09.2011-ST
+        //Freischaltung am 09.09.2011-ST
+        IF TOPAS_Buchungen_prfen = TRUE THEN
+          BEGIN
+
+            //TOPAS 02.01.2012-ST Packdaten holen
+            Packkontrolle.HolePackDaten(AUnr);
+
+            LizenzTab.RESET;
+            LizenzTab.CreateSystemFromSalesHeader(AUnr,FALSE);
+            LizenzTab.CreateServiceFromSalesHeader(AUnr,TRUE);
+          END;
+        //TOPAS Ende
+
+      END;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
