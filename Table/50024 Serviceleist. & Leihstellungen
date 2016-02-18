@@ -3033,14 +3033,29 @@ IF Wartungsnr <> '' THEN
     PrüfeLizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
     PrüfeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'>=%1',Buchungsdatum);
     PrüfeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',Wartungsnr);
-    PrüfeLizenzTab.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr");
     IF PrüfeLizenzTab.FINDFIRST THEN
-      BEGIN
-        IF PrüfeLizenzTab.Lizenzdatum > Buchungsdatum THEN
-          EXIT(PrüfeLizenzTab.Lizenzdatum)
-        ELSE
-          EXIT(Buchungsdatum);
-      END
+      REPEAT
+        ErmittleNeueServiceGruppe.RESET;
+        ErmittleNeueServiceGruppe.SETRANGE("Tabellen ID",50024);
+        ErmittleNeueServiceGruppe.SETRANGE("Feld ID",44);
+        ErmittleNeueServiceGruppe.SETRANGE("Nr.","SUP Artikelnr");
+        IF ErmittleNeueServiceGruppe.FINDFIRST THEN
+          BEGIN
+            ErmittleVertragServiceGruppe.RESET;
+            ErmittleVertragServiceGruppe.SETRANGE("Tabellen ID",50024);
+            ErmittleVertragServiceGruppe.SETRANGE("Feld ID",44);
+            ErmittleVertragServiceGruppe.SETRANGE("Nr.",PrüfeLizenzTab."SUP Artikelnr.");
+            IF ErmittleVertragServiceGruppe.FINDFIRST THEN
+              BEGIN
+                IF ErmittleNeueServiceGruppe."Einordnung Servicegruppe" = 
+                   ErmittleVertragServiceGruppe."Einordnung Servicegruppe" THEN
+                     IF PrüfeLizenzTab.Lizenzdatum > Buchungsdatum THEN
+                       EXIT(PrüfeLizenzTab.Lizenzdatum)
+                     ELSE
+                       EXIT(Buchungsdatum);
+              END;
+          END;
+      UNTIL PrüfeLizenzTab.NEXT = 0
     ELSE
       EXIT(Buchungsdatum);
   END
@@ -3059,6 +3074,8 @@ ELSE
           EXIT(Buchungsdatum);
       END;
   END;
+
+EXIT(Buchungsdatum);
 
 WartungsLaufzeitErmitteln(SUPArtikelnr : Code[20];Laufzeit : Code[20]) : Code[20]
 IF (SUPArtikelnr = 'CHAMPS-RE_INSTATE#01') OR (SUPArtikelnr = 'RE_INSTATEMENT_FEE') THEN
