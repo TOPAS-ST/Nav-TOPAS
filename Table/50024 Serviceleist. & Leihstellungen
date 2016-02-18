@@ -2196,7 +2196,9 @@ IF Vkliefkopf.FINDLAST THEN
                                                          LizenzTab."Zu exportieren" := TRUE;
                                                      END;
                                                    Wartung.MODIFY(TRUE);
-                                                END;
+                                                 END;
+                                               PrüfeBetreuerWechsel(Wartung."Wartungsvertragsnr.",Wartung."Debitornr.",
+                                                                    LizenzTab."Debitornr.");
                                              END
                                            ELSE
                                              BEGIN
@@ -2387,6 +2389,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               END;
                                             Wartung.MODIFY(TRUE);
                                           END;
+                                        PrüfeBetreuerWechsel(Wartung."Wartungsvertragsnr.",Wartung."Debitornr.",
+                                                             LizenzTab."Debitornr.");
                                       END
                                     ELSE
                                       BEGIN
@@ -2588,6 +2592,8 @@ IF Vkliefkopf.FINDLAST THEN
                                               END;
                                             Wartung.MODIFY(TRUE);
                                           END;
+                                        PrüfeBetreuerWechsel(Wartung."Wartungsvertragsnr.",Wartung."Debitornr.",
+                                                             LizenzTab."Debitornr.");
                                       END
                                     ELSE
                                       BEGIN
@@ -3523,3 +3529,43 @@ IF (Artikel.GET(artikelnr)) AND (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')
   END;
 
 EXIT(TRUE);
+
+PrüfeBetreuerWechsel(Vertragsnr : Code[20];VertragsDebnr : Code[20];NeueDebnr : Code[20])
+IF (VertragsDebnr = NeueDebnr) OR (NeueDebnr = '') THEN EXIT;
+
+Vertrag.GET(Vertragsnr);
+
+// Ändern der Führungsrolle anhand des neuen Betreuers
+IF VertragsDebnr <> NeueDebnr THEN
+  BEGIN
+     Beteiligte.RESET;
+     Beteiligte.SETRANGE("Kampagnennr.",Vertrag."Wartungsvertragsnr.");
+     Beteiligte.SETRANGE(Führungsrolle,TRUE);
+     IF Beteiligte.FINDFIRST THEN
+       BEGIN
+         Beteiligte.Führungsrolle := FALSE;
+         Beteiligte.Bemerkung := 'autom. Betreuerwechsel';
+         Beteiligte.MODIFY;
+       END;
+
+    DebKontaktBez.RESET;
+    DebKontaktBez.SETRANGE("Business Relation Code",'DEB');
+    DebKontaktBez.SETRANGE("No.",NeueDebnr);
+    IF DebKontaktBez.FINDFIRST THEN
+      BEGIN
+        Beteiligte.RESET;
+        Beteiligte.SETRANGE("Kampagnennr.",Vertrag."Wartungsvertragsnr.");
+        Beteiligte.SETRANGE("Kontaktnr.",DebKontaktBez."Contact No.");
+        IF NOT Beteiligte.FINDFIRST THEN
+          BEGIN
+            Beteiligte.INIT;
+            Beteiligte.VALIDATE("Kontaktnr.",DebKontaktBez."Contact No.");
+            Beteiligte."Kampagnennr." := Vertrag."Wartungsvertragsnr.";
+            Beteiligte.Führungsrolle := TRUE;
+            Beteiligte.INSERT;
+          END;
+          Vertrag.GET(Vertragsnr);
+          Vertrag.VALIDATE("Debitornr.",NeueDebnr);
+          Vertrag.MODIFY;
+      END;
+  END;
