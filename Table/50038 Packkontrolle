@@ -358,9 +358,17 @@ IF AP.FINDFIRST THEN
                     IF ((AP."Source No." = '718740') OR (AP."Source No." = '715250')) AND 
                     (Artikel."Manufacturer Code" = '78') THEN
                       Label."Manufacturer Number" := '200001506';
+                    IF (AP."Source No." = '912880') AND (Artikel."Manufacturer Code" = '30') THEN
+                      Label."Manufacturer Number" := '657593443';
 
                     //Label."Revision Level" := ;
                     //Label."Additional Part Information" := ;
+
+                    //Problem beim Auslesen des Datamatrix Codes durch Wasp Labeler, anscheinend bei 193 Zeichen, deswegen
+                    //gibt es eine einfache Abfrage damit ein zusätzliches Zeichen in einem kaum benutzten Feld vorliegt
+                    IF (STRLEN(FORMAT(Label."Manufacturer Part Number")) = 10)
+                    AND (STRLEN(DELCHR(FORMAT(AP.Quantity),'=','.-')) = 4) THEN
+                      Label."Additional Part Information" := '.';
 
                     //**************************************************************************************************
                     //     MS-Level kann als Eingabefeld im Wasp Labeler, da es dieses Feld nicht im Artikelstamm
@@ -517,7 +525,7 @@ IF AP.FINDFIRST THEN
 
                     IF rest_splittmenge = 0 THEN
                       BEGIN
-                        Label.Quantity := FORMAT((AP.Quantity * (-1))/splitte) + 'NAR000';
+                        Label.Quantity := DELCHR(FORMAT((AP.Quantity * (-1))/splitte),'=','.') + 'NAR000';
                         Label."Quantity Label" := FORMAT((AP.Quantity * (-1))/splitte);
                       END
                     ELSE
@@ -645,7 +653,8 @@ IF VKliefkopf.FINDLAST THEN
            OR (Artikel."Manufacturer Code" = '57') OR(Artikel."Manufacturer Code" = '5710')
            OR (Artikel."Manufacturer Code" = '96') OR (Artikel."Manufacturer Code" = '99'))
            OR ((Artikel."Manufacturer Code" = '59') AND ((Artikel.Serviceklassifizierung = 'SOFTWARE')
-           OR (Artikel.Serviceklassifizierung = 'LIZENZEN'))) THEN
+           OR ((Artikel."Manufacturer Code" = '85') AND (Artikel.Artikelgruppe <> 'SYSTEME'))
+           OR (Artikel.Serviceklassifizierung = 'LIZENZEN') OR (Artikel.Artikelgruppe = 'DIENSTLEISTUNG'))) THEN
              BEGIN
              END
            ELSE
