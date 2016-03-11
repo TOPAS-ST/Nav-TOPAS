@@ -364,12 +364,6 @@ IF AP.FINDFIRST THEN
                     //Label."Revision Level" := ;
                     //Label."Additional Part Information" := ;
 
-                    //Problem beim Auslesen des Datamatrix Codes durch Wasp Labeler, anscheinend bei 193 Zeichen, deswegen
-                    //gibt es eine einfache Abfrage damit ein zusätzliches Zeichen in einem kaum benutzten Feld vorliegt
-                    IF (STRLEN(FORMAT(Label."Manufacturer Part Number")) = 10)
-                    AND (STRLEN(DELCHR(FORMAT(AP.Quantity),'=','.-')) = 4) THEN
-                      Label."Additional Part Information" := '.';
-
                     //**************************************************************************************************
                     //     MS-Level kann als Eingabefeld im Wasp Labeler, da es dieses Feld nicht im Artikelstamm
                     //                       gibt bzw. man gibt es fest vor, für HALO immer 1 - Z
@@ -552,7 +546,7 @@ IF AP.FINDFIRST THEN
                     IF STRPOS(AP."Lot No.",'/') = 0 THEN
                       BEGIN
                         Label."Batch-Counter" := 1;
-                        Label."Batch-No.#1" := AP."Lot No." + '1';
+                        Label."Batch-No.#1" := AP."Lot No.";
                         Label."Batch-No.#2" := '';
                       END
                     ELSE
@@ -565,22 +559,22 @@ IF AP.FINDFIRST THEN
                         //**************************************************************************************************
 
                         Label."Batch-Counter" := 2;
-                        Label."Batch-No.#1" := COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1) + '1';
+                        Label."Batch-No.#1" := COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1);
                         IF STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 4 THEN
-                          Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1) + ' 2'
+                          Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)
                         ELSE
                           BEGIN
                             // 2 Zeichen vor und nach dem Trennstrich werden zu einem Datecode zusammengebaut bzw. aufbereitet
                             IF  (STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 2)
                             AND (STRLEN(COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1)) = 4) THEN
                               Label."Batch-No.#2" := COPYSTR(AP."Lot No.",1,2) + COPYSTR(AP."Lot No.",
-                                                     STRPOS(AP."Lot No.",'/')+1) +' 2'
+                                                     STRPOS(AP."Lot No.",'/')+1)
                             ELSE
                               BEGIN
                                 // Wolfson Format
                                 IF  (STRLEN(COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1)) = 7)
                                 AND (STRLEN(COPYSTR(AP."Lot No.",1,STRPOS(AP."Lot No.",'/')-1)) = 7) THEN
-                                  Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1) +' 2';
+                                  Label."Batch-No.#2" := COPYSTR(AP."Lot No.",STRPOS(AP."Lot No.",'/')+1);
                               END;
                           END;
                       END;
@@ -590,6 +584,46 @@ IF AP.FINDFIRST THEN
                     //**************************************************************************************************
 
                     Label."Lot. No." := AP."Lot No.";
+
+                    //**************************************************************************************************
+                    //                                    Prüfsumme wegen WaspLabeler Bug
+                    //**************************************************************************************************
+
+                    //Problem beim Auslesen des Datamatrix Codes durch Wasp Labeler - ist die Gesamtlänge des DataMatrix
+                    //Strings ungerade und von 1 ausgehend in Schrittweite von 4 zutreffend, dann kann der DataMatrix nicht
+                    //mehr ausgelesen werden, Bsp.: 1, 5, 9 ... 193, 197, 201, 205, 209 ...
+                    //Wenn die Prüfsumme ungerade ist, wird ein zusätzliches Zeichen in einem kaum benutzten Feld gefüllt
+
+                    prüfsumme := '[)>@06';
+                    prüfsumme += '@12S' + Label."Label Version";
+                    prüfsumme += '@P' + Label."Customer Part Number";
+                    prüfsumme += '@1P' + Label."Manufacturer Part Number";
+                    prüfsumme += '@31P' + Label."Ordering Code";
+                    prüfsumme += '@12V' + Label."Manufacturer Number";
+                    prüfsumme += '@10V' + Label."Manufacturer Location";
+                    prüfsumme += '@2P' + Label."Revision Level";
+                    prüfsumme += '@20P' + Label."Additional Part Information";
+                    prüfsumme += '@6D' + Label."Date of Manufacturing";
+                    prüfsumme += '@14D' + Label."Expiration Date";
+                    prüfsumme += '@30P' + Label.RoHS;
+                    prüfsumme += '@Z' + Label."MS-Level";
+                    prüfsumme += '@K' + Label."Purchase Order Number";
+                    prüfsumme += '@16K' + Label."Shipping Note Number";
+                    prüfsumme += '@V' + Label."Supplier-ID";
+                    prüfsumme += '@3S' + Label."Package-ID";
+                    prüfsumme += '@Q' + Label.Quantity;
+                    prüfsumme += '@20T' + FORMAT(Label."Batch-Counter");
+                    prüfsumme += '@1T' + Label."Batch-No.#1";
+                    prüfsumme += '@2T' + Label."Batch-No.#2";
+                    prüfsumme += '@1Z';
+                    prüfsumme += '@@';
+
+                    IF STRLEN(prüfsumme) MOD 2 <> 0 THEN
+                      Label."Additional Part Information" := Label."Additional Part Information"  + '-';
+
+                    //**************************************************************************************************
+                    //                                    Infofenster
+                    //**************************************************************************************************
 
                     ls_nr := AP."Document No.";
                     lfd_nr += 1;
