@@ -2,8 +2,8 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
 {
   OBJECT-PROPERTIES
   {
-    Date=03.09.15;
-    Time=11:52:22;
+    Date=16.03.16;
+    Time=17:15:52;
     Modified=Yes;
     Version List=fertig;
   }
@@ -48,11 +48,11 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
         OnAfterGetRecord=BEGIN
                            //Suche nach 1. Basisger„t zum Andruck des Benuters + PW
                            ErstAndruckLizenz.RESET;
-                           ErstAndruckLizenz.SETFILTER(Art,'%1',ErstAndruckLizenz.Art :: Service);
-                           ErstAndruckLizenz.SETFILTER(Inaktiv,'%1',FALSE);
-                           ErstAndruckLizenz.SETFILTER(Basisger„t,'%1',TRUE);
-                           ErstAndruckLizenz.SETFILTER("SUP Artikelnr.",'%1',Intern."SUP Artikelnr.");
-                           ErstAndruckLizenz.SETFILTER("Wartungsvertragsnr.",'%1',Intern."Wartungsvertragsnr.");
+                           ErstAndruckLizenz.SETRANGE(Art,ErstAndruckLizenz.Art :: Service);
+                           ErstAndruckLizenz.SETRANGE(Inaktiv,FALSE);
+                           ErstAndruckLizenz.SETRANGE(Basisger„t,TRUE);
+                           ErstAndruckLizenz.SETRANGE("Zu exportieren",TRUE);
+                           ErstAndruckLizenz.SETRANGE("Wartungsvertragsnr.",Intern."Wartungsvertragsnr.");
                            IF ErstAndruckLizenz.FINDFIRST THEN
                              BEGIN
                                benutzer := ErstAndruckLizenz.Benutzername;
@@ -67,10 +67,10 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
                              //Wartungsvertrag verfgt ber kein Basisger„t
                              BEGIN
                                ErstAndruckLizenz.RESET;
-                               ErstAndruckLizenz.SETFILTER(Art,'%1',ErstAndruckLizenz.Art :: Service);
-                               ErstAndruckLizenz.SETFILTER(Inaktiv,'%1',FALSE);
-                               ErstAndruckLizenz.SETFILTER("SUP Artikelnr.",'%1',Intern."SUP Artikelnr.");
-                               ErstAndruckLizenz.SETFILTER("Wartungsvertragsnr.",'%1',Intern."Wartungsvertragsnr.");
+                               ErstAndruckLizenz.SETRANGE(Art,ErstAndruckLizenz.Art :: Service);
+                               ErstAndruckLizenz.SETRANGE(Inaktiv,FALSE);
+                               ErstAndruckLizenz.SETRANGE("Zu exportieren",TRUE);
+                               ErstAndruckLizenz.SETRANGE("Wartungsvertragsnr.",Intern."Wartungsvertragsnr.");
                                IF ErstAndruckLizenz.FINDFIRST THEN
                                  BEGIN
                                    benutzer := ErstAndruckLizenz.Benutzername;
@@ -80,17 +80,7 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
                                    "urspr AU ger„t" := ErstAndruckLizenz."Urspr. Auftragsnr.";
                                    "fremderwerb ger„t" := ErstAndruckLizenz.Fremderwerb;
                                    "lfdnr ger„t" := ErstAndruckLizenz."Lfd. Nr.";
-                                 END
-                               ELSE
-                                BEGIN
-                                  benutzer := Intern.Benutzername;
-                                  pw := Intern.Passwort;
-                                  "artikelnr2 ger„t" := ErstAndruckLizenz."Artikelnr. 2";
-                                  "urspr LS ger„t" := Intern."Urspr. Lieferscheinnr.";
-                                  "urspr AU ger„t" := Intern."Urspr. Auftragsnr.";
-                                  "fremderwerb ger„t" := Intern.Fremderwerb;
-                                  "lfdnr ger„t" := Intern."Lfd. Nr.";
-                                END;
+                                 END;
                              END;
 
                            Artikel.GET("SUP Artikelnr.");
@@ -221,8 +211,8 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
             SectionWidth=18500;
             SectionHeight=4535;
             OnPreSection=BEGIN
-                           Nummer += 1;
-                           CurrReport.SHOWOUTPUT((STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (STRPOS(Intern."SUP Artikelnr.",'AHR') = 0));
+                           IF CurrReport.SHOWOUTPUT((STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (STRPOS(Intern."SUP Artikelnr.",'AHR') = 0)) THEN
+                             Nummer += 1;
 
                            //Andruck Verl„ngerung, da Anlage des Benutzers bereits erfolgt ist
                            IF Verl„ngerung = TRUE THEN
@@ -235,15 +225,16 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
                            PruefeLizenzTab.RESET;
                            PruefeLizenzTab.SETFILTER(Art,'%1',PruefeLizenzTab.Art :: Service);
                            PruefeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'<>%1',0D);
-                           PruefeLizenzTab.SETFILTER(PruefeLizenzTab."Wartungsvertragsnr.","Wartungsvertragsnr.");
+                           //PruefeLizenzTab.SETFILTER(Benutzername,'<>%1','');
+                           PruefeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           PruefeLizenzTab.SETFILTER("Nr.",'%1',Intern."Nr.");
+                           PruefeLizenzTab.SETFILTER("Lfd. Nr.",'<=%1',Intern."Lfd. Nr.");
                            IF PruefeLizenzTab.FINDFIRST THEN
                              REPEAT
-                               IF (abfrage_array[1] <> PruefeLizenzTab."Nr.") AND (abfrage_array[1] <> '')
-                               AND (STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (PruefeLizenzTab.Basisger„t = FALSE)
-                               AND (abfrage_array[2] = PruefeLizenzTab."Geh”rt zu Lfd. Nr.") THEN
+                               IF (STRPOS(Intern."SUP Artikelnr.",'HW') = 0) AND (PruefeLizenzTab.Basisger„t = FALSE) THEN
                                  zusatzmodul := 'Zusatzmodul(e), Benutzer bereits im Typo3 angelegt!';
-                               abfrage_array[1] := PruefeLizenzTab."Nr.";
-                               abfrage_array[2] := PruefeLizenzTab."Geh”rt zu Lfd. Nr.";
+                               IF PruefeLizenzTab.Basisger„t = TRUE THEN
+                                 zusatzmodul := '';
                              UNTIL PruefeLizenzTab.NEXT = 0;
 
                            //Andruck bei reinen Support Artikeln, kein Zugang notwendig
@@ -382,7 +373,6 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
       verlaengerung@1140019 : Text[100];
       zusatzmodul@1140020 : Text[100];
       nurSupport@1140023 : Text[100];
-      abfrage_array@1140022 : ARRAY [2] OF Code[40];
       benutzer@1140010 : Text[50];
       pw@1140007 : Text[50];
 
