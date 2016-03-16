@@ -2,8 +2,8 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
 {
   OBJECT-PROPERTIES
   {
-    Date=28.04.15;
-    Time=10:19:03;
+    Date=16.03.16;
+    Time=17:16:30;
     Modified=Yes;
     Version List=fertig;
   }
@@ -21,7 +21,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
     { PROPERTIES
       {
         DataItemTable=Table50011;
-        DataItemTableView=WHERE(Status=FILTER(<>ACTS));
+        DataItemTableView=WHERE(Status=FILTER(<>ACTS&<>Champs Partner));
         OnPreDataItem=BEGIN
                         Firmendaten.GET;
                         Firmendaten.CALCFIELDS("ISO Logo");
@@ -75,11 +75,11 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
 
                            //Suche nach 1. Basisger„t zum Andruck des Benuters + PW
                            ZugangsdatenAndruck.RESET;
-                           ZugangsdatenAndruck.SETFILTER(Art,'%1',ZugangsdatenAndruck.Art :: Service);
-                           ZugangsdatenAndruck.SETFILTER(Inaktiv,'%1',FALSE);
-                           ZugangsdatenAndruck.SETFILTER(Basisger„t,'%1',TRUE);
-                           ZugangsdatenAndruck.SETFILTER("SUP Artikelnr.",'%1',"Serviceleist. & Leihstellungen"."SUP Artikelnr.");
-                           ZugangsdatenAndruck.SETFILTER("Wartungsvertragsnr.",'%1',"Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
+                           ZugangsdatenAndruck.SETRANGE(Art,ZugangsdatenAndruck.Art :: Service);
+                           ZugangsdatenAndruck.SETRANGE(Inaktiv,FALSE);
+                           ZugangsdatenAndruck.SETRANGE(Basisger„t,TRUE);
+                           ZugangsdatenAndruck.SETRANGE("Zu exportieren",TRUE);
+                           ZugangsdatenAndruck.SETRANGE("Wartungsvertragsnr.","Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
                            IF ZugangsdatenAndruck.FINDFIRST THEN
                              BEGIN
                                benutzer := ZugangsdatenAndruck.Benutzername;
@@ -89,20 +89,15 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
                              //Wartungsvertrag verfgt ber kein Basisger„t
                              BEGIN
                                ZugangsdatenAndruck.RESET;
-                               ZugangsdatenAndruck.SETFILTER(Art,'%1',ZugangsdatenAndruck.Art :: Service);
-                               ZugangsdatenAndruck.SETFILTER(Inaktiv,'%1',FALSE);
-                               ZugangsdatenAndruck.SETFILTER("SUP Artikelnr.",'%1',"Serviceleist. & Leihstellungen"."SUP Artikelnr.");
-                               ZugangsdatenAndruck.SETFILTER("Wartungsvertragsnr.",'%1',"Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
+                               ZugangsdatenAndruck.SETRANGE(Art,ZugangsdatenAndruck.Art :: Service);
+                               ZugangsdatenAndruck.SETRANGE(Inaktiv,FALSE);
+                               ZugangsdatenAndruck.SETRANGE("Zu exportieren",TRUE);
+                               ZugangsdatenAndruck.SETRANGE("Wartungsvertragsnr.","Serviceleist. & Leihstellungen"."Wartungsvertragsnr.");
                                IF ZugangsdatenAndruck.FINDFIRST THEN
                                  BEGIN
                                    benutzer := ZugangsdatenAndruck.Benutzername;
                                    pw := ZugangsdatenAndruck.Passwort;
                                  END
-                               ELSE
-                                BEGIN
-                                  benutzer := "Serviceleist. & Leihstellungen".Benutzername;
-                                  pw := "Serviceleist. & Leihstellungen".Passwort;
-                                END;
                              END;
 
                            sup_artikelnr := "Serviceleist. & Leihstellungen"."SUP Artikelnr.";
@@ -110,9 +105,9 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
                            sup_artikelnr_lang := Artikel."No. 2";
 
                            IF ((STRPOS(sup_artikelnr_lang,'HW') <> 0) OR (STRPOS(sup_artikelnr_lang,'AHR') <> 0)
-                           OR (STRPOS(sup_artikelnr_lang,'SW') = 0) OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0))
-                           OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR') AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)
-                           AND (STRPOS(sup_artikelnr_lang,'ENH-SUPP-PROG') = 0) THEN
+                           OR (STRPOS(sup_artikelnr_lang,'RPLC') <> 0) OR (sup_artikelnr_lang = 'CHAMPS-SUPP-8X5/YR')
+                           OR (STRPOS(sup_artikelnr_lang,'ENH-SUPP-PROG') <> 0))
+                           AND ((STRPOS(sup_artikelnr_lang,'SW') = 0) AND (STRPOS(sup_artikelnr_lang,'SOFTWARE') = 0)) THEN
                              BEGIN
                                benutzer := '-';
                                pw := '-';
@@ -128,7 +123,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
           {
             SectionType=Header;
             PrintOnEveryPage=Yes;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=12100;
             KeepWithNext=No;
             OnPreSection=BEGIN
@@ -249,42 +244,17 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
           CONTROLS
           {
             { 1140016;Image     ;12676;1333 ;5250 ;1269 ;Bitmap=f:\daten neu\gemeinsame ordner\logo`s\topas\top_gelb.bmp }
-            { 1140042;Shape     ;7678 ;10400;10622;1400  }
-            { 1140043;Label     ;7931 ;10600;2000 ;423  ;FontSize=8;
-                                                         CaptionML=[DEU=Vertragsnr.;
-                                                                    ENU=Our Reference] }
-            { 1140044;Label     ;13300;10600;2600 ;423  ;Name=Ihre Konto-Nr.;
-                                                         FontSize=8;
-                                                         CaptionML=[DEU=Ihre Kunden-Nr.;
-                                                                    ENU=Your Account No.] }
-            { 1140045;Label     ;16400;10600;1262 ;423  ;Name=Datum;
-                                                         FontSize=8;
-                                                         CaptionML=[DEU=Datum;
-                                                                    ENU=Date] }
-            { 1140051;TextBox   ;7930 ;11200;2000 ;423  ;FontSize=8;
-                                                         SourceExpr="Wartungsvertragsnr." }
-            { 1140053;TextBox   ;16400;11200;1600 ;423  ;HorzAlign=Left;
-                                                         FontSize=8;
-                                                         SourceExpr=datum }
-            { 1140054;TextBox   ;13300;11200;2600 ;423  ;HorzAlign=Left;
-                                                         FontSize=8;
-                                                         SourceExpr=debitornr }
             { 1140055;TextBox   ;2100 ;7100 ;10300;926  ;HorzAlign=Center;
                                                          FontSize=22;
                                                          FontBold=No;
                                                          SourceExpr=kopf_text }
-            { 1140057;Label     ;10700;10601;2200 ;423  ;FontSize=8;
-                                                         CaptionML=[DEU=Auftragsnr.;
-                                                                    ENU=Order No.] }
-            { 1140058;TextBox   ;10700;11200;2200 ;423  ;FontSize=8;
-                                                         SourceExpr=auftragsnr }
-            { 1140060;Label     ;0    ;10997;3560 ;423  ;FontSize=7;
+            { 1140060;Label     ;0    ;11000;3560 ;423  ;FontSize=7;
                                                          CaptionML=[DEU=Ihre Angaben;
                                                                     ENU=Customer Ref.] }
-            { 1140061;TextBox   ;1500 ;11374;6024 ;423  ;HorzAlign=Left;
+            { 1140061;TextBox   ;1300 ;11400;5800 ;423  ;HorzAlign=Left;
                                                          FontSize=8;
                                                          SourceExpr=ihre_ref }
-            { 1140062;Label     ;0    ;11374;1500 ;423  ;FontSize=7;
+            { 1140062;Label     ;0    ;11374;1300 ;423  ;FontSize=7;
                                                          CaptionML=[DEU=Referenz:;
                                                                     ENU=Reference:] }
             { 1140063;TextBox   ;13679;8467 ;4200 ;300  ;SourceExpr=ansp_anrede }
@@ -401,12 +371,42 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
                                                          CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
                                                                     ENU=WEEE-Reg.-Nr.: DE 69202523] }
             { 1140010;PictureBox;9321 ;2696 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
+            { 1140021;Shape     ;7300 ;10400;11100;1400  }
+            { 1140022;Label     ;7500 ;10578;2000 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Vertragsnr.;
+                                                                    ENU=Our Reference] }
+            { 1140023;Label     ;9700 ;10578;2000 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Auftragsnr.;
+                                                                    ENU=Order No.] }
+            { 1140024;TextBox   ;7500 ;11178;2000 ;423  ;FontSize=8;
+                                                         SourceExpr=Wartungsvertrag."Wartungsvertragsnr." }
+            { 1140025;TextBox   ;9700 ;11178;2000 ;423  ;FontSize=8;
+                                                         SourceExpr=auftragsnr }
+            { 1140026;Label     ;11900;10578;2100 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Lieferscheinnr.;
+                                                                    ENU=Delivery Note] }
+            { 1140027;TextBox   ;11900;11178;2100 ;423  ;FontSize=8;
+                                                         SourceExpr="Nr." }
+            { 1140028;Label     ;14200;10578;2300 ;423  ;Name=Ihre Konto-Nr.;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Ihre Kunden-Nr.;
+                                                                    ENU=Your Account No.] }
+            { 1140029;TextBox   ;14200;11178;2300 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=debitornr }
+            { 1140030;Label     ;16700;10578;1262 ;423  ;Name=Datum;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Datum;
+                                                                    ENU=Date] }
+            { 1140032;TextBox   ;16700;11178;1600 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=datum }
           }
            }
         { PROPERTIES
           {
             SectionType=Header;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=1600;
             KeepWithNext=No;
             OnPreSection=BEGIN
@@ -427,7 +427,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=Header;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=2400;
             OnPreSection=BEGIN
                             CurrReport.SHOWOUTPUT(andruck_champs = FALSE);
@@ -448,12 +448,12 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
           {
             SectionType=Header;
             PrintOnEveryPage=Yes;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=1500;
           }
           CONTROLS
           {
-            { 1140031;Shape     ;0    ;100  ;18300;1200  }
+            { 1140031;Shape     ;100  ;100  ;18300;1200  }
             { 1140049;Label     ;1100 ;300  ;1800 ;500  ;VertAlign=Top;
                                                          FontSize=8;
                                                          FontBold=Yes;
@@ -504,7 +504,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=GroupHeader;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=1200;
             OnPreSection=BEGIN
                            Nummer += 1;
@@ -538,7 +538,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=GroupFooter;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=1000;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT((STRPOS(sup_artikelnr_lang,'SW') <> 0) AND (STRPOS(sup_artikelnr_lang,'CHAMPS') <> 0));
@@ -560,7 +560,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
             SectionType=Footer;
             PrintOnEveryPage=Yes;
             PlaceInBottom=Yes;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=1000;
           }
           CONTROLS
@@ -588,7 +588,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=423;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(sup_artikelnr <> Servicepositionen."SUP Artikelnr.");
@@ -603,7 +603,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=Footer;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=200;
             OnPreSection=BEGIN
                            CurrReport.SHOWOUTPUT(sup_artikelnr <> Servicepositionen."SUP Artikelnr.");
@@ -643,7 +643,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=423;
             OnPreSection=BEGIN
                            seriennr := "Seriennr.";
@@ -673,7 +673,8 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
                                                          SourceExpr="Serviceleist. & Leihstellungen"."Artikelnr. 2" }
             { 1140009;Label     ;6600 ;0    ;600  ;423  ;FontSize=8;
                                                          CaptionML=DEU=SN: }
-            { 1140052;TextBox   ;7200 ;0    ;5000 ;423  ;FontSize=8;
+            { 1140052;TextBox   ;7200 ;0    ;5000 ;423  ;HorzAlign=Left;
+                                                         FontSize=8;
                                                          SourceExpr=seriennr }
             { 1140011;TextBox   ;1130 ;0    ;544  ;423  ;FontSize=8;
                                                          DecimalPlaces=0:0;
@@ -699,7 +700,7 @@ OBJECT Report 50178 TOPAS Servicevertrag PDF
         { PROPERTIES
           {
             SectionType=Body;
-            SectionWidth=18541;
+            SectionWidth=18500;
             SectionHeight=423;
           }
           CONTROLS
