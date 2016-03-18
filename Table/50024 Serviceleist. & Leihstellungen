@@ -3315,15 +3315,20 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             //APSS One Box EK Konditionen
             IF APSS_OB = TRUE THEN
               BEGIN
-                normal_discount := 0.7;
-                v_service_laufzeit := kalk_laufzeit DIV 12;
-                CASE v_service_laufzeit OF
-                  0..1 : additional_discount := 0;
-                  2 : additional_discount := 0.02; // -5%
-                  3 : additional_discount := 0.09; // -9%
-                  4 : additional_discount := 0.12; // -12%
-                  5..100 : additional_discount := 0.15; // -15%
-                END;
+                IF ServiceQuoteIsValid(Quotenr) = TRUE THEN
+                  normal_discount := 0.62
+                ELSE
+                  BEGIN
+                    normal_discount := 0.7;
+                    v_service_laufzeit := kalk_laufzeit DIV 12;
+                    CASE v_service_laufzeit OF
+                      0..1 : additional_discount := 0;
+                      2 : additional_discount := 0.02; // -5%
+                      3 : additional_discount := 0.09; // -9%
+                      4 : additional_discount := 0.12; // -12%
+                      5..100 : additional_discount := 0.15; // -15%
+                    END;
+                  END;
               END;
 
             //Re Instatement Fee
@@ -3548,7 +3553,7 @@ IF (Artikel.GET(artikelnr)) AND (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')
 EXIT(TRUE);
 
 PrüfeBetreuerWechsel(Vertragsnr : Code[20];VertragsDebnr : Code[20];NeueDebnr : Code[20])
-IF (VertragsDebnr = NeueDebnr) OR (NeueDebnr = '') THEN EXIT;
+IF (VertragsDebnr = NeueDebnr) OR (NeueDebnr = '') OR (Vertragsnr = '') THEN EXIT;
 
 Vertrag.GET(Vertragsnr);
 
@@ -3560,9 +3565,18 @@ IF VertragsDebnr <> NeueDebnr THEN
      Beteiligte.SETRANGE(Führungsrolle,TRUE);
      IF Beteiligte.FINDFIRST THEN
        BEGIN
-         Beteiligte.Führungsrolle := FALSE;
-         Beteiligte.Bemerkung := 'autom. Betreuerwechsel';
-         Beteiligte.MODIFY;
+         DebKontaktBez.RESET;
+         DebKontaktBez.SETRANGE("Business Relation Code",'DEB');
+         DebKontaktBez.SETRANGE("No.",NeueDebnr);
+         IF (DebKontaktBez.FINDFIRST) AND (Beteiligte."Kontaktnr." <> DebKontaktBez."Contact No.") THEN
+           BEGIN
+             Beteiligte.Führungsrolle := FALSE;
+             Beteiligte.Bemerkung := 'autom. Betreuerwechsel';
+             Beteiligte.MODIFY;
+           END
+         ELSE
+           BEGIN
+           END;
        END;
 
     DebKontaktBez.RESET;
@@ -3580,9 +3594,16 @@ IF VertragsDebnr <> NeueDebnr THEN
             Beteiligte."Kampagnennr." := Vertrag."Wartungsvertragsnr.";
             Beteiligte.Führungsrolle := TRUE;
             Beteiligte.INSERT;
+          END
+        ELSE
+          BEGIN
+             Beteiligte.Führungsrolle := TRUE;
+             Beteiligte.MODIFY;
           END;
-          Vertrag.GET(Vertragsnr);
-          Vertrag.VALIDATE("Debitornr.",NeueDebnr);
-          Vertrag.MODIFY;
+        Vertrag.GET(Vertragsnr);
+        Vertrag.VALIDATE("Debitornr.",NeueDebnr);
+        Vertrag."Systemhaus Kontakt" := '';
+        Vertrag."Systemhaus E-Mail" := '';
+        Vertrag.MODIFY;
       END;
   END;
