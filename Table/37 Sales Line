@@ -4661,15 +4661,20 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         //APSS One Box EK Konditionen
         IF APSS_OB = TRUE THEN
           BEGIN
-            normal_discount := 0.7;
-            v_service_laufzeit := Laufzeit DIV 12;
-            CASE v_service_laufzeit OF
-              0..1 : additional_discount := 0;
-              2 : additional_discount := 0.02; // -5%
-              3 : additional_discount := 0.09; // -12%
-              4 : additional_discount := 0.12; // -12%
-              5..100 : additional_discount := 0.15; // -15%
-            END;
+            IF ServiceTab.ServiceQuoteIsValid(Quotenr) = TRUE THEN
+              normal_discount := 0.62
+            ELSE
+              BEGIN
+                normal_discount := 0.7;
+                v_service_laufzeit := Laufzeit DIV 12;
+                CASE v_service_laufzeit OF
+                  0..1 : additional_discount := 0;
+                  2 : additional_discount := 0.02; // -5%
+                  3 : additional_discount := 0.09; // -12%
+                  4 : additional_discount := 0.12; // -12%
+                  5..100 : additional_discount := 0.15; // -15%
+                END;
+              END;
           END;
 
         //Re Instatement Fee
