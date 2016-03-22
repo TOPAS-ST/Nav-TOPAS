@@ -2,8 +2,8 @@ OBJECT Form 50096 Audiocodes Seriennummer
 {
   OBJECT-PROPERTIES
   {
-    Date=24.09.15;
-    Time=14:24:20;
+    Date=21.03.16;
+    Time=14:32:51;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -11,12 +11,24 @@ OBJECT Form 50096 Audiocodes Seriennummer
   {
     Width=13200;
     Height=15070;
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    ModifyAllowed=No;
+    SourceTable=Table50024;
     OnOpenForm=BEGIN
                  Datenblatt_leeren;
 
                  postennr := 0;
 
                  Prfe_Autorun;
+
+                 IF GETFILTER("Seriennr.") <> '' THEN
+                   BEGIN
+                     Eingabe := GETFILTER("Seriennr.");
+                     postennr := 0;
+                     durchlauf := 0;
+                     Beginne_Suche(Eingabe);
+                   END;
                END;
 
   }
@@ -205,11 +217,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                               ELSE CurrForm.txt_ablaufdatum.UPDATEFORECOLOR(0)
                                                           END;
                                                            }
-    { 1140008;TextBox   ;3960 ;13420;550  ;440  ;Name=txt_wartungsverknpfungen;
-                                                 Editable=No;
-                                                 ParentControl=1140003;
-                                                 InFrame=Yes;
-                                                 SourceExpr=FORMAT(wartungsverknpfungen) }
     { 1140009;CommandButton;4620;13310;1870;660 ;ParentControl=1140003;
                                                  InFrame=Yes;
                                                  CaptionML=DEU=Anzeigen;
@@ -221,6 +228,11 @@ OBJECT Form 50096 Audiocodes Seriennummer
                                                             END;
                                                         END;
                                                          }
+    { 1140008;TextBox   ;3960 ;13420;550  ;440  ;Name=txt_wartungsverknpfungen;
+                                                 Editable=No;
+                                                 ParentControl=1140003;
+                                                 InFrame=Yes;
+                                                 SourceExpr=FORMAT(wartungsverknpfungen) }
     { 1140010;TextBox   ;440  ;13420;3520 ;440  ;Name=txt_alle_vertragsnr;
                                                  Editable=No;
                                                  ParentControl=1140003;
@@ -650,7 +662,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
       CurrForm.umltext2.VISIBLE := FALSE;
       CurrForm.btn_next.VISIBLE := FALSE;
       CurrForm.txt_boardini.VISIBLE := FALSE;
-      CurrForm.txt_alle_vertragsnr.VISIBLE := FALSE;
       CurrForm.txt_wartungsverknpfungen.VISIBLE := FALSE;
 
       nav_system := '';
@@ -885,7 +896,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
             RMA_zeile.SETFILTER(RMA_zeile."Datecode Pos.",'%1',"Datecode Pos.");
             IF RMA_zeile.FINDLAST THEN
               BEGIN
-                rmanr := RMA_zeile."RMA-Nr.";
                 artikelnr := RMA_zeile."Artikelnr.";
                 seriennr := "SN-Nr. / DC";
                 kundennr := RMA_beteiligte."Debitornr.";
@@ -910,7 +920,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
                 RMA_zeile.SETFILTER(RMA_zeile."Datecode Pos.",'%1',"Datecode Pos.");
                 IF RMA_zeile.FINDLAST THEN
                   BEGIN
-                    rmanr := RMA_zeile."RMA-Nr.";
                     artikelnr := RMA_zeile."Artikelnr.";
                     seriennr := "SN-Nr. / DC";
                     kundennr := RMA_beteiligte."Debitornr.";
@@ -931,7 +940,6 @@ OBJECT Form 50096 Audiocodes Seriennummer
           END
         ELSE
           BEGIN
-            rmanr := "RMA-Nr.";
             artikelnr := "Artikelnr.";
             seriennr := "SN-Nr. / DC";
             kundennr := "Debitornr.";
