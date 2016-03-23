@@ -4511,6 +4511,7 @@ Gen_Service_DC(SUP_Artikelnr : Code[20];"Basis Artikelnr" : Code[20];Laufzeit : 
 //              TOPAS 2015-04-27 ST  CHAMPS zertifizierte Partner
 //              TOPAS 2015-05-12 ST  APSS One Box
 //              TOPAS 2015-12-10 ST  CHAMPS Re Instatement Fee
+//              TOPAS 2016-03-23 ST  ACTS MSS Schaeffler
 //***************************************************************************************************
 
 IF Runden = TRUE THEN
@@ -4529,6 +4530,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS := FALSE;
     ACHAT := FALSE;
     ACTS_SCHAEFFLER := FALSE;
+    ACTS_MSS_SCHAEFFLER := FALSE;
     ACTS_MSS := FALSE;
     APSS_OB := FALSE;
     CHAMPS := FALSE;
@@ -4544,27 +4546,30 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
-            ACTS_MSS := TRUE
+          IF Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER' THEN
+            ACTS_MSS_SCHAEFFLER := TRUE
           ELSE
-            IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
-              CHAMPS_PARTNER := TRUE
+            IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
+              ACTS_MSS := TRUE
             ELSE
-              IF Artikel.Artikelgruppe = 'APSS_OB' THEN
-                APSS_OB := TRUE
+              IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+                CHAMPS_PARTNER := TRUE
               ELSE
-                IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
-                  RE_INSTATEMENT_FEE := TRUE
+                IF Artikel.Artikelgruppe = 'APSS_OB' THEN
+                  APSS_OB := TRUE
                 ELSE
-                  IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-                    CHAMPS := TRUE;
+                  IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+                    RE_INSTATEMENT_FEE := TRUE
+                  ELSE
+                    IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+                      CHAMPS := TRUE;
 
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'CHAMPS_PARTNER')
     AND (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')
     AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER')
-    AND (Artikel.Artikelgruppe <> 'ACTS_MSS') AND (Artikel.Artikelgruppe <> 'APSS_OB')
-    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') 
-    AND (Artikel.Artikelgruppe <> 'CHAMPS_FEE') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_MSS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    AND (Artikel.Artikelgruppe <> 'APSS_OB') AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') AND (Artikel.Artikelgruppe <> 'CHAMPS_FEE') THEN
       ERROR(Text126);
 
     Opt_laufzeit.RESET;
@@ -4578,7 +4583,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Service_PL.RESET;
     Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (APSS_OB = TRUE) THEN
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (APSS_OB = TRUE)
+    OR (ACTS_MSS_SCHAEFFLER = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
@@ -4656,6 +4662,12 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF ACTS_SCHAEFFLER = TRUE THEN
           BEGIN
             normal_discount := 0.5;
+          END;
+
+        //ACTS MSS Schaeffler EK Konditionen
+        IF ACTS_MSS_SCHAEFFLER = TRUE THEN
+          BEGIN
+            normal_discount := 0.2;
           END;
 
         //APSS One Box EK Konditionen
@@ -4743,9 +4755,9 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     IF (Artikel.Artikelgruppe <> 'CHAMPS') AND (Artikel.Artikelgruppe <> 'CHAMPS_PARTNER')
     AND (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACHAT')
     AND (Artikel.Artikelgruppe <> 'ACTS/ACHAT') AND (Artikel.Artikelgruppe <> 'ACTS_SCHAEFFLER')
-    AND (Artikel.Artikelgruppe <> 'ACTS_MSS') AND (Artikel.Artikelgruppe <> 'APSS_OB')
-    AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE') AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG')
-    AND (Artikel.Artikelgruppe <> 'CHAMPS_FEE') THEN
+    AND (Artikel.Artikelgruppe <> 'ACTS_MSS_SCHAEFFLER') AND (Artikel.Artikelgruppe <> 'ACTS_MSS')
+    AND (Artikel.Artikelgruppe <> 'APSS_OB')  AND (Artikel.Artikelgruppe <> 'SUPPORT & SOFTWARE')
+    AND (Artikel.Artikelgruppe <> 'DIENSTLEISTUNG') AND (Artikel.Artikelgruppe <> 'CHAMPS_FEE') THEN
       ERROR(Text126);
 
     IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
@@ -4758,13 +4770,16 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'APSS_OB' THEN
-            APSS_OB := TRUE
+          IF Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER' THEN
+            ACTS_MSS_SCHAEFFLER := TRUE
           ELSE
-            IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
-              RE_INSTATEMENT_FEE := TRUE
+            IF Artikel.Artikelgruppe = 'APSS_OB' THEN
+              APSS_OB := TRUE
             ELSE
-              CHAMPS := TRUE;
+              IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+                RE_INSTATEMENT_FEE := TRUE
+              ELSE
+                CHAMPS := TRUE;
 
     //VK Kondition CHAMPS zertifizierte Partner = -20% MSRP
     IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
@@ -4811,6 +4826,11 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                END;
 
              IF ACTS_SCHAEFFLER = TRUE THEN
+               BEGIN
+                 v_prozentsatz := 100 - Kalk_Prozentsatz;
+               END;
+
+             IF ACTS_MSS_SCHAEFFLER = TRUE THEN
                BEGIN
                  v_prozentsatz := 100 - Kalk_Prozentsatz;
                END;
@@ -4889,19 +4909,22 @@ ELSE
         IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
           ACTS_MSS := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
-            CHAMPS_PARTNER := TRUE
+          IF Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER' THEN
+            ACTS_MSS_SCHAEFFLER := TRUE
           ELSE
-            IF Artikel.Artikelgruppe = 'APSS_OB' THEN
-              APSS_OB := TRUE
+            IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+              CHAMPS_PARTNER := TRUE
             ELSE
-              IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
-                RE_INSTATEMENT_FEE := TRUE
+              IF Artikel.Artikelgruppe = 'APSS_OB' THEN
+                APSS_OB := TRUE
               ELSE
-                IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-                  CHAMPS := TRUE
-                    ELSE
-                      SUP := TRUE;
+                IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+                  RE_INSTATEMENT_FEE := TRUE
+                ELSE
+                  IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+                    CHAMPS := TRUE
+                      ELSE
+                        SUP := TRUE;
 
 IF (CHAMPS = TRUE) OR (SUP = TRUE) THEN
   BEGIN
@@ -4943,7 +4966,7 @@ IF (CHAMPS = TRUE) OR (SUP = TRUE) THEN
 //                                     ACTS und ACHAT  Berechnung
 //***************************************************************************************************
 
-IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) 
+IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_ACHAT = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (ACTS_MSS_SCHAEFFLER = TRUE)
 OR (ACTS_MSS = TRUE) OR (CHAMPS_PARTNER = TRUE) OR (APSS_OB = TRUE) OR (RE_INSTATEMENT_FEE = TRUE) THEN
   BEGIN
     WITH FindMSRPPrice DO BEGIN
