@@ -2,8 +2,8 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
 {
   OBJECT-PROPERTIES
   {
-    Date=20.01.16;
-    Time=12:17:31;
+    Date=23.03.16;
+    Time=15:43:05;
     Modified=Yes;
     Version List=fertig;
   }
@@ -62,7 +62,6 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                         Firmendaten.CALCFIELDS("ISO Logo");
 
                         Nummer := 0;
-                        champ_price := 0;
                         TotalText := '';
 
                         //CurrReport.CREATETOTALS(champ_price_total);
@@ -99,7 +98,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                  ERROR('Bestellung konnte nicht gefunden werden.');
                              END;
 
-                           champ_price_total := champ_price_total + (Menge * "Service DC");
+                           service_price_total := service_price_total + (Menge * "Service DC");
 
                            IF termcode = '' THEN
                              ZlgBed.INIT
@@ -123,7 +122,8 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                              header_zusatz := 'Champs'
                            ELSE
                              IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT')
-                             OR (Artikel.Artikelgruppe = 'ACHAT') THEN
+                             OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER')
+                             OR (Artikel.Artikelgruppe = 'ACTS_MSS') OR (Artikel.Artikelgruppe = 'ACHAT') THEN
                                header_zusatz := 'ACTS'
                              ELSE
                                header_zusatz := '';
@@ -139,7 +139,6 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                    ChampOrderPos.RESET;
                                    ChampOrderPos.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
                                    ChampOrderPos.SETFILTER(Basisger„t,'%1',TRUE);
-                                   ChampOrderPos.SETFILTER("SUP Artikelnr.",'%1',"SUP Artikelnr.");
                                    ChampOrderPos.SETFILTER("Geh”rt zu Lfd. Nr.",'%1',"Geh”rt zu Lfd. Nr.");
                                    IF ChampOrderPos.FINDFIRST THEN
                                      seriennr := ChampOrderPos."Seriennr.";
@@ -151,7 +150,6 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
 
                            IF STRPOS(seriennr,'S/N:') = 1 THEN
                              seriennr := COPYSTR(seriennr,STRLEN('S/N:')+1);
-
 
                            IF Fremderwerb THEN
                              seriennr := seriennr + '*';
@@ -379,7 +377,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                                          CaptionML=DEU=Continuation }
             { 1140027;TextBox   ;16400;200  ;1500 ;423  ;FontSize=9;
                                                          FontBold=Yes;
-                                                         SourceExpr=champ_price_total }
+                                                         SourceExpr=service_price_total }
           }
            }
         { PROPERTIES
@@ -424,7 +422,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                                          CaptionML=DEU=To Be Continued }
             { 1140033;TextBox   ;16400;200  ;1500 ;423  ;FontSize=9;
                                                          FontBold=Yes;
-                                                         SourceExpr=champ_price_total }
+                                                         SourceExpr=service_price_total }
           }
            }
         { PROPERTIES
@@ -441,7 +439,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                                                          SourceExpr=TotalText }
             { 1140030;TextBox   ;16400;600  ;1500 ;423  ;FontSize=9;
                                                          FontBold=Yes;
-                                                         SourceExpr=champ_price_total }
+                                                         SourceExpr=service_price_total }
           }
            }
       }
@@ -531,7 +529,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
                           WHERE(Number=CONST(1));
         DataItemVarName=SeiteSchleife;
         OnPreDataItem=BEGIN
-                        CurrReport.CREATETOTALS(champ_price_total);
+                        CurrReport.CREATETOTALS(service_price_total);
                       END;
 
       }
@@ -710,8 +708,7 @@ OBJECT Report 50179 TOPAS Champs / ACTS Ordering
       EinkVonAdr@1140019 : ARRAY [8] OF Text[50];
       FormatAdr@1140020 : Codeunit 365;
       TotalText@1140004 : Text[50];
-      champ_price@1140000 : Decimal;
-      champ_price_total@1140013 : Decimal;
+      service_price_total@1140013 : Decimal;
       Nummer@1140005 : Integer;
       w„hcode@1140015 : Code[20];
       termcode@1140021 : Code[20];
