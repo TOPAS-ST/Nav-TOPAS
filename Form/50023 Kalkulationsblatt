@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=03.02.16;
-    Time=14:16:22;
+    Date=23.03.16;
+    Time=11:43:23;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -40,8 +40,8 @@ OBJECT Form 50023 Kalkulationsblatt
                            IF Artikel.GET("SUP Artikelnr.") AND ((Artikel.Artikelgruppe = 'ACTS')
                            OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACHAT')
                            OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
-                           OR (Artikel.Artikelgruppe = 'APSS_OB') OR (Artikel.Artikelgruppe ='CHAMPS_PARTNER')
-                           OR (Artikel.Artikelgruppe = 'CHAMPS_FEE')) THEN
+                           OR (Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'APSS_OB')
+                           OR (Artikel.Artikelgruppe = 'CHAMPS_PARTNER') OR (Artikel.Artikelgruppe = 'CHAMPS_FEE')) THEN
                              BEGIN
                                CurrForm.txtbox_kalk_prozentsatz.VISIBLE := TRUE;
                                CurrForm.label_hinweis_kalk_prozentsatz.VISIBLE := TRUE;
@@ -601,7 +601,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                 ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                 ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                                 ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
-                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 //Laufzeit vorbelegen
                                 Opt.RESET;
                                 Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -609,6 +608,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                 Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                 IF Opt.FINDFIRST THEN
                                   ChampRelaDoc.Laufzeit := Opt.Code;
+                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                 ChampRelaDoc.Basisger„t);
                                 ChampRelaDoc.INSERT(TRUE);
@@ -651,7 +651,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","Lief-Zeile"."No.");
                                     ChampRelaDoc."Menge kalk." := "Lief-Zeile".Quantity;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     //Laufzeit vorbelegen
                                     Opt.RESET;
@@ -660,6 +659,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                     IF Opt.FINDFIRST THEN
                                       ChampRelaDoc.Laufzeit := Opt.Code;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                     ChampRelaDoc.Basisger„t);
                                     ChampRelaDoc.INSERT(TRUE);
@@ -702,7 +702,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
                                     ChampRelaDoc."Menge kalk." := ServicePos.Menge;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
@@ -713,6 +712,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                     IF Opt.FINDFIRST THEN
                                       ChampRelaDoc.Laufzeit := Opt.Code;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                     ChampRelaDoc.Basisger„t);
                                     ChampRelaDoc.INSERT(TRUE);
@@ -812,7 +812,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                 ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                 ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                                 ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
-                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 //Laufzeit vorbelegen
                                 Opt.RESET;
                                 Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -820,6 +819,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                 Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                 IF Opt.FINDFIRST THEN
                                   ChampRelaDoc.Laufzeit := Opt.Code;
+                                ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                 ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                 ChampRelaDoc.Basisger„t);
                                 ChampRelaDoc.INSERT(TRUE);
@@ -862,7 +862,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","Lief-Zeile"."No.");
                                     ChampRelaDoc."Menge kalk." := "Lief-Zeile".Quantity;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     //Laufzeit vorbelegen
                                     Opt.RESET;
@@ -871,6 +870,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                     IF Opt.FINDFIRST THEN
                                       ChampRelaDoc.Laufzeit := Opt.Code;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                     ChampRelaDoc.Basisger„t);
                                     ChampRelaDoc.INSERT(TRUE);
@@ -914,7 +914,6 @@ OBJECT Form 50023 Kalkulationsblatt
                                     ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
                                     ChampRelaDoc.VALIDATE("Menge kalk.",ServicePos.Menge);
                                     CurrForm."Menge kalk.".UPDATE;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
                                     ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
                                     ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
@@ -925,6 +924,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                     Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                                     IF Opt.FINDFIRST THEN
                                       ChampRelaDoc.Laufzeit := Opt.Code;
+                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                                     ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                                     ChampRelaDoc.Basisger„t);
                                     ChampRelaDoc.INSERT(TRUE);
@@ -1043,7 +1043,6 @@ OBJECT Form 50023 Kalkulationsblatt
                             ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                             ChampRelaDoc.VALIDATE("Ger„te Artikelnr.","AU-Zeile"."No.");
                             ChampRelaDoc."Menge kalk." := "AU-Zeile"."Outstanding Quantity";
-                            ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                             //Laufzeit vorbelegen
                             Opt.RESET;
                             Opt.SETFILTER("Tabellen ID",'%1',50024);
@@ -1051,6 +1050,7 @@ OBJECT Form 50023 Kalkulationsblatt
                             Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                             IF Opt.FINDFIRST THEN
                               ChampRelaDoc.Laufzeit := Opt.Code;
+                            ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
                             ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                             ChampRelaDoc.Basisger„t);
                             ChampRelaDoc.INSERT(TRUE);
@@ -1096,7 +1096,6 @@ OBJECT Form 50023 Kalkulationsblatt
                 ChampRelaDoc."Belegzeilennr." := PrfeChampRelaDoc."Belegzeilennr." + 11111;
               ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
               ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
-              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Fremderwerb := TRUE;
               ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
               //Laufzeit vorbelegen
@@ -1106,6 +1105,7 @@ OBJECT Form 50023 Kalkulationsblatt
               Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
               IF Opt.FINDFIRST THEN
                 ChampRelaDoc.Laufzeit := Opt.Code;
+              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
               ChampRelaDoc.Basisger„t);
               ChampRelaDoc.INSERT(TRUE);
@@ -1146,7 +1146,6 @@ OBJECT Form 50023 Kalkulationsblatt
                 ChampRelaDoc."Belegzeilennr." := PrfeChampRelaDoc."Belegzeilennr." + 11111;
               ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
               ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
-              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Fremderwerb := TRUE;
               ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
               //Laufzeit vorbelegen
@@ -1156,6 +1155,7 @@ OBJECT Form 50023 Kalkulationsblatt
               Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
               IF Opt.FINDFIRST THEN
                 ChampRelaDoc.Laufzeit := Opt.Code;
+              ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
               ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
               ChampRelaDoc.Basisger„t);
               ChampRelaDoc.INSERT(TRUE);
@@ -1698,7 +1698,6 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
                       ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",TempChampRelaDoc."Ger„te Artikelnr.");
                       ChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk.";
-                      ChampRelaDoc.VALIDATE("Quotenr.",TempChampRelaDoc."Quotenr.");
                       ChampRelaDoc."Laufzeit ab Buchungsdatum" := TempChampRelaDoc."Laufzeit ab Buchungsdatum";
                       ChampRelaDoc."Vertragsnr. bernommen" := TempChampRelaDoc."Vertragsnr. bernommen";
                       ChampRelaDoc."Abw. Ger„te Artikelnr." := TempChampRelaDoc."Abw. Ger„te Artikelnr.";
@@ -1711,6 +1710,7 @@ OBJECT Form 50023 Kalkulationsblatt
                       Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
                       IF Opt.FINDFIRST THEN
                         ChampRelaDoc.Laufzeit := Opt.Code;
+                      ChampRelaDoc.VALIDATE("Quotenr.",TempChampRelaDoc."Quotenr.");
                       ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                       ChampRelaDoc.Basisger„t);
                       ChampRelaDoc.INSERT(TRUE);
@@ -2017,7 +2017,8 @@ OBJECT Form 50023 Kalkulationsblatt
       OR (Service_Artikel.Artikelgruppe = 'ACHAT') OR (Service_Artikel.Artikelgruppe = 'ACTS')
       OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS') OR (Service_Artikel.Artikelgruppe = 'ACTS/ACHAT')
       OR (Service_Artikel.Artikelgruppe = 'APSS_OB') OR (Service_Artikel.Artikelgruppe = 'CHAMPS_FEE')
-      OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')) AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+      OR (Service_Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Service_Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER'))
+      AND (Ger„te_Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
         EXIT(FALSE)
       ELSE
         EXIT(TRUE);
