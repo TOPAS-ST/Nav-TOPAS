@@ -780,7 +780,7 @@ sup_artikelnr_lang := Artikel."No. 2";
 IF (STRPOS("SUP Artikelnr.",'HW') <> 0) OR (STRPOS("SUP Artikelnr.",'AHR') <> 0)
 OR ("SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR') OR ("SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01')
 OR (STRPOS("SUP Artikelnr.",'RPLC') <> 0) OR ("SUP Artikelnr." = 'RE_INSTATEMENT_FEE')
-OR (Artikel.Artikelgruppe = 'ACTS_MSS') THEN
+OR (Artikel.Artikelgruppe = 'ACTS_MSS') OR (Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER') THEN
   EXIT('');
 
 IF STRPOS(Seriennr,'S/N: ') = 1 THEN
@@ -1989,7 +1989,9 @@ IF Vkliefkopf.FINDLAST THEN
            BEGIN
 
              IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
-             OR (Artikel.Artikelgruppe = 'ACTS_MSS') OR (Artikel.Artikelgruppe = 'APSS_OB') THEN
+             OR (Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
+             OR (Artikel.Artikelgruppe = 'APSS_OB')
+             THEN
                ACTS := TRUE
              ELSE
                ACTS := FALSE;
@@ -3102,7 +3104,8 @@ ELSE
 ServiceArtikelnrErmitteln(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Waehrung : Code[10]) : Code[40]
 Artikel.GET(SUP_Artikelnr);
 IF (Artikel.Artikelgruppe = 'ACTS') OR (Artikel.Artikelgruppe = 'ACTS/ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_MSS')
-OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'APSS_OB') THEN
+OR (Artikel.Artikelgruppe = 'ACHAT') OR (Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER')
+OR (Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER') OR (Artikel.Artikelgruppe = 'APSS_OB') THEN
   ACTS := TRUE
 ELSE
   ACTS := FALSE;
@@ -3171,6 +3174,7 @@ ServicePreiseNeuKalkulieren(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Laufze
 //2015-04-27 ST CHAMPS zertifizierte Partner
 //2015-05-12 ST APSS One Box
 //2015-12-10 ST CHAMPS Re Instatement Fee
+//2016-03-23 ST ACTS MSS Schaeffler
 
 IF Laufzeit = '' THEN
   EXIT;
@@ -3191,6 +3195,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
     ACTS := FALSE;
     ACHAT := FALSE;
     ACTS_SCHAEFFLER := FALSE;
+    ACTS_MSS_SCHAEFFLER := FALSE;
     ACTS_MSS := FALSE;
     APSS_OB := FALSE;
     CHAMPS := FALSE;
@@ -3206,20 +3211,23 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         IF Artikel.Artikelgruppe = 'ACTS_SCHAEFFLER' THEN
           ACTS_SCHAEFFLER := TRUE
         ELSE
-          IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
-            ACTS_MSS := TRUE
+          IF Artikel.Artikelgruppe = 'ACTS_MSS_SCHAEFFLER' THEN
+            ACTS_MSS_SCHAEFFLER := TRUE
           ELSE
-            IF Artikel.Artikelgruppe = 'CHAMPS' THEN
-              CHAMPS := TRUE
+            IF Artikel.Artikelgruppe = 'ACTS_MSS' THEN
+              ACTS_MSS := TRUE
             ELSE
-              IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
-                CHAMPS_PARTNER := TRUE
+              IF Artikel.Artikelgruppe = 'CHAMPS' THEN
+                CHAMPS := TRUE
               ELSE
-                IF Artikel.Artikelgruppe = 'APSS_OB' THEN
-                  APSS_OB := TRUE
+                IF Artikel.Artikelgruppe = 'CHAMPS_PARTNER' THEN
+                  CHAMPS_PARTNER := TRUE
                 ELSE
-                  IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
-                    RE_INSTATEMENT_FEE := TRUE;
+                  IF Artikel.Artikelgruppe = 'APSS_OB' THEN
+                    APSS_OB := TRUE
+                  ELSE
+                    IF Artikel.Artikelgruppe = 'CHAMPS_FEE' THEN
+                      RE_INSTATEMENT_FEE := TRUE;
 
     EVALUATE(kalk_laufzeit,COPYSTR(Laufzeit,1,STRPOS(Laufzeit,'M')-1));
 
@@ -3234,7 +3242,8 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
 
     Service_PL.RESET;
     Service_PL.SETFILTER("Zuordnung obsolete",'%1',FALSE);
-    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (APSS_OB = TRUE) THEN
+    IF (ACTS = TRUE) OR (ACHAT = TRUE) OR (ACTS_MSS = TRUE) OR (ACTS_SCHAEFFLER = TRUE) OR (ACTS_MSS_SCHAEFFLER = TRUE)
+    OR (APSS_OB = TRUE) THEN
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: ACTS)
     ELSE
       Service_PL.SETFILTER(Art,'%1',Service_PL.Art :: Champs);
@@ -3310,6 +3319,12 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             IF ACTS_SCHAEFFLER = TRUE THEN
               BEGIN
                 normal_discount := 0.5;
+              END;
+
+            //ACTS MSS Schaeffler EK Konditionen
+            IF ACTS_MSS_SCHAEFFLER = TRUE THEN
+              BEGIN
+                normal_discount := 0.2;
               END;
 
             //APSS One Box EK Konditionen
