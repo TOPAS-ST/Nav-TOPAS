@@ -3698,6 +3698,7 @@ IF AUzeile.FINDFIRST THEN
               menge_basissysteme_fremd := 0;
               v_basissystem := '';
               v_belegnr_fremd := '';
+              v_artikelnr := '';
 
               REPEAT
 
