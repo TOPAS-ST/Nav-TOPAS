@@ -1095,7 +1095,7 @@ ELSE
                     LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
                     LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
                     LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
-                    IF z = 1 THEN
+                    IF Artikel."Item Tracking Code" = 'KEINE' THEN
                       LizenzTab.Menge := ChampRelaDoc."Menge kalk."
                     ELSE
                       LizenzTab.Menge := 1;
@@ -1129,7 +1129,7 @@ ELSE
                     LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
                     LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
                     LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
-                    IF z = 1 THEN
+                    IF Artikel."Item Tracking Code" = 'KEINE' THEN
                       LizenzTab.Menge := ChampRelaDoc."Menge kalk."
                     ELSE
                       LizenzTab.Menge := 1;
@@ -3324,7 +3324,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             //ACTS MSS Schaeffler EK Konditionen
             IF ACTS_MSS_SCHAEFFLER = TRUE THEN
               BEGIN
-                normal_discount := 0.2;
+                normal_discount := 0.8;
               END;
 
             //APSS One Box EK Konditionen
