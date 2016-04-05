@@ -1,0 +1,593 @@
+OBJECT Report 50018 RMA-ProForma
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.02.15;
+    Time=08:28:18;
+    Modified=Yes;
+    Version List=Topas Bericht;
+  }
+  PROPERTIES
+  {
+    TopMargin=1000;
+    BottomMargin=100;
+    LeftMargin=1500;
+    OnInitReport=BEGIN
+                   selected := STRMENU(Text000,1);
+                   CASE selected OF
+                     0: opt_invoice := opt_invoice :: Hersteller;
+                     1: opt_invoice := opt_invoice :: Hersteller;
+                     2: opt_invoice := opt_invoice :: Kunde;
+                   END
+                 END;
+
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50020;
+        OnPreDataItem=BEGIN
+                        Firmendaten.GET;
+                        Firmendaten.CALCFIELDS("ISO Logo");
+                      END;
+
+        ReqFilterFields=RMA-Nr.;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18600;
+            SectionHeight=13400;
+            OnPreSection=BEGIN
+                           RMA_Zeile.RESET;
+                           RMA_Zeile.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
+                           //IF opt_invoice = opt_invoice :: Kunde THEN
+                           //  RMA_Zeile.SETFILTER(Belegart,'%1',RMA_Zeile.Belegart :: "an Kunden")
+                           //ELSE
+                           //RMA_Zeile.SETFILTER(Belegart,'%1',RMA_Zeile.Belegart :: "an Hersteller");
+                           IF RMA_Zeile.FINDFIRST THEN
+                             BEGIN
+                               Anschrift.RESET;
+                               Anschrift.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
+                               IF opt_invoice = opt_invoice :: Kunde THEN
+                                 Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Kunde)
+                               ELSE
+                                 Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Hersteller);
+                               Anschrift.SETFILTER(Fhrungsrolle,'%1',TRUE);
+                               IF Anschrift.FINDFIRST THEN
+                                 BEGIN
+                                   Kontakt.GET(Anschrift."Kontakt Mandantennr.");
+                                   CurrReport.LANGUAGE := Language.GetLanguageID(Kontakt."Language Code");
+
+                                   "PLZ-Code" := Anschrift."PLZ-Code";
+                                   Ort := Anschrift.Ort;
+                                   Country.SETFILTER(Code,'%1',Anschrift."L„nder-/Regionscode");
+                                   IF Country.FINDFIRST THEN Land := Country.Name;
+
+                                   Zeile1 := Anschrift.Name;
+                                   Zeile2 := Anschrift."Name 2";
+                                   Zeile3 := Anschrift.Adresse;
+                                   Zeile4 := Anschrift."Adresse 2";
+
+                                   IF ((Zeile2 = '') AND (Zeile1 <> '') AND (Zeile3 <> '') AND (Zeile4 <> ''))  THEN
+                                     BEGIN
+                                       Zeile1 := '';
+                                       Zeile2 := Anschrift.Name;
+                                       Zeile3 := Anschrift.Adresse;
+                                       Zeile4 := Anschrift."Adresse 2";
+                                     END;
+
+                                   IF ((Zeile4 = '') AND (Zeile1 <> '') AND (Zeile2 <> '') AND (Zeile3 <> '')) THEN
+                                     BEGIN
+                                       Zeile1 := '';
+                                       Zeile2 := Anschrift.Name;
+                                       Zeile3 := Anschrift."Name 2";
+                                       Zeile4 := Anschrift.Adresse;
+                                     END;
+
+                                   IF ((Zeile2 = '') AND (Zeile4 = '') AND (Zeile1 <> '') AND (Zeile3 <> '')) THEN
+                                     BEGIN
+                                       Zeile1 := '';
+                                       Zeile2 := '';
+                                       Zeile3 := Anschrift.Name;
+                                       Zeile4 := Anschrift.Adresse;
+                                     END;
+
+                                   IF CurrReport.LANGUAGE = 1031 THEN
+                                      BEGIN
+                                        seite:=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO));
+                                      END
+                                    ELSE
+                                      BEGIN
+                                        seite:=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO));
+                                      END;
+                                 END
+                               ELSE
+                                 ERROR(Text001);
+                               END
+                           ELSE
+                             CurrReport.SHOWOUTPUT(FALSE);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140004;Label     ;0    ;4400 ;1680 ;423  ;Name=TOPAS electronic;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 1140006;Label     ;1700 ;4400 ;2500 ;423  ;Name=Vertriebsgesellschaft mbH,;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 1140007;Label     ;4200 ;4400 ;1800 ;423  ;Name=Postfach 11 04 11,;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 1140008;Label     ;6000 ;4400 ;1470 ;423  ;Name=30163 Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=5 }
+            { 1140009;Label     ;5900 ;8500 ;5300 ;900  ;FontSize=16;
+                                                         CaptionML=DEU=Pro Forma - Invoice }
+            { 1140012;Shape     ;12300;11126;5939 ;1400  }
+            { 1140013;Label     ;13240;11326;2500 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Referenznr.;
+                                                                    EUQ=Reference No.] }
+            { 1140014;TextBox   ;13240;11926;2500 ;400  ;FontSize=8;
+                                                         SourceExpr="RMA-Nr." }
+            { 1140018;Image     ;13227;1217 ;5250 ;1269 ;Bitmap=f:\daten neu\gemeinsame ordner\logo`s\topas\top_gelb.bmp }
+            { 1140019;Label     ;14100;9600 ;4300 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=email: customerservice@topas.de }
+            { 1140020;Label     ;14100;9283 ;4300 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Fax.: +49 511 9 68 64-64;
+                                                                    ENU=Fax.: +49 511 9 68 64-64] }
+            { 1140021;Label     ;14100;8983 ;4300 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Telefon: +49 511 9 68 64-11;
+                                                                    ENU=Phone: +49 511 9 68 64-11] }
+            { 1140022;Label     ;14100;8683 ;4300 ;300  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Customer Service;
+                                                                    ENU=Customer Service] }
+            { 1140044;Label     ;16233;11326;1050 ;423  ;FontSize=8;
+                                                         CaptionML=[DEU=Datum;
+                                                                    ENU=Date] }
+            { 1140045;TextBox   ;16232;11927;1600 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=WORKDATE }
+            { 1140065;TextBox   ;0    ;6900 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr="PLZ-Code" + ' ' +  Ort }
+            { 1140066;TextBox   ;0    ;7300 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Land }
+            { 1140067;TextBox   ;0    ;5300 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Zeile1 }
+            { 1140068;TextBox   ;0    ;5700 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Zeile2 }
+            { 1140069;TextBox   ;0    ;6100 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Zeile3 }
+            { 1140071;TextBox   ;0    ;6500 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Zeile4 }
+            { 1140075;Label     ;0    ;12144;5900 ;500  ;FontSize=10;
+                                                         CaptionML=[DEU=Sehr geehrte Damen und Herren,;
+                                                                    ENU=To whom it may concern,] }
+            { 1140081;Label     ;0    ;12900;18200;500  ;FontSize=10;
+                                                         CaptionML=[DEU=heute senden wir Ihnen folgende Artikel:;
+                                                                    ENU=today we are sending the following parts:] }
+            { 1140083;TextBox   ;16400;10426;1680 ;423  ;HorzAlign=Right;
+                                                         FontSize=7;
+                                                         SourceExpr=seite }
+            { 1140005;Label     ;0    ;1216 ;6732 ;400  ;FontName=Arial;
+                                                         FontSize=9;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="TOPAS electronic Vertriebsgesellschaft mbH, ";
+                                                                    ENU="TOPAS electronic Vetriebsgesellschaft mbH   "] }
+            { 1140010;Label     ;19   ;1674 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU="Tel. (0511) 9 68 64-0 ";
+                                                                    ENU="Phone +49 511- 9 68 64-0  "] }
+            { 1140011;Label     ;19   ;2074 ;2700 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Fax. (0511) 9 68 64-64;
+                                                                    ENU=Fax. +49 511- 9 68 64-64] }
+            { 1140016;Label     ;2855 ;1674 ;9830 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Gesch„ftsfhrer: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann;
+                                                                    ENU=CEO: Ulf Zell, Joachim Maaá, Gert von Engelhardt, Thomas Fortmann] }
+            { 1140017;Label     ;2855 ;2074 ;4200 ;400  ;Name=Amtsgericht Hannover HRB 1838;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140085;Label     ;6583 ;1250 ;3433 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=Groáer Kolonnenweg 18C3,;
+                                                                    ENU=Grosser Kolonnenweg 18C3,] }
+            { 1140086;Label     ;9885 ;1248 ;2467 ;400  ;FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=[DEU=30163 Hannover;
+                                                                    ENU="30163 Hannover "] }
+            { 1140023;Label     ;14100;4200 ;4300 ;300  ;Name=Deutsche Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes }
+            { 1140025;Label     ;14100;4500 ;4300 ;300  ;Name=USD-Kto 0305615;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR- und USD-Konto: }
+            { 1140026;Label     ;14100;4800 ;4300 ;300  ;Name=SWIFT-BIC.: DEUTDE2HXXX;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140027;Label     ;14100;5100 ;4300 ;300  ;Name=IBAN: DE62250700700030561500;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140028;Label     ;14100;5800 ;4300 ;300  ;Name=Dresdener Bank AG, Hannover;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Commerzbank AG, Hannover }
+            { 1140029;Label     ;14100;6100 ;4300 ;300  ;Name=DM-Kto 0770566900 BLZ 25080020;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No;
+                                                         CaptionML=DEU=EUR-, USD- und JPY-Konto: }
+            { 1140030;Label     ;14100;6400 ;4300 ;300  ;Name=SWIFT-BIC.: DRESDEFF250;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140031;Label     ;14100;6700 ;4300 ;300  ;Name=IBAN: DE30250800200770566900;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=No }
+            { 1140032;Label     ;14100;7400 ;4300 ;300  ;Name=Steuer-Nr.:   25/202/35327;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Steuer-Nr.:   25/202/35327;
+                                                                    ENU=TAX No.:   25/202/35327] }
+            { 1140033;Label     ;14100;7700 ;4300 ;300  ;Name=USt.-ID.-Nr.: DE115651057;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=USt.-ID.-Nr.: DE115651057;
+                                                                    ENU=VAT Reg.No.: DE115651057] }
+            { 1140034;Label     ;14100;8000 ;4300 ;300  ;Name=WEEE-Reg.-Nr.: DE 69202523;
+                                                         FontName=Arial;
+                                                         FontSize=7;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
+                                                                    ENU=WEEE-Reg.-No.: DE 69202523] }
+            { 1140015;PictureBox;9303 ;3759 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50023;
+        DataItemTableView=WHERE(Art=FILTER(an Hersteller),
+                                Andruck=FILTER(Text oben));
+        DataItemLink=Nr.=FIELD(RMA-Nr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18600;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                                    CurrReport.SHOWOUTPUT(Andruck=Andruck::"Text oben");
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140078;TextBox   ;0    ;0    ;18200;400  ;FontSize=9;
+                                                         SourceExpr=Bemerkung }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50021;
+        DataItemTableView=WHERE(Ausblenden=FILTER(No));
+        OnPreDataItem=BEGIN
+                        IF opt_invoice = opt_invoice :: Hersteller THEN
+                          "RMA-Zeile".SETRANGE("RMA-Zeile".Belegart,"RMA-Zeile".Belegart :: "an Hersteller");
+
+                        IF opt_invoice = opt_invoice :: Kunde THEN
+                          "RMA-Zeile".SETRANGE("RMA-Zeile".Belegart,"RMA-Zeile".Belegart :: "an Kunden");
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           TariffNo := '';
+                           Artikelnr :=  '';
+
+                           Artikel.RESET;
+                           Artikel.SETFILTER("No.",'%1',"Artikelnr.");
+                           IF Artikel.FINDFIRST THEN
+                             BEGIN
+                               TariffNo := Artikel."Tariff No.";
+                               Artikelnr :=  Artikel."No. 2";
+                             END
+                           ELSE
+                             BEGIN
+                               Artikelnr := "Artikelnr.";
+                              END;
+
+                           /////W„hrungscode 0 durch Euro ersetzen\\\\\
+                           IF opt_invoice = opt_invoice :: Hersteller THEN
+                             W„hrung:="RMA-Zeile"."EK-W„hrung"
+                           ELSE
+                             W„hrung:="RMA-Zeile".W„hrung;
+
+                           IF W„hrung = '' THEN
+                             W„hrung:='EUR'
+                         END;
+
+        DataItemLink=RMA-Nr.=FIELD(RMA-Nr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18600;
+            SectionHeight=1600;
+          }
+          CONTROLS
+          {
+            { 1140049;Shape     ;0    ;500  ;18300;1100  }
+            { 1140051;Label     ;16400;600  ;1721 ;846  ;HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Betrag;
+                                                                    ENU=Amount] }
+            { 1140072;Label     ;13900;600  ;2100 ;846  ;HorzAlign=Center;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Ursprungs- land;
+                                                                    ENU=Country of origin] }
+            { 1140073;Label     ;11600;600  ;1700 ;846  ;HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Preis;
+                                                                    ENU=Unit Price] }
+            { 1140074;Label     ;8859 ;600  ;1458 ;846  ;HorzAlign=Right;
+                                                         VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Menge;
+                                                                    ENU=Quantity] }
+            { 1140076;Label     ;1700 ;600  ;6720 ;846  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Artikelnr.;
+                                                                    ENU=Partnumber] }
+            { 1140077;Label     ;153  ;600  ;1400 ;846  ;VertAlign=Top;
+                                                         FontSize=9;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=[DEU=Nr.;
+                                                                    ENU=Item] }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18600;
+            SectionHeight=2400;
+            OnPreSection=BEGIN
+                           //CurrReport.SHOWOUTPUT(Belegart=Belegart::"an Hersteller");
+                           IF  opt_invoice = opt_invoice :: Hersteller THEN
+                             BEGIN
+                               Amount:=ROUND(("RMA-Zeile"."Menge SN-Nr. / DC")*("RMA-Zeile"."urspr. DC-Preis EK-Lieferung"),0.01);
+                               Price := "RMA-Zeile"."urspr. DC-Preis EK-Lieferung";
+                               Totalamount:=Totalamount+Amount;
+                               Anzahl_Zeile:=Anzahl_Zeile+1;
+                             END
+                           ELSE
+                             BEGIN
+                               Amount:=ROUND(("RMA-Zeile"."Menge SN-Nr. / DC")*("RMA-Zeile"."VK-Preis"),0.01);
+                               Price := "RMA-Zeile"."VK-Preis";
+                               Totalamount:=Totalamount+Amount;
+                               Anzahl_Zeile:=Anzahl_Zeile+1;
+                             END;
+
+
+                           IF Manufacturer.GET("RMA-Zeile".Herstellercode) THEN
+                             Manufac := Manufacturer.Name
+                           ELSE
+                             Manufac := '';
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140000;TextBox   ;200  ;200  ;1100 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=Anzahl_Zeile }
+            { 1140002;TextBox   ;1700 ;200  ;6700 ;400  ;FontSize=8;
+                                                         SourceExpr=Artikelnr }
+            { 1140047;TextBox   ;8700 ;200  ;1300 ;400  ;FontSize=8;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Menge SN-Nr. / DC" }
+            { 1140050;TextBox   ;11200;200  ;1600 ;400  ;FontSize=8;
+                                                         SourceExpr=Price }
+            { 1140048;TextBox   ;15700;200  ;1800 ;400  ;FontSize=8;
+                                                         SourceExpr=Amount }
+            { 1140003;TextBox   ;14400;200  ;1000 ;400  ;FontSize=8;
+                                                         SourceExpr=Ursprungsland }
+            { 1140054;Label     ;1700 ;1500 ;2024 ;400  ;FontSize=8;
+                                                         CaptionML=[DEU=Ihre RMA-Nr.:;
+                                                                    ENU=Your RMA-No.:] }
+            { 1140055;TextBox   ;13000;200  ;800  ;400  ;FontSize=8;
+                                                         SourceExpr=W„hrung }
+            { 1140057;TextBox   ;17600;200  ;700  ;400  ;FontSize=8;
+                                                         SourceExpr=W„hrung }
+            { 1140052;TextBox   ;3700 ;1900 ;5800 ;400  ;FontSize=8;
+                                                         SourceExpr=TariffNo }
+            { 1140056;Label     ;1700 ;1900 ;2024 ;400  ;FontSize=8;
+                                                         CaptionML=[DEU=Tariff Nr.:;
+                                                                    ENU=Tariff No.:] }
+            { 1140001;TextBox   ;3700 ;1510 ;5800 ;390  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="RMA-Nr. Hersteller" }
+            { 1140053;TextBox   ;3700 ;1100 ;5800 ;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr="SN-Nr. / DC" }
+            { 1140059;Label     ;1700 ;1100 ;2011 ;400  ;Name=SN-Nr. / DC:;
+                                                         ParentControl=1140053;
+                                                         VertAlign=Bottom;
+                                                         FontSize=8;
+                                                         FontBold=No;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=SN-Nr. / DC: }
+            { 1140070;TextBox   ;1700 ;600  ;12400;400  ;HorzAlign=Left;
+                                                         FontSize=8;
+                                                         SourceExpr=Artikel.Description }
+            { 1140024;Label     ;9753 ;1079 ;2000 ;400  ;FontSize=8;
+                                                         CaptionML=[DEU=Hersteller:;
+                                                                    ENU=Manufacturer:] }
+            { 1140080;TextBox   ;11742;1079 ;5800 ;400  ;FontSize=8;
+                                                         SourceExpr=Manufac }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18600;
+            SectionHeight=3308;
+          }
+          CONTROLS
+          {
+            { 1140063;TextBox   ;15200;500  ;2300 ;400  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Totalamount }
+            { 1140064;TextBox   ;17600;500  ;700  ;400  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         SourceExpr=W„hrung }
+            { 1140058;Shape     ;100  ;200  ;18100;100  ;ShapeStyle=HorzLine }
+            { 1140060;Shape     ;13900;1100 ;4300 ;100  ;ShapeStyle=HorzLine }
+            { 1140061;Shape     ;13900;1194 ;4300 ;100  ;ShapeStyle=HorzLine }
+            { 1140062;Label     ;13900;500  ;1200 ;400  ;FontSize=8;
+                                                         FontBold=Yes;
+                                                         CaptionML=[DEU=Gesamt:;
+                                                                    ENU=Total:] }
+            { 1140084;Label     ;0    ;1700 ;18100;500  ;FontSize=10;
+                                                         CaptionML=DEU=Rckware / Return material shipment }
+            { 1140040;Label     ;0    ;2200 ;18100;500  ;FontSize=10;
+                                                         CaptionML=DEU=No commercial value for customs purpose only. }
+            { 1140041;Label     ;0    ;2699 ;18100;500  ;FontSize=10;
+                                                         CaptionML=DEU=Incoterms: EXW Hannover }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50023;
+        DataItemTableView=WHERE(Art=FILTER(an Hersteller),
+                                Andruck=FILTER(Text unten));
+        DataItemVarName=Textunten;
+        DataItemLink=Nr.=FIELD(RMA-Nr.);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18600;
+            SectionHeight=400;
+          }
+          CONTROLS
+          {
+            { 1140079;TextBox   ;0    ;0    ;18200;400  ;FontSize=9;
+                                                         SourceExpr=Textunten.Bemerkung }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=5060;
+      Height=440;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      Country@1140000 : Record 9;
+      Price@1140025 : Decimal;
+      Amount@1140001 : Decimal;
+      Totalamount@1140002 : Decimal;
+      Artikel@1140003 : Record 27;
+      Manufacturer@1140012 : Record 5720;
+      Anzahl_Zeile@1140004 : Integer;
+      RMA_Zeile@1140020 : Record 50021;
+      Anschrift@1140015 : Record 50022;
+      Kontakt@1140017 : Record 5050;
+      Language@1140016 : Record 8;
+      Zeile1@1140005 : Text[60];
+      Zeile2@1140006 : Text[60];
+      Zeile3@1140007 : Text[60];
+      Zeile4@1140008 : Text[60];
+      "PLZ-Code"@1140018 : Code[20];
+      Ort@1140019 : Text[30];
+      Land@1140021 : Text[50];
+      w„hrung@1140009 : Text[30];
+      TariffNo@1140010 : Code[10];
+      Artikelnr@1140011 : Code[40];
+      Manufac@1140013 : Text[50];
+      seite@1140014 : Text[30];
+      opt_invoice@1140022 : 'Hersteller,Kunde';
+      selected@1140023 : Integer;
+
+      Text000@1140024 : TextConst
+        'DEU=Hersteller,Kunde';
+
+      Text001@1140026 : TextConst
+        'DEU=Bitte hinterlegen Sie den Hersteller bzw. Kunden und achten Sie darauf, dass die Fhrungsrolle vergeben ist.';
+      Firmendaten@1140027 : Record 79;
+
+    BEGIN
+    END.
+  }
+}
+
