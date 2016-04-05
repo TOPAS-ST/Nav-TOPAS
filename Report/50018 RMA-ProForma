@@ -2,8 +2,8 @@ OBJECT Report 50018 RMA-ProForma
 {
   OBJECT-PROPERTIES
   {
-    Date=19.02.15;
-    Time=08:28:18;
+    Date=05.04.16;
+    Time=10:17:31;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -45,74 +45,45 @@ OBJECT Report 50018 RMA-ProForma
             SectionWidth=18600;
             SectionHeight=13400;
             OnPreSection=BEGIN
-                           RMA_Zeile.RESET;
-                           RMA_Zeile.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
-                           //IF opt_invoice = opt_invoice :: Kunde THEN
-                           //  RMA_Zeile.SETFILTER(Belegart,'%1',RMA_Zeile.Belegart :: "an Kunden")
-                           //ELSE
-                           //RMA_Zeile.SETFILTER(Belegart,'%1',RMA_Zeile.Belegart :: "an Hersteller");
-                           IF RMA_Zeile.FINDFIRST THEN
+                           IF CurrReport.LANGUAGE = 1031 THEN
+                              BEGIN
+                                seite:=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO));
+                              END
+                            ELSE
+                              BEGIN
+                                seite:=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO));
+                              END;
+
+                           Anschrift.RESET;
+                           Anschrift.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
+                           IF opt_invoice = opt_invoice :: Kunde THEN
+                             Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Kunde)
+                           ELSE
+                             Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Hersteller);
+                           Anschrift.SETFILTER(Fhrungsrolle,'%1',TRUE);
+                           IF Anschrift.FINDFIRST THEN
                              BEGIN
-                               Anschrift.RESET;
-                               Anschrift.SETFILTER("RMA-Nr.",'%1',"RMA-Nr.");
-                               IF opt_invoice = opt_invoice :: Kunde THEN
-                                 Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Kunde)
-                               ELSE
-                                 Anschrift.SETFILTER(Art,'%1',Anschrift.Art :: Hersteller);
-                               Anschrift.SETFILTER(Fhrungsrolle,'%1',TRUE);
-                               IF Anschrift.FINDFIRST THEN
+                               Kontakt.GET(Anschrift."Kontakt Mandantennr.");
+                               CurrReport.LANGUAGE := Language.GetLanguageID(Kontakt."Language Code");
+
+                               Ansprechpartner.RESET;
+                               Ansprechpartner.SETRANGE("RMA-Nr.","RMA-Nr.");
+                               Ansprechpartner.SETRANGE(Art, Ansprechpartner.Art :: "Ansprechpartner Kunde");
+                               Ansprechpartner.SETRANGE("Kontakt Mandantennr.",Anschrift."Kontakt Mandantennr.");
+                               IF Ansprechpartner.FINDFIRST THEN
                                  BEGIN
-                                   Kontakt.GET(Anschrift."Kontakt Mandantennr.");
-                                   CurrReport.LANGUAGE := Language.GetLanguageID(Kontakt."Language Code");
-
-                                   "PLZ-Code" := Anschrift."PLZ-Code";
-                                   Ort := Anschrift.Ort;
-                                   Country.SETFILTER(Code,'%1',Anschrift."L„nder-/Regionscode");
-                                   IF Country.FINDFIRST THEN Land := Country.Name;
-
-                                   Zeile1 := Anschrift.Name;
-                                   Zeile2 := Anschrift."Name 2";
-                                   Zeile3 := Anschrift.Adresse;
-                                   Zeile4 := Anschrift."Adresse 2";
-
-                                   IF ((Zeile2 = '') AND (Zeile1 <> '') AND (Zeile3 <> '') AND (Zeile4 <> ''))  THEN
-                                     BEGIN
-                                       Zeile1 := '';
-                                       Zeile2 := Anschrift.Name;
-                                       Zeile3 := Anschrift.Adresse;
-                                       Zeile4 := Anschrift."Adresse 2";
-                                     END;
-
-                                   IF ((Zeile4 = '') AND (Zeile1 <> '') AND (Zeile2 <> '') AND (Zeile3 <> '')) THEN
-                                     BEGIN
-                                       Zeile1 := '';
-                                       Zeile2 := Anschrift.Name;
-                                       Zeile3 := Anschrift."Name 2";
-                                       Zeile4 := Anschrift.Adresse;
-                                     END;
-
-                                   IF ((Zeile2 = '') AND (Zeile4 = '') AND (Zeile1 <> '') AND (Zeile3 <> '')) THEN
-                                     BEGIN
-                                       Zeile1 := '';
-                                       Zeile2 := '';
-                                       Zeile3 := Anschrift.Name;
-                                       Zeile4 := Anschrift.Adresse;
-                                     END;
-
-                                   IF CurrReport.LANGUAGE = 1031 THEN
-                                      BEGIN
-                                        seite:=STRSUBSTNO('Seite %1',FORMAT(CurrReport.PAGENO));
-                                      END
-                                    ELSE
-                                      BEGIN
-                                        seite:=STRSUBSTNO('Page %1',FORMAT(CurrReport.PAGENO));
-                                      END;
+                                   Ansprechpartner.CALCFIELDS("Telefonnr.");
+                                   kontaktname := Ansprechpartner.Name + ' (' + Ansprechpartner."Telefonnr." + ')';
                                  END
                                ELSE
-                                 ERROR(Text001);
-                               END
+                                 kontaktname := '';
+
+                               FormatAddr.FormatAddr(Andruck,Anschrift.Name,Anschrift."Name 2",kontaktname,
+                               Anschrift.Adresse,Anschrift."Adresse 2",Anschrift.Ort,Anschrift."PLZ-Code",'',Anschrift."L„nder-/Regionscode");
+
+                             END
                            ELSE
-                             CurrReport.SHOWOUTPUT(FALSE);
+                             ERROR(Text001);
                          END;
 
           }
@@ -130,7 +101,7 @@ OBJECT Report 50018 RMA-ProForma
             { 1140008;Label     ;6000 ;4400 ;1470 ;423  ;Name=30163 Hannover;
                                                          FontName=Arial;
                                                          FontSize=5 }
-            { 1140009;Label     ;5900 ;8500 ;5300 ;900  ;FontSize=16;
+            { 1140009;Label     ;5900 ;9200 ;5300 ;900  ;FontSize=16;
                                                          CaptionML=DEU=Pro Forma - Invoice }
             { 1140012;Shape     ;12300;11126;5939 ;1400  }
             { 1140013;Label     ;13240;11326;2500 ;423  ;FontSize=8;
@@ -164,18 +135,6 @@ OBJECT Report 50018 RMA-ProForma
             { 1140045;TextBox   ;16232;11927;1600 ;400  ;HorzAlign=Left;
                                                          FontSize=8;
                                                          SourceExpr=WORKDATE }
-            { 1140065;TextBox   ;0    ;6900 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr="PLZ-Code" + ' ' +  Ort }
-            { 1140066;TextBox   ;0    ;7300 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr=Land }
-            { 1140067;TextBox   ;0    ;5300 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr=Zeile1 }
-            { 1140068;TextBox   ;0    ;5700 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr=Zeile2 }
-            { 1140069;TextBox   ;0    ;6100 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr=Zeile3 }
-            { 1140071;TextBox   ;0    ;6500 ;6500 ;400  ;FontSize=9;
-                                                         SourceExpr=Zeile4 }
             { 1140075;Label     ;0    ;12144;5900 ;500  ;FontSize=10;
                                                          CaptionML=[DEU=Sehr geehrte Damen und Herren,;
                                                                     ENU=To whom it may concern,] }
@@ -273,6 +232,22 @@ OBJECT Report 50018 RMA-ProForma
                                                          CaptionML=[DEU=WEEE-Reg.-Nr.: DE 69202523;
                                                                     ENU=WEEE-Reg.-No.: DE 69202523] }
             { 1140015;PictureBox;9303 ;3759 ;3100 ;2000 ;SourceExpr=Firmendaten."ISO Logo" }
+            { 1140035;TextBox   ;0    ;7400 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[6] }
+            { 1140036;TextBox   ;0    ;7000 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[5] }
+            { 1140037;TextBox   ;0    ;6600 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[4] }
+            { 1140038;TextBox   ;0    ;6200 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[3] }
+            { 1140039;TextBox   ;0    ;5800 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[2] }
+            { 1140042;TextBox   ;0    ;5400 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[1] }
+            { 1140043;TextBox   ;0    ;8200 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[8] }
+            { 1140046;TextBox   ;0    ;7800 ;6500 ;400  ;FontSize=9;
+                                                         SourceExpr=Andruck[7] }
           }
            }
       }
@@ -553,7 +528,6 @@ OBJECT Report 50018 RMA-ProForma
   CODE
   {
     VAR
-      Country@1140000 : Record 9;
       Price@1140025 : Decimal;
       Amount@1140001 : Decimal;
       Totalamount@1140002 : Decimal;
@@ -564,13 +538,8 @@ OBJECT Report 50018 RMA-ProForma
       Anschrift@1140015 : Record 50022;
       Kontakt@1140017 : Record 5050;
       Language@1140016 : Record 8;
-      Zeile1@1140005 : Text[60];
-      Zeile2@1140006 : Text[60];
-      Zeile3@1140007 : Text[60];
-      Zeile4@1140008 : Text[60];
-      "PLZ-Code"@1140018 : Code[20];
-      Ort@1140019 : Text[30];
-      Land@1140021 : Text[50];
+      Ansprechpartner@1140030 : Record 50022;
+      FormatAddr@1140029 : Codeunit 365;
       w„hrung@1140009 : Text[30];
       TariffNo@1140010 : Code[10];
       Artikelnr@1140011 : Code[40];
@@ -585,6 +554,8 @@ OBJECT Report 50018 RMA-ProForma
       Text001@1140026 : TextConst
         'DEU=Bitte hinterlegen Sie den Hersteller bzw. Kunden und achten Sie darauf, dass die Fhrungsrolle vergeben ist.';
       Firmendaten@1140027 : Record 79;
+      Andruck@1140028 : ARRAY [8] OF Text[90];
+      kontaktname@1140031 : Text[50];
 
     BEGIN
     END.
