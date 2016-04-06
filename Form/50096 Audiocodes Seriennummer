@@ -2,8 +2,8 @@ OBJECT Form 50096 Audiocodes Seriennummer
 {
   OBJECT-PROPERTIES
   {
-    Date=21.03.16;
-    Time=14:32:51;
+    Date=05.04.16;
+    Time=11:35:33;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -776,8 +776,11 @@ OBJECT Form 50096 Audiocodes Seriennummer
         vk_artpostennr := "Entry No.";
         IF Positive THEN BEGIN
 
-          ek_belegnr := ItemEntry."Document No.";
-          ek_datum := ItemEntry."Document Date";
+          ek_belegnr :="Document No.";
+          ek_datum := "Document Date";
+          artikelnr := "Item No.";
+          seriennr := "Serial No.";
+          ek_artpostennr := "Entry No.";
 
           IF PurchRcptHeader.GET(ItemEntry."Document No.") THEN
             BEGIN
