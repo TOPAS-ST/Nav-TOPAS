@@ -2,8 +2,8 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
 {
   OBJECT-PROPERTIES
   {
-    Date=31.03.16;
-    Time=16:59:04;
+    Date=06.04.16;
+    Time=09:39:13;
     Modified=Yes;
     Version List=Fertig!!!;
   }
@@ -42,7 +42,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
                         Quelle_Sheet := Quelle_Excel.Worksheets.Item('Einspielen');
 
                         excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count;
-                        PL_W„h := FORMAT(Quelle_Sheet.Range(Spalte_W„h+Quelle_j).Value);
+                        PL_W„h := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_W„h+Quelle_j).Value));
                         EVALUATE(v_art,FORMAT(Quelle_Sheet.Range(Spalte_Art+Quelle_j).Value));
 
                         IF (auswahl = 1) AND (FORMAT(v_art) <> 'Champs') THEN ERROR('Falsche Syntax in Liste');
@@ -201,7 +201,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
 
                         Quelle_j := '2';
                         excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count;
-                        PL_W„h := FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value);
+                        PL_W„h := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value));
 
                         IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+'1').Value) <> 'MSRP' THEN
                           ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_MSRP + ' muss MSRP sein.');
@@ -225,7 +225,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
                           excel_msrp := 0;
                           EOL := FALSE;
 
-                          Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+                          Artikelname := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value));
                           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> 'EOL' THEN
                             BEGIN
                               IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value) <> '' THEN
@@ -238,7 +238,16 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
                           ELSE
                             EOL := TRUE;
 
-                          PL_W„h := FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value);
+                          //Ausnahme EMS/UPG/TO-ACSRVR
+                          CASE Artikelname OF
+                            'EMS/UPG/TO-ACSRVR' :
+                            BEGIN
+                              excel_dc := excel_msrp;
+                              excel_msrp := 0;
+                            END;
+                          END;
+
+                          PL_W„h := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value));
                           IF FORMAT(Quelle_Sheet.Range(Spalte_Startdatum+Quelle_j).Value) <> '' THEN
                           startdatum := Quelle_Sheet.Range(Spalte_Startdatum+Quelle_j).Value;
                           IF Artikelname <> '' THEN
@@ -408,7 +417,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
 
                         Quelle_j := '2';
                         excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count;
-                        PL_W„h := FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value);
+                        PL_W„h := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value));
 
                         IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+'1').Value) <> 'MSRP' THEN
                           ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_MSRP + ' muss MSRP sein.');
@@ -421,7 +430,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
                           excel_msrp := 0;
                           EOL := FALSE;
 
-                          Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
+                          Artikelname := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value));
                           IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value) <> 'EOS' THEN
                             BEGIN
                               IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Systeme+Quelle_j).Value) <> '' THEN
@@ -434,7 +443,7 @@ OBJECT Dataport 50030 ACS_Syst_CHAMP Import EURO/USD
                           ELSE
                             EOL := TRUE;
 
-                          PL_W„h := FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value);
+                          PL_W„h := UPPERCASE(FORMAT(Quelle_Sheet.Range(Spalte_W„h_Systeme+Quelle_j).Value));
                           IF FORMAT(Quelle_Sheet.Range(Spalte_Startdatum+Quelle_j).Value) <> '' THEN
                           startdatum := Quelle_Sheet.Range(Spalte_Startdatum+Quelle_j).Value;
                           IF Artikelname <> '' THEN
