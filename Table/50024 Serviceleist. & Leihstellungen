@@ -663,6 +663,8 @@ Zum Verschieben markieren - OnValidate()
 Zum Verschieben markieren - OnLookup()
 
 Inaktiv - OnValidate()
+IF ("RMA-Nr." <> '') AND (Inaktiv = FALSE) THEN
+  ERROR(Text076);
 
 Inaktiv - OnLookup()
 
@@ -1181,8 +1183,8 @@ IF Liefkopf.FINDLAST THEN
     IF Liefzeile.FINDFIRST THEN
       REPEAT
 
-        wartungsnr := '';
-        hauptwartungsnr := '';
+        auswahl_wartungsnr := '';
+        auswahl_hauptwartungsnr := '';
 
         Artikel.GET(Liefzeile."No.");
         IF Artikel."Software Upgrade Protection" = FALSE THEN
@@ -1481,8 +1483,8 @@ IF Liefkopf.FINDLAST THEN
                               BEGIN
                                 IF FORM.RUNMODAL(50024,WartungsÜbersicht) = ACTION::LookupOK THEN
                                   BEGIN
-                                     wartungsnr := WartungsÜbersicht."Wartungsvertragsnr.";
-                                     hauptwartungsnr := WartungsÜbersicht."Hauptwartungsvertragsnr.";
+                                     auswahl_wartungsnr := WartungsÜbersicht."Wartungsvertragsnr.";
+                                     auswahl_hauptwartungsnr := WartungsÜbersicht."Hauptwartungsvertragsnr.";
                                   END
                                 ELSE
                                   BEGIN
@@ -1542,10 +1544,10 @@ IF Liefkopf.FINDLAST THEN
                         SystemPos."SOR Option" := Liefkopf."Payment Terms Code";
                       END;
 
-                    IF (wartungsnr <> '') AND (hauptwartungsnr <> '') THEN
+                    IF (auswahl_wartungsnr <> '') AND (auswahl_hauptwartungsnr <> '') THEN
                       BEGIN
-                        SystemPos."Wartungsvertragsnr." := wartungsnr;
-                        SystemPos."Hauptwartungsvertragsnr." := hauptwartungsnr;
+                        SystemPos."Wartungsvertragsnr." := auswahl_wartungsnr;
+                        SystemPos."Hauptwartungsvertragsnr." := auswahl_hauptwartungsnr;
                       END
                     ELSE
                       BEGIN
@@ -1668,6 +1670,9 @@ IF Liefkopf.FINDLAST THEN
     IF Liefzeile.FINDFIRST THEN
       REPEAT
 
+        wartungsnr := '';
+        hauptwartungsnr := '';
+
         Artikel.GET(Liefzeile."No.");
 
         IF Artikel."Software Upgrade Protection" = TRUE THEN
@@ -1755,6 +1760,9 @@ IF Liefkopf.FINDLAST THEN
                                     Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
                                     Wartung.MODIFY(TRUE);
                                   END;
+
+                                wartungsnr := Wartung."Wartungsvertragsnr.";
+                                hauptwartungsnr := Wartung."Hauptwartungsvertragsnr.";
 
                                 //************************************************************************************************
                                 //    Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und vorträglich Module etc. 
@@ -1884,8 +1892,8 @@ IF Liefkopf.FINDLAST THEN
                         SystemPos."Belegzeilennr." := HoleTempLizenzTab."Belegzeilennr.";
                         SystemPos.Ursprungsland := HoleTempLizenzTab.Ursprungsland;
                         SystemPos.Fremderwerb := HoleTempLizenzTab.Fremderwerb;
-                        SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
-                        SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
+                        SystemPos."Wartungsvertragsnr." := wartungsnr;
+                        SystemPos."Hauptwartungsvertragsnr." := hauptwartungsnr;
                         IF STRPOS(Liefkopf."Payment Terms Code",'SOR') <> 0 THEN
                           BEGIN
                             SystemPos.SOR := TRUE;
