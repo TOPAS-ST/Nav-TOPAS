@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=23.03.16;
-    Time=11:43:23;
+    Date=14.04.16;
+    Time=14:16:22;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -164,7 +164,15 @@ OBJECT Form 50023 Kalkulationsblatt
     { 1140069;CheckBox  ;24448;5280 ;1839 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
                                                  ShowCaption=No;
-                                                 SourceExpr="Laufzeit ab Buchungsdatum" }
+                                                 SourceExpr="Laufzeit ab Buchungsdatum";
+                                                 OnAfterValidate=BEGIN
+                                                                   CurrForm.SAVERECORD;
+                                                                   IF UpdateLaufzeitabBuchungsdatum(Rec) = TRUE THEN
+                                                                     BEGIN
+                                                                       CurrForm.UPDATE(TRUE);
+                                                                     END;
+                                                                 END;
+                                                                  }
     { 1140070;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140069;
                                                  InColumnHeading=Yes }
     { 1140030;TextBox   ;1056 ;2200 ;1500 ;440  ;ParentControl=1140000;
@@ -1704,12 +1712,26 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc."Nachtr„gliche Service Order" := TempChampRelaDoc."Nachtr„gliche Service Order";
                       ChampRelaDoc.Fremderwerb := TempChampRelaDoc.Fremderwerb;
                       //Laufzeit vorbelegen
-                      Opt.RESET;
-                      Opt.SETFILTER("Tabellen ID",'%1',50024);
-                      Opt.SETFILTER("Feld ID",'%1',44);
-                      Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
-                      IF Opt.FINDFIRST THEN
-                        ChampRelaDoc.Laufzeit := Opt.Code;
+                      IF (TempChampRelaDoc.Startdatum <> 0D) OR (TempChampRelaDoc.Ablaufdatum <> 0D) THEN
+                        BEGIN
+                          ChampRelaDoc.VALIDATE(Laufzeit,TempChampRelaDoc.Laufzeit);
+                          ChampRelaDoc.VALIDATE(Startdatum,TempChampRelaDoc.Startdatum);
+                          ChampRelaDoc.VALIDATE(Ablaufdatum,TempChampRelaDoc.Ablaufdatum);
+                        END
+                      ELSE
+                        BEGIN
+                          Opt.RESET;
+                          Opt.SETFILTER("Tabellen ID",'%1',50024);
+                          Opt.SETFILTER("Feld ID",'%1',44);
+                          Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
+                          IF Opt.FINDFIRST THEN
+                            ChampRelaDoc.Laufzeit := Opt.Code;
+                        END;
+                      IF TempChampRelaDoc."Wartungsvertragsnr." <> '' THEN
+                        BEGIN
+                          ChampRelaDoc.VALIDATE(Laufzeit,TempChampRelaDoc.Laufzeit);
+                          ChampRelaDoc.VALIDATE("Wartungsvertragsnr.",TempChampRelaDoc."Wartungsvertragsnr.");
+                        END;
                       ChampRelaDoc.VALIDATE("Quotenr.",TempChampRelaDoc."Quotenr.");
                       ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
                       ChampRelaDoc.Basisger„t);
