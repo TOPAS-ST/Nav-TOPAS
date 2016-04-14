@@ -2,8 +2,8 @@ OBJECT Report 50094 Auslaufende Vertr„ge
 {
   OBJECT-PROPERTIES
   {
-    Date=18.01.16;
-    Time=14:12:22;
+    Date=01.04.16;
+    Time=09:49:05;
     Modified=Yes;
     Version List=;
   }
@@ -62,9 +62,10 @@ OBJECT Report 50094 Auslaufende Vertr„ge
         DataItemTableView=SORTING(Debitornr.,Vertragsablaufdatum,Wartungsvertragsnr.)
                           WHERE(Status=FILTER(Auftrag|ACTS|ACHAT|Champs Partner));
         OnAfterGetRecord=BEGIN
-                           Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                           Sheet.Range('A'+j).Value := TOPAS_API.CreateExcelHyperlinkToNav(Wartungsvertrag.TABLENAME,1,50015,
+                                                       Wartungsvertrag."Wartungsvertragsnr.");
                            Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
-                           Sheet.Range('C'+j).Value := Wartungsvertrag."Debitornr.";
+                           Sheet.Range('C'+j).Value := TOPAS_API.CreateExcelHyperlinkToNav(Debitor.TABLENAME,1,21,Wartungsvertrag."Debitornr.");
                            Sheet.Range('D'+j).Value := Wartungsvertrag.Debitorname;
                            Sheet.Range('E'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
                            Sheet.Range('F'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
@@ -79,9 +80,9 @@ OBJECT Report 50094 Auslaufende Vertr„ge
                            IF SystemPos.FINDLAST THEN
                              BEGIN
                                Sheet.Range('H'+j).Value := SystemPos."Artikelnr. 2";
-                               Sheet.Range('I'+j).Value := SystemPos."Seriennr.";
+                               Sheet.Range('I'+j).Value := TOPAS_API.CreateExcelHyperlinkToNav(SystemPos.TABLENAME,1,50096,SystemPos."Seriennr.");
                                Sheet.Range('J'+j).Value := SystemPos."Board ini";
-                               Sheet.Range('K'+j).Value := SystemPos."Nr.";
+                               Sheet.Range('K'+j).Value := TOPAS_API.CreateExcelHyperlinkToNav(Lieferschein.TABLENAME,1,130,SystemPos."Nr.");
                              END;
 
                            IF Debitor.GET( Wartungsvertrag."Debitornr.") THEN
@@ -241,7 +242,7 @@ OBJECT Report 50094 Auslaufende Vertr„ge
       filter_startdatum@1140004 : Text[30];
       filter_ablaufdatum@1140005 : Text[30];
       filter@1140006 : Text[180];
-      champs_lieferscheinkopf@1140007 : Record 110;
+      Lieferschein@1140007 : Record 110;
       "ext-referenz"@1140008 : Text[80];
       "show_ext-referenz"@1140009 : Boolean;
       Protokollpfaddatei@1140018 : Text[250];
