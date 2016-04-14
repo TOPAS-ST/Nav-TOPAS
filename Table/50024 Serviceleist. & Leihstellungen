@@ -1086,33 +1086,6 @@ ELSE
                   END
                 ELSE
                   z := ChampRelaDoc."Menge kalk." - TempLizenzTab.COUNT;
-
-                FOR k := 1 TO z DO
-                  BEGIN
-                    LizenzTab.INIT;
-                    LizenzTab.Art := LizenzTab.Art :: Temporär;
-                    LizenzTab."Nr." := Lieferscheinnr;
-                    LizenzTab."Belegzeilennr." := Lieferscheinzeilennr;
-                    LizenzTab.INSERT(TRUE);
-                    LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
-                    LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
-                    LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
-                    IF Artikel."Item Tracking Code" = 'KEINE' THEN
-                      LizenzTab.Menge := ChampRelaDoc."Menge kalk."
-                    ELSE
-                      LizenzTab.Menge := 1;
-                    Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
-                    LizenzTab.Ursprungsland := Artikel."Country/Region of Origin Code";
-                    LizenzTab."Auftragsnr." := Auftragsnr;
-                    LizenzTab."Auftragszeilennr." := AUzeilennr;
-                    LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
-                    LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
-                    LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
-                    LizenzTab.Fremderwerb := TRUE;
-                    LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
-                                              LizenzTab."Seriennr.",Debnr);
-                    LizenzTab.MODIFY;
-                  END;
               END
             ELSE
               BEGIN
@@ -1121,32 +1094,58 @@ ELSE
                   z := 1
                 ELSE
                   z := ChampRelaDoc."Menge kalk.";
-                FOR k := 1 TO z DO
+              END;
+
+            FOR k := 1 TO z DO
+              BEGIN
+                LizenzTab.INIT;
+                LizenzTab.Art := LizenzTab.Art :: Temporär;
+                LizenzTab."Nr." := Lieferscheinnr;
+                LizenzTab."Belegzeilennr." := Lieferscheinzeilennr;
+                LizenzTab.INSERT(TRUE);
+                LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
+                LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
+                LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
+                IF Artikel."Item Tracking Code" = 'KEINE' THEN
+                  LizenzTab.Menge := ChampRelaDoc."Menge kalk."
+                ELSE
                   BEGIN
-                    LizenzTab.INIT;
-                    LizenzTab.Art := LizenzTab.Art :: Temporär;
-                    LizenzTab."Nr." := Lieferscheinnr;
-                    LizenzTab."Belegzeilennr." := Lieferscheinzeilennr;
-                    LizenzTab.INSERT(TRUE);
-                    LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
-                    LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
-                    LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
-                    IF Artikel."Item Tracking Code" = 'KEINE' THEN
-                      LizenzTab.Menge := ChampRelaDoc."Menge kalk."
-                    ELSE
-                      LizenzTab.Menge := 1;
-                    Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
-                    LizenzTab.Ursprungsland := Artikel."Country/Region of Origin Code";
-                    LizenzTab."Auftragsnr." := Auftragsnr;
-                    LizenzTab."Auftragszeilennr." := AUzeilennr;
-                    LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
-                    LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
-                    LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
-                    LizenzTab.Fremderwerb := TRUE;
-                    LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
-                                              LizenzTab."Seriennr.",Debnr);
-                    LizenzTab.MODIFY;
+                    LizenzTab.Menge := 1;
+                    HoleTempSN.RESET;
+                    HoleTempSN.SETFILTER("Lfd. Nr.",'<>%1',LizenzTab."Lfd. Nr.");
+                    HoleTempSN.SETFILTER(Art,'%1',HoleTempSN.Art :: Temporär);
+                    HoleTempSN.SETFILTER("Debitornr.",'%1',ChampRelaDoc."Debitornr.");
+                    HoleTempSN.SETFILTER("Artikelnr.",'%1',ChampRelaDoc."Geräte Artikelnr.");
+                    HoleTempSN.SETFILTER("Auftragsnr.",'%1',Auftragsnr);
+                    HoleTempSN.SETFILTER("Nr.",'%1',Lieferscheinnr);
+                    HoleTempSN.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
+                    HoleTempSN.SETFILTER("Seriennr.",'<>%1','');
+                    IF HoleTempSN.FINDFIRST THEN
+                      REPEAT
+                        TempLizenzTab.RESET;
+                        TempLizenzTab.SETRANGE(Art,TempLizenzTab.Art :: Temporär);
+                        TempLizenzTab.SETRANGE("Debitornr.",Debnr);
+                        TempLizenzTab.SETRANGE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
+                        TempLizenzTab.SETRANGE("Auftragsnr.",Auftragsnr);
+                        TempLizenzTab.SETRANGE("Auftragszeilennr.",AUzeilennr);
+                        TempLizenzTab.SETRANGE("Nr.",Lieferscheinnr);
+                        TempLizenzTab.SETRANGE("Belegzeilennr.",Lieferscheinzeilennr);
+                        TempLizenzTab.SETRANGE("Seriennr.",HoleTempSN."Seriennr.");
+                        IF NOT TempLizenzTab.FINDFIRST THEN
+                          LizenzTab.VALIDATE("Seriennr.",HoleTempSN."Seriennr.");
+                      UNTIL (HoleTempSN.NEXT = 0) OR (LizenzTab."Seriennr." <> '');
                   END;
+                Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
+                LizenzTab.Ursprungsland := Artikel."Country/Region of Origin Code";
+                LizenzTab."Auftragsnr." := Auftragsnr;
+                LizenzTab."Auftragszeilennr." := AUzeilennr;
+                LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
+                LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
+                LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
+                LizenzTab.Fremderwerb := TRUE;
+                LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
+                                          LizenzTab."Seriennr.",Debnr);
+                LizenzTab.MODIFY;
               END;
           END
         ELSE
