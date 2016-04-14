@@ -7,11 +7,11 @@ OnModify()
 
 OnDelete()
 ServiceLizenzTab.RESET;
-ServiceLizenzTab.SETFILTER(Art,'%1',ServiceLizenzTab.Art :: Temporär);
-ServiceLizenzTab.SETFILTER("Nr.",'%1',"Belegnr.");
-ServiceLizenzTab.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-ServiceLizenzTab.SETFILTER("Auftragsnr.",'%1',"Nr.");
-ServiceLizenzTab.SETFILTER("Auftragszeilennr.",'%1',"Zeilennr.");
+ServiceLizenzTab.SETRANGE(Art,ServiceLizenzTab.Art :: Temporär);
+ServiceLizenzTab.SETRANGE("Nr.","Belegnr.");
+ServiceLizenzTab.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+ServiceLizenzTab.SETRANGE("Auftragsnr.","Nr.");
+ServiceLizenzTab.SETRANGE("Auftragszeilennr.","Zeilennr.");
 IF ServiceLizenzTab.FINDFIRST THEN
   ServiceLizenzTab.DELETEALL;
 
@@ -40,18 +40,18 @@ IF Art = Art :: "SUP-AU" THEN
     //Prüfung: Bei Fremderwerb müssen für ein und derselben Pseudo Belegnr. + Zeilennr. die Artikelnummern identisch sein
     IF Fremderwerb = TRUE THEN
       BEGIN
-        ServiceZuordnungBeleg.RESET;
-        ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
-        ServiceZuordnungBeleg.SETFILTER("Belegnr.",'%1',"Belegnr.");
-        ServiceZuordnungBeleg.SETFILTER("Belegzeilennr.",'%1',"Belegzeilennr.");
-        IF ServiceZuordnungBeleg.FINDFIRST THEN
+        ServiceRelaDoc.RESET;
+        ServiceRelaDoc.SETRANGE(Art,ServiceRelaDoc.Art :: "SUP-AU");
+        ServiceRelaDoc.SETRANGE("Belegnr.","Belegnr.");
+        ServiceRelaDoc.SETRANGE("Belegzeilennr.","Belegzeilennr.");
+        IF ServiceRelaDoc.FINDFIRST THEN
           REPEAT 
-            IF ((ServiceZuordnungBeleg."Nr." <> "Nr.") OR (ServiceZuordnungBeleg."Zeilennr." <> "Zeilennr."))
-            AND (ServiceZuordnungBeleg."Geräte Artikelnr." <> "Geräte Artikelnr.") THEN
-              ERROR(Text004,FIELDCAPTION("Belegnr."),ServiceZuordnungBeleg."Belegnr.",FIELDCAPTION("Belegzeilennr."),
-                    ServiceZuordnungBeleg."Belegzeilennr.",FIELDCAPTION("Geräte Artikelnr."),
-                    ServiceZuordnungBeleg."Geräte Artikelnr.",ServiceZuordnungBeleg."Nr.","Geräte Artikelnr.");
-          UNTIL ServiceZuordnungBeleg.NEXT = 0;
+            IF ((ServiceRelaDoc."Nr." <> "Nr.") OR (ServiceRelaDoc."Zeilennr." <> "Zeilennr."))
+            AND (ServiceRelaDoc."Geräte Artikelnr." <> "Geräte Artikelnr.") THEN
+              ERROR(Text004,FIELDCAPTION("Belegnr."),ServiceRelaDoc."Belegnr.",FIELDCAPTION("Belegzeilennr."),
+                    ServiceRelaDoc."Belegzeilennr.",FIELDCAPTION("Geräte Artikelnr."),
+                    ServiceRelaDoc."Geräte Artikelnr.",ServiceRelaDoc."Nr.","Geräte Artikelnr.");
+          UNTIL ServiceRelaDoc.NEXT = 0;
       END;
 
     Artikel.GET("Geräte Artikelnr.");
@@ -135,7 +135,7 @@ IF xRec."Menge kalk." <> "Menge kalk." THEN
 Menge kalk. - OnLookup()
 
 Laufzeit - OnValidate()
-PrüfeServiceQuote(Laufzeit,"Quotenr.");
+PrüfeServiceQuote("SUP Artikelnr.",Laufzeit,"Quotenr.");
 
 IF STRPOS(Laufzeit,'M') = 0 THEN
   ERROR('Im Feld %1 muss auch immer die Angabe M (Monate) enthalten sein.',FIELDCAPTION(Laufzeit));
@@ -156,12 +156,12 @@ Laufzeit - OnLookup()
 Startdatum - OnValidate()
 IF "SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN ERROR(Text005);
 
-ServiceZuordnungBeleg.RESET;
-ServiceZuordnungBeleg.SETRANGE(Art,ServiceZuordnungBeleg.Art :: "SUP-AU");
-ServiceZuordnungBeleg.SETRANGE("Nr.","Nr.");
-ServiceZuordnungBeleg.SETRANGE("Zeilennr.","Zeilennr.");
-ServiceZuordnungBeleg.SETRANGE(Startdatum,Startdatum);
-IF NOT ServiceZuordnungBeleg.FINDFIRST THEN
+ServiceRelaDoc.RESET;
+ServiceRelaDoc.SETRANGE(Art,ServiceRelaDoc.Art :: "SUP-AU");
+ServiceRelaDoc.SETRANGE("Nr.","Nr.");
+ServiceRelaDoc.SETRANGE("Zeilennr.","Zeilennr.");
+ServiceRelaDoc.SETRANGE(Startdatum,Startdatum);
+IF NOT ServiceRelaDoc.FINDFIRST THEN
   BEGIN
     IF (Startdatum < WORKDATE) AND (Startdatum <> 0D) THEN
       IF NOT CONFIRM(Text002,TRUE,FIELDCAPTION(Startdatum)) THEN
@@ -213,9 +213,9 @@ IF Startdatum = 0D THEN
 IF (Ablaufdatum = 0D) AND (Startdatum = 0D) THEN
   BEGIN
     Opt.RESET;
-    Opt.SETFILTER("Tabellen ID",'%1',50024);
-    Opt.SETFILTER("Feld ID",'%1',44);
-    Opt.SETFILTER("Nr.",'%1',"SUP Artikelnr.");
+    Opt.SETRANGE("Tabellen ID",50024);
+    Opt.SETRANGE("Feld ID",44);
+    Opt.SETRANGE("Nr.","SUP Artikelnr.");
     IF Opt.FINDFIRST THEN
       VALIDATE(Laufzeit,Opt.Code);
   END;
@@ -255,7 +255,7 @@ Laufzeit ab Buchungsdatum - OnValidate()
 Laufzeit ab Buchungsdatum - OnLookup()
 
 Quotenr. - OnValidate()
-PrüfeServiceQuote(Laufzeit,"Quotenr.");
+PrüfeServiceQuote("SUP Artikelnr.",Laufzeit,"Quotenr.");
 
 Quotenr. - OnLookup()
 
@@ -265,10 +265,10 @@ Gruppierung - OnLookup()
 
 PseudoBelegNrErmitteln(auftragsnr : Code[20];auzeilennr : Integer) : Code[20]
 PrüfeServRelaDoc.RESET;
-PrüfeServRelaDoc.SETFILTER(Art,'%1',PrüfeServRelaDoc.Art :: "SUP-AU");
-PrüfeServRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
-PrüfeServRelaDoc.SETFILTER("Zeilennr.",'%1',auzeilennr);
-PrüfeServRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+PrüfeServRelaDoc.SETRANGE(Art,PrüfeServRelaDoc.Art :: "SUP-AU");
+PrüfeServRelaDoc.SETRANGE("Nr.",auftragsnr);
+PrüfeServRelaDoc.SETRANGE("Zeilennr.",auzeilennr);
+PrüfeServRelaDoc.SETRANGE(Fremderwerb,TRUE);
 IF PrüfeServRelaDoc.FINDFIRST THEN
   BEGIN
     EXIT(PrüfeServRelaDoc."Belegnr.");
@@ -277,10 +277,10 @@ ELSE
   BEGIN
     // Prüfe, ob im Beleg eine andere Kalkulation mit Pseudo Belegnr. besteht und wenn ja biete diese an
     PrüfeServRelaDoc.RESET;
-    PrüfeServRelaDoc.SETFILTER(Art,'%1',PrüfeServRelaDoc.Art :: "SUP-AU");
-    PrüfeServRelaDoc.SETFILTER("Nr.",'%1',auftragsnr);
-    //PrüfeServRelaDoc.SETFILTER(Basisgerät,'%1',TRUE);
-    PrüfeServRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+    PrüfeServRelaDoc.SETRANGE(Art,PrüfeServRelaDoc.Art :: "SUP-AU");
+    PrüfeServRelaDoc.SETRANGE("Nr.",auftragsnr);
+    //PrüfeServRelaDoc.SETRANGE(Basisgerät,TRUE);
+    PrüfeServRelaDoc.SETRANGE(Fremderwerb,TRUE);
     IF PrüfeServRelaDoc.FINDLAST THEN
       IF CONFIRM(Text001,TRUE,PrüfeServRelaDoc."Zeilennr.",PrüfeServRelaDoc."SUP Artikelnr.",PrüfeServRelaDoc."Belegnr.") THEN
         EXIT(PrüfeServRelaDoc."Belegnr.");
@@ -291,9 +291,13 @@ ELSE
     EXIT('LS_' + laufende_nummer);
   END;
 
-PrüfeServiceQuote(kalk_laufzeit : Code[20];kalk_quotenr : Code[10])
+PrüfeServiceQuote(Service : Code[20];kalk_laufzeit : Code[20];kalk_quotenr : Code[10])
 //Zunächst für AudioCodes Quotes gedacht, gelten grundsätzlich nur für Service-Laufzeiten von max. 1 Jahr
 IF (kalk_quotenr = '') OR (kalk_laufzeit = '') THEN EXIT;
+
+IF Artikel.GET(Service) THEN
+  IF (Artikel.Artikelgruppe <> 'APSS_OB') AND (Artikel.Artikelgruppe <> 'ACTS') AND (Artikel.Artikelgruppe <> 'ACTS_MSS') THEN
+    ERROR(Text009,FIELDCAPTION("Quotenr."));
 
 EVALUATE(v_laufzeit,COPYSTR(kalk_laufzeit,1,STRPOS(kalk_laufzeit,'M')-1));
 IF (kalk_quotenr <> '') AND (v_laufzeit > 12) THEN
@@ -320,3 +324,23 @@ ELSE
   Teil_string_b := zusatz_belegzeile + Belegnr + '_' + FORMAT(Belegzeile);
 
 EXIT(Teil_string_a + Teil_string_b);
+
+UpdateLaufzeitabBuchungsdatum(VAR FromServiceRelaDoc : Record "Service Beleg Zuordnung") : Boolean
+IF (FromServiceRelaDoc.HASFILTER) AND (FromServiceRelaDoc."Laufzeit ab Buchungsdatum" = TRUE) THEN
+  BEGIN
+    IF CONFIRM(Text010,TRUE) = TRUE THEN
+      BEGIN
+        UpdateServiceRelaDoc.RESET;
+        UpdateServiceRelaDoc.SETRANGE(Art,FromServiceRelaDoc.Art);
+        UpdateServiceRelaDoc.SETRANGE("Nr.",FromServiceRelaDoc."Nr.");
+        UpdateServiceRelaDoc.SETRANGE("Zeilennr.",FromServiceRelaDoc."Zeilennr.");
+        IF UpdateServiceRelaDoc.FIND('-') THEN
+          BEGIN
+            REPEAT
+              UpdateServiceRelaDoc."Laufzeit ab Buchungsdatum" := TRUE;
+              UpdateServiceRelaDoc.MODIFY;
+            UNTIL UpdateServiceRelaDoc.NEXT = 0;
+            EXIT(TRUE);
+          END;
+      END;
+  END;
