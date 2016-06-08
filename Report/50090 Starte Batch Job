@@ -52,11 +52,11 @@ IF Belege.FINDFIRST() THEN Belege.DELETEALL();
 Verkaufskopf.RESET;
 Verkaufskopf.SETFILTER(Verkaufskopf."Document Type",
                       '%1 | %2 | %3',Belege.Belegart::Quote,Belege.Belegart::Order,Belege.Belegart::"Blanket Order");
-Verkaufskopf.FINDFIRST;
+Verkaufskopf.FIND('-');
   REPEAT
     Verkaufszeile.SETFILTER(Verkaufszeile."Document No.",'%1',Verkaufskopf."No.");
     Verkaufszeile.SETFILTER(Verkaufszeile.Type,'%1',Verkaufszeile.Type::Item);
-    IF Verkaufszeile.FINDFIRST THEN
+    IF Verkaufszeile.FIND('-') THEN
       BEGIN
         REPEAT
            Belege.INIT;
@@ -126,13 +126,13 @@ Belege.RESET;
 
 Verkaufsrechnungskopf.RESET;
 Verkaufsrechnungskopf.SETFILTER(Verkaufsrechnungskopf."No.",'>%1',letzte_belegnr);
-IF Verkaufsrechnungskopf.FINDFIRST THEN
+IF Verkaufsrechnungskopf.FIND('-') THEN
   BEGIN
     REPEAT
       Verkaufsrechnungszeile.RESET;
       Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile."Document No.",'%1',Verkaufsrechnungskopf."No.");
       Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile.Type,'%1',Verkaufsrechnungszeile.Type::Item);
-      IF Verkaufsrechnungszeile.FINDFIRST THEN
+      IF Verkaufsrechnungszeile.FIND('-') THEN
         BEGIN
           REPEAT
             Belege.INIT;
@@ -176,7 +176,11 @@ IF Verkaufsrechnungskopf.FINDFIRST THEN
             Belege."Rahmenauftragszeilennr.":= Verkaufsrechnungszeile."Blanket Order Line No.";
             Belege."Auftragsnr.":=Verkaufsrechnungszeile."Order No.";
             Belege."Auftragszeilennr.":=Verkaufsrechnungszeile."Order Line No.";
-            Belege."Betrag MW ohne Mwst.":=Verkaufsrechnungszeile."Quantity (Base)" * Verkaufsrechnungszeile."VK-Preis (MW)";
+//   geändert 13.10.2014 Führt zu kleineren Differenzen im Betrag w/Rundung des Einzelbetrages
+//            Belege."Betrag MW ohne Mwst.":=Verkaufsrechnungszeile."Quantity (Base)" * Verkaufsrechnungszeile."VK-Preis (MW)";
+//   neu folgende Zeile 13.10.2014 UB
+            Belege."Betrag MW ohne Mwst.":=Verkaufsrechnungszeile.Amount / Belege."VK-Kurs";
+
             Belege.Endkunde:=Verkaufsrechnungszeile."Endkundennr.";
             Belege."Endkontaktnr Pivot" := EndkontaktPivot_fuellen(Verkaufsrechnungskopf."Sell-to Contact No.",
                                            Verkaufsrechnungszeile."Endkundennr.",Verkaufsrechnungszeile.Endkunde);
@@ -206,13 +210,13 @@ Belege.RESET;
 
 Verkaufsgutschriftskopf.RESET;
 Verkaufsgutschriftskopf.SETFILTER(Verkaufsgutschriftskopf."No.",'>%1',letzte_belegnr);
-IF Verkaufsgutschriftskopf.FINDFIRST THEN
+IF Verkaufsgutschriftskopf.FIND('-') THEN
   BEGIN
     REPEAT
       Verkaufsgutschriftszeile.RESET;
       Verkaufsgutschriftszeile.SETFILTER(Verkaufsgutschriftszeile."Document No.",'%1',Verkaufsgutschriftskopf."No.");
       Verkaufsgutschriftszeile.SETFILTER(Verkaufsgutschriftszeile.Type,'%1',Verkaufsgutschriftszeile.Type::Item);
-      IF Verkaufsgutschriftszeile.FINDFIRST THEN
+      IF Verkaufsgutschriftszeile.FIND('-') THEN
         BEGIN
           REPEAT
             Belege.INIT;
@@ -269,7 +273,6 @@ IF Verkaufsgutschriftskopf.FINDFIRST THEN
 
 {noch nicht aktiv
 
-{
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1',Belege.Belegart::Invoice);
 IF Belege.FINDLAST THEN
@@ -281,18 +284,17 @@ ELSE
     letzte_belegnr:='RE';
   END;
 Belege.RESET;
-}
 
 //Verkaufsrechnungskopf.RESET;
 //Verkaufsrechnungskopf.SETFILTER(Verkaufsrechnungskopf."No.",'>%1',letzte_belegnr);
-//IF Verkaufsrechnungskopf.FINDFIRST THEN
+//IF Verkaufsrechnungskopf.FIND('-') THEN
 //  BEGIN
 //    REPEAT
       Verkaufsrechnungszeile.RESET;
       //Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile."Document No.",'%1',Verkaufsrechnungskopf."No.");
       Verkaufsrechnungszeile.SETFILTER(Verkaufsrechnungszeile.Type,'%1',Verkaufsrechnungszeile.Type::"G/L Account");
       Verkaufsrechnungszeile.SETFILTER("No.",'%1|%2|%3','4407','4408','4424');
-      IF Verkaufsrechnungszeile.FINDFIRST THEN
+      IF Verkaufsrechnungszeile.FIND('-') THEN
         BEGIN
           REPEAT
             Verkaufsrechnungskopf.GET(Verkaufsrechnungszeile."Document No.");
@@ -362,8 +364,8 @@ REPEAT
 
   Statistik.RESET;
   Statistik.SETFILTER(Statistik.Jahr,'%1',Jahr);
-  IF Statistik.FINDFIRST THEN Statistik.DELETEALL(TRUE);
-  Statistik.RESET;
+  IF Statistik.FINDFIRST THEN Statistik.DELETEALL();
+  //Statistik.RESET;
 
   datumsfilter_fuellen(Jahr);
   geschaeftsjahr_aufbauen(Jahr);
@@ -412,7 +414,7 @@ statistikfuellen_artikel(Datumsfilter : Text[30];quartal : Integer;gjahr : Text[
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
 Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
-IF Belege.FINDFIRST THEN
+IF Belege.FIND('-') THEN
   BEGIN
     REPEAT
       anzahl:=0;
@@ -473,8 +475,14 @@ IF Belege.FINDFIRST THEN
           Statistik.INIT;
           Statistik.Art:=Statistik.Art::Artikel;
           Statistik."Debitornr.":=Belege."Debitornr.";
+    // Feld Endkunde bei Neuanlage mit '' vorbelegen   TB 2016-04-22
+          Statistik.Endkunde:='';
+          Statistik.Endkunde_name :='';
+     //
           Statistik."Artikelnr.2":=Belege."Artikelnr.";
           Statistik.Jahr:=gjahr;
+
+
           CASE quartal OF
             1: BEGIN; 
                  Statistik.Q1_Menge:=anzahl;
@@ -538,7 +546,7 @@ statistikfuellen_hersteller(Datumsfilter : Text[30];quartal : Integer;gjahr : Te
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
 Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
-IF Belege.FINDFIRST THEN
+IF Belege.FIND('-') THEN
   BEGIN
     REPEAT
       anzahl:=0;
@@ -597,7 +605,13 @@ IF Belege.FINDFIRST THEN
           Statistik.INIT;
           Statistik.Art:=Statistik.Art::Hersteller;
           Statistik."Debitornr.":=Belege."Debitornr.";
+
+        // Feld Endkunde bei Neuanlage mit '' vorbelegen   TB 2016-04-22
+          Statistik.Endkunde:='';
+          Statistik.Endkunde_name :='';
+     //
           Statistik.Jahr:=gjahr;
+
           CASE quartal OF
             1: BEGIN; 
                  Statistik.Q1_Menge:=anzahl;
@@ -657,7 +671,7 @@ statistikfuellen_endkunden(Datumsfilter : Text[30];quartal : Integer;gjahr : Tex
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
 Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
-IF Belege.FINDFIRST THEN
+IF Belege.FIND('-') THEN
   BEGIN
     REPEAT
       anzahl:=0;
@@ -776,7 +790,7 @@ statistikfuellen_endkunden_art(Datumsfilter : Text[30];quartal : Integer;gjahr :
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
 Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);
-IF Belege.FINDFIRST THEN
+IF Belege.FIND('-') THEN
   BEGIN
     REPEAT
       anzahl:=0;
@@ -916,7 +930,7 @@ statistikfuellen_endkunden_hst(Datumsfilter : Text[30];quartal : Integer;gjahr :
 Belege.RESET;
 Belege.SETFILTER(Belege.Belegart,'%1|%2',Belege.Belegart::Invoice,Belege.Belegart::"Credit Memo");
 Belege.SETFILTER(Belege.Belegdatum,Datumsfilter);        /// Prüfen
-IF Belege.FINDFIRST THEN
+IF Belege.FIND('-') THEN
   BEGIN
     REPEAT
       anzahl:=0;
@@ -1061,7 +1075,7 @@ REPEAT
 
   Statistik.RESET;
   Statistik.SETFILTER(Statistik.Jahr,'%1',Jahr);
-  IF Statistik.FINDFIRST THEN Statistik.DELETEALL(TRUE);
+  IF Statistik.FINDFIRST THEN Statistik.DELETEALL();
   Statistik.RESET;
 
   datumsfilter_fuellen(Jahr);
@@ -1087,8 +1101,7 @@ statistik_artikel_historie(Datumsfilter : Text[30];quartal : Integer;gjahr : Tex
 Beleghistorie.RESET;
 Beleghistorie.SETFILTER(Beleghistorie.Belegart,'%1|%2',Beleghistorie.Belegart::Invoice,Beleghistorie.Belegart::"Credit Memo");
 Beleghistorie.SETFILTER(Beleghistorie.Belegdatum,Datumsfilter);
-Beleghistorie.FINDFIRST;
-
+Beleghistorie.FIND('-');
 REPEAT
   anzahl:=0;
   wert:=0;
@@ -1205,8 +1218,7 @@ statistik_hersteller_historie(Datumsfilter : Text[30];quartal : Integer;gjahr : 
 Beleghistorie.RESET;
 Beleghistorie.SETFILTER(Beleghistorie.Belegart,'%1|%2',Beleghistorie.Belegart::Invoice,Beleghistorie.Belegart::"Credit Memo");
 Beleghistorie.SETFILTER(Beleghistorie.Belegdatum,Datumsfilter);
-Beleghistorie.FINDFIRST;
-
+Beleghistorie.FIND('-');
 REPEAT
   anzahl:=0;
   wert:=0;
@@ -1319,9 +1331,12 @@ IF (Endkundennr <> '') THEN
   IF (COPYSTR(Endkundennr,1,2) = 'KT') AND (STRLEN(Endkundennr) = 8) THEN
     EXIT(Endkundennr)
   ELSE
-    EXIT('KT000240')
+    IF (VerkAnKontakt <> '') THEN
+      EXIT(VerkAnKontakt)
+    ELSE
+      EXIT('KT000240') //Damit das Feld nicht leer bleibt, falls etwas nicht stimmt
 ELSE
-  IF (Endkundenname <> '') THEN
-    EXIT('KT000240')
+  IF (VerkAnKontakt <> '') THEN
+    EXIT(VerkAnKontakt)
   ELSE
-    EXIT(VerkAnKontakt);
+    EXIT('KT000240'); //Damit das Feld nicht leer bleibt, falls etwas nicht stimmt
