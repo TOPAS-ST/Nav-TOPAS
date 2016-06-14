@@ -2,8 +2,8 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
 {
   OBJECT-PROPERTIES
   {
-    Date=25.06.15;
-    Time=14:12:41;
+    Date=12.02.16;
+    Time=10:47:31;
     Modified=Yes;
     Version List=Beleg Žnderungsbest„tigung --> 50098 !!;
   }
@@ -369,6 +369,13 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
                                  andruck[AndruckFeldPrfen] := 'WŽ berprfen, +/- 3% !';
                                END;
 
+                             IF "Sales Header"."Shipping Agent Code" = 'UPS-RG5' THEN
+                               BEGIN
+                                 andruck[AndruckFeldPrfen] := 'UPS Paperless Invoice erforderlich !';
+                                 andruck[AndruckFeldPrfen] := 'Keine Papierrechnung zum Paket !';
+                               END;
+
+
                              IF STRPOS("Sales Header"."Payment Terms Code",'SOR') <> 0 THEN
                                andruck[9] := 'SOR';
 
@@ -448,6 +455,7 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
                            VerkDruckZ„hler.RUN("Sales Header");
 
                          // TOPAS Rahmenauftrag
+                         {
                          IF rahmen THEN
                            BEGIN
                              rahmenauftr„ge.SETFILTER("No.",rahmenauftragsnummer);
@@ -455,7 +463,7 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
 
                              //REPORT.RUN(50114,FALSE,FALSE,rahmenauftr„ge);
                            END;
-
+                         }
                          // ende
                        END;
 
@@ -1716,10 +1724,14 @@ OBJECT Report 50075 TOPAS-Auftragsbest„tigung -Log
           }
           CONTROLS
           {
-            { 208 ;TextBox      ;2006 ;0    ;6930 ;423  ;FontSize=8;
-                                                         SourceExpr='Warentarif-Nr.: '+ Item."Tariff No." }
+            { 208 ;TextBox      ;4334 ;0    ;3358 ;423  ;FontSize=8;
+                                                         SourceExpr=Item."Tariff No." }
             { 1140026;TextBox   ;9081 ;0    ;6930 ;423  ;FontSize=8;
                                                          SourceExpr='ECCN-Nr.: '+ Item."ECCN-Nr." }
+            { 1140044;Label     ;2011 ;0    ;2271 ;423  ;Name=Ihre Artikelnummer:;
+                                                         FontSize=8;
+                                                         CaptionML=[DEU=Warentarif-Nr.:;
+                                                                    ENU=Tariff code:] }
           }
            }
         { PROPERTIES
