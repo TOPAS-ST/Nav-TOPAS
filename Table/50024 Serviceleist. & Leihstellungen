@@ -486,23 +486,23 @@ IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
         TempSystemPos.SETRANGE(Vormerkung,TRUE);
         TempSystemPos.SETRANGE("Auftragsnr.","Auftragsnr.");
         TempSystemPos.SETRANGE("Auftragszeilennr.","Auftragszeilennr.");
-        IF TempSystemPos.FINDFIRST THEN
-          BEGIN
-            REPEAT
-              SystemPos.RESET;
-              SystemPos.SETRANGE(Art,SystemPos.Art :: System);
-              SystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
-              SystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
-              SystemPos.SETRANGE("Artikelnr.",TempSystemPos."Artikelnr.");
-              SystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
-              IF SystemPos.FINDFIRST THEN
-                BEGIN
-                  Artikel.GET(SystemPos."Artikelnr.");
-                  IF (SystemPos."Wartungsvertragsnr." <> '') AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
-                      ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
-                END;
-            UNTIL TempSystemPos.NEXT = 0;
-          END;
+        TempSystemPos.SETRANGE(Basisgerät,FALSE);
+        IF TempSystemPos.FIND('-') THEN
+          REPEAT
+            SystemPos.RESET;
+            SystemPos.SETRANGE(Art,SystemPos.Art :: System);
+            SystemPos.SETRANGE("Nr.",TempSystemPos."Nr.");
+            SystemPos.SETRANGE("Belegzeilennr.",TempSystemPos."Belegzeilennr.");
+            SystemPos.SETRANGE("Artikelnr.",TempSystemPos."Artikelnr.");
+            SystemPos.SETRANGE("Seriennr.",TempSystemPos."Seriennr.");
+            SystemPos.SETFILTER("Wartungsvertragsnr.",'<>%1','');
+            IF SystemPos.FINDFIRST THEN
+              BEGIN
+                Artikel.GET(SystemPos."Artikelnr.");
+                IF (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
+                  ERROR(Text027,SystemPos."Lfd. Nr.",SystemPos."Seriennr.",SystemPos."Wartungsvertragsnr.");
+              END;
+          UNTIL TempSystemPos.NEXT = 0;
       END
     ELSE
       BEGIN
@@ -538,7 +538,7 @@ IF (Art = Art :: Temporär) AND (Vormerkung = TRUE) THEN
         TempSystemPos.SETRANGE(Vormerkung,TRUE);
         TempSystemPos.SETRANGE("Auftragsnr.","Auftragsnr.");
         TempSystemPos.SETRANGE("Auftragszeilennr.","Auftragszeilennr.");
-        IF TempSystemPos.FINDFIRST THEN
+        IF TempSystemPos.FIND('-') THEN
           BEGIN
             SystemPos.RESET;
             SystemPos.SETRANGE(Art,SystemPos.Art :: System);
@@ -937,16 +937,19 @@ IF Artikelposten.FINDFIRST THEN
           BEGIN
             //Fehllieferung von Seriennr., die nicht mehr geändert werden können, 
             //wurden in den Systempositionen geändert
-            PrüfeLizenzTab.RESET;
-            PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: System);
-            PrüfeLizenzTab.SETFILTER("Artikelnr.",'%1',Artikelposten."Item No.");
-            PrüfeLizenzTab.SETFILTER("Urspr. Seriennr.",'%1',Artikelposten."Serial No.");
-            IF (PrüfeLizenzTab.FINDFIRST) AND (PrüfeLizenzTab.Reklamiert = FALSE)
-            AND (PrüfeLizenzTab.Ersatzverfahren = FALSE) THEN
+            IF Artikelposten."Serial No." <> '' THEN
               BEGIN
-                zupruefende_seriennr := PrüfeLizenzTab."Seriennr.";
-                urspr_seriennr := PrüfeLizenzTab."Urspr. Seriennr.";
-                artikelnr := PrüfeLizenzTab."Artikelnr.";
+                PrüfeLizenzTab.RESET;
+                PrüfeLizenzTab.SETFILTER(Art,'%1',PrüfeLizenzTab.Art :: System);
+                PrüfeLizenzTab.SETFILTER("Artikelnr.",'%1',Artikelposten."Item No.");
+                PrüfeLizenzTab.SETFILTER("Urspr. Seriennr.",'%1',Artikelposten."Serial No.");
+                IF (PrüfeLizenzTab.FINDFIRST) AND (PrüfeLizenzTab.Reklamiert = FALSE)
+                AND (PrüfeLizenzTab.Ersatzverfahren = FALSE) THEN
+                  BEGIN
+                    zupruefende_seriennr := PrüfeLizenzTab."Seriennr.";
+                    urspr_seriennr := PrüfeLizenzTab."Urspr. Seriennr.";
+                    artikelnr := PrüfeLizenzTab."Artikelnr.";
+                  END;
               END;
           END;
 
@@ -3299,11 +3302,13 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             //ACTS Managed Spare Service EK Konditionen
             IF ACTS_MSS = TRUE THEN
               BEGIN
+                //MSS ohne Quote von -10% auf -20% , mit Quote (in Annahme) von -15% auf -20% geändert
+                //auch wenn die Werte nun gleich sind, bleibt diese Abfrage bzgl. Quote hier stehen
                 IF ServiceQuoteIsValid(Quotenr) = TRUE THEN
-                  normal_discount := 0.85
+                  normal_discount := 0.8
                 ELSE
                   BEGIN
-                    normal_discount := 0.9;
+                    normal_discount := 0.8;
                     v_service_laufzeit := kalk_laufzeit DIV 12;
                     CASE v_service_laufzeit OF
                       0..1 : additional_discount := 0;
@@ -3341,7 +3346,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
                   normal_discount := 0.62
                 ELSE
                   BEGIN
-                    normal_discount := 0.7;
+                    normal_discount := 0.65;
                     v_service_laufzeit := kalk_laufzeit DIV 12;
                     CASE v_service_laufzeit OF
                       0..1 : additional_discount := 0;
@@ -3376,7 +3381,8 @@ CheckDoubleSerialNo(Artnr : Code[20];SN : Code[20]) : Boolean
 IF (Artnr = '') OR (SN = '') THEN
   EXIT(FALSE);
 
-ServicePos.SETRANGE(Art,Art :: Service,Art :: System);
+//ServicePos.SETRANGE(Art,Art :: Service,Art :: System);
+ServicePos.SETRANGE(Art,Art :: System);
 ServicePos.SETRANGE("Artikelnr.",Artnr);
 ServicePos.SETRANGE("Seriennr.",SN);
 ServicePos.SETRANGE(Inaktiv,FALSE);
