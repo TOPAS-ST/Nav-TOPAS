@@ -1445,6 +1445,7 @@ IF Liefkopf.FINDLAST THEN
             IF (Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS') AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
               BEGIN
                 system_champs_verbindung := FALSE;
+                basissystem_vorhanden := FALSE;
 
                 //Prüfe ob der Artikel ohne Champ Zuordnung gebucht wurde
                 PrüfeCHAMPZuordnung.RESET;
@@ -1464,6 +1465,7 @@ IF Liefkopf.FINDLAST THEN
                           IF (Artikel.GET(PrüfeSystemLiefzeile."No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') 
                           OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
                             BEGIN
+                              basissystem_vorhanden := TRUE;
                               PrüfeCHAMPZuordnung.RESET;
                               PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',PrüfeSystemLiefzeile."Order No.");
                               PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',PrüfeSystemLiefzeile."Order Line No.");
@@ -1474,7 +1476,8 @@ IF Liefkopf.FINDLAST THEN
                             END;
                         UNTIL PrüfeSystemLiefzeile.NEXT = 0;
 
-                        IF (system_champs_verbindung = FALSE) AND (Liefzeile."ACS Projektinfos" <> '') THEN
+                        IF (system_champs_verbindung = FALSE) AND (Liefzeile."ACS Projektinfos" <> '')
+                        AND (basissystem_vorhanden = FALSE) THEN
                           BEGIN
                             MESSAGE(Text019,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
                             Liefzeile."ACS Projektinfos");
