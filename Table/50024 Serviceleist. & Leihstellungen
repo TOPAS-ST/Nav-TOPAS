@@ -3635,3 +3635,23 @@ IF VertragsDebnr <> NeueDebnr THEN
         Vertrag.MODIFY;
       END;
   END;
+
+AlleTempSeriennrVormerken(VAR FromTempSystemPos : Record "Serviceleist. & Leihstellungen") : Boolean
+IF FromTempSystemPos.HASFILTER THEN
+  BEGIN
+    IF CONFIRM(Text077,TRUE) = TRUE THEN
+      BEGIN
+        UpdateTempSystemPos.RESET;
+        UpdateTempSystemPos.SETRANGE(Art,FromTempSystemPos.Art);
+        UpdateTempSystemPos.SETRANGE("Auftragsnr.",FromTempSystemPos."Auftragsnr.");
+        UpdateTempSystemPos.SETRANGE("Auftragszeilennr.",FromTempSystemPos."Auftragszeilennr.");
+        IF UpdateTempSystemPos.FIND('-') THEN
+          BEGIN
+            REPEAT
+              UpdateTempSystemPos.VALIDATE(Vormerkung,TRUE);
+              UpdateTempSystemPos.MODIFY;
+            UNTIL UpdateTempSystemPos.NEXT = 0;
+            EXIT(TRUE);
+          END;
+      END;
+  END;
