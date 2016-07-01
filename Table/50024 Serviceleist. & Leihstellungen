@@ -658,6 +658,10 @@ Quotenr. - OnValidate()
 
 Quotenr. - OnLookup()
 
+Service bereits bestellt - OnValidate()
+
+Service bereits bestellt - OnLookup()
+
 Zum Verschieben markieren - OnValidate()
 
 Zum Verschieben markieren - OnLookup()
@@ -1059,27 +1063,27 @@ ELSE
       //                                  Fall 3 - Pseudo Vorbelegungen
       //***************************************************************************************************
       BEGIN
-        ChampRelaDoc.RESET;
-        ChampRelaDoc.SETFILTER(Art,'%1',ChampRelaDoc.Art :: "SUP-AU");
-        ChampRelaDoc.SETFILTER("Debitornr.",'%1',Debnr);
-        ChampRelaDoc.SETFILTER("Nr.",'%1',Auftragsnr);
-        ChampRelaDoc.SETFILTER("Zeilennr.",'%1',AUzeilennr);
-        ChampRelaDoc.SETFILTER("Belegnr.",'%1',Lieferscheinnr);
-        ChampRelaDoc.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
-        ChampRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
-        IF ChampRelaDoc.FINDFIRST THEN
+        ServiceRelaDoc.RESET;
+        ServiceRelaDoc.SETFILTER(Art,'%1',ServiceRelaDoc.Art :: "SUP-AU");
+        ServiceRelaDoc.SETFILTER("Debitornr.",'%1',Debnr);
+        ServiceRelaDoc.SETFILTER("Nr.",'%1',Auftragsnr);
+        ServiceRelaDoc.SETFILTER("Zeilennr.",'%1',AUzeilennr);
+        ServiceRelaDoc.SETFILTER("Belegnr.",'%1',Lieferscheinnr);
+        ServiceRelaDoc.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
+        ServiceRelaDoc.SETFILTER(Fremderwerb,'%1',TRUE);
+        IF ServiceRelaDoc.FINDFIRST THEN
           BEGIN
             TempLizenzTab.RESET;
             TempLizenzTab.SETFILTER(Art,'%1',TempLizenzTab.Art :: Temporär);
             TempLizenzTab.SETFILTER("Debitornr.",'%1',Debnr);
-            TempLizenzTab.SETFILTER("Artikelnr.",'%1',ChampRelaDoc."Geräte Artikelnr.");
+            TempLizenzTab.SETFILTER("Artikelnr.",'%1',ServiceRelaDoc."Geräte Artikelnr.");
             TempLizenzTab.SETFILTER("Auftragsnr.",'%1',Auftragsnr);
             TempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',AUzeilennr);
             TempLizenzTab.SETFILTER("Nr.",'%1',Lieferscheinnr);
             TempLizenzTab.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
             IF TempLizenzTab.FINDFIRST THEN
               BEGIN
-                Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
+                Artikel.GET(ServiceRelaDoc."Geräte Artikelnr.");
                 IF Artikel."Item Tracking Code" = 'KEINE' THEN
                   BEGIN
                     IF TempLizenzTab.COUNT >= 1 THEN
@@ -1088,15 +1092,15 @@ ELSE
                      z := 1;
                   END
                 ELSE
-                  z := ChampRelaDoc."Menge kalk." - TempLizenzTab.COUNT;
+                  z := ServiceRelaDoc."Menge kalk." - TempLizenzTab.COUNT;
               END
             ELSE
               BEGIN
-                Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
+                Artikel.GET(ServiceRelaDoc."Geräte Artikelnr.");
                 IF Artikel."Item Tracking Code" = 'KEINE' THEN
                   z := 1
                 ELSE
-                  z := ChampRelaDoc."Menge kalk.";
+                  z := ServiceRelaDoc."Menge kalk.";
               END;
 
             FOR k := 1 TO z DO
@@ -1106,19 +1110,19 @@ ELSE
                 LizenzTab."Nr." := Lieferscheinnr;
                 LizenzTab."Belegzeilennr." := Lieferscheinzeilennr;
                 LizenzTab.INSERT(TRUE);
-                LizenzTab."Debitornr." := ChampRelaDoc."Debitornr.";
-                LizenzTab.VALIDATE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
+                LizenzTab."Debitornr." := ServiceRelaDoc."Debitornr.";
+                LizenzTab.VALIDATE("Artikelnr.",ServiceRelaDoc."Geräte Artikelnr.");
                 LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
                 IF Artikel."Item Tracking Code" = 'KEINE' THEN
-                  LizenzTab.Menge := ChampRelaDoc."Menge kalk."
+                  LizenzTab.Menge := ServiceRelaDoc."Menge kalk."
                 ELSE
                   BEGIN
                     LizenzTab.Menge := 1;
                     HoleTempSN.RESET;
                     HoleTempSN.SETFILTER("Lfd. Nr.",'<>%1',LizenzTab."Lfd. Nr.");
                     HoleTempSN.SETFILTER(Art,'%1',HoleTempSN.Art :: Temporär);
-                    HoleTempSN.SETFILTER("Debitornr.",'%1',ChampRelaDoc."Debitornr.");
-                    HoleTempSN.SETFILTER("Artikelnr.",'%1',ChampRelaDoc."Geräte Artikelnr.");
+                    HoleTempSN.SETFILTER("Debitornr.",'%1',ServiceRelaDoc."Debitornr.");
+                    HoleTempSN.SETFILTER("Artikelnr.",'%1',ServiceRelaDoc."Geräte Artikelnr.");
                     HoleTempSN.SETFILTER("Auftragsnr.",'%1',Auftragsnr);
                     HoleTempSN.SETFILTER("Nr.",'%1',Lieferscheinnr);
                     HoleTempSN.SETFILTER("Belegzeilennr.",'%1',Lieferscheinzeilennr);
@@ -1128,7 +1132,7 @@ ELSE
                         TempLizenzTab.RESET;
                         TempLizenzTab.SETRANGE(Art,TempLizenzTab.Art :: Temporär);
                         TempLizenzTab.SETRANGE("Debitornr.",Debnr);
-                        TempLizenzTab.SETRANGE("Artikelnr.",ChampRelaDoc."Geräte Artikelnr.");
+                        TempLizenzTab.SETRANGE("Artikelnr.",ServiceRelaDoc."Geräte Artikelnr.");
                         TempLizenzTab.SETRANGE("Auftragsnr.",Auftragsnr);
                         TempLizenzTab.SETRANGE("Auftragszeilennr.",AUzeilennr);
                         TempLizenzTab.SETRANGE("Nr.",Lieferscheinnr);
@@ -1138,13 +1142,13 @@ ELSE
                           LizenzTab.VALIDATE("Seriennr.",HoleTempSN."Seriennr.");
                       UNTIL (HoleTempSN.NEXT = 0) OR (LizenzTab."Seriennr." <> '');
                   END;
-                Artikel.GET(ChampRelaDoc."Geräte Artikelnr.");
+                Artikel.GET(ServiceRelaDoc."Geräte Artikelnr.");
                 LizenzTab.Ursprungsland := Artikel."Country/Region of Origin Code";
                 LizenzTab."Auftragsnr." := Auftragsnr;
                 LizenzTab."Auftragszeilennr." := AUzeilennr;
                 LizenzTab."Urspr. Auftragsnr." := 'AU_' + DELCHR(Lieferscheinnr,'<','LS_');
                 LizenzTab."Urspr. Auftragszeilennr." := Lieferscheinzeilennr;
-                LizenzTab.Basisgerät := ChampRelaDoc.Basisgerät;
+                LizenzTab.Basisgerät := ServiceRelaDoc.Basisgerät;
                 LizenzTab.Fremderwerb := TRUE;
                 LizenzTab.Verlängerung := PrüfeWartungvorhanden("SUP Artikelnr",Lieferscheinnr,Lieferscheinzeilennr,
                                           LizenzTab."Seriennr.",Debnr);
@@ -1235,45 +1239,45 @@ IF Liefkopf.FINDLAST THEN
                     Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                     Wartung.INSERT(TRUE);
 
-                    PrüfeHauptWartung.RESET;
-                    PrüfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
-                    PrüfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
-                    IF NOT PrüfeHauptWartung.FINDFIRST THEN
+                    PruefeHauptWartung.RESET;
+                    PruefeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                    PruefeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                    IF NOT PruefeHauptWartung.FINDFIRST THEN
                       BEGIN
                         Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
                         Wartung.MODIFY(TRUE);
                       END
                     ELSE
                       BEGIN
-                        Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
+                        Wartung."Hauptwartungsvertragsnr." := PruefeHauptWartung."Wartungsvertragsnr.";
                         Wartung.MODIFY(TRUE);
                       END;
 
                    //***************************************************************************************************
                    //             Sonderfall, wenn im Auftrag vorträglich ein Modul etc. und dann erst das
-                   //          Basisgerät gebucht wird, die auch in der Champ Kalkulation zusammengehörig sind
+                   //          Basisgerät gebucht wird, die auch in der Service Kalkulation zusammengehörig sind
                    //             Verlorene Systempositionen ohne Vertragsnr. werden diesem WV zugeordnet
                    //***************************************************************************************************
 
-                   PrüfeCHAMPZuordnung.RESET;
-                   PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                   PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                   PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',AUnr);
-                   PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
-                   IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                   PruefeKalkulation.RESET;
+                   PruefeKalkulation.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                   PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                   PruefeKalkulation.SETFILTER("Belegnr.",'%1',AUnr);
+                   PruefeKalkulation.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                   IF PruefeKalkulation.FINDFIRST THEN
                      BEGIN
-                       CHAMPZuordnungHolen.RESET;
-                       CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                       CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-                       CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Nr.");
-                       CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
-                       IF CHAMPZuordnungHolen.FINDFIRST THEN
+                       KalkulationHolen.RESET;
+                       KalkulationHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                       KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+                       KalkulationHolen.SETFILTER("Nr.",'%1',PruefeKalkulation."Nr.");
+                       KalkulationHolen.SETFILTER("Zeilennr.",'%1',PruefeKalkulation."Zeilennr.");
+                       IF KalkulationHolen.FINDFIRST THEN
                          REPEAT
                            OffeneSystemPos.RESET;
                            OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
-                           OffeneSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
-                           OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                           OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                           OffeneSystemPos.SETFILTER("Artikelnr.",'%1',KalkulationHolen."Geräte Artikelnr.");
+                           OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',KalkulationHolen."Belegnr.");
+                           OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                            OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
                            IF OffeneSystemPos.FINDFIRST THEN
                              REPEAT
@@ -1281,36 +1285,36 @@ IF Liefkopf.FINDLAST THEN
                                OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
                                OffeneSystemPos.MODIFY;
                              UNTIL OffeneSystemPos.NEXT = 0;
-                         UNTIL CHAMPZuordnungHolen.NEXT = 0;
+                         UNTIL KalkulationHolen.NEXT = 0;
                      END;
 
                     //NEU 26.11.2013 - Bugfix
 
                     //***************************************************************************************************
                     //         Sonderfall, wenn Basisgerät im Auftrag gebucht wird und mind. ein Modul
-                    //        aus unseren Lieferungen stammt und alle in einer Champ Kalkulation aufgestellt sind,
+                    //        aus unseren Lieferungen stammt und alle in einer Service Kalkulation aufgestellt sind,
                     //          dann werden die verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
                     //***************************************************************************************************
 
-                    PrüfeCHAMPZuordnung.RESET;
-                    PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                    PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                    PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',AUnr);
-                    PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
-                    IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                    PruefeKalkulation.RESET;
+                    PruefeKalkulation.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                    PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                    PruefeKalkulation.SETFILTER("Belegnr.",'%1',AUnr);
+                    PruefeKalkulation.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                    IF PruefeKalkulation.FINDFIRST THEN
                       BEGIN
-                        CHAMPZuordnungHolen.RESET;
-                        CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                        CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-                        CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Nr.");
-                        CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
-                        IF CHAMPZuordnungHolen.FINDFIRST THEN
+                        KalkulationHolen.RESET;
+                        KalkulationHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                        KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+                        KalkulationHolen.SETFILTER("Nr.",'%1',PruefeKalkulation."Nr.");
+                        KalkulationHolen.SETFILTER("Zeilennr.",'%1',PruefeKalkulation."Zeilennr.");
+                        IF KalkulationHolen.FINDFIRST THEN
                           REPEAT
                             OffeneSystemPos.RESET;
                             OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
-                            OffeneSystemPos.SETFILTER("Artikelnr.",'%1',CHAMPZuordnungHolen."Geräte Artikelnr.");
-                            OffeneSystemPos.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                            OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                            OffeneSystemPos.SETFILTER("Artikelnr.",'%1',KalkulationHolen."Geräte Artikelnr.");
+                            OffeneSystemPos.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                            OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                             OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
                             IF OffeneSystemPos.FINDFIRST THEN
                               REPEAT
@@ -1330,7 +1334,7 @@ IF Liefkopf.FINDLAST THEN
                                     Wartung.TABLECAPTION,Wartung."Wartungsvertragsnr.");
                                   END;
                               UNTIL OffeneSystemPos.NEXT = 0;
-                          UNTIL CHAMPZuordnungHolen.NEXT = 0;
+                          UNTIL KalkulationHolen.NEXT = 0;
                       END;
 
 
@@ -1402,17 +1406,17 @@ IF Liefkopf.FINDLAST THEN
                     Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                     Wartung.INSERT(TRUE);
 
-                    PrüfeHauptWartung.RESET;
-                    PrüfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
-                    PrüfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
-                    IF NOT PrüfeHauptWartung.FINDFIRST THEN
+                    PruefeHauptWartung.RESET;
+                    PruefeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                    PruefeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                    IF NOT PruefeHauptWartung.FINDFIRST THEN
                       BEGIN
                         Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
                         Wartung.MODIFY(TRUE);
                       END
                     ELSE
                       BEGIN
-                        Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
+                        Wartung."Hauptwartungsvertragsnr." := PruefeHauptWartung."Wartungsvertragsnr.";
                         Wartung.MODIFY(TRUE);
                       END;
 
@@ -1444,52 +1448,52 @@ IF Liefkopf.FINDLAST THEN
 
             IF (Artikel.Serviceklassifizierung <> 'SYSTEM CHAMPS') AND (Artikel.Serviceklassifizierung <> 'SYSTEM FLAT') THEN
               BEGIN
-                system_champs_verbindung := FALSE;
+                system_service_verbindung := FALSE;
                 basissystem_vorhanden := FALSE;
 
-                //Prüfe ob der Artikel ohne Champ Zuordnung gebucht wurde
-                PrüfeCHAMPZuordnung.RESET;
-                PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',Liefzeile."Order No.");
-                PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
-                IF NOT PrüfeCHAMPZuordnung.FINDFIRST THEN
+                //Prüfe ob der Artikel ohne Service Kalkulation gebucht wurde
+                PruefeKalkulation.RESET;
+                PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                PruefeKalkulation.SETFILTER("Belegnr.",'%1',Liefzeile."Order No.");
+                PruefeKalkulation.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                IF NOT PruefeKalkulation.FINDFIRST THEN
                   BEGIN
                     //Prüfe ob Systemartikel alleinstehend gebucht wurde
-                    PrüfeSystemLiefzeile.RESET;
-                    PrüfeSystemLiefzeile.SETFILTER("Document No.",'%1',Liefkopf."No.");
-                    PrüfeSystemLiefzeile.SETFILTER(Type,'%1',PrüfeSystemLiefzeile.Type :: Item);
-                    PrüfeSystemLiefzeile.SETFILTER(Quantity,'>%1',0);
-                    IF PrüfeSystemLiefzeile.FINDFIRST THEN
+                    PruefeSystemLiefzeile.RESET;
+                    PruefeSystemLiefzeile.SETFILTER("Document No.",'%1',Liefkopf."No.");
+                    PruefeSystemLiefzeile.SETFILTER(Type,'%1',PruefeSystemLiefzeile.Type :: Item);
+                    PruefeSystemLiefzeile.SETFILTER(Quantity,'>%1',0);
+                    IF PruefeSystemLiefzeile.FINDFIRST THEN
                       BEGIN
                         REPEAT
-                          IF (Artikel.GET(PrüfeSystemLiefzeile."No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') 
+                          IF (Artikel.GET(PruefeSystemLiefzeile."No.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
                           OR (Artikel.Serviceklassifizierung = 'SYSTEM FLAT')) THEN
                             BEGIN
                               basissystem_vorhanden := TRUE;
-                              PrüfeCHAMPZuordnung.RESET;
-                              PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',PrüfeSystemLiefzeile."Order No.");
-                              PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',PrüfeSystemLiefzeile."Order Line No.");
-                              IF NOT PrüfeCHAMPZuordnung.FINDFIRST THEN
+                              PruefeKalkulation.RESET;
+                              PruefeKalkulation.SETFILTER("Belegnr.",'%1',PruefeSystemLiefzeile."Order No.");
+                              PruefeKalkulation.SETFILTER("Belegzeilennr.",'%1',PruefeSystemLiefzeile."Order Line No.");
+                              IF NOT PruefeKalkulation.FINDFIRST THEN
                                 BEGIN
-                                  system_champs_verbindung := TRUE;
+                                  system_service_verbindung := TRUE;
                                 END;
                             END;
-                        UNTIL PrüfeSystemLiefzeile.NEXT = 0;
+                        UNTIL PruefeSystemLiefzeile.NEXT = 0;
 
-                        IF (system_champs_verbindung = FALSE) AND (Liefzeile."ACS Projektinfos" <> '')
+                        IF (system_service_verbindung = FALSE) AND (Liefzeile."ACS Projektinfos" <> '')
                         AND (basissystem_vorhanden = FALSE) THEN
                           BEGIN
                             MESSAGE(Text019,Liefzeile."No.",Liefzeile."Line No.",Liefzeile.FIELDCAPTION("ACS Projektinfos"),
                             Liefzeile."ACS Projektinfos");
                             COMMIT;
-                            CLEAR(WartungsÜbersicht);
-                            WartungsÜbersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
-                            IF WartungsÜbersicht.FINDFIRST THEN
+                            CLEAR(WartungsUebersicht);
+                            WartungsUebersicht.SETFILTER("Debitornr.",'%1',Liefkopf."Sell-to Customer No.");
+                            IF WartungsUebersicht.FINDFIRST THEN
                               BEGIN
-                                IF FORM.RUNMODAL(50024,WartungsÜbersicht) = ACTION::LookupOK THEN
+                                IF FORM.RUNMODAL(50024,WartungsUebersicht) = ACTION::LookupOK THEN
                                   BEGIN
-                                     auswahl_wartungsnr := WartungsÜbersicht."Wartungsvertragsnr.";
-                                     auswahl_hauptwartungsnr := WartungsÜbersicht."Hauptwartungsvertragsnr.";
+                                     auswahl_wartungsnr := WartungsUebersicht."Wartungsvertragsnr.";
+                                     auswahl_hauptwartungsnr := WartungsUebersicht."Hauptwartungsvertragsnr.";
                                   END
                                 ELSE
                                   BEGIN
@@ -1556,24 +1560,24 @@ IF Liefkopf.FINDLAST THEN
                       END
                     ELSE
                       BEGIN
-                        PrüfeCHAMPZuordnung.RESET;
-                        PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                        PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                        PrüfeCHAMPZuordnung.SETFILTER("Belegnr.",'%1',AUnr);
-                        PrüfeCHAMPZuordnung.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
-                        PrüfeCHAMPZuordnung.SETFILTER(Basisgerät,'%1',FALSE);
-                        IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                        PruefeKalkulation.RESET;
+                        PruefeKalkulation.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                        PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                        PruefeKalkulation.SETFILTER("Belegnr.",'%1',AUnr);
+                        PruefeKalkulation.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                        PruefeKalkulation.SETFILTER(Basisgerät,'%1',FALSE);
+                        IF PruefeKalkulation.FINDFIRST THEN
                           BEGIN
                             //Dieser Umweg muss genommen werden, um prüfen zu können, ob ein Basissystem in der Kalk. vorliegt
-                            CHAMPZuordnungHolen.RESET;
-                            CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                            CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-                            CHAMPZuordnungHolen.SETFILTER(Basisgerät,'%1',TRUE);
-                            CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Nr.");
-                            CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',PrüfeCHAMPZuordnung."Zeilennr.");
-                            IF CHAMPZuordnungHolen.FINDFIRST THEN
-                              IF (CHAMPZuordnungHolen."Belegnr." = Wartung."Auftragsnr.")
-                              AND (CHAMPZuordnungHolen."Belegzeilennr." = Wartung."Auftragszeilennr.") THEN
+                            KalkulationHolen.RESET;
+                            KalkulationHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                            KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+                            KalkulationHolen.SETFILTER(Basisgerät,'%1',TRUE);
+                            KalkulationHolen.SETFILTER("Nr.",'%1',PruefeKalkulation."Nr.");
+                            KalkulationHolen.SETFILTER("Zeilennr.",'%1',PruefeKalkulation."Zeilennr.");
+                            IF KalkulationHolen.FINDFIRST THEN
+                              IF (KalkulationHolen."Belegnr." = Wartung."Auftragsnr.")
+                              AND (KalkulationHolen."Belegzeilennr." = Wartung."Auftragszeilennr.") THEN
                                 BEGIN
                                   SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
                                   SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
@@ -1601,16 +1605,16 @@ IF Liefkopf.FINDLAST THEN
                     IF Wartung.GET(SystemPos."Wartungsvertragsnr.") AND (SystemPos."Wartungsvertragsnr." <> '') THEN
                       Wartung.MODIFY(TRUE)
                     ELSE
-                      //Einzel Modul im AU + Champ Kalkulation mit Basisgerät aus LS usw.
+                      //Einzel Modul im AU + Servicce Kalkulation mit Basisgerät aus LS usw.
                       BEGIN
-                        CHAMPZuordnungHolen.RESET;
-                        CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-                        CHAMPZuordnungHolen.SETFILTER("Belegnr.",'%1',Liefkopf."Order No.");
-                        CHAMPZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
-                        IF CHAMPZuordnungHolen.FINDFIRST THEN
+                        KalkulationHolen.RESET;
+                        KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+                        KalkulationHolen.SETFILTER("Belegnr.",'%1',Liefkopf."Order No.");
+                        KalkulationHolen.SETFILTER("Belegzeilennr.",'%1',Liefzeile."Order Line No.");
+                        IF KalkulationHolen.FINDFIRST THEN
                           BEGIN
-                            IF (CHAMPZuordnungHolen."Wartungsvertragsnr." <> '') AND
-                            (Wartung.GET(CHAMPZuordnungHolen."Wartungsvertragsnr.")) THEN
+                            IF (KalkulationHolen."Wartungsvertragsnr." <> '') AND
+                            (Wartung.GET(KalkulationHolen."Wartungsvertragsnr.")) THEN
                               BEGIN
                                 SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
                                 SystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
@@ -1618,16 +1622,16 @@ IF Liefkopf.FINDLAST THEN
                               END
                             ELSE
                               BEGIN
-                                ZuordnungBasisgerät.RESET;
-                                ZuordnungBasisgerät.SETFILTER(Art,'%1',ZuordnungBasisgerät.Art :: "SUP-AU");
-                                ZuordnungBasisgerät.SETFILTER("Nr.",'%1',Liefkopf."Order No.");
-                                ZuordnungBasisgerät.SETFILTER("Zeilennr.",'%1',CHAMPZuordnungHolen."Zeilennr.");
-                                ZuordnungBasisgerät.SETFILTER(Basisgerät,'%1',TRUE);
-                                IF ZuordnungBasisgerät.FINDFIRST THEN
+                                ZuordnungBasissystem.RESET;
+                                ZuordnungBasissystem.SETFILTER(Art,'%1',ZuordnungBasissystem.Art :: "SUP-AU");
+                                ZuordnungBasissystem.SETFILTER("Nr.",'%1',Liefkopf."Order No.");
+                                ZuordnungBasissystem.SETFILTER("Zeilennr.",'%1',KalkulationHolen."Zeilennr.");
+                                ZuordnungBasissystem.SETFILTER(Basisgerät,'%1',TRUE);
+                                IF ZuordnungBasissystem.FINDFIRST THEN
                                   BEGIN
                                     Wartung.RESET;
-                                    Wartung.SETFILTER("Lieferscheinnr.",'%1',ZuordnungBasisgerät."Belegnr.");
-                                    Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',ZuordnungBasisgerät."Belegzeilennr.");
+                                    Wartung.SETFILTER("Lieferscheinnr.",'%1',ZuordnungBasissystem."Belegnr.");
+                                    Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',ZuordnungBasissystem."Belegzeilennr.");
                                     IF Wartung.FINDFIRST THEN
                                       BEGIN
                                         SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
@@ -1682,24 +1686,24 @@ IF Liefkopf.FINDLAST THEN
 
         IF Artikel."Software Upgrade Protection" = TRUE THEN
           BEGIN
-            CHAMPZuordnungHolen.RESET;
-            CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-            CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-            CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-            CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-            IF CHAMPZuordnungHolen.FINDFIRST THEN
+            KalkulationHolen.RESET;
+            KalkulationHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+            KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+            KalkulationHolen.SETFILTER("Nr.",'%1',AUnr);
+            KalkulationHolen.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+            IF KalkulationHolen.FINDFIRST THEN
               REPEAT
                 HoleTempLizenzTab.RESET;
                 HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                HoleTempLizenzTab.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                HoleTempLizenzTab.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                 HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',Liefzeile."Order No.");
                 HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',Liefzeile."Order Line No.");
                 HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
                 HoleTempLizenzTab.SETFILTER(Fremderwerb,'%1',TRUE);
                 IF HoleTempLizenzTab.FINDFIRST THEN
                   REPEAT
-                    IF CHAMPZuordnungHolen.Basisgerät THEN
+                    IF KalkulationHolen.Basisgerät THEN
                       BEGIN
 
                         //***************************************************************************************************
@@ -1707,7 +1711,7 @@ IF Liefkopf.FINDLAST THEN
                         //***************************************************************************************************
 
                         IF PrüfeWartungsAnlageAktion(HoleTempLizenzTab."Artikelnr.", HoleTempLizenzTab.Fremderwerb,
-                           CHAMPZuordnungHolen) THEN
+                           KalkulationHolen) THEN
                           BEGIN
                             Wartung.RESET;
                             Wartung.SETFILTER("Lieferscheinnr.",'%1',HoleTempLizenzTab."Nr.");
@@ -1752,17 +1756,17 @@ IF Liefkopf.FINDLAST THEN
                                 Wartung."Systemhaus E-Mail" := Liefkopf."Systemhaus E-Mail";
                                 Wartung.INSERT(TRUE);
 
-                                PrüfeHauptWartung.RESET;
-                                PrüfeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
-                                PrüfeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
-                                IF NOT PrüfeHauptWartung.FINDFIRST THEN
+                                PruefeHauptWartung.RESET;
+                                PruefeHauptWartung.SETFILTER("Auftragsnr.",'%1',Wartung."Auftragsnr.");
+                                PruefeHauptWartung.SETFILTER("Auftragszeilennr.",'%1',Wartung."Auftragszeilennr.");
+                                IF NOT PruefeHauptWartung.FINDFIRST THEN
                                   BEGIN
                                     Wartung."Hauptwartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
                                     Wartung.MODIFY(TRUE);
                                   END
                                 ELSE
                                   BEGIN
-                                    Wartung."Hauptwartungsvertragsnr." := PrüfeHauptWartung."Wartungsvertragsnr.";
+                                    Wartung."Hauptwartungsvertragsnr." := PruefeHauptWartung."Wartungsvertragsnr.";
                                     Wartung.MODIFY(TRUE);
                                   END;
 
@@ -1771,23 +1775,23 @@ IF Liefkopf.FINDLAST THEN
 
                                 //************************************************************************************************
                                 //    Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und vorträglich Module etc. 
-                                //       im AU gebucht werden, die auch in der Champ Kalkulation zusammengehörig sind, dann
+                                //       im AU gebucht werden, die auch in der Service Kalkulation zusammengehörig sind, dann
                                 //         werden verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
                                 //************************************************************************************************
 
-                                PrüfeCHAMPZuordnung.RESET;
-                                PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                                PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                                PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
-                                PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-                                IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                                PruefeKalkulation.RESET;
+                                PruefeKalkulation.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                                PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                                PruefeKalkulation.SETFILTER("Nr.",'%1',AUnr);
+                                PruefeKalkulation.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+                                IF PruefeKalkulation.FINDFIRST THEN
                                   BEGIN
                                     REPEAT
                                       OffeneSystemPos.RESET;
                                       OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
-                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
-                                      OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
-                                      OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
+                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PruefeKalkulation."Geräte Artikelnr.");
+                                      OffeneSystemPos.SETFILTER("Auftragsnr.",'%1',PruefeKalkulation."Belegnr.");
+                                      OffeneSystemPos.SETFILTER("Auftragszeilennr.",'%1',PruefeKalkulation."Belegzeilennr.");
                                       OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
                                       IF OffeneSystemPos.FINDFIRST THEN
                                         REPEAT
@@ -1795,28 +1799,28 @@ IF Liefkopf.FINDLAST THEN
                                           OffeneSystemPos."Hauptwartungsvertragsnr." := Wartung."Hauptwartungsvertragsnr.";
                                           OffeneSystemPos.MODIFY;
                                         UNTIL OffeneSystemPos.NEXT = 0;
-                                    UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
+                                    UNTIL PruefeKalkulation.NEXT = 0;
                                   END;
 
                                 //************************************************************************************************
                                 //         Sonderfall, wenn Basisgerät als Pseudo Position gebucht wird und mind. ein Modul
-                                //        aus unseren Lieferungen stammt und alle in einer Champ Kalkulation aufgestellt sind,
+                                //      aus unseren Lieferungen stammt und alle in einer Service Kalkulation aufgestellt sind,
                                 //          dann werden die verlorene Systempositionen ohne Vertragsnr. diesem WV zugeordnet
                                 //************************************************************************************************
 
-                                PrüfeCHAMPZuordnung.RESET;
-                                PrüfeCHAMPZuordnung.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-                                PrüfeCHAMPZuordnung.SETFILTER(Art,'%1',PrüfeCHAMPZuordnung.Art :: "SUP-AU");
-                                PrüfeCHAMPZuordnung.SETFILTER("Nr.",'%1',AUnr);
-                                PrüfeCHAMPZuordnung.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-                                IF PrüfeCHAMPZuordnung.FINDFIRST THEN
+                                PruefeKalkulation.RESET;
+                                PruefeKalkulation.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+                                PruefeKalkulation.SETFILTER(Art,'%1',PruefeKalkulation.Art :: "SUP-AU");
+                                PruefeKalkulation.SETFILTER("Nr.",'%1',AUnr);
+                                PruefeKalkulation.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+                                IF PruefeKalkulation.FINDFIRST THEN
                                   BEGIN
                                     REPEAT
                                       OffeneSystemPos.RESET;
                                       OffeneSystemPos.SETFILTER(Art,'%1',Art :: System);
-                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PrüfeCHAMPZuordnung."Geräte Artikelnr.");
-                                      OffeneSystemPos.SETFILTER("Nr.",'%1',PrüfeCHAMPZuordnung."Belegnr.");
-                                      OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',PrüfeCHAMPZuordnung."Belegzeilennr.");
+                                      OffeneSystemPos.SETFILTER("Artikelnr.",'%1',PruefeKalkulation."Geräte Artikelnr.");
+                                      OffeneSystemPos.SETFILTER("Nr.",'%1',PruefeKalkulation."Belegnr.");
+                                      OffeneSystemPos.SETFILTER("Belegzeilennr.",'%1',PruefeKalkulation."Belegzeilennr.");
                                       OffeneSystemPos.SETFILTER("Wartungsvertragsnr.",'%1','');
                                       IF OffeneSystemPos.FINDFIRST THEN
                                         REPEAT
@@ -1834,7 +1838,7 @@ IF Liefkopf.FINDLAST THEN
                                               OffeneSystemPos.MODIFY;
                                             END;
                                         UNTIL OffeneSystemPos.NEXT = 0;
-                                    UNTIL PrüfeCHAMPZuordnung.NEXT = 0;
+                                    UNTIL PruefeKalkulation.NEXT = 0;
                                   END;
 
                                 //************************************************************************************************
@@ -1908,18 +1912,18 @@ IF Liefkopf.FINDLAST THEN
                         IF Wartung.GET(SystemPos."Wartungsvertragsnr.") AND (SystemPos."Wartungsvertragsnr." <> '') THEN
                           Wartung.MODIFY(TRUE)
                         ELSE
-                          //Nachträglich Champs von LS + Pseudo Einzel Modul z.B., damit die Pos. dennoch zugeordnet werden kann
+                          //Nachträglich Service von LS + Pseudo Einzel Modul z.B., damit die Pos. zugeordnet werden kann
                           BEGIN
-                            ZuordnungBasisgerät.RESET;
-                            ZuordnungBasisgerät.SETFILTER(Art,'%1',ZuordnungBasisgerät.Art :: "SUP-AU");
-                            ZuordnungBasisgerät.SETFILTER("Nr.",'%1',AUnr);
-                            ZuordnungBasisgerät.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
-                            ZuordnungBasisgerät.SETFILTER(Basisgerät,'%1',TRUE);
-                            IF ZuordnungBasisgerät.FINDFIRST THEN
+                            ZuordnungBasissystem.RESET;
+                            ZuordnungBasissystem.SETFILTER(Art,'%1',ZuordnungBasissystem.Art :: "SUP-AU");
+                            ZuordnungBasissystem.SETFILTER("Nr.",'%1',AUnr);
+                            ZuordnungBasissystem.SETFILTER("Zeilennr.",'%1',Liefzeile."Order Line No.");
+                            ZuordnungBasissystem.SETFILTER(Basisgerät,'%1',TRUE);
+                            IF ZuordnungBasissystem.FINDFIRST THEN
                               BEGIN
                                 Wartung.RESET;
-                                Wartung.SETFILTER("Lieferscheinnr.",'%1',ZuordnungBasisgerät."Belegnr.");
-                                Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',ZuordnungBasisgerät."Belegzeilennr.");
+                                Wartung.SETFILTER("Lieferscheinnr.",'%1',ZuordnungBasissystem."Belegnr.");
+                                Wartung.SETFILTER("Lieferscheinzeilennr.",'%1',ZuordnungBasissystem."Belegzeilennr.");
                                 IF Wartung.FINDFIRST THEN
                                   BEGIN
                                     SystemPos."Wartungsvertragsnr." := Wartung."Wartungsvertragsnr.";
@@ -1931,10 +1935,10 @@ IF Liefkopf.FINDLAST THEN
 
                         //Sonderfall, wenn einzelne Pseudo Module ohne Basisgerät zu einem bestehenden
                         //Wartungsvertrag hinzugefügt werden sollen
-                        IF (SystemPos."Wartungsvertragsnr." = '') AND (CHAMPZuordnungHolen."Wartungsvertragsnr." <> '') THEN
+                        IF (SystemPos."Wartungsvertragsnr." = '') AND (KalkulationHolen."Wartungsvertragsnr." <> '') THEN
                           BEGIN
-                            SystemPos."Wartungsvertragsnr." := CHAMPZuordnungHolen."Wartungsvertragsnr.";
-                            SystemPos."Hauptwartungsvertragsnr." := CHAMPZuordnungHolen."Wartungsvertragsnr.";
+                            SystemPos."Wartungsvertragsnr." := KalkulationHolen."Wartungsvertragsnr.";
+                            SystemPos."Hauptwartungsvertragsnr." := KalkulationHolen."Wartungsvertragsnr.";
                           END;
 
                         IF (Artikel.GET(HoleTempLizenzTab."Artikelnr.")) AND ((Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS')
@@ -1965,13 +1969,13 @@ IF Liefkopf.FINDLAST THEN
                         COMMIT;
                       END
                     ELSE
-                      IF CHAMPZuordnungHolen.Basisgerät = TRUE THEN
-                        SystemPos.FehlendeVertragsZugehoerigkeit(CHAMPZuordnungHolen."Nr.",CHAMPZuordnungHolen."Zeilennr.",
-                        CHAMPZuordnungHolen."Belegnr.",CHAMPZuordnungHolen."Belegzeilennr.",SystemPos."Wartungsvertragsnr.");
+                      IF KalkulationHolen.Basisgerät = TRUE THEN
+                        SystemPos.FehlendeVertragsZugehoerigkeit(KalkulationHolen."Nr.",KalkulationHolen."Zeilennr.",
+                        KalkulationHolen."Belegnr.",KalkulationHolen."Belegzeilennr.",SystemPos."Wartungsvertragsnr.");
 
                     COMMIT;
                   UNTIL HoleTempLizenzTab.NEXT = 0;
-              UNTIL CHAMPZuordnungHolen.NEXT = 0;
+              UNTIL KalkulationHolen.NEXT = 0;
           END;
       UNTIL Liefzeile.NEXT = 0;
   END;
@@ -1979,7 +1983,7 @@ IF Liefkopf.FINDLAST THEN
 CreateServiceFromSalesHeader(VAR AUnr : Code[20];NichtDrucken : Boolean)
 //***************************************************************************************************
 //            01.03.2011-ST  Das System holt sich nach Erstellung des Lieferscheins die
-//       entsprechenden Seriennr. aus den Artikelposten, wenn Wartung (CHAMPS) gebucht wurde
+//           entsprechenden Seriennr. aus den Artikelposten, wenn Wartung gebucht wurde
 //***************************************************************************************************
 
 zudrucken := FALSE;
@@ -2019,32 +2023,33 @@ IF Vkliefkopf.FINDLAST THEN
              ELSE
                CHAMPS_PARTNER := FALSE;
 
-             //Bestimmt mit welcher Währung Champs eingekauft werden soll, für Euro gleich leer setzen
+             //Bestimmt mit welcher Währung Service eingekauft werden soll, für Euro gleich leer setzen
              //In den Lieferscheinen gibt es nur Currency Code als FlowField Lookup auf den Vekaufslieferkopf
              IF Kreditor.GET(Artikel."Vendor No.") THEN
                ek_Währung := Kreditor."Currency Code"
              ELSE
                ek_Währung := 'USD';
 
-             CHAMPZuordnungHolen.RESET;
-             CHAMPZuordnungHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
-             CHAMPZuordnungHolen.SETFILTER(Art,'%1',CHAMPZuordnungHolen.Art :: "SUP-AU");
-             CHAMPZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-             CHAMPZuordnungHolen.SETFILTER("Zeilennr.",'%1',Vkliefzeile."Line No.");
-             IF CHAMPZuordnungHolen.FINDFIRST THEN
+             KalkulationHolen.RESET;
+             KalkulationHolen.SETCURRENTKEY(Art,"Nr.","Zeilennr.",Gruppierung);
+             KalkulationHolen.SETFILTER(Art,'%1',KalkulationHolen.Art :: "SUP-AU");
+             KalkulationHolen.SETFILTER("Nr.",'%1',AUnr);
+             KalkulationHolen.SETFILTER("Zeilennr.",'%1',Vkliefzeile."Line No.");
+             IF KalkulationHolen.FINDFIRST THEN
                REPEAT
 
                 //*****************************************************************************************
                 //              Prüfung Fall #1 SUP Artikel verweist auf Auftrags Position
                 //*****************************************************************************************
 
-                   IF (CHAMPZuordnungHolen."Nachträgliche Service Order" = FALSE) AND (CHAMPZuordnungHolen.Fremderwerb = FALSE) THEN
+                   IF (KalkulationHolen."Nachträgliche Service Order" = FALSE)
+                   AND (KalkulationHolen.Fremderwerb = FALSE) THEN
                      BEGIN
-                       //Lieferschein durchsuchen, welche Positionen sich auf diesen Champ Artikel beziehen
+                       //Lieferschein durchsuchen, welche Positionen sich auf diesen Service Artikel beziehen
                        HoleLiefZeile.RESET;
                        HoleLiefZeile.SETFILTER(Type,'%1',HoleLiefZeile.Type :: Item);
                        HoleLiefZeile.SETFILTER("Document No.",'%1',Vkliefzeile."Document No.");
-                       HoleLiefZeile.SETFILTER("Line No.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                       HoleLiefZeile.SETFILTER("Line No.",'%1',KalkulationHolen."Belegzeilennr.");
                        HoleLiefZeile.SETFILTER("SUP Belegnr.",'%1','');
                        HoleLiefZeile.SETFILTER("SUP Belegzeilennr.",'%1',0);
                        HoleLiefZeile.SETFILTER(Quantity,'>%1',0);
@@ -2056,14 +2061,14 @@ IF Vkliefkopf.FINDLAST THEN
                            SeriennrVerfolgung.SETFILTER("Document Line No.",'%1',HoleLiefZeile."Line No.");
                            IF SeriennrVerfolgung.FINDFIRST THEN
                              BEGIN
-                               FOR i := 1 TO (Vkliefzeile.Quantity * CHAMPZuordnungHolen."Menge kalk.") DO
+                               FOR i := 1 TO (Vkliefzeile.Quantity * KalkulationHolen."Menge kalk.") DO
                                  BEGIN
                                    LizenzTab.RESET;
                                    LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                                    LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                                    LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
-                                   LizenzTab.SETFILTER("Urspr. Auftragsnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                                   LizenzTab.SETFILTER("Urspr. Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                                   LizenzTab.SETFILTER("Urspr. Auftragsnr.",'%1',KalkulationHolen."Belegnr.");
+                                   LizenzTab.SETFILTER("Urspr. Auftragszeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                                    LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                                    LizenzTab.SETFILTER("Artikelnr.",'%1',SeriennrVerfolgung."Item No.");
                                    LizenzTab.SETFILTER("Seriennr.",'%1',SeriennrVerfolgung."Serial No.");
@@ -2085,12 +2090,13 @@ IF Vkliefkopf.FINDLAST THEN
                                        LizenzTab."PLZ-Code" := Vkliefkopf."Sell-to Post Code";
                                        LizenzTab.Kontakt := Vkliefkopf.Kontaktperson;
                                        LizenzTab."SUP Artikelnr." := Vkliefzeile."No.";
-                                       LizenzTab.Basisgerät := CHAMPZuordnungHolen.Basisgerät;
-                                       LizenzTab."Abw. Geräte Artikelnr." := CHAMPZuordnungHolen."Abw. Geräte Artikelnr.";
+                                       LizenzTab.Basisgerät := KalkulationHolen.Basisgerät;
+                                       LizenzTab."Abw. Geräte Artikelnr." := KalkulationHolen."Abw. Geräte Artikelnr.";
                                        LizenzTab.VALIDATE("Artikelnr.",SeriennrVerfolgung."Item No.");
                                        LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
-                                       CHAMPZuordnungHolen.Startdatum, SeriennrVerfolgung."Posting Date",
-                                       CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
+                                       KalkulationHolen.Startdatum, SeriennrVerfolgung."Posting Date",
+                                       KalkulationHolen."Wartungsvertragsnr.",
+                                       KalkulationHolen."Laufzeit ab Buchungsdatum"));
                                        LizenzTab.Belegdatum := SeriennrVerfolgung."Posting Date";
                                        LizenzTab."Urspr. Buchungsdatum" := SeriennrVerfolgung."Posting Date";
                                        LizenzTab.Serviceleistung := 'WARTUNGSVERTRAG';
@@ -2113,22 +2119,22 @@ IF Vkliefkopf.FINDLAST THEN
                                        LizenzTab."Urspr. Lieferscheinzeilennr." := HoleLiefZeile."Line No.";
                                        LizenzTab."System Projektinfos" := Vkliefzeile."ACS Projektinfos";
                                        LizenzTab.VALIDATE("Dauer Serviceleistung",WartungsLaufzeitErmitteln(Vkliefzeile."No.",
-                                       CHAMPZuordnungHolen.Laufzeit));
-                                       IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                         LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                       KalkulationHolen.Laufzeit));
+                                       IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                         LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
                                        LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(HoleLiefZeile."No.",
                                                                          Vkliefzeile."No.",ek_Währung);
                                        LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",Vkliefzeile."No.",
-                                                                 CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
-                                                                 CHAMPZuordnungHolen."Quotenr.");
+                                                                 KalkulationHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                                 KalkulationHolen."Quotenr.");
                                        LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(HoleLiefZeile."No.",
-                                                                   Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'MSRP',
-                                                                   FALSE,ek_Währung,CHAMPZuordnungHolen."Quotenr.");
-                                       LizenzTab."Quotenr." := CHAMPZuordnungHolen."Quotenr.";
+                                                                   Vkliefzeile."No.",KalkulationHolen.Laufzeit,'MSRP',
+                                                                   FALSE,ek_Währung,KalkulationHolen."Quotenr.");
+                                       LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                        LizenzTab."Service Währungscode" := ek_Währung;
 
-                                       //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
+                                       //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                        SystemPos.RESET;
                                        SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
                                        SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
@@ -2153,37 +2159,37 @@ IF Vkliefkopf.FINDLAST THEN
                                                //noch nicht verlängert wird - Angleichung Laufzeit an bestehende verlängerte Pos.
                                                v_verlaengerung_start := PrüfeLizenzVerlängerung(LizenzTab."SUP Artikelnr.",
                                                LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
-                                               LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,0,
-                                               CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                               LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,0,
+                                               KalkulationHolen."Wartungsvertragsnr.");
                                                IF v_verlaengerung_start <> 0D THEN
                                                  BEGIN
                                                    LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                                    LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                                    LizenzTab."Seriennr.");
-                                                   IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D)
-                                                   AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
-                                                     LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
+                                                   IF (LizenzTab.Verlängerung = FALSE) AND (KalkulationHolen.Startdatum <> 0D)
+                                                   AND (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                     LizenzTab.VALIDATE(Lizenzdatum,KalkulationHolen.Startdatum)
                                                    ELSE
                                                      IF LizenzTab.Verlängerung = TRUE THEN
                                                        IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
-                                                       OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                       OR (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                                          LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
 
                                                    LizenzTab.VALIDATE("Dauer Serviceleistung");
                                                    v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                                    LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                                    ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                                   LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                                   CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                                   LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,1,
+                                                   KalkulationHolen."Wartungsvertragsnr.");
                                                    IF v_verlaengerung_ablauf <> 0D THEN
                                                      LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                                  END;
 
                                                //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
-                                               IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                                 LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                               IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                                 LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                               IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '')
+                                               IF (KalkulationHolen."Wartungsvertragsnr." = '')
                                                AND ((LizenzTab.Benutzername <> '')
                                                OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
                                                OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
@@ -2237,17 +2243,18 @@ IF Vkliefkopf.FINDLAST THEN
                      END;
 
                   //***************************************************************************************************
-                  //              Prüfung Fall #2 Champ Artikel verweist auf eine Lieferschein Position.
+                  //              Prüfung Fall #2 Service Artikel verweist auf eine Lieferschein Position.
                   //       Es kann sich hierbei um Verlängerungen handeln, wenn bereits ein Teil der Seriennr. in
                   //         einem Wartungsvertrag auftauchen oder um das nachträgliche Generieren von Lizenzen
                   //***************************************************************************************************
 
-                  IF (CHAMPZuordnungHolen."Nachträgliche Service Order" = TRUE) AND (CHAMPZuordnungHolen.Fremderwerb = FALSE) THEN
+                  IF (KalkulationHolen."Nachträgliche Service Order" = TRUE) 
+                  AND (KalkulationHolen.Fremderwerb = FALSE) THEN
                     BEGIN
                       HoleTempLizenzTab.RESET;
                       HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                       HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',Vkliefzeile."Order No.");
                       HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',Vkliefzeile."Order Line No.");
                       HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
@@ -2258,8 +2265,8 @@ IF Vkliefkopf.FINDLAST THEN
                             LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                             LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                             LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
-                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',KalkulationHolen."Belegnr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                             LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                             LizenzTab.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                             LizenzTab.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
@@ -2282,51 +2289,51 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab.Kontakt := Vkliefkopf.Kontaktperson;
                                 LizenzTab."SUP Artikelnr." := Vkliefzeile."No.";
                                 LizenzTab."Belegzeilennr." := Vkliefzeile."Line No.";
-                                LizenzTab.Basisgerät := CHAMPZuordnungHolen.Basisgerät;
-                                LizenzTab."Abw. Geräte Artikelnr." := CHAMPZuordnungHolen."Abw. Geräte Artikelnr.";
+                                LizenzTab.Basisgerät := KalkulationHolen.Basisgerät;
+                                LizenzTab."Abw. Geräte Artikelnr." := KalkulationHolen."Abw. Geräte Artikelnr.";
                                 LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
-                                CHAMPZuordnungHolen.Startdatum,Vkliefkopf."Posting Date",
-                                CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
+                                KalkulationHolen.Startdatum,Vkliefkopf."Posting Date",
+                                KalkulationHolen."Wartungsvertragsnr.",KalkulationHolen."Laufzeit ab Buchungsdatum"));
                                 LizenzTab.Belegdatum := Vkliefzeile."Posting Date";
                                 LizenzTab.Benutzername := LizenzTab.Benutzername_generieren(LizenzTab."Artikelnr.",
                                                           LizenzTab."SUP Artikelnr.",LizenzTab."Seriennr.",
-                                                          CHAMPZuordnungHolen."Belegnr.",CHAMPZuordnungHolen."Belegzeilennr.");
+                                                          KalkulationHolen."Belegnr.",KalkulationHolen."Belegzeilennr.");
                                 LizenzTab.Passwort := LizenzTab.Passwort_generieren(LizenzTab."Artikelnr.",
                                                       LizenzTab.Benutzername,LizenzTab."Seriennr.",LizenzTab.Lizenzdatum);
 
                                 IF LizenzTab."SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01' THEN
                                   LizenzTab."Service Artikelnr." := 'CHAMPS-RE_INSTATEMENT_FEE';
 
-                                LizenzTab."Urspr. Lieferscheinnr." := CHAMPZuordnungHolen."Belegnr.";
-                                LizenzTab."Urspr. Lieferscheinzeilennr." := CHAMPZuordnungHolen."Belegzeilennr.";
-                                ShipmentHeader.GET(CHAMPZuordnungHolen."Belegnr.");
+                                LizenzTab."Urspr. Lieferscheinnr." := KalkulationHolen."Belegnr.";
+                                LizenzTab."Urspr. Lieferscheinzeilennr." := KalkulationHolen."Belegzeilennr.";
+                                ShipmentHeader.GET(KalkulationHolen."Belegnr.");
                                 LizenzTab."Urspr. Buchungsdatum" := ShipmentHeader."Posting Date";
                                 IF LizenzTab."SUP Artikelnr." = 'EXTD-HW-WARR/YR' THEN
                                   LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('1J',LizenzTab."Urspr. Buchungsdatum"));
                                 LizenzTab."System Projektinfos" := Vkliefzeile."ACS Projektinfos";
                                 LizenzTab.VALIDATE("Dauer Serviceleistung",WartungsLaufzeitErmitteln(Vkliefzeile."No.",
-                                CHAMPZuordnungHolen.Laufzeit));
-                                IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                  LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                KalkulationHolen.Laufzeit));
+                                IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                  LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
                                 LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(LizenzTab."Artikelnr.",
                                 Vkliefzeile."No.",ek_Währung);
 
                                 LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                          CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
-                                                          CHAMPZuordnungHolen."Quotenr.");
+                                                          KalkulationHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                          KalkulationHolen."Quotenr.");
                                 LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
-                                                            CHAMPZuordnungHolen."Quotenr.");
-                                LizenzTab."Quotenr." := CHAMPZuordnungHolen."Quotenr.";
+                                                            KalkulationHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
+                                                            KalkulationHolen."Quotenr.");
+                                LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
-                                //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
+                                //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                 SystemPos.RESET;
                                 SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
                                 SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
-                                SystemPos.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                                SystemPos.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                                SystemPos.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                                SystemPos.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                                 SystemPos.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                                 SystemPos.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
                                 IF SystemPos.FINDFIRST THEN
@@ -2346,37 +2353,37 @@ IF Vkliefkopf.FINDLAST THEN
                                         //noch nicht verlängert wird - Angleich Laufzeit an bestehende verlängerte Pos.
                                         v_verlaengerung_start := PrüfeLizenzVerlängerung(LizenzTab."SUP Artikelnr.",
                                         LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
-                                        LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,0,
-                                        CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                        LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,0,
+                                        KalkulationHolen."Wartungsvertragsnr.");
                                         IF v_verlaengerung_start <> 0D THEN
                                           BEGIN
                                             LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
-                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D) 
-                                            AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
-                                              LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
+                                            IF (LizenzTab.Verlängerung = FALSE) AND (KalkulationHolen.Startdatum <> 0D) 
+                                            AND (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                              LizenzTab.VALIDATE(Lizenzdatum,KalkulationHolen.Startdatum)
                                             ELSE
                                               IF LizenzTab.Verlängerung = TRUE THEN
                                                 IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
-                                                OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                OR (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                                   LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
 
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
                                             v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                             LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                             ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                            LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                            CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                            LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,1,
+                                            KalkulationHolen."Wartungsvertragsnr.");
                                             IF v_verlaengerung_ablauf <> 0D THEN
                                               LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
-                                        IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                          LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                        IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                          LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                        IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
+                                        IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
                                         OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
                                           BEGIN
@@ -2428,8 +2435,8 @@ IF Vkliefkopf.FINDLAST THEN
 
                         HoleTempLizenzTab.RESET;
                         HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                        HoleTempLizenzTab.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                        HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                        HoleTempLizenzTab.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                        HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                         HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',Vkliefzeile."Order No.");
                         HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',Vkliefzeile."Order Line No.");
                         IF HoleTempLizenzTab.FINDFIRST THEN
@@ -2447,14 +2454,15 @@ IF Vkliefkopf.FINDLAST THEN
                   //***************************************************************************************************
 
                   ////Vorerst deaktiviert 24.08.2011-ST, wieder aktiviert am 28.09.2011-ST
-                  IF (CHAMPZuordnungHolen."Nachträgliche Service Order" = TRUE) AND (CHAMPZuordnungHolen.Fremderwerb = TRUE) THEN
+                  IF (KalkulationHolen."Nachträgliche Service Order" = TRUE) 
+                  AND (KalkulationHolen.Fremderwerb = TRUE) THEN
                     BEGIN
                       HoleTempLizenzTab.RESET;
                       HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
-                      HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',CHAMPZuordnungHolen."Nr.");
-                      HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Zeilennr.");
+                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
+                      HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',KalkulationHolen."Nr.");
+                      HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',KalkulationHolen."Zeilennr.");
                       HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
                       HoleTempLizenzTab.SETFILTER(Fremderwerb,'%1',TRUE);
                       IF HoleTempLizenzTab.FINDFIRST THEN
@@ -2464,8 +2472,8 @@ IF Vkliefkopf.FINDLAST THEN
                             LizenzTab.SETFILTER(Art,'%1',LizenzTab.Art :: Service);
                             LizenzTab.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
                             LizenzTab.SETFILTER("Belegzeilennr.",'%1',Vkliefzeile."Line No.");
-                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinnr.",'%1',KalkulationHolen."Belegnr.");
+                            LizenzTab.SETFILTER("Urspr. Lieferscheinzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                             LizenzTab.SETFILTER("SUP Artikelnr.",'%1',Vkliefzeile."No.");
                             LizenzTab.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                             LizenzTab.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
@@ -2488,16 +2496,16 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab.Kontakt := Vkliefkopf.Kontaktperson;
                                 LizenzTab."SUP Artikelnr." := Vkliefzeile."No.";
                                 LizenzTab."Belegzeilennr." := Vkliefzeile."Line No.";
-                                LizenzTab.Basisgerät := CHAMPZuordnungHolen.Basisgerät;
-                                LizenzTab."Abw. Geräte Artikelnr." := CHAMPZuordnungHolen."Abw. Geräte Artikelnr.";
+                                LizenzTab.Basisgerät := KalkulationHolen.Basisgerät;
+                                LizenzTab."Abw. Geräte Artikelnr." := KalkulationHolen."Abw. Geräte Artikelnr.";
                                 LizenzTab.VALIDATE(Lizenzdatum,WartungsStartErmitteln(LizenzTab."SUP Artikelnr.",
-                                CHAMPZuordnungHolen.Startdatum,Vkliefkopf."Posting Date",
-                                CHAMPZuordnungHolen."Wartungsvertragsnr.",CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum"));
+                                KalkulationHolen.Startdatum,Vkliefkopf."Posting Date",
+                                KalkulationHolen."Wartungsvertragsnr.",KalkulationHolen."Laufzeit ab Buchungsdatum"));
                                 LizenzTab.Belegdatum := Vkliefzeile."Posting Date";
                                 LizenzTab."Urspr. Buchungsdatum" := Vkliefzeile."Posting Date";
                                 LizenzTab.Benutzername := LizenzTab.Benutzername_generieren(LizenzTab."Artikelnr.",
                                                           LizenzTab."SUP Artikelnr.",LizenzTab."Seriennr.",
-                                                          CHAMPZuordnungHolen."Belegnr.",CHAMPZuordnungHolen."Belegzeilennr.");
+                                                          KalkulationHolen."Belegnr.",KalkulationHolen."Belegzeilennr.");
                                 LizenzTab.Passwort := LizenzTab.Passwort_generieren(LizenzTab."Artikelnr.",
                                                       LizenzTab.Benutzername,LizenzTab."Seriennr.",LizenzTab.Lizenzdatum);
                                 IF LizenzTab."SUP Artikelnr." = 'CHAMPS-RE_INSTATE#01' THEN
@@ -2508,27 +2516,27 @@ IF Vkliefkopf.FINDLAST THEN
                                 LizenzTab.Ursprungsland := Artikel."Country/Region of Origin Code";
                                 LizenzTab."System Projektinfos" := Vkliefzeile."ACS Projektinfos";
                                 LizenzTab.VALIDATE("Dauer Serviceleistung",WartungsLaufzeitErmitteln(Vkliefzeile."No.",
-                                CHAMPZuordnungHolen.Laufzeit));
-                                IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                  LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                KalkulationHolen.Laufzeit));
+                                IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                  LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
                                 LizenzTab."Service Artikelnr." := ServiceArtikelnrErmitteln(LizenzTab."Artikelnr.",
                                 Vkliefzeile."No.",ek_Währung);
                                 LizenzTab."Service DC" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",
-                                                          Vkliefzeile."No.",CHAMPZuordnungHolen.Laufzeit,'DC',FALSE,ek_Währung,
-                                                          CHAMPZuordnungHolen."Quotenr.");
+                                                          Vkliefzeile."No.",KalkulationHolen.Laufzeit,'DC',FALSE,ek_Währung,
+                                                          KalkulationHolen."Quotenr.");
                                 LizenzTab."Service MSRP" := ServicePreiseNeuKalkulieren(LizenzTab."Artikelnr.",Vkliefzeile."No.",
-                                                            CHAMPZuordnungHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
-                                                            CHAMPZuordnungHolen."Quotenr.");
-                                LizenzTab."Quotenr." := CHAMPZuordnungHolen."Quotenr.";
+                                                            KalkulationHolen.Laufzeit,'MSRP',FALSE,ek_Währung,
+                                                            KalkulationHolen."Quotenr.");
+                                LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                 LizenzTab."Service Währungscode" := ek_Währung;
 
-                                //Zuordnung der Champ Position in den entsprechenden Wartungs- bzw. Systemvertrag
+                                //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                 SystemPos.RESET;
                                 SystemPos.SETFILTER(Art,'%1',SystemPos.Art :: System);
                                 SystemPos.SETFILTER(Inaktiv,'%1',FALSE);
-                                SystemPos.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                                SystemPos.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
+                                SystemPos.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                                SystemPos.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
                                 SystemPos.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
                                 SystemPos.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
                                 SystemPos.SETFILTER(Fremderwerb,'%1',TRUE);
@@ -2549,37 +2557,37 @@ IF Vkliefkopf.FINDLAST THEN
                                         //noch nicht verlängert wird - Angleich Laufzeit an bestehende verlängerte Pos.
                                         v_verlaengerung_start := PrüfeLizenzVerlängerung(LizenzTab."SUP Artikelnr.",
                                         LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
-                                        LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,0,
-                                        CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                        LizenzTab."Seriennr.",'',LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,0,
+                                        KalkulationHolen."Wartungsvertragsnr.");
                                         IF v_verlaengerung_start <> 0D THEN
                                           BEGIN
                                             LizenzTab.Verlängerung := PrüfeServiceVerlängerung(LizenzTab."SUP Artikelnr.",
                                             LizenzTab."Urspr. Lieferscheinnr.",LizenzTab."Urspr. Lieferscheinzeilennr.",
                                             LizenzTab."Seriennr.");
-                                            IF (LizenzTab.Verlängerung = FALSE) AND (CHAMPZuordnungHolen.Startdatum <> 0D)
-                                            AND (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
-                                              LizenzTab.VALIDATE(Lizenzdatum,CHAMPZuordnungHolen.Startdatum)
+                                            IF (LizenzTab.Verlängerung = FALSE) AND (KalkulationHolen.Startdatum <> 0D)
+                                            AND (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                              LizenzTab.VALIDATE(Lizenzdatum,KalkulationHolen.Startdatum)
                                             ELSE
                                               IF LizenzTab.Verlängerung = TRUE THEN
                                                 IF (v_verlaengerung_start > Vkliefzeile."Posting Date")
-                                                OR (CHAMPZuordnungHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
+                                                OR (KalkulationHolen."Laufzeit ab Buchungsdatum" = FALSE) THEN
                                                   LizenzTab.VALIDATE(Lizenzdatum,CALCDATE('+1T',v_verlaengerung_start));
 
                                             LizenzTab.VALIDATE("Dauer Serviceleistung");
                                             v_verlaengerung_ablauf := PrüfeLizenzVerlängerung(
                                             LizenzTab."SUP Artikelnr.",LizenzTab."Urspr. Lieferscheinnr."
                                             ,LizenzTab."Urspr. Lieferscheinzeilennr.",LizenzTab."Seriennr.",'',
-                                            LizenzTab.Fremderwerb,CHAMPZuordnungHolen.Laufzeit,1,
-                                            CHAMPZuordnungHolen."Wartungsvertragsnr.");
+                                            LizenzTab.Fremderwerb,KalkulationHolen.Laufzeit,1,
+                                            KalkulationHolen."Wartungsvertragsnr.");
                                             IF v_verlaengerung_ablauf <> 0D THEN
                                               LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
                                         //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
-                                        IF CHAMPZuordnungHolen.Ablaufdatum <> 0D THEN
-                                          LizenzTab."Ablaufdatum Serviceleistung" := CHAMPZuordnungHolen.Ablaufdatum;
+                                        IF KalkulationHolen.Ablaufdatum <> 0D THEN
+                                          LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                        IF (CHAMPZuordnungHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
+                                        IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
                                         OR (ACTS = TRUE) OR (ACHAT = TRUE)) THEN
                                           BEGIN
@@ -2631,10 +2639,10 @@ IF Vkliefkopf.FINDLAST THEN
 
                       HoleTempLizenzTab.RESET;
                       HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',CHAMPZuordnungHolen."Belegnr.");
-                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',CHAMPZuordnungHolen."Belegzeilennr.");
-                      HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',CHAMPZuordnungHolen."Nr.");
-                      HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',CHAMPZuordnungHolen."Zeilennr.");
+                      HoleTempLizenzTab.SETFILTER("Nr.",'%1',KalkulationHolen."Belegnr.");
+                      HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',KalkulationHolen."Belegzeilennr.");
+                      HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',KalkulationHolen."Nr.");
+                      HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',KalkulationHolen."Zeilennr.");
                       HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
                       HoleTempLizenzTab.SETFILTER(Fremderwerb,'%1',TRUE);
                       IF HoleTempLizenzTab.FINDFIRST THEN
@@ -2644,7 +2652,7 @@ IF Vkliefkopf.FINDLAST THEN
 
                   ZähleServiceVerlängerungen(LizenzTab."Wartungsvertragsnr.");
 
-               UNTIL CHAMPZuordnungHolen.NEXT = 0;
+               UNTIL KalkulationHolen.NEXT = 0;
            END;
       UNTIL Vkliefzeile.NEXT = 0;
 
@@ -2667,25 +2675,25 @@ IF Vkliefkopf.FINDLAST THEN
         ELSE
           BEGIN
             letzte_wartungsnr := '';
-            GetDruckÄnderung.RESET;
-            GetDruckÄnderung.SETFILTER(Art,'%1',GetDruckÄnderung.Art :: Service);
-            GetDruckÄnderung.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
-            IF GetDruckÄnderung.FINDFIRST THEN
+            GetDruckAenderung.RESET;
+            GetDruckAenderung.SETFILTER(Art,'%1',GetDruckAenderung.Art :: Service);
+            GetDruckAenderung.SETFILTER("Nr.",'%1',Vkliefzeile."Document No.");
+            IF GetDruckAenderung.FINDFIRST THEN
               BEGIN
                 REPEAT
                   GetDruckWartung.RESET;
                   GetDruckWartung.SETFILTER(Status,'%1|%2|%3',GetDruckWartung.Status :: System,GetDruckWartung.Status :: Auftrag,
                   GetDruckWartung.Status :: ACHAT);
-                  GetDruckWartung.SETFILTER("Wartungsvertragsnr.",'%1',GetDruckÄnderung."Wartungsvertragsnr.");
+                  GetDruckWartung.SETFILTER("Wartungsvertragsnr.",'%1',GetDruckAenderung."Wartungsvertragsnr.");
                   IF GetDruckWartung.FINDFIRST THEN
                     //REPEAT
                       IF letzte_wartungsnr <> GetDruckWartung."Wartungsvertragsnr." THEN
                         BEGIN
                           DruckeLizenz(GetDruckWartung."Wartungsvertragsnr.",nur_intern_drucken);
-                          letzte_wartungsnr := GetDruckÄnderung."Wartungsvertragsnr.";
+                          letzte_wartungsnr := GetDruckAenderung."Wartungsvertragsnr.";
                         END;
                     //UNTIL GetDruckWartung.NEXT = 0;
-                UNTIL GetDruckÄnderung.NEXT = 0;
+                UNTIL GetDruckAenderung.NEXT = 0;
               END;
           END;
 
@@ -2896,18 +2904,18 @@ IF DruckeWartung.FINDFIRST THEN
   END;
 
 OpenServiceKalkulation(version : Integer)
-ChampRelaDoc.RESET;
-ChampRelaDoc.SETFILTER(Art,'SUP-AU');
-ChampRelaDoc.SETFILTER("Nr.",'%1',"Auftragsnr.");
-ChampRelaDoc.SETFILTER("Zeilennr.",'%1',"Auftragszeilennr.");
+ServiceRelaDoc.RESET;
+ServiceRelaDoc.SETFILTER(Art,'SUP-AU');
+ServiceRelaDoc.SETFILTER("Nr.",'%1',"Auftragsnr.");
+ServiceRelaDoc.SETFILTER("Zeilennr.",'%1',"Auftragszeilennr.");
 IF version = 0 THEN
   BEGIN
-    IF ChampRelaDoc.FINDFIRST THEN ;
-    FORM.RUNMODAL(50023,ChampRelaDoc);
+    IF ServiceRelaDoc.FINDFIRST THEN ;
+    FORM.RUNMODAL(50023,ServiceRelaDoc);
   END
 ELSE
-  IF ChampRelaDoc.FINDFIRST THEN
-    FORM.RUNMODAL(50023,ChampRelaDoc);
+  IF ServiceRelaDoc.FINDFIRST THEN
+    FORM.RUNMODAL(50023,ServiceRelaDoc);
 
 SystemZugehörigkeitErmitteln(Auftragsnr : Code[20];AktLfdNr : Code[20];Wartungsnr : Code[20]) : Code[20]
 IF Wartungsnr = '' THEN
@@ -2983,7 +2991,7 @@ IF Kalkulation.FINDFIRST THEN
       END
     ELSE
       BEGIN
-        //Wenn Pos. direkt mit Champs geliefert wurde
+        //Wenn Pos. direkt mit Service geliefert wurde
         SystemPosOhneWVnr.RESET;
         SystemPosOhneWVnr.SETFILTER(Art,'%1',SystemPosOhneWVnr.Art :: System);
         SystemPosOhneWVnr.SETFILTER("Auftragsnr.",'%1',Kalkulation."Belegnr.");
@@ -3128,18 +3136,18 @@ IF SUP_Artikelnr = 'CHAMPS-RE_INSTATE#01' THEN
 IF SUP_Artikelnr = 'RE_INSTATEMENT_FEE' THEN
   EXIT('RE_INSTATEMENT_FEE');
 
-Champs.RESET;
-Champs.SETFILTER("Zuordnung obsolete",'%1',FALSE);
+Servicepreise.RESET;
+Servicepreise.SETFILTER("Zuordnung obsolete",'%1',FALSE);
 IF ACTS THEN
-  Champs.SETFILTER(Art,'%1',Champs.Art :: ACTS)
+  Servicepreise.SETFILTER(Art,'%1',Servicepreise.Art :: ACTS)
 ELSE
-  Champs.SETFILTER(Art,'%1',Champs.Art :: Champs);
-Champs.SETFILTER("Artikelnr.",'%1',Artikelnr);
+  Servicepreise.SETFILTER(Art,'%1',Servicepreise.Art :: Champs);
+Servicepreise.SETFILTER("Artikelnr.",'%1',Artikelnr);
 SUP_Artikelnr := ServiceTab.FakeSUPArtikelErmitteln(SUP_Artikelnr);
-Champs.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
-Champs.SETFILTER(Währungscode,'%1',Waehrung);
-IF Champs.FINDFIRST THEN
-  EXIT(Champs."Service Artikelnr.");
+Servicepreise.SETFILTER("SUP Artikelnr.",'%1',SUP_Artikelnr);
+Servicepreise.SETFILTER(Währungscode,'%1',Waehrung);
+IF Servicepreise.FINDFIRST THEN
+  EXIT(Servicepreise."Service Artikelnr.");
 
 NewPosFromRMA(LfdNr : Code[20];AlteSN : Code[20];NeueSN : Code[20];"RMA-Nr" : Code[20];CopyRec : Record "Serviceleist. & Leihstellungen"
 IF CopyRec.Reklamiert = FALSE THEN
@@ -3178,7 +3186,7 @@ IF CopyRec.Reklamiert = FALSE THEN
   END;
 
 ServicePreiseNeuKalkulieren(Artikelnr : Code[20];SUP_Artikelnr : Code[20];Laufzeit : Code[20];Feld : Code[20];Runden : Boolean;Währung 
-//2011-12-06 ST Für Übergang genutzt, bis eindeutig Champ Preise vor dem Buchen neu kalkuliert werden
+//2011-12-06 ST Für Übergang genutzt, bis eindeutig Servicepreise vor dem Buchen neu kalkuliert werden können
 //2014-01-10 ST Nun auch für ACTS
 //2014-01-27 ST Nun auch für ACHAT
 //2014-06-18 ST Nun auch für Misch ACTS/ACHAT
@@ -3327,7 +3335,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
             IF ACHAT = TRUE THEN
               BEGIN
                 normal_discount := 0.8;
-                spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (Zurückrechnung Champ DC auf 100 % MSRP) * 0.58 EK ACHAT
+                spezial_discount := 1 / 0.8 *0.58 // für ACHAT 1 / 0.8 (Zurückrechnung DC auf 100 % MSRP) * 0.58 EK ACHAT
               END;
 
             //ACTS Schaeffler EK Konditionen
