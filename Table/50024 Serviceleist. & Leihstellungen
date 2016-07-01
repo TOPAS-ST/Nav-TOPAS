@@ -2133,6 +2133,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                                    FALSE,ek_Währung,KalkulationHolen."Quotenr.");
                                        LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                        LizenzTab."Service Währungscode" := ek_Währung;
+                                       LizenzTab."Service bereits bestellt" := Vkliefzeile."Service bereits bestellt";
 
                                        //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                        SystemPos.RESET;
@@ -2327,6 +2328,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                             KalkulationHolen."Quotenr.");
                                 LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                 LizenzTab."Service Währungscode" := ek_Währung;
+                                LizenzTab."Service bereits bestellt" := Vkliefzeile."Service bereits bestellt";
 
                                 //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                 SystemPos.RESET;
@@ -2530,6 +2532,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                             KalkulationHolen."Quotenr.");
                                 LizenzTab."Quotenr." := KalkulationHolen."Quotenr.";
                                 LizenzTab."Service Währungscode" := ek_Währung;
+                                LizenzTab."Service bereits bestellt" := Vkliefzeile."Service bereits bestellt";
 
                                 //Zuordnung der Serviceposition in den entsprechenden Wartungs- bzw. Systemvertrag
                                 SystemPos.RESET;
