@@ -2,8 +2,8 @@ OBJECT Report 50006 Batch_Belege_und_einz
 {
   OBJECT-PROPERTIES
   {
-    Date=31.08.15;
-    Time=17:12:16;
+    Date=14.07.16;
+    Time=10:26:58;
     Modified=Yes;
     Version List=Entwicklung!!!;
   }
@@ -13,6 +13,11 @@ OBJECT Report 50006 Batch_Belege_und_einz
     ProcessingOnly=Yes;
     OnInitReport=BEGIN
                    AttachmentPath := 'F:\Daten NEU\Gemeinsame Ordner\Customer Service\EMailVersand\';
+                   //Performance Test PDFCreator, Umstellung auf lokalen Pfad tempor„r
+                   //AttachmentPath := 'D:\EMailVersand\';
+
+                   IF TOPAS_API.NewFolder(AttachmentPath) = FALSE THEN
+                     ERROR('Abbruch, Pfad nicht verfgbar: %1',AttachmentPath);
 
                    CLEAR(DefaultPrinter);
                    IF ISCLEAR(DefaultPrinter) THEN
@@ -26,10 +31,8 @@ OBJECT Report 50006 Batch_Belege_und_einz
                    REPEAT
                    UNTIL ISCLEAR(DefaultPrinter);
 
-                   //Auftragsbest„tigung_PDF:=TRUE;
-                   //Žnderungsauftragsbest„ttig_PDF:=TRUE;
-                   //Bestellung_PDF:=TRUE;
-                   //Rechnung_PDF:=TRUE;
+                   //Experimentell, um sicherzustellen, dass der Prozess geschlossen ist
+                   SHELL('C:\WINDOWS\system32\cmd.exe', '/c', 'TASKKILL /F /IM PDFCreator.EXE /T');
 
                    //IF DATE2DWY(WORKDATE, 1) = 1 THEN
                      //BEGIN
@@ -198,14 +201,13 @@ OBJECT Report 50006 Batch_Belege_und_einz
 
                     END;
 
-
+                  wartungsnr_save := '';
                   IF Servicevertr„ge_PDF = TRUE THEN
                     BEGIN
                       VKliefkopf.RESET;
                       VKliefkopf.SETFILTER("Posting Date",'%1',Tagesdatum);
                       IF VKliefkopf.FINDFIRST THEN
                         REPEAT
-                          wartungsnr := '';
                           vertrag_gedruckt := FALSE;
                           Debitor.GET(VKliefkopf."Sell-to Customer No.");
                           IF Debitor."Service via EMail" = TRUE THEN
@@ -217,13 +219,14 @@ OBJECT Report 50006 Batch_Belege_und_einz
                               IF Servicepositionen.FINDFIRST THEN
                                 BEGIN
                                   REPEAT
-                                    IF Servicepositionen."Wartungsvertragsnr." <> wartungsnr THEN
+                                    IF STRPOS(wartungsnr_save,Servicepositionen."Wartungsvertragsnr.") = 0 THEN
                                       vertrag_gedruckt := FALSE;
                                     IF vertrag_gedruckt = FALSE THEN
                                       BEGIN
                                         Wartungsvertrag.RESET;
                                         Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",Servicepositionen."Wartungsvertragsnr.");
-                                        Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: ACTS);
+                                        Wartungsvertrag.SETFILTER(Status,'<>%1&<>%2',Wartungsvertrag.Status :: ACTS,
+                                                                  Wartungsvertrag.Status :: "Champs Partner");
                                         IF Wartungsvertrag.FINDFIRST THEN
                                           BEGIN
                                             PDFCreator.SaveToPDF('Servicevertrag',Wartungsvertrag."Wartungsvertragsnr.",AttachmentPath,
@@ -231,7 +234,7 @@ OBJECT Report 50006 Batch_Belege_und_einz
                                             vertrag_gedruckt := TRUE;
                                           END;
                                       END;
-                                    wartungsnr := Servicepositionen."Wartungsvertragsnr.";
+                                    wartungsnr_save := wartungsnr_save + Servicepositionen."Wartungsvertragsnr.";
                                   UNTIL Servicepositionen.NEXT = 0;
                                 END;
                             END;
@@ -405,13 +408,13 @@ OBJECT Report 50006 Batch_Belege_und_einz
                      END;
 
                    //Fr Servicevertr„ge
+                   wartungsnr_save := '';
                    IF Servicevertr„ge_PDF = TRUE THEN
                      BEGIN
                        VKliefkopf.RESET;
                        VKliefkopf.SETFILTER("Posting Date",'%1',Tagesdatum);
                        IF VKliefkopf.FINDFIRST THEN
                          REPEAT
-                           wartungsnr := '';
                            vertrag_gedruckt := FALSE;
                            Debitor.GET(VKliefkopf."Sell-to Customer No.");
                            IF Debitor."Service via EMail" = TRUE THEN
@@ -427,13 +430,14 @@ OBJECT Report 50006 Batch_Belege_und_einz
                                      body[1] := '';
                                      body[2] := '';
 
-                                     IF Servicepositionen."Wartungsvertragsnr." <> wartungsnr THEN
+                                     IF STRPOS(wartungsnr_save,Servicepositionen."Wartungsvertragsnr.") = 0 THEN
                                        vertrag_gedruckt := FALSE;
                                      IF vertrag_gedruckt = FALSE THEN
                                        BEGIN
                                          Wartungsvertrag.RESET;
                                          Wartungsvertrag.SETFILTER("Wartungsvertragsnr.",Servicepositionen."Wartungsvertragsnr.");
-                                         Wartungsvertrag.SETFILTER(Status,'<>%1',Wartungsvertrag.Status :: ACTS);
+                                         Wartungsvertrag.SETFILTER(Status,'<>%1&<>%2',Wartungsvertrag.Status :: ACTS,
+                                                                   Wartungsvertrag.Status :: "Champs Partner");
                                          IF Wartungsvertrag.FINDFIRST THEN
                                            BEGIN
                                              IF VKliefkopf."Language Code" <> 'ENU' THEN
@@ -454,7 +458,7 @@ OBJECT Report 50006 Batch_Belege_und_einz
                                              vertrag_gedruckt := TRUE;
                                            END;
                                        END;
-                                     wartungsnr := Servicepositionen."Wartungsvertragsnr.";
+                                     wartungsnr_save := wartungsnr_save + Servicepositionen."Wartungsvertragsnr.";
                                    UNTIL Servicepositionen.NEXT = 0;
                                  END;
                              END;
@@ -537,7 +541,7 @@ OBJECT Report 50006 Batch_Belege_und_einz
       Wartungsvertrag@1140027 : Record 50011;
       Servicepositionen@1140026 : Record 50024;
       Debitor@1140013 : Record 18;
-      wartungsnr@1140028 : Code[20];
+      wartungsnr_save@1140028 : Text[1024];
       vertrag_gedruckt@1140029 : Boolean;
       original_50019@1140023 : Text[80];
       original_50075@1140010 : Text[80];
