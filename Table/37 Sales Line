@@ -2823,6 +2823,10 @@ System Projektinfos - OnValidate()
 
 System Projektinfos - OnLookup()
 
+Service bereits bestellt - OnValidate()
+
+Service bereits bestellt - OnLookup()
+
 Verpackungstyp - OnValidate()
 
 Verpackungstyp - OnLookup()
@@ -4634,11 +4638,13 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         //ACTS Managed Spare Service EK Konditionen
         IF ACTS_MSS = TRUE THEN
           BEGIN
+            //MSS ohne Quote von -10% auf -20% , mit Quote (in Annahme) von -15% auf -20% geändert
+            //auch wenn die Werte nun gleich sind, bleibt diese Abfrage bzgl. Quote hier stehen
             IF ServiceTab.ServiceQuoteIsValid(Quotenr) = TRUE THEN
-              normal_discount := 0.85
+              normal_discount := 0.8
             ELSE
               BEGIN
-                normal_discount := 0.9;
+                normal_discount := 0.8;
                 v_service_laufzeit := Laufzeit DIV 12;
                 CASE v_service_laufzeit OF
                   0..1 : additional_discount := 0;
@@ -4667,7 +4673,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
         //ACTS MSS Schaeffler EK Konditionen
         IF ACTS_MSS_SCHAEFFLER = TRUE THEN
           BEGIN
-            normal_discount := 0.2;
+            normal_discount := 0.8;
           END;
 
         //APSS One Box EK Konditionen
@@ -4677,7 +4683,7 @@ IF (Artikel."Software Upgrade Protection" = TRUE) THEN
               normal_discount := 0.62
             ELSE
               BEGIN
-                normal_discount := 0.7;
+                normal_discount := 0.65;
                 v_service_laufzeit := Laufzeit DIV 12;
                 CASE v_service_laufzeit OF
                   0..1 : additional_discount := 0;
