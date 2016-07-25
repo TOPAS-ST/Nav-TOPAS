@@ -3219,7 +3219,8 @@ IF ((CalledByFieldNo = CurrFieldNo) OR (CalledByFieldNo = FIELDNO("Shipment Date
    ("Job Contract Entry No." = 0) AND
    NOT (Nonstock OR "Special Order")
 THEN
-  ItemCheckAvail.SalesLineCheck(Rec);
+  //TOPAS 25.07.2016 - ST Anzeige beim Überschreiten der Verfügbarkeit deaktiviert
+  //ItemCheckAvail.SalesLineCheck(Rec);
 
 ShowReservation()
 TESTFIELD(Type,Type::Item);
