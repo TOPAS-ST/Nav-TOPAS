@@ -7,16 +7,24 @@ SearchFolderBuildtoOrder
                 optimierte Abfragen (die Automation Error verhindert) und Einbindung der neuen Fkt. trim_text()
 
 ================================================================================================================
-trim_text
+trim_text()
 - 2014-04-02 ST released as a new function to trim a text
 
 ================================================================================================================
-GetDefaultPrinter
+GetDefaultPrinter()
 - 2015-07-01 ST relased as a new function to get the default system printer
 
 ================================================================================================================
-replace_text
+replace_text()
 - 2016-02-25 ST relased as a new function to replace a string in a text
+
+================================================================================================================
+CreateExcelHyperlinkToNav()
+- 2016-02-25 ST dynamic Navision Link change for a specific table
+
+================================================================================================================
+CalcNextWorkday()
+- 2016-07-28 ST calculate the next workday date from a given date
 
 ================================================================================================================
 
@@ -194,6 +202,15 @@ REPEAT
 UNTIL v_startdate > EndDate;
 
 EXIT(werktage);
+
+CalcNextWorkday(StartDate : Date) : Date
+CASE DATE2DWY(StartDate,1) OF
+  0..4,7 : n_workdate := CALCDATE('+1T',StartDate);
+  5    : n_workdate := CALCDATE('+3T',StartDate);
+  6    : n_workdate := CALCDATE('+2T',StartDate);
+END;
+
+EXIT(n_workdate);
 
 SearchMailsAndOpen(gwAccID : Text[30];password : Text[30];search : Text[80]) : Boolean
 IF ISCLEAR(gwApplication) THEN
