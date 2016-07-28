@@ -15,6 +15,10 @@ GetDefaultPrinter
 - 2015-07-01 ST relased as a new function to get the default system printer
 
 ================================================================================================================
+replace_text
+- 2016-02-25 ST relased as a new function to replace a string in a text
+
+================================================================================================================
 
 OnRun()
 
@@ -105,7 +109,7 @@ IF new THEN
     run := gw.Execute('SelectToEndText()', sResult);
     //   change the font size
     Fontname := 'Segoe UI';
-    run := gw.Execute('FontSet("' + Fontname + '";-16;400)', sResult);
+    run := gw.Execute('FontSet("' + Fontname + '";-14;400)', sResult);
     run := gw.Execute('FontBold(0)',sResult);
     run := gw.Execute('PosTextTop()', sResult);
   END
@@ -121,7 +125,7 @@ ELSE
     run := gw.Execute('SelectToEndText()', sResult);
     //   change the font size
     Fontname := 'Segoe UI';
-    run := gw.Execute('FontSet("' + Fontname + '";-16;400)', sResult);
+    run := gw.Execute('FontSet("' + Fontname + '";-14;400)', sResult);
     run := gw.Execute('FontBold(0)',sResult);
     run := gw.Execute('PosToEndOfText()', sResult);
 
@@ -1230,17 +1234,23 @@ InfoFileF.TEXTMODE := TRUE;
 InfoFileF.CREATE('R:\Navision\Fehlerprotokolle\RecordLink Fehler.txt');
 
 chr := 10;
-//VerkTab.SETFILTER(Code,'%1','BP');
+//VerkTab.SETFILTER(Code,'%1','ST');
 IF VerkTab.FINDFIRST THEN
   BEGIN
     REPEAT
-      bodytext[1] := '##### DIESE E-MAIL WURDE AUTOMATISCH AUS NAVISION ERZEUGT. #####' + FORMAT(chr) +
-      'Für bessere Lesbarkeit empfiehlt es sich die Mail zu maximieren.' + FORMAT(chr) +
-      'Bitte korrigiere die Dateipfade oder lösche ggf. den nachfolgendenden Link aus NAV. Hinweis: Zuerst steht immer der ' +
-      'Tabellen Datensatz, darunter dann der fehlerhafte Pfad. Links, die nicht aufgefunden werden konnten, bitte ' +
-      'zurückschicken.' + FORMAT(chr) +
-      'Tipp: Es kann sein, dass der Ordner umbenannt, komplett verschoben oder die Datei umbenannt / gelöscht wurde.' + FORMAT(chr)+
-      'Generell: Pfade wie C:\ oder D:\ sind ungeeignet. Benutze bitte immer die Tauschlaufwerke.' + FORMAT(chr) + FORMAT(chr);
+      bodytext[1] := 
+      '##### DIESE E-MAIL WURDE AUTOMATISCH AUS NAVISION ERZEUGT. #####' + FORMAT(chr) +
+      'Für bessere Lesbarkeit empfiehlt es sich die Mail zu maximieren.' + FORMAT(chr) + FORMAT(chr) +
+      'Bitte korrigiere die inkorrekten Dateipfade oder lösche ggf. den entsprechenden Datei-Link aus NAV.' + FORMAT(chr) +
+      'Tipp: Es kann sein, dass der Ordner bzw. die Datei umbenannt, verschoben oder gelöscht wurde.' + FORMAT(chr) +
+      'Generell: Bitte keine Pfade wie C:\ oder D:\ benutzen. Bitte immer die Netzlaufwerke wie z.B. F:\, R:\, I:\ ... '
+      + FORMAT(chr) + ' benutzen, damit ALLE auf die Dokumente zugreifen können.' + FORMAT(chr) +
+      'Hinweis: Zuerst steht immer der NAV Datensatz, darunter der Pfad zum Dokument, der so nicht mehr existiert.' + FORMAT(chr) +
+      'Dokumente, die wichtig erscheinen aber nicht aufgefunden werden konnten, bitte markieren und an mich' + FORMAT(chr) +
+      ' zurückschicken, ich versuche sie dann aufzufinden und zu korrigieren.' + FORMAT(chr) +
+      '##########################################################' +
+      FORMAT(chr) + FORMAT(chr);
+
       bodytext[2] := FORMAT(chr) + '';
       bodytext[3] := FORMAT(chr) + '';
       bodytext[4] := FORMAT(chr) + '';
@@ -1249,7 +1259,7 @@ IF VerkTab.FINDFIRST THEN
       k := 1;
 
       DataLink.SETRANGE(DataLink."User ID",VerkTab.Code);
-      IF DataLink.FINDFIRST THEN
+      IF DataLink.FIND('-') THEN
         REPEAT
           IF NOT EXISTS(DataLink.URL1) AND (STRPOS(DataLink.URL1,'www.') = 0) THEN
             BEGIN
@@ -1257,7 +1267,7 @@ IF VerkTab.FINDFIRST THEN
               InfoFileF.WRITE(FORMAT(DataLink."Record ID") + ' Datei: ' + DataLink.URL1+ ' konnte nicht gefunden werden.');
               //ERROR('%1 konnte nicht gefunden werden.',DataLink.URL1);
               IF STRLEN(FORMAT(bodytext[k]) + FORMAT(DataLink."Record ID") + ' ' + zusatztext[1] + ' ,Datei: ' +
-              FORMAT(chr) + '    [' + DataLink.URL1 + zusatztext[2] + ']' + FORMAT(chr)) > 1024 THEN
+              FORMAT(chr) + '    [   ' + DataLink.URL1 + zusatztext[2] + '   ]' + FORMAT(chr)) > 1024 THEN
                 k += 1;
 
               zusatztext[1] := '';
@@ -1268,10 +1278,10 @@ IF VerkTab.FINDFIRST THEN
                   Memokopf.SETFILTER("Memonr.",'%1',COPYSTR(FORMAT(DataLink."Record ID"),12,8));
                   IF Memokopf.FINDFIRST THEN
                     IF Memokopf."Mandantennr." <> '' THEN
-                      zusatztext[1] := 'Kontaktnr. ' + Memokopf."Mandantennr."
+                      zusatztext[1] := 'Kontakt Memo ' + Memokopf."Mandantennr."
                     ELSE
                       IF Memokopf."Kampagnennr." <> '' THEN
-                        zusatztext[1] := 'Projektnr. ' + Memokopf."Kampagnennr.";
+                        zusatztext[1] := 'Projekt Memo ' + Memokopf."Kampagnennr.";
                 END;
 
               IF STRPOS(FORMAT(DataLink."Record ID"),'Memokopf:') = 1 THEN
@@ -1286,16 +1296,24 @@ IF VerkTab.FINDFIRST THEN
                 END;
 
               IF  DataLink.URL1 = '' THEN
-                zusatztext[2] := '*Der DATEIPFAD ist LEER, bitte LÖSCHEN!!!';
+                zusatztext[2] := '*Der DATEIPFAD ist LEER, bitte Link LÖSCHEN!!!';
               bodytext[k] := bodytext[k] + FORMAT(DataLink."Record ID") + ' ' + zusatztext[1] +
-              ' ,Datei: ' + FORMAT(chr) + '    [' + DataLink.URL1 + zusatztext[2] + ']' + FORMAT(chr);
+              '  - Datei: ' + FORMAT(chr) + '    [   ' + DataLink.URL1 + zusatztext[2] + '   ]' + FORMAT(chr);
+              bodytext[k] := replace_text(bodytext[k],'Item','Artikelkarte');
+              bodytext[k] := replace_text(bodytext[k],'Contact','Kontaktkarte');
+              bodytext[k] := replace_text(bodytext[k],'Customer','Debitorkarte');
+              bodytext[k] := replace_text(bodytext[k],'Comment Line','Bemerkungszeile');
+              bodytext[k] := replace_text(bodytext[k],'Rlshp. Mgt. Comment Line','Bemerkungszeile');
+              bodytext[k] := replace_text(bodytext[k],'Campaign','Projektkarte');
+              bodytext[k] := replace_text(bodytext[k],'Sales Header','Auftragskarte');
+              bodytext[k] := replace_text(bodytext[k],'Purchase Header','Bestellungen');
             END;
         UNTIL DataLink.NEXT = 0;
 
         IF fehler THEN  BEGIN
           IF bodytext[1] <> '' THEN
             NewMailAddMoreBody(VerkTab."E-Mail",'','',
-            'Die Pfade folgender Links im Navision (Büroklammer Funktion) stimmen nicht mehr',bodytext[1],'','',TRUE,FALSE);
+            'Die Pfade der Datei-Links im Navision (Büroklammer Funktion) sind nicht mehr korrekt',bodytext[1],'','',TRUE,FALSE);
           IF bodytext[2] <> '' THEN
             NewMailAddMoreBody('','','','',bodytext[2],'','',FALSE,FALSE);
           IF bodytext[3] <> '' THEN
@@ -1456,6 +1474,11 @@ trim_text(all_text : Text[1024];text_to_trim : Text[120]) : Text[1024]
 EXIT(COPYSTR(all_text,1,STRPOS(all_text,text_to_trim)-1) +
 COPYSTR(all_text,STRPOS(all_text,text_to_trim) + STRLEN(text_to_trim)));
 
+replace_text(all_text : Text[1024];text_to_replace : Text[120];text_replace_with : Text[120]) : Text[1024]
+IF STRPOS(all_text,text_to_replace) = 0  THEN EXIT(all_text);
+EXIT(COPYSTR(all_text,1,STRPOS(all_text,text_to_replace)-1) + text_replace_with +
+COPYSTR(all_text,STRPOS(all_text,text_to_replace) + STRLEN(text_to_replace)));
+
 ConvertStrToNum(string : Text[250]) : Integer
 EVALUATE(num,DELCHR(string,'=',DELCHR(string,'=','0123456789')));
 EXIT(num);
@@ -1529,6 +1552,92 @@ Drucker := WshShell.RegRead(RegKey);
 CLEAR(WshShell);
 
 EXIT(Drucker);
+
+CreateExcelHyperlinkToNav(RecordTableName : Text[50];RecordKeyId : Integer;FormID : Integer;DataValue : Text[50]) : Text[1024]
+IF (RecordTableName = '') OR (RecordKeyId <= 0) THEN EXIT('');
+
+CASE RecordTableName OF
+
+  'Wartungsvertrag' : 
+    BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+    END;
+
+  'Sales Header' :
+    BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          IF FormID = 41 THEN
+            EXIT('=HYPERLINK("' + STRSUBSTNO("Link_Field1+Field3",FormID,0,DataValue) + '";"' + DataValue + '")');
+          IF FormID = 42 THEN
+            EXIT('=HYPERLINK("' + STRSUBSTNO("Link_Field1+Field3",FormID,1,DataValue) + '";"' + DataValue + '")');
+          IF FormID = 507 THEN
+            EXIT('=HYPERLINK("' + STRSUBSTNO("Link_Field1+Field3",FormID,4,DataValue) + '";"' + DataValue + '")');
+        END;
+    END;
+
+   'Contact' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Customer' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Item' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Quotedaten' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Support' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field1,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Sales Shipment Header' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field3,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+   'Serviceleist. & Leihstellungen' :
+     BEGIN
+      IF RecordKeyId = 1 THEN
+        BEGIN
+          EXIT('=HYPERLINK("' + STRSUBSTNO(Link_Field7,FormID,DataValue) + '";"' + DataValue + '")');
+        END;
+     END;
+
+END;
+
+EXIT(DataValue);
 
 PDFCreator::eReady()
 PDFCreator.cPrinterStop := TRUE;
