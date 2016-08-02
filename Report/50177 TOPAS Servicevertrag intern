@@ -2,8 +2,8 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
 {
   OBJECT-PROPERTIES
   {
-    Date=16.03.16;
-    Time=17:15:52;
+    Date=02.08.16;
+    Time=15:04:43;
     Modified=Yes;
     Version List=fertig;
   }
@@ -21,6 +21,18 @@ OBJECT Report 50177 TOPAS Servicevertrag intern
       {
         DataItemTable=Table50011;
         DataItemTableView=WHERE(Status=FILTER(<>ACTS&<>Champs Partner));
+        NewPagePerRecord=Yes;
+        OnAfterGetRecord=BEGIN
+                           PruefeLizenzTab.RESET;
+                           PruefeLizenzTab.SETFILTER(Art,'%1',PruefeLizenzTab.Art :: Service);
+                           PruefeLizenzTab.SETFILTER("Wartungsvertragsnr.",'%1',"Wartungsvertragsnr.");
+                           PruefeLizenzTab.SETFILTER("Zu exportieren",'%1',TRUE);
+                           PruefeLizenzTab.SETFILTER("Ablaufdatum Serviceleistung",'>=%1',WORKDATE);
+                           PruefeLizenzTab.SETFILTER(Inaktiv,'%1',FALSE);
+                           IF NOT PruefeLizenzTab.FINDFIRST THEN
+                             CurrReport.SKIP;
+                         END;
+
         ReqFilterFields=Wartungsvertragsnr.;
       }
       SECTIONS
