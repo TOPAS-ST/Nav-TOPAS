@@ -1,0 +1,838 @@
+OBJECT Codeunit 50000 Importiere Wechselkurse
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02.08.16;
+    Time=10:16:17;
+    Modified=Yes;
+    Version List=TOPAS/CE1.00;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+            HideMsg := FALSE;
+
+            //Commerzbank Kurse - holt sich die Kurse aus dem Archiv
+            GetCurrencyExchRateCoba();
+
+            //EZB Kurse - die History ist standardm„áig deaktiviert
+            //GetCurrencyExchRateXML();
+            ////GetCurrencyExchRateHistoryXML();
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      HideMsg@1000000000 : Boolean;
+      Excel@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      TOPAS_API@1140000 : Codeunit 50001;
+
+      Text000@1140007 : TextConst
+        'DEU=W„hrungs Wechselkurse wurden aktualisiert.',
+        'ENU=Currency Exchange Rates updated.';
+
+      Text001@1140006 : TextConst
+        'DEU=<Could not import XML Currency Exchange Rates.>',
+        'ENU=Could not import XML Currency Exchange Rates.';
+
+      Text002@1140005 : TextConst
+        'DEU=<Import Currency Exchange Rates from XML ...\Currency Date #1########\Currency Code #2########\Currency Rate #3########\@4@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>',
+        'ENU=Import Currency Exchange Rates from XML ...\Currency Date #1########\Currency Code #2########\Currency Rate #3########\@4@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+
+      Text003@1140008 : TextConst
+        'DEU=Importiere Wechselkurse aus XLS ...\W„hrungsdatum        #1########\W„hrungscode         #2########\W„hrungs Wechselkurs #3########\@4@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+
+      Text004@1140009 : TextConst
+        'DEU=Programm Abbruch: Die Quell Datei: %1 konnte nicht verarbeitet werden.';
+
+      Text005@1140010 : TextConst
+        'DEU=Die Datei %1 existiert nicht! Der Import wird abgebrochen.';
+
+      Text006@1140011 : TextConst
+        'DEU=Es stehen keine Kurse fr das heutige Datum zur Verfgung.';
+
+    PROCEDURE HideMessage@1000000000(InHideMsg@1000000000 : Boolean);
+    BEGIN
+      HideMsg := InHideMsg;
+    END;
+
+    PROCEDURE GetCurrencyExchRateCoba@1140000();
+    VAR
+      Currency@1140019 : Record 4;
+      CurrencyExchRate@1140018 : Record 330;
+      CurrencyURL@1140017 : Text[250];
+      NewCurrencyDate@1140016 : Date;
+      NewCurrencyCode@1140015 : Code[10];
+      NewCurrencyRate@1140014 : Decimal;
+      i@1140013 : Integer;
+      Window@1140012 : Dialog;
+      Program_GetExchRate@1140011 : Text[250];
+      Row_Curr@1140010 : Text[30];
+      Row_Date@1140009 : Text[30];
+      Column_Curr@1140007 : Text[30];
+      Column_Date@1140006 : Text[30];
+      Cell_Text_Tagesdatum@1140020 : Text[30];
+      _aCurrency@1140005 : ARRAY [10] OF Code[10];
+      CurrCount@1140004 : Integer;
+      ExchCurrRate@1140008 : Decimal;
+      chr@1140003 : Char;
+      body@1140002 : ARRAY [2] OF Text[1024];
+      ExchCurrRateText@1140001 : Text[1024];
+      subject@1140000 : Text[80];
+    BEGIN
+      //Info:
+
+      body[1] := '';
+      body[2] := '';
+      chr := 10;
+      CurrencyURL := ENVIRON('TEMP')+'\coba_rates_DE.xls';
+      NewCurrencyDate := TOPAS_API.CalcNextWorkday(WORKDATE);
+      //Fr Testzwecke
+      //NewCurrencyDate := 280716D;
+
+      Window.OPEN(Text003);
+      Window.UPDATE(1, NewCurrencyDate);
+
+      IF EXISTS(CurrencyURL) THEN ERASE(CurrencyURL);
+      Program_GetExchRate := '\\w2k8r2-filesrv\Software\software\TOPAS eigen\Wechselkurse\Wechselkurse_holen.Exe';
+      SHELL(Program_GetExchRate);
+      YIELD;
+
+      REPEAT
+        i += 1;
+        SLEEP(1000);
+        IF i = 15 THEN
+          ERROR(Text004,CurrencyURL);
+      UNTIL EXISTS(CurrencyURL);
+
+      IF NOT EXISTS(CurrencyURL) THEN
+        ERROR(Text005,CurrencyURL);
+
+      IF CREATE (Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Book := Excel.Workbooks._Open(CurrencyURL,0,FALSE);
+      Sheet := Book.Worksheets.Item(1);
+
+      IF Currency.FINDFIRST THEN
+        BEGIN
+          FOR CurrCount:= 1 TO Currency.COUNT DO
+            BEGIN
+              _aCurrency[CurrCount] := Currency.Code;
+              Currency.NEXT;
+            END;
+        END;
+
+      Cell_Text_Tagesdatum := FindRow('Tagesdatum','Cell','A','Z');
+
+      IF FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z') <> '' THEN
+        BEGIN
+
+          COMPRESSARRAY(_aCurrency);
+          FOR i:= 1 TO  CurrCount DO
+            BEGIN
+
+              Row_Date := FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z');
+              Column_Date := FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Column','A','Z');
+              Column_Curr := FindRow(_aCurrency[i],'Column','A','Z');
+              Row_Curr  := FindRow(_aCurrency[i],'Row','A','Z');
+
+              NewCurrencyCode := _aCurrency[i];
+              Window.UPDATE(2, NewCurrencyCode);
+              IF FORMAT(Excel.Range(Column_Curr + INCSTR(Row_Curr)).Value) = 'Geld' THEN
+                ExchCurrRate := Excel.Range(Column_Curr + Row_Date).Value;
+              EVALUATE(NewCurrencyRate, CONVERTSTR(FORMAT(ExchCurrRate), '.', ','));
+              Window.UPDATE(3, NewCurrencyRate);
+
+              // Insert new Currency Exchange Rate
+              IF Currency.GET(NewCurrencyCode) THEN BEGIN
+                IF NOT CurrencyExchRate.RECORDLEVELLOCKING THEN
+                  CurrencyExchRate.LOCKTABLE(TRUE);
+                CurrencyExchRate.INIT;
+                CurrencyExchRate."Starting Date" := NewCurrencyDate;
+                CurrencyExchRate."Currency Code" := NewCurrencyCode;
+                CurrencyExchRate."Relational Currency Code" := '';
+                CurrencyExchRate."Exchange Rate Amount" := NewCurrencyRate;
+                CurrencyExchRate."Relational Exch. Rate Amount" := 1;
+                CurrencyExchRate."Adjustment Exch. Rate Amount" := 1;
+                CurrencyExchRate."Relational Adjmt Exch Rate Amt" := 1;
+                CurrencyExchRate."Fix Exchange Rate Amount" := CurrencyExchRate."Fix Exchange Rate Amount":: "Relational Currency";
+                IF NOT CurrencyExchRate.INSERT(TRUE) THEN;
+                ExchCurrRateText += 'EUR / ' + NewCurrencyCode + ' : ' + FORMAT(CurrencyExchRate."Exchange Rate Amount") + FORMAT(chr);
+              END;
+
+              Window.UPDATE(4, ROUND(10000 /CurrCount * i, 1));
+              SLEEP(500);
+
+            END;
+
+           IF NOT HideMsg THEN
+             MESSAGE(Text000);
+
+            subject := 'Kurse ' + FORMAT(NewCurrencyDate);
+            body[1] := 'Hallo' + FORMAT(chr) +
+                       'hier die aktuellen Kurse:' + FORMAT(chr) + FORMAT(chr) +
+                       ExchCurrRateText + FORMAT(chr) +
+                       'Mit freundlichen Gráen' + FORMAT(chr) + FORMAT(chr);
+            TOPAS_API.NewMail('','','',subject,body[1]+body[2],'','');
+
+        END
+      ELSE
+        IF NOT HideMsg THEN
+          MESSAGE(Text006);
+
+      Window.CLOSE;
+
+      Book.Close;
+      CLEAR(Book);
+      SLEEP(100);
+
+      IF ISCLEAR(Book) = TRUE THEN
+        ERASE(CurrencyURL);
+    END;
+
+    PROCEDURE GetCurrencyExchRateXML@1000000010();
+    VAR
+      XMLDOMDocument@1000000000 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{F6D90F11-9C73-11D3-B32E-00C04F990BB4}:'Microsoft XML, v3.0'.DOMDocument";
+      CurrNode@1000000001 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      CurrNode2@1000000004 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      XMLDOMhttp@1000000018 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{F6D90F16-9C73-11D3-B32E-00C04F990BB4}:'Microsoft XML, v3.0'.XMLHTTP";
+      CurrNodeList@1000000010 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF82-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNodeList";
+      CurrNodeList2@1000000019 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF82-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNodeList";
+      XMLDOMMgmt@1000000003 : Codeunit 6224;
+      Currency@1000000014 : Record 4;
+      CurrencyExchRate@1000000015 : Record 330;
+      CurrencyURL@1000000002 : Text[250];
+      AttributeText@1000000007 : Text[30];
+      NewCurrencyDate@1000000005 : Date;
+      NewCurrencyCode@1000000012 : Code[10];
+      NewCurrencyRate@1000000013 : Decimal;
+      NoOfCurr@1000000020 : Integer;
+      Day@1000000006 : Integer;
+      Month@1000000008 : Integer;
+      Year@1000000009 : Integer;
+      i@1000000011 : Integer;
+      Window@1000000021 : Dialog;
+      Program_GetExchRate@1140000 : Text[250];
+      Row_Curr@1140013 : Text[30];
+      Row_Date@1140012 : Text[30];
+      ExchCurrRate@1140002 : Decimal;
+      Column_Curr@1140011 : Text[30];
+      Column_Date@1140010 : Text[30];
+      _aCurrency@1140004 : ARRAY [10] OF Code[10];
+      CurrCount@1140001 : Integer;
+      chr@1140006 : Char;
+      body@1140005 : ARRAY [2] OF Text[1024];
+      ExchCurrRateText@1140007 : Text[1024];
+      subject@1140003 : Text[80];
+    BEGIN
+      // Imports Currency Exchange Rates from EUROPEAN CENTRAL BANK via XML
+      // Base on EUR: 1 EUR = <Rate> <Currency>
+
+      CurrencyURL := 'http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
+
+      IF ISCLEAR(XMLDOMhttp) THEN
+        CREATE(XMLDOMhttp);
+      XMLDOMhttp.open('GET', CurrencyURL, TRUE);
+      YIELD;
+      XMLDOMhttp.send();
+      FOR i := 1 TO 1000 DO
+        YIELD;
+
+      IF ISCLEAR(XMLDOMDocument) THEN
+        CREATE(XMLDOMDocument);
+      XMLDOMDocument := XMLDOMhttp.responseXML();
+
+      XMLDOMMgmt.SetNormalCase();
+      CurrNode := XMLDOMDocument.documentElement;
+
+      // Get attribute "Time"
+      IF XMLDOMMgmt.FindNode(CurrNode, '/gesmes:Envelope/Cube/Cube', CurrNode2) THEN BEGIN
+        CurrNode := CurrNode2;
+        IF XMLDOMMgmt.FindNode(CurrNode, '@time', CurrNode2) THEN BEGIN
+          IF STRLEN(CurrNode2.text) > 0 THEN
+            AttributeText := CurrNode2.text;
+          EVALUATE(Day, COPYSTR(AttributeText, 9, 2));
+          EVALUATE(Month, COPYSTR(AttributeText, 6, 2));
+          EVALUATE(Year, COPYSTR(AttributeText, 1, 4));
+          NewCurrencyDate := DMY2DATE(Day, Month, Year);
+
+          // Get atributes "Currency" and "Rate"
+          IF XMLDOMMgmt.FindNodes(CurrNode, '/gesmes:Envelope/Cube/Cube/Cube', CurrNodeList) THEN BEGIN
+            NoOfCurr := CurrNodeList.length;
+
+            Window.OPEN(Text002);
+            Window.UPDATE(1, NewCurrencyDate);
+
+            FOR i := 1 TO NoOfCurr DO BEGIN
+              CurrNode := CurrNodeList.item(i - 1);
+              IF XMLDOMMgmt.FindNode(CurrNode, '@currency', CurrNode2) THEN BEGIN
+                EVALUATE(NewCurrencyCode, CurrNode2.text);
+                Window.UPDATE(2, NewCurrencyCode);
+                IF XMLDOMMgmt.FindNodes(CurrNode, '@rate', CurrNodeList2) THEN BEGIN
+                  CurrNode2 := CurrNodeList2.nextNode();
+                  EVALUATE(NewCurrencyRate, CONVERTSTR(CurrNode2.text, '.', ','));
+                  Window.UPDATE(3, NewCurrencyRate);
+
+                  // Insert new Currency Exchange Rate
+                  IF Currency.GET(NewCurrencyCode) THEN BEGIN
+                    IF NOT CurrencyExchRate.RECORDLEVELLOCKING THEN
+                      CurrencyExchRate.LOCKTABLE(TRUE);
+                    CurrencyExchRate.INIT;
+                    CurrencyExchRate."Starting Date" := NewCurrencyDate;
+                    CurrencyExchRate."Currency Code" := NewCurrencyCode;
+                    CurrencyExchRate."Relational Currency Code" := '';
+                    CurrencyExchRate."Exchange Rate Amount" := NewCurrencyRate;
+                    CurrencyExchRate."Relational Exch. Rate Amount" := 1;
+                    CurrencyExchRate."Adjustment Exch. Rate Amount" := 1;
+                    CurrencyExchRate."Relational Adjmt Exch Rate Amt" := 1;
+                    CurrencyExchRate."Fix Exchange Rate Amount" := CurrencyExchRate."Fix Exchange Rate Amount"::"Relational Currency";
+                    IF NOT CurrencyExchRate.INSERT(TRUE) THEN;
+                  END;
+
+                END;
+              END;
+              Window.UPDATE(4, ROUND(10000 / NoOfCurr * i, 1));
+              CurrNode := CurrNodeList.nextNode();
+            END;
+            Window.CLOSE;
+            IF NOT HideMsg THEN
+              MESSAGE(Text000);
+          END;
+        END;
+      END ELSE
+        IF NOT HideMsg THEN
+          ERROR(Text001);
+    END;
+
+    PROCEDURE GetCurrencyExchRateHistoryXML@1000000012();
+    VAR
+      XMLDOMDocument@1000000000 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{F6D90F11-9C73-11D3-B32E-00C04F990BB4}:'Microsoft XML, v3.0'.DOMDocument";
+      CurrNode@1000000001 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      CurrNode2@1000000004 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      CurrNode3@1000000024 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      CurrNode4@1000000025 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF80-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNode";
+      XMLDOMhttp@1000000018 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{F6D90F16-9C73-11D3-B32E-00C04F990BB4}:'Microsoft XML, v3.0'.XMLHTTP";
+      CurrNodeList@1000000010 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF82-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNodeList";
+      CurrNodeList2@1000000019 : Automation "{F5078F18-C551-11D3-89B9-0000F81FE221} 3.0:{2933BF82-7B36-11D2-B20E-00C04F983E60}:'Microsoft XML, v3.0'.IXMLDOMNodeList";
+      XMLDOMMgmt@1000000003 : Codeunit 6224;
+      Currency@1000000014 : Record 4;
+      CurrencyExchRate@1000000015 : Record 330;
+      CurrencyURL@1000000002 : Text[250];
+      AttributeText@1000000007 : Text[30];
+      NewCurrencyDate@1000000005 : Date;
+      OldCurrencyDate@1000000023 : Date;
+      ThresholdDate@1000000026 : Date;
+      NewCurrencyCode@1000000012 : Code[10];
+      NewCurrencyRate@1000000013 : Decimal;
+      NoOfCurr@1000000020 : Integer;
+      Day@1000000006 : Integer;
+      Month@1000000008 : Integer;
+      Year@1000000009 : Integer;
+      i@1000000011 : Integer;
+
+      Text000@1000000017 : TextConst
+        'ENU=Currency Exchange Rates updated.';
+
+      Text001@1000000016 : TextConst
+        'ENU=Could not import XML Currency Exchange Rates.';
+      Window@1000000021 : Dialog;
+
+      Text002@1000000022 : TextConst
+        'ENU=Import Currency Exchange Rates from XML ...\Currency Date #1########\Currency Code #2########\Currency Rate #3########\@4@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+    BEGIN
+      // Imports Currency Exchange Rates from EUROPEAN CENTRAL BANK via XML
+      // History Data since 01.04.1999
+      // Base on EUR: 1 EUR = <Rate> <Currency>
+
+      CurrencyURL := 'http://www.ecb.int/stats/eurofxref/eurofxref-hist.xml';
+      ThresholdDate := 010105D;  // 1st January 2005
+
+      IF ISCLEAR(XMLDOMhttp) THEN
+        CREATE(XMLDOMhttp);
+      XMLDOMhttp.open('GET', CurrencyURL, TRUE);
+      YIELD;
+      XMLDOMhttp.send();
+      FOR i := 1 TO 1000 DO
+        YIELD;
+
+      IF ISCLEAR(XMLDOMDocument) THEN
+        CREATE(XMLDOMDocument);
+      XMLDOMDocument := XMLDOMhttp.responseXML();
+
+      XMLDOMMgmt.SetNormalCase();
+      CurrNode := XMLDOMDocument.documentElement;
+
+      IF XMLDOMMgmt.FindNodes(CurrNode, '/gesmes:Envelope/Cube/Cube/Cube', CurrNodeList) THEN BEGIN
+       Window.OPEN(Text002);
+
+        NoOfCurr := CurrNodeList.length;
+        FOR i := 1 TO NoOfCurr DO BEGIN
+          // Get atributes "Currency" and "Rate"
+          IF XMLDOMMgmt.FindNode(CurrNodeList.item(i - 1), '@currency', CurrNode2) THEN BEGIN
+            EVALUATE(NewCurrencyCode, CurrNode2.text);
+            Window.UPDATE(2, NewCurrencyCode);
+            IF XMLDOMMgmt.FindNodes(CurrNodeList.item(i - 1), '@rate', CurrNodeList2) THEN BEGIN
+              CurrNode3 := CurrNodeList2.nextNode();
+              EVALUATE(NewCurrencyRate, CONVERTSTR(CurrNode3.text, '.', ','));
+              Window.UPDATE(3, NewCurrencyRate);
+
+              // Get atribute "Time"
+              IF XMLDOMMgmt.FindNode(CurrNodeList.item(i - 1).parentNode, '@time', CurrNode4) THEN BEGIN
+                IF STRLEN(CurrNode4.text) > 0 THEN
+                  AttributeText := CurrNode4.text;
+                EVALUATE(Day, COPYSTR(AttributeText, 9, 2));
+                EVALUATE(Month, COPYSTR(AttributeText, 6, 2));
+                EVALUATE(Year, COPYSTR(AttributeText, 1, 4));
+                NewCurrencyDate := DMY2DATE(Day, Month, Year);
+                Window.UPDATE(1, NewCurrencyDate);
+
+                IF NewCurrencyDate >= ThresholdDate THEN BEGIN
+                  // Insert new Currency Exchange Rate
+                  IF Currency.GET(NewCurrencyCode) THEN BEGIN
+                    IF NOT CurrencyExchRate.RECORDLEVELLOCKING THEN
+                      CurrencyExchRate.LOCKTABLE(TRUE);
+                    CurrencyExchRate.INIT;
+                    CurrencyExchRate."Starting Date" := NewCurrencyDate;
+                    CurrencyExchRate."Currency Code" := NewCurrencyCode;
+                    CurrencyExchRate."Relational Currency Code" := '';
+                    CurrencyExchRate."Exchange Rate Amount" := NewCurrencyRate;
+                    CurrencyExchRate."Relational Exch. Rate Amount" := 1;
+                    CurrencyExchRate."Adjustment Exch. Rate Amount" := NewCurrencyRate;
+                    CurrencyExchRate."Relational Adjmt Exch Rate Amt" := 1;
+                    CurrencyExchRate."Fix Exchange Rate Amount" := CurrencyExchRate."Fix Exchange Rate Amount"::"Relational Currency";
+                    IF NOT CurrencyExchRate.INSERT(TRUE) THEN;
+                  END;
+                END ELSE
+                  EXIT;
+
+                IF (NewCurrencyDate <> OldCurrencyDate) THEN BEGIN
+                  OldCurrencyDate := NewCurrencyDate;
+                  COMMIT;
+                END;
+              END;
+            END;
+            Window.UPDATE(4, ROUND(10000 / NoOfCurr * i, 1));
+          END;
+          SLEEP(100);
+        END;
+        Window.CLOSE;
+        IF NOT HideMsg THEN
+          MESSAGE(Text000);
+      END ELSE
+        IF NOT HideMsg THEN
+          ERROR(Text001);
+    END;
+
+    PROCEDURE FindRow@1140013(What@1140000 : Text[80];Art@1140001 : Text[30];Col1@1140006 : Text[30];Col2@1140008 : Text[30]) : Text[30];
+    VAR
+      Range1@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Cell@1140003 : Code[40];
+      vorherige_zeile@1140004 : Integer;
+      naechste_zeile@1140005 : Integer;
+      i@1140007 : Integer;
+    BEGIN
+      WITH Sheet.Range(Col1 + ':' + Col2) DO
+        BEGIN
+          i := 1;
+          Range1 :=
+          (Sheet.Columns.Find(
+            What));
+          // Wird der Suchbegriff nicht gefunden, steigt er sofort aus den Schleifen aus
+          IF ISCLEAR(Range1) THEN EXIT('');
+          IF FORMAT(Range1.Value) <> What THEN
+           Range1 := Sheet.Rows.FindNext(Range1);
+          IF FORMAT(Range1.Value) <> What THEN EXIT('');
+          Cell := Range1.Address;
+          CASE Art OF
+            'Row' : EVALUATE(Cell,FORMAT(TOPAS_API.ConvertStrToNum(Cell)));
+            'Column' : EVALUATE(Cell,COPYSTR(Cell,2,STRPOS(COPYSTR(Cell,2),'$')-1));
+          END;
+          EXIT(Cell);
+      END;
+    END;
+
+    EVENT Sheet@1140001::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableUpdate@2156(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableAfterValueChange@2886(TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableBeforeAllocateChange@2889(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableBeforeCommitChanges@2892(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableBeforeDiscardChanges@2893(TargetPivotTable@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140001 : Integer;ValueChangeEnd@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140001::PivotTableChangeSync@2894(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Book@1140003::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Book@1140003::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Book@1140003::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Book@1140003::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    EVENT Book@1140003::WindowResize@1554(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::WindowActivate@1556(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::WindowDeactivate@1557(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::PivotTableOpenConnection@2159(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140003::Sync@2266(SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::BeforeXmlImport@2283(Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::AfterXmlImport@2285(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::BeforeXmlExport@2287(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140001 : Text[1024];VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::AfterXmlExport@2288(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140001 : Text[1024];Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::RowsetComplete@2610(Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::SheetPivotTableBeforeCommitCha@2897(Sh@1140004 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::AfterSave@2900(Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140003::NewChart@2901(Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::NewWorkbook@1565(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookOpen@1567(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookActivate@1568(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookBeforeClose@1570(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookBeforePrint@1572(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookNewSheet@1573(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookAddinInstall@1574(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookAddinUninstall@1575(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WindowResize@1554(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WindowActivate@1556(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WindowDeactivate@1557(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookPivotTableCloseConnect@2160(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookPivotTableOpenConnecti@2161(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookSync@2289(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookBeforeXmlImport@2290(Wb@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookAfterXmlImport@2291(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookRowsetComplete@2611(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::AfterCalculate@2612();
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::SheetPivotTableAfterValueChang@2895(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::ProtectedViewWindowOpen@2903(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::ProtectedViewWindowBeforeClose@2906(Pvw@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow";Reason@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::ProtectedViewWindowActivate@2909(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::ProtectedViewWindowDeactivate@2910(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookAfterSave@2911(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140004::WorkbookNewChart@2912(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      ********************************
+      *** STRYK System Improvement ***
+      ***     J”rg A. Stryk        ***
+      ***  http://www.stryk.info/  ***
+      ********************************
+
+      !!! Errors and omissions excepted, use at own risk, no warranty or guarantee, no support !!!
+
+      Description:
+
+      The "European Central Bank" provides permantently/daily actual "Currency Exchange Rates" in XML format.
+      Two files are available:
+        eurofxref-daily.xml  : Daily updated Currency Exchange Rates
+        eurofxref-hist.xml   : Historic Currency Exchange rates since 1999 until today
+      This service is for free. Further information: http://www.ecb.int/stats/eurofxref/
+      All Exchange Rates are on base of EUR: 1 EUR = <Currency> <Rate>, e.g. 1 EUR = 1,20 USD
+
+      Functions:
+
+      "OnRun"
+      Executes "GetCurrencyExchRateCoba"
+
+      "HideMessage(InHideMessage : Boolean)"
+      Switch to deactivate/hide Messages and Errors
+
+      "GetCurrencyExchRateCoba"
+      Used to import "coba_rates_DE.xls" from Cmmmerzbank over IE Extension Program "Wechselkurse_holen.exe"
+      This function is called in the OnRun Trigger, thus this Codeunit could be used as a "Job" for the "Job Scheduler"
+
+      "GetCurrencyExchRateXML"
+      Used to import 'eurofxref-daily.xml'
+      This function is called in the OnRun Trigger, thus this Codeunit could be used as a "Job" for the "Job Scheduler"
+
+      "GetCurrencyExchRateHistoryXML"
+      Used to import 'eurofxref-hist.xml'
+      This function could be called to initialize the Currency Exchange Rates
+      Only rates between today and the "ThresholdDate" are imported
+      The default value for "ThresholdDate" is 01.01.2005, to be changed if necessary
+
+      Known Issues:
+      - Sometimes MS Windows has a problem to load the required libraries in time, so an error will occur
+        and the function needs to be called again.
+
+      - When the XML files are requested, it depends on the currently established Internet connection, how fast
+        the XML could be retrieved.
+        To create a delay between connection and retrieval these code lines are inserted:
+        ...
+        FOR i := 1 TO 1000 DO
+          YIELD;
+        ...
+        In case of slower Internet connections or DLL-load times it may be feasible to increase the amount of iterations.
+
+      - Within the XML the rates a formatted like this: <Cube currency="USD" rate="1.2100" />, the . (point) as decimal separator.
+        Depending on the Windows settings, this point would be interpreted as thousands-separator,
+        thus within the functions the . is converted to a , (comma)
+        ...
+        CONVERTSTR(CurrNode2.text, '.', ',')
+        ...
+        This may have to be changed depending on the local formats.
+    }
+    END.
+  }
+}
+
