@@ -2,8 +2,8 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
 {
   OBJECT-PROPERTIES
   {
-    Date=02.08.16;
-    Time=10:16:17;
+    Date=03.08.16;
+    Time=10:36:21;
     Modified=Yes;
     Version List=TOPAS/CE1.00;
   }
@@ -92,7 +92,7 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
       CurrencyURL := ENVIRON('TEMP')+'\coba_rates_DE.xls';
       NewCurrencyDate := TOPAS_API.CalcNextWorkday(WORKDATE);
       //Fr Testzwecke
-      //NewCurrencyDate := 280716D;
+      //NewCurrencyDate := 030816D;
 
       Window.OPEN(Text003);
       Window.UPDATE(1, NewCurrencyDate);
@@ -127,23 +127,25 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
 
       Cell_Text_Tagesdatum := FindRow('Tagesdatum','Cell','A','Z');
 
-      IF FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z') <> '' THEN
+      IF FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z') <> '' THEN
         BEGIN
 
           COMPRESSARRAY(_aCurrency);
           FOR i:= 1 TO  CurrCount DO
             BEGIN
 
-              Row_Date := FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z');
-              Column_Date := FindRow(FORMAT(WORKDATE,0,'<Day,2>.<Month,2>.<Year4>'),'Column','A','Z');
+              Row_Date := FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z');
+              Column_Date := FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Column','A','Z');
               Column_Curr := FindRow(_aCurrency[i],'Column','A','Z');
               Row_Curr  := FindRow(_aCurrency[i],'Row','A','Z');
 
               NewCurrencyCode := _aCurrency[i];
+              Window.UPDATE(1, NewCurrencyDate);
               Window.UPDATE(2, NewCurrencyCode);
               IF FORMAT(Excel.Range(Column_Curr + INCSTR(Row_Curr)).Value) = 'Geld' THEN
                 ExchCurrRate := Excel.Range(Column_Curr + Row_Date).Value;
-              EVALUATE(NewCurrencyRate, CONVERTSTR(FORMAT(ExchCurrRate), '.', ','));
+              EVALUATE(NewCurrencyRate, CONVERTSTR(FORMAT(ExchCurrRate,0,'<Precision,' + Currency."Unit-Amount Decimal Places" +
+                       '><Integer><Decimal>'), '.', ','));
               Window.UPDATE(3, NewCurrencyRate);
 
               // Insert new Currency Exchange Rate
@@ -154,7 +156,7 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
                 CurrencyExchRate."Starting Date" := NewCurrencyDate;
                 CurrencyExchRate."Currency Code" := NewCurrencyCode;
                 CurrencyExchRate."Relational Currency Code" := '';
-                CurrencyExchRate."Exchange Rate Amount" := NewCurrencyRate;
+                CurrencyExchRate.VALIDATE("Exchange Rate Amount",NewCurrencyRate);
                 CurrencyExchRate."Relational Exch. Rate Amount" := 1;
                 CurrencyExchRate."Adjustment Exch. Rate Amount" := 1;
                 CurrencyExchRate."Relational Adjmt Exch Rate Amt" := 1;
