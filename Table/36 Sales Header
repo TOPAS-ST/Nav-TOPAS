@@ -3536,16 +3536,16 @@ IF AUzeile.FINDFIRST THEN
       //***************************************************************************************************
 
       ServiceZuordnungHolen.RESET;
-      ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
-      ServiceZuordnungHolen.SETFILTER("Belegnr.",'%1',AUnr);
-      ServiceZuordnungHolen.SETFILTER("Belegzeilennr.",'%1',AUzeile."Line No.");
-      ServiceZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
-      ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
-      IF ServiceZuordnungHolen.FINDFIRST THEN
+      ServiceZuordnungHolen.SETRANGE(Art,ServiceZuordnungHolen.Art :: "SUP-AU");
+      ServiceZuordnungHolen.SETRANGE("Belegnr.",AUnr);
+      ServiceZuordnungHolen.SETRANGE("Belegzeilennr.",AUzeile."Line No.");
+      ServiceZuordnungHolen.SETRANGE("Nachträgliche Service Order",FALSE);
+      ServiceZuordnungHolen.SETRANGE(Fremderwerb,FALSE);
+      IF ServiceZuordnungHolen.FIND('-') THEN
         REPEAT
           PrüfeAUzeile.RESET;
-          PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Nr.");
-          PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Zeilennr.");
+          PrüfeAUzeile.SETRANGE("Document No.",ServiceZuordnungHolen."Nr.");
+          PrüfeAUzeile.SETRANGE("Line No.",ServiceZuordnungHolen."Zeilennr.");
           IF PrüfeAUzeile.FINDFIRST THEN
             BEGIN
               IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
@@ -3562,16 +3562,16 @@ IF AUzeile.FINDFIRST THEN
       //***************************************************************************************************
 
       ServiceZuordnungHolen.RESET;
-      ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
-      ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-      ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-      ServiceZuordnungHolen.SETFILTER("Nachträgliche Service Order",'%1',FALSE);
-      ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
-      IF ServiceZuordnungHolen.FINDFIRST THEN
+      ServiceZuordnungHolen.SETRANGE(Art,ServiceZuordnungHolen.Art :: "SUP-AU");
+      ServiceZuordnungHolen.SETRANGE("Nr.",AUnr);
+      ServiceZuordnungHolen.SETRANGE("Zeilennr.",AUzeile."Line No.");
+      ServiceZuordnungHolen.SETRANGE("Nachträgliche Service Order",FALSE);
+      ServiceZuordnungHolen.SETRANGE(Fremderwerb,FALSE);
+      IF ServiceZuordnungHolen.FIND('-') THEN
         REPEAT
           PrüfeAUzeile.RESET;
-          PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
-          PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
+          PrüfeAUzeile.SETRANGE("Document No.",ServiceZuordnungHolen."Belegnr.");
+          PrüfeAUzeile.SETRANGE("Line No.",ServiceZuordnungHolen."Belegzeilennr.");
           IF PrüfeAUzeile.FINDFIRST THEN
             BEGIN
               IF PrüfeAUzeile."Qty. to Ship" = 0 THEN
@@ -3602,9 +3602,9 @@ IF AUzeile.FINDFIRST THEN
             ERROR(Text112,AUzeile.FIELDCAPTION("Qty. to Ship"),Artikel.Artikelgruppe,AUzeile."No.");
 
           ServiceZuordnungHolen.RESET;
-          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
-          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
+          ServiceZuordnungHolen.SETRANGE(Art,ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETRANGE("Nr.",AUnr);
+          ServiceZuordnungHolen.SETRANGE("Zeilennr.",AUzeile."Line No.");
           IF NOT ServiceZuordnungHolen.FINDFIRST THEN
             ERROR(Text113,AUzeile."No.",AUzeile."Line No.");
 
@@ -3646,10 +3646,10 @@ IF AUzeile.FINDFIRST THEN
           //***************************************************************************************************
 
           ServiceZuordnungHolen.RESET;
-          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
-          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          ServiceZuordnungHolen.SETFILTER(Fremderwerb,'%1',FALSE);
+          ServiceZuordnungHolen.SETRANGE(Art,ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETRANGE("Nr.",AUnr);
+          ServiceZuordnungHolen.SETRANGE("Zeilennr.",AUzeile."Line No.");
+          ServiceZuordnungHolen.SETRANGE(Fremderwerb,FALSE);
           IF ServiceZuordnungHolen.FINDFIRST THEN
             BEGIN
               menge_kalk_ges := 0;
@@ -3659,18 +3659,18 @@ IF AUzeile.FINDFIRST THEN
                 IF ServiceZuordnungHolen."Nachträgliche Service Order" = FALSE THEN
                   BEGIN
                     PrüfeAUzeile.RESET;
-                    PrüfeAUzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
-                    PrüfeAUzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
-                    //PrüfeAUzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
+                    PrüfeAUzeile.SETRANGE("Document No.",ServiceZuordnungHolen."Belegnr.");
+                    PrüfeAUzeile.SETRANGE("Line No.",ServiceZuordnungHolen."Belegzeilennr.");
+                    //PrüfeAUzeile.SETRANGE("No.",ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeAUzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeAUzeile."Qty. to Ship";
                   END
                 ELSE
                   BEGIN
                     PrüfeLiefzeile.RESET;
-                    PrüfeLiefzeile.SETFILTER("Document No.",'%1',ServiceZuordnungHolen."Belegnr.");
-                    PrüfeLiefzeile.SETFILTER("Line No.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
-                    //PrüfeLiefzeile.SETFILTER("No.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
+                    PrüfeLiefzeile.SETRANGE("Document No.",ServiceZuordnungHolen."Belegnr.");
+                    PrüfeLiefzeile.SETRANGE("Line No.",ServiceZuordnungHolen."Belegzeilennr.");
+                    //PrüfeLiefzeile.SETRANGE("No.",ServiceZuordnungHolen."Geräte Artikelnr.");
                     IF PrüfeLiefzeile.FINDFIRST THEN
                       menge_liefern_ges := menge_liefern_ges + PrüfeLiefzeile.Quantity;
                   END;
@@ -3686,10 +3686,10 @@ IF AUzeile.FINDFIRST THEN
           //***************************************************************************************************
 
           ServiceZuordnungHolen.RESET;
-          ServiceZuordnungHolen.SETFILTER(Art,'%1',ServiceZuordnungHolen.Art :: "SUP-AU");
-          ServiceZuordnungHolen.SETFILTER("Nr.",'%1',AUnr);
-          ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-          IF ServiceZuordnungHolen.FINDFIRST THEN
+          ServiceZuordnungHolen.SETRANGE(Art,ServiceZuordnungHolen.Art :: "SUP-AU");
+          ServiceZuordnungHolen.SETRANGE("Nr.",AUnr);
+          ServiceZuordnungHolen.SETRANGE("Zeilennr.",AUzeile."Line No.");
+          IF ServiceZuordnungHolen.FIND('-') THEN
             BEGIN
 
               menge_kalk_ges := 0;
@@ -3743,11 +3743,11 @@ IF AUzeile.FINDFIRST THEN
                       ERROR(Text138);
 
                     ServiceZuordnungBeleg.RESET;
-                    ServiceZuordnungBeleg.SETFILTER(Art,'%1',ServiceZuordnungBeleg.Art :: "SUP-AU");
-                    ServiceZuordnungBeleg.SETFILTER("Nr.",'%1',AUnr);
-                    ServiceZuordnungBeleg.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
-                    ServiceZuordnungBeleg.SETFILTER(Basisgerät,'%1',TRUE);
-                    IF ServiceZuordnungBeleg.FINDFIRST THEN
+                    ServiceZuordnungBeleg.SETRANGE(Art,ServiceZuordnungBeleg.Art :: "SUP-AU");
+                    ServiceZuordnungBeleg.SETRANGE("Nr.",AUnr);
+                    ServiceZuordnungBeleg.SETRANGE("Zeilennr.",AUzeile."Line No.");
+                    ServiceZuordnungBeleg.SETRANGE(Basisgerät,TRUE);
+                    IF ServiceZuordnungBeleg.FIND('-') THEN
                       REPEAT
                         PrüfeServicePos.RESET;
                         PrüfeServicePos.SETFILTER(Art,'%1',PrüfeServicePos.Art ::Temporär);
@@ -3830,13 +3830,13 @@ IF AUzeile.FINDFIRST THEN
                     menge_kalk_ges := menge_kalk_ges + menge_kalk_pos;
 
                     HoleTempLizenzTab.RESET;
-                    HoleTempLizenzTab.SETFILTER(Art,'%1',HoleTempLizenzTab.Art :: Temporär);
-                    HoleTempLizenzTab.SETFILTER("Nr.",'%1',ServiceZuordnungHolen."Belegnr.");
-                    HoleTempLizenzTab.SETFILTER("Belegzeilennr.",'%1',ServiceZuordnungHolen."Belegzeilennr.");
-                    HoleTempLizenzTab.SETFILTER("Auftragsnr.",'%1',ServiceZuordnungHolen."Nr.");
-                    HoleTempLizenzTab.SETFILTER("Auftragszeilennr.",'%1',ServiceZuordnungHolen."Zeilennr.");
-                    HoleTempLizenzTab.SETFILTER("Artikelnr.",'%1',ServiceZuordnungHolen."Geräte Artikelnr.");
-                    HoleTempLizenzTab.SETFILTER(Vormerkung,'%1',TRUE);
+                    HoleTempLizenzTab.SETRANGE(Art,HoleTempLizenzTab.Art :: Temporär);
+                    HoleTempLizenzTab.SETRANGE("Nr.",ServiceZuordnungHolen."Belegnr.");
+                    HoleTempLizenzTab.SETRANGE("Belegzeilennr.",ServiceZuordnungHolen."Belegzeilennr.");
+                    HoleTempLizenzTab.SETRANGE("Auftragsnr.",ServiceZuordnungHolen."Nr.");
+                    HoleTempLizenzTab.SETRANGE("Auftragszeilennr.",ServiceZuordnungHolen."Zeilennr.");
+                    HoleTempLizenzTab.SETRANGE("Artikelnr.",ServiceZuordnungHolen."Geräte Artikelnr.");
+                    HoleTempLizenzTab.SETRANGE(Vormerkung,TRUE);
                     IF HoleTempLizenzTab.FINDFIRST THEN
                       BEGIN
                         menge_auswahl_pos := 0;
@@ -3853,11 +3853,11 @@ IF AUzeile.FINDFIRST THEN
                           //***************************************************************************************************
 
                           PrüfeSystemPos.RESET;
-                          PrüfeSystemPos.SETFILTER(Art,'%1',PrüfeSystemPos.Art :: System);
-                          PrüfeSystemPos.SETFILTER("Nr.",'%1',HoleTempLizenzTab."Nr.");
-                          PrüfeSystemPos.SETFILTER("Belegzeilennr.",'%1',HoleTempLizenzTab."Belegzeilennr.");
-                          PrüfeSystemPos.SETFILTER("Artikelnr.",'%1',HoleTempLizenzTab."Artikelnr.");
-                          PrüfeSystemPos.SETFILTER("Seriennr.",'%1',HoleTempLizenzTab."Seriennr.");
+                          PrüfeSystemPos.SETRANGE(Art,PrüfeSystemPos.Art :: System);
+                          PrüfeSystemPos.SETRANGE("Nr.",HoleTempLizenzTab."Nr.");
+                          PrüfeSystemPos.SETRANGE("Belegzeilennr.",HoleTempLizenzTab."Belegzeilennr.");
+                          PrüfeSystemPos.SETRANGE("Artikelnr.",HoleTempLizenzTab."Artikelnr.");
+                          PrüfeSystemPos.SETRANGE("Seriennr.",HoleTempLizenzTab."Seriennr.");
                           IF (PrüfeSystemPos.FINDLAST) AND (PrüfeSystemPos.Inaktiv = TRUE) THEN
                             ERROR(Text131,HoleTempLizenzTab.FIELDCAPTION("Seriennr."),PrüfeSystemPos."Seriennr.",
                                   ServiceZuordnungHolen."Zeilennr.");
@@ -3968,6 +3968,25 @@ IF AUzeile.FINDFIRST THEN
           ServiceZuordnungHolen.SETFILTER("Zeilennr.",'%1',AUzeile."Line No.");
           IF ServiceZuordnungHolen.FINDFIRST THEN
             REPEAT
+
+              WITH ServiceZuordnungHolen DO BEGIN
+                IF "Wartungsvertragsnr." <> '' THEN
+                  BEGIN
+                    IF Ablaufdatum = 0D THEN
+                      BEGIN
+                        v_ablaufdatum := Ablaufdatum_generieren("SUP Artikelnr.","Wartungsvertragsnr.");
+                        IF v_ablaufdatum <> 0D THEN
+                          BEGIN
+                            IF Laufzeit <> FORMAT(TOPAS_API.CalculateTimeDiff('M',WORKDATE,v_ablaufdatum)) + 'M' THEN
+                              BEGIN
+                                VALIDATE(Laufzeit,FORMAT(TOPAS_API.CalculateTimeDiff('M',WORKDATE,v_ablaufdatum)) + 'M');
+                                MODIFY(TRUE);
+                              END;
+                          END;
+                      END;
+                  END;
+                END;
+
               service_dc_einzeln_neu := ServiceTab.ServicePreiseNeuKalkulieren(ServiceZuordnungHolen."Geräte Artikelnr.",
                                   ServiceZuordnungHolen."SUP Artikelnr.",ServiceZuordnungHolen.Laufzeit,'DC',FALSE,
                                   AUzeile.Einkaufswährungscode,ServiceZuordnungHolen."Quotenr.");
