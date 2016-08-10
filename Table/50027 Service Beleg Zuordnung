@@ -344,3 +344,34 @@ IF (FromServiceRelaDoc.HASFILTER) AND (FromServiceRelaDoc."Laufzeit ab Buchungsd
           END;
       END;
   END;
+
+Ablaufdatum_generieren(SUPArtikelnr : Code[20];Wartungsnr : Code[20]) : Date
+Ermittle_Servicegruppe.RESET;
+Ermittle_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
+Ermittle_Servicegruppe.SETFILTER("Feld ID",'%1',44);
+Ermittle_Servicegruppe.SETFILTER("Nr.",'%1',SUPArtikelnr);
+IF Ermittle_Servicegruppe.FINDFIRST THEN
+  BEGIN
+    PrüfeServiceTab.RESET;
+    PrüfeServiceTab.SETFILTER(Art,'%1',PrüfeServiceTab.Art :: Service);
+    PrüfeServiceTab.SETFILTER("Ablaufdatum Serviceleistung",'>%1',WORKDATE);
+    PrüfeServiceTab.SETFILTER("Wartungsvertragsnr.",'%1',Wartungsnr);
+    //PrüfeServiceTab.SETFILTER("Zu exportieren",'%1',TRUE);
+    PrüfeServiceTab.SETFILTER(Basisgerät,'%1',TRUE);
+    PrüfeServiceTab.SETFILTER(Inaktiv,'%1',FALSE);
+    PrüfeServiceTab.ASCENDING(FALSE);
+    IF PrüfeServiceTab.FINDFIRST THEN
+      REPEAT
+        Artikel_Servicegruppe.RESET;
+        Artikel_Servicegruppe.SETFILTER("Tabellen ID",'%1',50024);
+        Artikel_Servicegruppe.SETFILTER("Feld ID",'%1',44);
+        Artikel_Servicegruppe.SETFILTER("Nr.",'%1',PrüfeServiceTab."SUP Artikelnr.");
+        IF (Artikel_Servicegruppe.FINDFIRST) AND (Artikel_Servicegruppe."Einordnung Servicegruppe" =
+        Ermittle_Servicegruppe."Einordnung Servicegruppe") THEN
+          BEGIN
+            EXIT(PrüfeServiceTab."Ablaufdatum Serviceleistung");
+          END;
+    UNTIL PrüfeServiceTab.NEXT = 0;
+  END;
+
+EXIT(0D);
