@@ -1,0 +1,1552 @@
+OBJECT Report 50085 TOPAS Auftragsbestand
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11.06.14;
+    Time=09:41:36;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    TopMargin=1000;
+    BottomMargin=100;
+    OnPreReport=BEGIN
+                  //*******************************************************************************************************
+                  //                    Sicherheitsabfrage ob Temp Tabelle auch Berichtstabelle ist
+                  //*******************************************************************************************************
+                  IF Berichtstabelle.TABLECAPTION <> 'Berichtstabelle' THEN
+                    ERROR('Eine Sicherheitssperre verhindert die Ausfhrung dieses Berichtes.'+
+                          'Stellen Sie sicher, dass die TABLECAPTION der Berichtstabelle auch auf Berichtstabelle lautet.');
+
+                  Berichtstabelle.RESET;
+                  IF Berichtstabelle.ISEMPTY = FALSE THEN
+                    BEGIN
+                      REPEAT
+                        Berichtstabelle.RESET;
+                        IF Berichtstabelle.ISEMPTY = FALSE THEN
+                          BEGIN
+                            SLEEP(500);
+                            counter += 1;
+                          END;
+
+                        IF counter MOD 30 = 0 THEN
+                          BEGIN
+                            Berichtstabelle.FINDFIRST;
+                            IF CONFIRM('Die Berichtstabelle ist seit %1 durch Anwender %2 gesperrt. Wollen Sie die Anwendung abbrechen?',
+                            TRUE,Berichtstabelle.Uhrzeit,Berichtstabelle.User,counter,TRUE) THEN
+                              ERROR('');
+                          END;
+                      UNTIL Berichtstabelle.ISEMPTY = TRUE;
+                    END;
+
+                  //*******************************************************************************************************
+                  //                                 Akt. Auftr„ge werden durchsucht
+                  //*******************************************************************************************************
+
+                  SalesHeader.RESET;
+                  IF (Startdatum<>0D) AND (Enddatum=0D) THEN
+                    SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1',Startdatum);
+                  IF (Startdatum<>0D) AND (Enddatum<>0D) THEN
+                    SalesHeader.SETFILTER(SalesHeader."Order Date",'>=%1&<=%2',Startdatum,Enddatum);
+                  IF (Startdatum=0D) AND (Enddatum<>0D) THEN
+                    SalesHeader.SETFILTER(SalesHeader."Order Date",'<=%1',Enddatum);
+                  SalesHeader.SETFILTER("Betreuer Innendienst",betreuer);
+                  SalesHeader.SETFILTER("Salesperson Code",verk„ufer);
+                  SalesHeader.SETFILTER(Teams,teams);
+                  SalesHeader.SETFILTER("Territory Code",gebietscode);
+                  SalesHeader.SETFILTER(SalesHeader."Document Type",'%1',SalesHeader."Document Type" :: Order);
+                  IF SalesHeader.FINDFIRST THEN
+                    REPEAT
+                      belegzeilen_vorhanden := FALSE;
+
+                      SalesLine.RESET;
+                      SalesLine.SETFILTER(SalesLine."Document No.",SalesHeader."No.");
+                      SalesLine.SETFILTER(SalesLine.Type,'%1',SalesLine.Type :: Item);
+                      SalesLine.SETFILTER(SalesLine."Outstanding Quantity",'>%1',0);
+                      SalesLine.SETFILTER(SalesLine."Manufacturer Code",hersteller);
+                      IF (zugesagtes_startdatum <> 0D) AND (zugesagtes_enddatum = 0D) THEN
+                        SalesLine.SETFILTER(SalesLine."Promised Delivery Date",'>=%1',zugesagtes_startdatum);
+                      IF (zugesagtes_startdatum <> 0D) AND (zugesagtes_enddatum <> 0D) THEN
+                        SalesLine.SETFILTER(SalesLine."Promised Delivery Date",'>=%1&<=%2',zugesagtes_startdatum,zugesagtes_enddatum);
+                      IF (zugesagtes_startdatum = 0D) AND (zugesagtes_enddatum <> 0D) THEN
+                        SalesLine.SETFILTER(SalesLine."Promised Delivery Date",'<=%1',zugesagtes_enddatum);
+                      IF SalesLine.FINDFIRST THEN
+                        BEGIN
+                          belegzeilen_vorhanden := TRUE;
+
+                          Berichtstabelle_temp.RESET;
+                          Berichtstabelle_temp.SETFILTER(Tabelle,'%1','DEBITOR');
+                          Berichtstabelle_temp.SETFILTER(Index,'%1',SalesHeader."Sell-to Customer No.");
+                          IF NOT Berichtstabelle_temp.FINDFIRST THEN
+                            BEGIN
+                              //*******************************************************************************************************
+                              //                                     Debitor Daten schreiben
+                              //*******************************************************************************************************
+
+                              Berichtstabelle.INIT;
+                                Berichtstabelle.Tabelle := 'DEBITOR';
+                                Berichtstabelle.Index := SalesHeader."Sell-to Customer No.";
+                                Berichtstabelle."Feld 10" := SalesHeader."Sell-to Customer Name";
+                                Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                                Berichtstabelle.User := USERID;
+                              Berichtstabelle.INSERT;
+                            END;
+
+                          REPEAT
+                            //*******************************************************************************************************
+                            //                                      Auftragszeilen schreiben
+                            //*******************************************************************************************************
+                            Berichtstabelle.INIT;
+                              Berichtstabelle.Tabelle := 'BELEGZEILE';
+                              Berichtstabelle.Index := SalesLine."Document No.";
+                              Berichtstabelle.Datum := SalesLine."Promised Delivery Date";
+                              Berichtstabelle."Belegnr." := SalesLine."Document No.";
+                              Berichtstabelle."Zeilennr." := SalesLine."Line No.";
+                              Berichtstabelle."Feld 3" := SalesLine."Artikelnr. 2";
+                              Berichtstabelle."Feld 4" := SalesLine."Outstanding Quantity";
+                              Berichtstabelle."Feld 5" := SalesLine."Unit Price";
+                              IF Quotedaten.GET(SalesLine."Quotenr.") THEN
+                                Berichtstabelle."Feld 6" := Quotedaten."Quotenr. Hersteller";
+                              IF SalesHeader."Currency Code" = '' THEN
+                                Berichtstabelle."Feld 7" := '°'
+                              ELSE
+                                Berichtstabelle."Feld 7" := SalesHeader."Currency Code";
+                              Berichtstabelle."Feld 10" := FORMAT(SalesLine."Outstanding Quantity" * SalesLine."Unit Price");
+                              Berichtstabelle."Feld 11" := FORMAT(SalesLine."Requested Delivery Date");
+                              Berichtstabelle."Feld 12" := FORMAT(ROUND(SalesLine."Profit %",0.01));
+                              Berichtstabelle."Feld 13" := FORMAT(ROUND(SalesLine."Unit Cost (LCY)",0.01));
+                                Berichtstabelle."Feld 14" := FORMAT(SalesLine.Quantity);
+                              Berichtstabelle."Feld 15" := FORMAT(RckstandMenge);
+                              Berichtstabelle."Feld 16" := FORMAT(SalesHeader."Currency Factor");
+                              Berichtstabelle."Feld 18" := SalesLine."Shipment Date";
+                              Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                              Berichtstabelle.User := USERID;
+                            Berichtstabelle.INSERT;
+
+                          UNTIL SalesLine.NEXT = 0;
+                        END;
+
+                      //*******************************************************************************************************
+                      //     Nachtr„glich alle anderen Daten schreiben, wenn auch wirklich Auftragszeilen vorhanden sind
+                      //*******************************************************************************************************
+
+                      IF belegzeilen_vorhanden THEN
+                        BEGIN
+                          //Auftragskopf
+                          Berichtstabelle.INIT;
+                            Berichtstabelle.Tabelle := 'BELEGKOPF';
+                            Berichtstabelle.Index := SalesHeader."No.";
+                            Berichtstabelle.Datum := SalesHeader."Order Date";
+                            Berichtstabelle."Belegnr." := SalesHeader."No.";
+                            Berichtstabelle."Feld 2" := SalesHeader."Sell-to Customer No.";
+                            SalesHeader.CALCFIELDS(Amount);
+                            Berichtstabelle."Feld 4" := SalesHeader.Amount;
+                            Berichtstabelle."Feld 6" := SalesHeader."Betreuer Innendienst";
+                            Berichtstabelle."Feld 7" := SalesHeader."Salesperson Code";
+                            Berichtstabelle."Feld 8" := SalesHeader.Teams;
+                            Berichtstabelle."Feld 9" := SalesHeader."Territory Code";
+                            IF SalesHeader."Currency Code" <> '' THEN
+                              Berichtstabelle."Feld 12" := SalesHeader."Currency Code"
+                            ELSE
+                              Berichtstabelle."Feld 12" := '°';
+                            Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                            Berichtstabelle.User := USERID;
+                          Berichtstabelle.INSERT;
+
+                        END;
+
+                    UNTIL SalesHeader.NEXT = 0;
+
+
+                  IF (zugesagtes_startdatum = 0D) AND (zugesagtes_enddatum = 0D) THEN
+                    BEGIN
+
+                      //*******************************************************************************************************
+                      //                                 Archivierte Auftr„ge werden durchsucht
+                      //*******************************************************************************************************
+
+                      IF ohne_archiv = TRUE THEN
+                        EXIT;
+
+                      ArchSalesHeader.RESET;
+                      IF (Startdatum<>0D) AND (Enddatum=0D) THEN
+                        ArchSalesHeader.SETFILTER(ArchSalesHeader."Order Date",'>=%1',Startdatum);
+                      IF (Startdatum<>0D) AND (Enddatum<>0D) THEN
+                        ArchSalesHeader.SETFILTER(ArchSalesHeader."Order Date",'>=%1&<=%2',Startdatum,Enddatum);
+                      IF (Startdatum=0D) AND (Enddatum<>0D) THEN
+                        ArchSalesHeader.SETFILTER(ArchSalesHeader."Order Date",'<=%1',Enddatum);
+                      ArchSalesHeader.SETFILTER("Betreuer Innendienst",betreuer);
+                      ArchSalesHeader.SETFILTER("Salesperson Code",verk„ufer);
+                      ArchSalesHeader.SETFILTER(Teams,teams);
+                      ArchSalesHeader.SETFILTER("Territory Code",gebietscode);
+                      ArchSalesHeader.SETFILTER(ArchSalesHeader."Document Type",'%1',ArchSalesHeader."Document Type" :: Order);
+                      IF ArchSalesHeader.FINDFIRST THEN
+                        REPEAT
+                          arch_belegzeilen_vorhanden := FALSE;
+
+                          ArchSalesLine.RESET;
+                          ArchSalesLine.SETFILTER(ArchSalesLine."Document No.",ArchSalesHeader."No.");
+                          ArchSalesLine.SETFILTER(ArchSalesLine.Type,'%1',ArchSalesLine.Type :: Item);
+                          //ArchSalesLine.SETFILTER(ArchSalesLine."Outstanding Quantity",'>%1',0);
+                          ArchSalesLine.SETFILTER(ArchSalesLine."Manufacturer Code",hersteller);
+                          ArchSalesLine.SETFILTER("Version No.",'%1',ArchSalesHeader."Version No.");
+                          IF ArchSalesLine.FINDFIRST THEN
+                            BEGIN
+                              arch_belegzeilen_vorhanden := TRUE;
+
+                              Berichtstabelle_temp.RESET;
+                              Berichtstabelle_temp.SETFILTER(Tabelle,'%1','ARCH_DEBITOR');
+                              Berichtstabelle_temp.SETFILTER(Index,'%1',ArchSalesHeader."Sell-to Customer No.");
+                              IF NOT Berichtstabelle_temp.FINDFIRST THEN
+                                BEGIN
+                                  //*******************************************************************************************************
+                                  //                                     Debitor Daten schreiben
+                                  //*******************************************************************************************************
+
+                                  Berichtstabelle.INIT;
+                                    Berichtstabelle.Tabelle := 'ARCH_DEBITOR';
+                                    Berichtstabelle.Index := ArchSalesHeader."Sell-to Customer No.";
+                                    Berichtstabelle."Feld 10" := ArchSalesHeader."Sell-to Customer Name";
+                                    Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                                    Berichtstabelle.User := USERID;
+                                  Berichtstabelle.INSERT;
+                                END;
+
+                              REPEAT
+                                //*******************************************************************************************************
+                                //                                 Archivierte Auftragszeilen schreiben
+                                //*******************************************************************************************************
+
+                                Berichtstabelle.INIT;
+                                  Berichtstabelle.Tabelle := 'ARCH_BELEGZEILE';
+                                  Berichtstabelle.Index := ArchSalesLine."Document No.";
+                                  Berichtstabelle.Datum := ArchSalesLine."Promised Delivery Date";
+                                  Berichtstabelle."Belegnr." := ArchSalesLine."Document No.";
+                                  Berichtstabelle."Zeilennr." := ArchSalesLine."Line No.";
+                                  Berichtstabelle."Feld 3" := ArchSalesLine."Artikelnr. 2";
+                                  Berichtstabelle."Feld 4" := ArchSalesLine.Quantity;
+                                  Berichtstabelle."Feld 5" := ArchSalesLine."Unit Price";
+                                  IF Quotedaten.GET(ArchSalesLine."Quotenr.") THEN
+                                    Berichtstabelle."Feld 6" := Quotedaten."Quotenr. Hersteller";
+                                  IF ArchSalesHeader."Currency Code" = '' THEN
+                                    Berichtstabelle."Feld 7" := '°'
+                                  ELSE
+                                    Berichtstabelle."Feld 7" := ArchSalesHeader."Currency Code";
+                                  Berichtstabelle."Feld 10" := FORMAT(ArchSalesLine."Outstanding Quantity" * ArchSalesLine."Unit Price");
+                                  Berichtstabelle."Feld 11" := FORMAT(ArchSalesLine."Requested Delivery Date");
+                                  Berichtstabelle."Feld 12" := FORMAT(ROUND(ArchSalesLine."Profit %",0.01));
+                                  Berichtstabelle."Feld 13" := FORMAT(ROUND(ArchSalesLine."Unit Cost (LCY)",0.01));
+                                  Berichtstabelle."Feld 16" := FORMAT(ArchSalesHeader."Currency Factor");
+                                  Berichtstabelle."Feld 18" := ArchSalesLine."Shipment Date";
+                                  Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                                  Berichtstabelle.User := USERID;
+                                Berichtstabelle.INSERT;
+
+                              UNTIL ArchSalesLine.NEXT = 0;
+                            END;
+
+                          //*******************************************************************************************************
+                          //     Nachtr„glich alle anderen Daten schreiben, wenn auch wirklich Auftragszeilen vorhanden sind
+                          //*******************************************************************************************************
+
+                          IF arch_belegzeilen_vorhanden THEN
+                            BEGIN
+                              //Auftragskopf
+                              Berichtstabelle.INIT;
+                                Berichtstabelle.Tabelle := 'ARCH_BELEGKOPF';
+                                Berichtstabelle.Index := ArchSalesHeader."No.";
+                                Berichtstabelle.Datum := ArchSalesHeader."Order Date";
+                                Berichtstabelle."Belegnr." := ArchSalesHeader."No.";
+                                Berichtstabelle."Feld 2" := ArchSalesHeader."Sell-to Customer No.";
+                                ArchSalesHeader.CALCFIELDS(Amount);
+                                Berichtstabelle."Feld 4" := ArchSalesHeader.Amount;
+                                Berichtstabelle."Feld 6" := ArchSalesHeader."Betreuer Innendienst";
+                                Berichtstabelle."Feld 7" := ArchSalesHeader."Salesperson Code";
+                                Berichtstabelle."Feld 8" := ArchSalesHeader.Teams;
+                                Berichtstabelle."Feld 9" := ArchSalesHeader."Territory Code";
+                                IF ArchSalesHeader."Currency Code" <> '' THEN
+                                  Berichtstabelle."Feld 12" := ArchSalesHeader."Currency Code"
+                                ELSE
+                                  Berichtstabelle."Feld 12" := '°';
+                                Berichtstabelle.Uhrzeit := CURRENTDATETIME;
+                                Berichtstabelle.User := USERID;
+                              Berichtstabelle.INSERT;
+
+                            END;
+
+                        UNTIL ArchSalesHeader.NEXT = 0;
+
+                      //*******************************************************************************************************
+                      //         Temp Datensatz erzeugt, damit die Berichtsansicht eine neue Seite fr arch. Angebote
+                      //              ”ffnet und auf dieser neuen Seite der Header nicht zweimal angedruckt wird
+                      //*******************************************************************************************************
+
+                      Berichtstabelle_temp.RESET;
+                      Berichtstabelle_temp.SETFILTER(Berichtstabelle_temp.Tabelle,'%1','ARCH_DEBITOR');
+                      IF Berichtstabelle_temp.FINDFIRST THEN
+                        BEGIN
+                          Berichtstabelle.INIT;
+                            Berichtstabelle.Tabelle := 'TEMP';
+                            Berichtstabelle.Index := 'XXXX';
+                          Berichtstabelle.INSERT;
+                        END;
+
+                    END;
+                END;
+
+    OnPostReport=BEGIN
+                   IF Berichtstabelle.TABLECAPTION = 'Berichtstabelle' THEN
+                     Berichtstabelle.DELETEALL;
+                 END;
+
+    HorzGrid=100;
+    VertGrid=100;
+  }
+  DATAITEMS
+  {
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(DEBITOR));
+        DataItemVarName=Debitor;
+        OnPreDataItem=BEGIN
+                        IF sort = sort :: Nr THEN
+                          Debitor.SETCURRENTKEY(Tabelle,Index,"Belegnr.","Zeilennr.");
+                        IF sort = sort :: Name THEN
+                          Debitor.SETCURRENTKEY("Feld 10",Datum,Index);
+
+                        CurrReport.NEWPAGEPERRECORD := NurEinProSeiteDrucken;
+                        CurrReport.CREATETOTALS(AuftragBetrag,AuftragBetragMW,AuftragBetrag_USD,AuftragBetrag_JPY,AuftragBetrag_EURO);
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=500;
+          }
+          CONTROLS
+          {
+            { 1140000;Label     ;5700 ;0    ;6000 ;500  ;HorzAlign=Center;
+                                                         VertAlign=Bottom;
+                                                         FontSize=12;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftragsbersicht - Aktuell }
+            { 1140001;TextBox   ;15000;0    ;3150 ;500  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+            { 1140002;Label     ;12173;0    ;750  ;500  ;ParentControl=1140003;
+                                                         VertAlign=Bottom }
+            { 1140003;TextBox   ;12923;0    ;450  ;500  ;VertAlign=Bottom;
+                                                         CaptionML=DEU=Seite;
+                                                         SourceExpr=CurrReport.PAGENO }
+            { 1140004;TextBox   ;0    ;0    ;2600 ;500  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=USERID }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18400;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(Betr„geDruckInMW);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140005;Label     ;0    ;0    ;3000 ;423  ;CaptionML=DEU=Alle Betr„ge in MW }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            SectionWidth=18400;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140008;TextBox   ;0    ;0    ;17700;423  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         SourceExpr='Verk„ufercode: '+verk„ufer+' Betreuer Innendienst: ' + betreuer + ' Teams: ' + teams + ' Gebietscode: ' + gebietscode + ' Hersteller: ' + hersteller + '  Auftragsdatum: ' + FORMAT(Startdatum) + '..' + FORMAT(Enddatum) }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=1000;
+          }
+          CONTROLS
+          {
+            { 1140009;Shape     ;0    ;0    ;18300;900   }
+            { 1140010;Label     ;1350 ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Liefer datum }
+            { 1140011;Label     ;4000 ;100  ;2450 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Artikel }
+            { 1140012;Label     ;6800 ;100  ;850  ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Menge }
+            { 1140013;Label     ;7800 ;100  ;1050 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Rest- menge }
+            { 1140014;Label     ;9000 ;100  ;1050 ;700  ;HorzAlign=Center;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Rckst. menge }
+            { 1140015;Label     ;11800;100  ;1700 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Preis }
+            { 1140016;Label     ;16200;100  ;1800 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Gesamt }
+            { 1140017;Label     ;15000;100  ;900  ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Marge in % }
+            { 1140018;Label     ;10300;100  ;1300 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Einstands- preis(EUR) }
+            { 1140019;Label     ;100  ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Auftrags Nummer }
+            { 1140020;Label     ;13600;100  ;1300 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=W„hrungs faktor }
+            { 1140021;Label     ;2600 ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Wunsch termin }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140022;TextBox   ;0    ;0    ;1200 ;423  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Index }
+            { 1140023;TextBox   ;1400 ;0    ;5200 ;423  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 10" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=300;
+          }
+          CONTROLS
+          {
+            { 1140049;Shape     ;0    ;0    ;18300;300  ;BorderWidth=2pt;
+                                                         ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(AuftragBetrag_EURO <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140073;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140074;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag_EURO;
+                                                         AutoFormatType=1 }
+            { 1140075;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(AuftragBetrag_USD <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140070;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140076;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag_USD;
+                                                         AutoFormatType=1 }
+            { 1140077;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='USD' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(AuftragBetrag_JPY <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140078;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140079;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag_JPY;
+                                                         AutoFormatType=1 }
+            { 1140080;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='JPY' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=846;
+            OnPreSection=BEGIN
+                           Wechselkurs.SETFILTER(Wechselkurs."Currency Code",'%1','USD');
+                           Wechselkurs.FINDLAST;
+                           summe[1] := AuftragBetrag_USD/Wechselkurs."Exchange Rate Amount";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140063;TextBox   ;13772;300  ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         DecimalPlaces=4:4;
+                                                         SourceExpr=Wechselkurs."Exchange Rate Amount" }
+            { 1140064;TextBox   ;15072;300  ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag_USD/Wechselkurs."Exchange Rate Amount";
+                                                         AutoFormatType=1 }
+            { 1140065;Shape     ;9800 ;0    ;8472 ;300  ;BorderWidth=1pt;
+                                                         ShapeStyle=HorzLine }
+            { 1140066;TextBox   ;17572;300  ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140067;Label     ;9800 ;300  ;3906 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt USD bewertet mit Kurs: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=500;
+            OnPreSection=BEGIN
+                           Wechselkurs.SETFILTER(Wechselkurs."Currency Code",'%1','JPY');
+                           Wechselkurs.FINDLAST;
+                           summe[2] := AuftragBetrag_JPY/Wechselkurs."Exchange Rate Amount";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140068;TextBox   ;13772;0    ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         DecimalPlaces=4:4;
+                                                         SourceExpr=Wechselkurs."Exchange Rate Amount" }
+            { 1140069;TextBox   ;15072;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag_JPY/Wechselkurs."Exchange Rate Amount";
+                                                         AutoFormatType=1 }
+            { 1140071;TextBox   ;17572;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140072;Label     ;9800 ;0    ;3906 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt JPY bewertet mit Kurs: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=1729;
+          }
+          CONTROLS
+          {
+            { 1140042;Shape     ;10000;494  ;8399 ;300  ;BorderWidth=1pt;
+                                                         ShapeStyle=HorzLine }
+            { 1140043;TextBox   ;15100;1200 ;2400 ;423  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetragMW;
+                                                         AutoFormatType=1 }
+            { 1140044;TextBox   ;17600;1200 ;800  ;423  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140045;Label     ;10100;1200 ;3694 ;453  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Total: }
+            { 1140046;Label     ;10051;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt in Euro: }
+            { 1140047;TextBox   ;15100;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=summe[1]+summe[2];
+                                                         AutoFormatType=1 }
+            { 1140048;TextBox   ;17592;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140099;Label     ;1904 ;1162 ;3107 ;463  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt Einstandsbetrag: }
+            { 1140098;TextBox   ;5273 ;1225 ;2399 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Gesamt_AU_EK }
+            { 1140114;TextBox   ;7768 ;1225 ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(BELEGKOPF));
+        DataItemVarName=Belegkopf;
+        OnPreDataItem=BEGIN
+                        CurrReport.CREATETOTALS(AuftragBetrag,AuftragBetragMW,AuftragBetrag_USD,AuftragBetrag_JPY,AuftragBetrag_EURO);
+                      END;
+
+        DataItemLink=Feld 2=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=561;
+          }
+          CONTROLS
+          {
+            { 1140006;Label     ;14790;0    ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140007;TextBox   ;15890;0    ;1600 ;400  ;FontBold=Yes;
+                                                         SourceExpr=AuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140039;TextBox   ;17590;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr=waehrung }
+            { 1140081;Shape     ;0    ;350  ;18400;150  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(BELEGZEILE));
+        DataItemVarName=Belegzeile;
+        OnPreDataItem=BEGIN
+                        CurrReport.CREATETOTALS(AuftragBetrag,AuftragBetragMW,AuftragBetrag_USD,AuftragBetrag_JPY,AuftragBetrag_EURO);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           NeuerAuftrag := Belegzeile.Index <> Auftragkopf."No.";
+
+                           IF NeuerAuftrag THEN
+                             Auftragkopf.GET(1,Belegzeile.Index);
+                           IF "Feld 18" <= WORKDATE THEN
+                             RckstandMenge := "Feld 14"
+                           ELSE
+                             RckstandMenge := '0';
+
+                           AuftragBetrag := "Feld 4" * "Feld 5";
+
+                           IF NOT Betr„geDruckInMW THEN
+                             BEGIN
+                               IF Auftragkopf."Currency Code" = 'USD' THEN
+                                 AuftragBetrag_USD := AuftragBetrag;
+                               IF Auftragkopf."Currency Code" = 'JPY' THEN
+                               AuftragBetrag_JPY := AuftragBetrag;
+                               IF Auftragkopf."Currency Code" = '' THEN
+                                 AuftragBetrag_EURO := AuftragBetrag;
+                             END;
+
+                           //AuftragBetrag := ROUND("Outstanding Quantity" * "Sales Line"."Line Amount" / Quantity);
+                           AuftragBetragMW := AuftragBetrag;
+                           IF Betr„geDruckInMW THEN
+                             AuftragBetrag_EURO := AuftragBetragMW;
+
+                           IF Auftragkopf."Currency Code" <> '' THEN BEGIN
+                             IF Auftragkopf."Currency Factor" <> 0 THEN
+                               AuftragBetragMW :=
+                                 ROUND(
+                                   W„hrungWechKurs.ExchangeAmtFCYToLCY(
+                                     WORKDATE,Auftragkopf."Currency Code",
+                                     AuftragBetragMW,Auftragkopf."Currency Factor"));
+                             IF Betr„geDruckInMW THEN
+                               BEGIN
+                                 AuftragBetrag := AuftragBetragMW;
+                                 AuftragBetrag_EURO := AuftragBetragMW;
+                               END;
+                           END;
+
+                           waehrung := "Feld 7";
+
+                           IF Betr„geDruckInMW=TRUE THEN
+                             waehrung:='EUR';
+                         END;
+
+        DataItemLink=Index=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           IF CurrReport.SHOWOUTPUT(NeuerAuftrag) THEN
+                             BEGIN
+                               EVALUATE(artzeile_ek,"Feld 13");
+                               Gesamt_AU_EK := Gesamt_AU_EK + (artzeile_ek * "Feld 4");
+                             END;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140024;TextBox   ;1300 ;0    ;1400 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Belegkopf.Datum }
+            { 1140025;TextBox   ;0    ;0    ;1306 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftragsnr.;
+                                                         SourceExpr=Belegkopf.Index }
+            { 1140026;TextBox   ;4000 ;400  ;2550 ;400  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140027;TextBox   ;1300 ;400  ;1350 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr=Datum }
+            { 1140028;TextBox   ;6600 ;400  ;1050 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 14" }
+            { 1140029;TextBox   ;7700 ;400  ;1050 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140030;TextBox   ;8900 ;400  ;1000 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:5;
+                                                         SourceExpr=RckstandMenge }
+            { 1140031;TextBox   ;11400;400  ;1500 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 5";
+                                                         AutoFormatType=2 }
+            { 1140032;TextBox   ;15900;400  ;1600 ;400  ;HorzAlign=Right;
+                                                         CaptionML=DEU=Auftrag Bestand;
+                                                         SourceExpr=AuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140033;TextBox   ;15200;400  ;700  ;400  ;SourceExpr="Feld 12" }
+            { 1140034;TextBox   ;10000;400  ;1300 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140035;TextBox   ;13000;400  ;900  ;400  ;SourceExpr="Feld 7" }
+            { 1140036;TextBox   ;17600;400  ;800  ;400  ;SourceExpr=waehrung }
+            { 1140037;TextBox   ;14000;400  ;900  ;400  ;SourceExpr="Feld 16" }
+            { 1140038;TextBox   ;2700 ;400  ;1300 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr="Feld 11" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           IF CurrReport.SHOWOUTPUT(NOT NeuerAuftrag) THEN
+                             BEGIN
+                               EVALUATE(artzeile_ek,"Feld 13");
+                               Gesamt_AU_EK := Gesamt_AU_EK + (artzeile_ek * "Feld 4");
+                             END;
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140050;TextBox   ;1296 ;0    ;1350 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr=Datum }
+            { 1140051;TextBox   ;2696 ;0    ;1300 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr="Feld 11" }
+            { 1140052;TextBox   ;3996 ;0    ;2550 ;400  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140053;TextBox   ;6596 ;0    ;1050 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 14" }
+            { 1140054;TextBox   ;7696 ;0    ;1050 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140055;TextBox   ;8896 ;0    ;1000 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:5;
+                                                         SourceExpr=RckstandMenge }
+            { 1140056;TextBox   ;9996 ;0    ;1300 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140057;TextBox   ;11396;0    ;1500 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 5";
+                                                         AutoFormatType=2 }
+            { 1140058;TextBox   ;12996;0    ;900  ;400  ;SourceExpr="Feld 7" }
+            { 1140059;TextBox   ;13996;0    ;900  ;400  ;SourceExpr="Feld 16" }
+            { 1140060;TextBox   ;15196;0    ;700  ;400  ;SourceExpr="Feld 12" }
+            { 1140061;TextBox   ;15896;0    ;1600 ;400  ;HorzAlign=Right;
+                                                         CaptionML=DEU=Auftrag Bestand;
+                                                         SourceExpr=AuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140062;TextBox   ;17596;0    ;800  ;400  ;SourceExpr=waehrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=300;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 6" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140040;TextBox   ;2870 ;0    ;3800 ;300  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 6" }
+            { 1140041;Label     ;1270 ;0    ;1600 ;300  ;HorzAlign=Right;
+                                                         CaptionML=DEU="Quote-Nr.: " }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(TEMP));
+        DataItemVarName=NewPage;
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=0;
+            OnPreSection=BEGIN
+                           CurrReport.NEWPAGE;
+                         END;
+
+          }
+          CONTROLS
+          {
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_DEBITOR));
+        DataItemVarName=Arch_Debitor;
+        OnPreDataItem=BEGIN
+                        IF sort = sort :: Nr THEN
+                          Arch_Debitor.SETCURRENTKEY(Tabelle,Index,"Belegnr.","Zeilennr.");
+                        IF sort = sort :: Name THEN
+                          Arch_Debitor.SETCURRENTKEY("Feld 10",Datum,Index);
+
+                        CurrReport.NEWPAGEPERRECORD := NurEinProSeiteDrucken;
+                        CurrReport.CREATETOTALS(ArchAuftragBetrag,ArchAuftragBetragMW,ArchAuftragBetrag_USD,ArchAuftragBetrag_JPY,ArchAuftragBetrag_EURO);
+                      END;
+
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=500;
+          }
+          CONTROLS
+          {
+            { 1140087;Label     ;5700 ;0    ;6000 ;500  ;HorzAlign=Center;
+                                                         VertAlign=Bottom;
+                                                         FontSize=12;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftragsbersicht - Archiv }
+            { 1140088;TextBox   ;15000;0    ;3150 ;500  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=FORMAT(TODAY,0,4) }
+            { 1140089;Label     ;12173;0    ;750  ;500  ;ParentControl=1140090;
+                                                         VertAlign=Bottom }
+            { 1140090;TextBox   ;12923;0    ;450  ;500  ;VertAlign=Bottom;
+                                                         CaptionML=DEU=Seite;
+                                                         SourceExpr=CurrReport.PAGENO }
+            { 1140091;TextBox   ;0    ;0    ;2600 ;500  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         SourceExpr=USERID }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=423;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(Betr„geDruckInMW);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140092;Label     ;0    ;0    ;3000 ;423  ;CaptionML=DEU=Alle Betr„ge in MW }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140093;TextBox   ;0    ;0    ;17700;423  ;HorzAlign=Left;
+                                                         VertAlign=Bottom;
+                                                         FontSize=7;
+                                                         SourceExpr='Verk„ufercode: '+verk„ufer+' Betreuer Innendienst: ' + betreuer + ' Teams: ' + teams + ' Gebietscode: ' + gebietscode + '  Auftragsdatum: ' + FORMAT(Startdatum) + '..' + FORMAT(Enddatum) }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Header;
+            PrintOnEveryPage=Yes;
+            SectionWidth=18400;
+            SectionHeight=900;
+          }
+          CONTROLS
+          {
+            { 1140094;Shape     ;0    ;0    ;18300;900   }
+            { 1140095;Label     ;1350 ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Liefer datum }
+            { 1140096;Label     ;4000 ;100  ;2450 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Artikel }
+            { 1140097;Label     ;7500 ;100  ;900  ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Menge }
+            { 1140100;Label     ;11000;100  ;1700 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Preis }
+            { 1140101;Label     ;16200;100  ;1800 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=VK-Gesamt }
+            { 1140102;Label     ;15000;100  ;900  ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Marge in % }
+            { 1140103;Label     ;9100 ;100  ;1400 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Einstands- preis(EUR) }
+            { 1140104;Label     ;100  ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Auftrags Nummer }
+            { 1140105;Label     ;13300;100  ;1300 ;700  ;HorzAlign=Right;
+                                                         VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=W„hrungs faktor }
+            { 1140106;Label     ;2600 ;100  ;1200 ;700  ;VertAlign=Bottom;
+                                                         FontBold=Yes;
+                                                         MultiLine=Yes;
+                                                         CaptionML=DEU=Wunsch termin }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=423;
+          }
+          CONTROLS
+          {
+            { 1140107;TextBox   ;0    ;0    ;1200 ;423  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Index }
+            { 1140108;TextBox   ;1400 ;0    ;5200 ;423  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr="Feld 10" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=300;
+          }
+          CONTROLS
+          {
+            { 1140143;Shape     ;0    ;0    ;18300;300  ;BorderWidth=2pt;
+                                                         ShapeStyle=HorzLine }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(ArchAuftragBetrag_EURO <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140144;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140145;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag_EURO;
+                                                         AutoFormatType=1 }
+            { 1140146;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(ArchAuftragBetrag_USD <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140147;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140148;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag_USD;
+                                                         AutoFormatType=1 }
+            { 1140149;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='USD' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(ArchAuftragBetrag_JPY <> 0);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140150;Label     ;10000;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140151;TextBox   ;15049;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag_JPY;
+                                                         AutoFormatType=1 }
+            { 1140152;TextBox   ;17541;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='JPY' }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=700;
+            OnPreSection=BEGIN
+                           Wechselkurs.SETFILTER(Wechselkurs."Currency Code",'%1','USD');
+                           Wechselkurs.FINDLAST;
+                           summe[1] := ArchAuftragBetrag_USD/Wechselkurs."Exchange Rate Amount";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140082;TextBox   ;13772;300  ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         DecimalPlaces=4:4;
+                                                         SourceExpr=Wechselkurs."Exchange Rate Amount" }
+            { 1140083;TextBox   ;15072;300  ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag_USD/Wechselkurs."Exchange Rate Amount";
+                                                         AutoFormatType=1 }
+            { 1140084;Shape     ;9800 ;0    ;8472 ;300  ;BorderWidth=1pt;
+                                                         ShapeStyle=HorzLine }
+            { 1140085;TextBox   ;17572;300  ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140086;Label     ;9800 ;300  ;3906 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt USD bewertet mit Kurs: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           Wechselkurs.SETFILTER(Wechselkurs."Currency Code",'%1','JPY');
+                           Wechselkurs.FINDLAST;
+                           summe[2] := ArchAuftragBetrag_JPY/Wechselkurs."Exchange Rate Amount";
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140153;TextBox   ;13772;0    ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         DecimalPlaces=4:4;
+                                                         SourceExpr=Wechselkurs."Exchange Rate Amount" }
+            { 1140154;TextBox   ;15072;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag_JPY/Wechselkurs."Exchange Rate Amount";
+                                                         AutoFormatType=1 }
+            { 1140155;TextBox   ;17572;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140156;Label     ;9800 ;0    ;3906 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt JPY bewertet mit Kurs: }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=1653;
+          }
+          CONTROLS
+          {
+            { 1140157;Shape     ;10000;494  ;8399 ;300  ;BorderWidth=1pt;
+                                                         ShapeStyle=HorzLine }
+            { 1140158;TextBox   ;15100;1200 ;2400 ;423  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetragMW;
+                                                         AutoFormatType=1 }
+            { 1140159;TextBox   ;17600;1200 ;800  ;423  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+            { 1140160;Label     ;10100;1200 ;3694 ;453  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Total: }
+            { 1140161;Label     ;10051;0    ;3773 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt in Euro: }
+            { 1140162;TextBox   ;15100;0    ;2400 ;400  ;FontBold=Yes;
+                                                         SourceExpr=summe[1]+summe[2];
+                                                         AutoFormatType=1 }
+            { 1140163;TextBox   ;17592;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr='Euro' }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=1;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_BELEGKOPF));
+        DataItemVarName=Arch_Belegkopf;
+        OnPreDataItem=BEGIN
+                        CurrReport.CREATETOTALS(ArchAuftragBetrag,ArchAuftragBetragMW,ArchAuftragBetrag_USD,ArchAuftragBetrag_JPY,ArchAuftragBetrag_EURO);
+                      END;
+
+        DataItemLink=Feld 2=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Footer;
+            SectionWidth=18400;
+            SectionHeight=500;
+          }
+          CONTROLS
+          {
+            { 1140139;Label     ;14790;0    ;1100 ;400  ;HorzAlign=Right;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Gesamt: }
+            { 1140140;TextBox   ;15890;0    ;1600 ;400  ;FontBold=Yes;
+                                                         SourceExpr=ArchAuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140141;TextBox   ;17590;0    ;800  ;400  ;FontBold=Yes;
+                                                         SourceExpr=waehrung }
+            { 1140142;Shape     ;0    ;350  ;18400;150  ;ShapeStyle=HorzLine }
+          }
+           }
+      }
+       }
+    { PROPERTIES
+      {
+        DataItemIndent=2;
+        DataItemTable=Table50037;
+        DataItemTableView=SORTING(Tabelle,Index,Belegnr.,Zeilennr.)
+                          WHERE(Tabelle=FILTER(ARCH_BELEGZEILE));
+        DataItemVarName=Arch_Belegzeile;
+        OnPreDataItem=BEGIN
+                        CurrReport.CREATETOTALS(ArchAuftragBetrag,ArchAuftragBetragMW,ArchAuftragBetrag_USD,ArchAuftragBetrag_JPY,ArchAuftragBetrag_EURO);
+                      END;
+
+        OnAfterGetRecord=BEGIN
+                           NeuerAuftrag := Arch_Belegzeile.Index <> ArchAuftragkopf."No.";
+
+                           IF NeuerAuftrag THEN
+                             BEGIN
+                               ArchAuftragkopf.RESET;
+                               ArchAuftragkopf.SETFILTER(ArchAuftragkopf."No.",'%1',Arch_Belegzeile.Index);
+                               ArchAuftragkopf.SETFILTER(ArchAuftragkopf."Document Type",'%1',ArchAuftragkopf."Document Type" :: Order);
+                               ArchAuftragkopf.FINDFIRST;
+                             END;
+
+                           ArchAuftragBetrag := "Feld 4" * "Feld 5";
+
+                           IF NOT Betr„geDruckInMW THEN
+                             BEGIN
+                               IF ArchAuftragkopf."Currency Code" = 'USD' THEN
+                                 ArchAuftragBetrag_USD := ArchAuftragBetrag;
+                               IF ArchAuftragkopf."Currency Code" = 'JPY' THEN
+                               ArchAuftragBetrag_JPY := ArchAuftragBetrag;
+                               IF ArchAuftragkopf."Currency Code" = '' THEN
+                                 ArchAuftragBetrag_EURO := ArchAuftragBetrag;
+                             END;
+
+                           ArchAuftragBetragMW := ArchAuftragBetrag;
+                           IF Betr„geDruckInMW THEN
+                             ArchAuftragBetrag_EURO := ArchAuftragBetragMW;
+
+                           IF ArchAuftragkopf."Currency Code" <> '' THEN BEGIN
+                             IF ArchAuftragkopf."Currency Factor" <> 0 THEN
+                               ArchAuftragBetragMW :=
+                                 ROUND(
+                                   W„hrungWechKurs.ExchangeAmtFCYToLCY(
+                                     WORKDATE,ArchAuftragkopf."Currency Code",
+                                     ArchAuftragBetragMW,ArchAuftragkopf."Currency Factor"));
+                             IF Betr„geDruckInMW THEN
+                               BEGIN
+                                 ArchAuftragBetrag := ArchAuftragBetragMW;
+                                 ArchAuftragBetrag_EURO := ArchAuftragBetragMW;
+                               END;
+                           END;
+
+                           waehrung := "Feld 7";
+
+                           IF Betr„geDruckInMW=TRUE THEN
+                             waehrung:='EUR'
+                         END;
+
+        DataItemLink=Index=FIELD(Index);
+      }
+      SECTIONS
+      {
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=800;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(NeuerAuftrag);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140109;TextBox   ;1300 ;0    ;1400 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         SourceExpr=Arch_Belegkopf.Datum }
+            { 1140110;TextBox   ;0    ;0    ;1200 ;400  ;HorzAlign=Left;
+                                                         FontBold=Yes;
+                                                         CaptionML=DEU=Auftragsnr.;
+                                                         SourceExpr=Arch_Belegkopf.Index }
+            { 1140111;TextBox   ;4000 ;400  ;2800 ;400  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140112;TextBox   ;1300 ;400  ;1350 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr=Datum }
+            { 1140113;TextBox   ;7100 ;400  ;1050 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140116;TextBox   ;10900;400  ;1500 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 5";
+                                                         AutoFormatType=2 }
+            { 1140117;TextBox   ;15900;400  ;1600 ;400  ;HorzAlign=Right;
+                                                         CaptionML=DEU=Auftrag Bestand;
+                                                         SourceExpr=ArchAuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140118;TextBox   ;15200;400  ;700  ;400  ;SourceExpr="Feld 12" }
+            { 1140119;TextBox   ;9000 ;400  ;1300 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140120;TextBox   ;12500;400  ;900  ;400  ;SourceExpr="Feld 7" }
+            { 1140121;TextBox   ;17600;400  ;800  ;400  ;SourceExpr=waehrung }
+            { 1140122;TextBox   ;13700;400  ;900  ;400  ;SourceExpr="Feld 16" }
+            { 1140123;TextBox   ;2700 ;400  ;1300 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr="Feld 11" }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=400;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT(NOT NeuerAuftrag);
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140124;TextBox   ;1300 ;0    ;1350 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr=Datum }
+            { 1140125;TextBox   ;2700 ;0    ;1300 ;400  ;HorzAlign=Left;
+                                                         CaptionML=DEU=Liefer Datum;
+                                                         SourceExpr="Feld 11" }
+            { 1140126;TextBox   ;4000 ;0    ;2800 ;400  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 3" }
+            { 1140127;TextBox   ;7100 ;0    ;1050 ;400  ;HorzAlign=Right;
+                                                         DecimalPlaces=0:0;
+                                                         SourceExpr="Feld 4" }
+            { 1140130;TextBox   ;9000 ;0    ;1300 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 13" }
+            { 1140131;TextBox   ;10900;0    ;1500 ;400  ;HorzAlign=Right;
+                                                         SourceExpr="Feld 5";
+                                                         AutoFormatType=2 }
+            { 1140132;TextBox   ;12500;0    ;900  ;400  ;SourceExpr="Feld 7" }
+            { 1140133;TextBox   ;13700;0    ;900  ;400  ;SourceExpr="Feld 16" }
+            { 1140134;TextBox   ;15200;0    ;700  ;400  ;SourceExpr="Feld 12" }
+            { 1140135;TextBox   ;15900;0    ;1600 ;400  ;HorzAlign=Right;
+                                                         CaptionML=DEU=Auftrag Bestand;
+                                                         SourceExpr=ArchAuftragBetrag;
+                                                         AutoFormatType=1 }
+            { 1140136;TextBox   ;17600;0    ;800  ;400  ;SourceExpr=waehrung }
+          }
+           }
+        { PROPERTIES
+          {
+            SectionType=Body;
+            SectionWidth=18400;
+            SectionHeight=300;
+            OnPreSection=BEGIN
+                           CurrReport.SHOWOUTPUT("Feld 6" <> '');
+                         END;
+
+          }
+          CONTROLS
+          {
+            { 1140137;TextBox   ;2900 ;0    ;3800 ;300  ;HorzAlign=Left;
+                                                         SourceExpr="Feld 6" }
+            { 1140138;Label     ;1300 ;0    ;1600 ;300  ;HorzAlign=Right;
+                                                         CaptionML=DEU="Quote-Nr.: " }
+          }
+           }
+      }
+       }
+  }
+  REQUESTFORM
+  {
+    PROPERTIES
+    {
+      Width=9460;
+      Height=9900;
+      SaveValues=Yes;
+    }
+    CONTROLS
+    {
+      { 1140000;TextBox   ;6380 ;1210 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140003;
+                                                   SourceExpr=Enddatum }
+      { 1140001;Label     ;5500 ;1210 ;660  ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=bis }
+      { 1140002;TextBox   ;3520 ;1210 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140000;
+                                                   SourceExpr=Startdatum }
+      { 1140003;TextBox   ;3520 ;2640 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140006;
+                                                   SourceExpr=betreuer }
+      { 1140004;Label     ;330  ;1210 ;2970 ;440  ;InPage=-1;
+                                                   LeaderDots=Yes;
+                                                   CaptionML=DEU=Auftragsdatum von }
+      { 1140005;Label     ;330  ;2640 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Betreuer Innendienst }
+      { 1140006;TextBox   ;3520 ;3190 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140009;
+                                                   SourceExpr=verk„ufer }
+      { 1140007;Label     ;330  ;3190 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Verk„ufercode }
+      { 1140008;Label     ;330  ;220  ;8910 ;440  ;InPage=-1;
+                                                   FontBold=Yes;
+                                                   CaptionML=DEU=Auftragsbestand }
+      { 1140009;TextBox   ;3520 ;3740 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140011;
+                                                   SourceExpr=teams }
+      { 1140010;Label     ;330  ;3740 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Teams }
+      { 1140011;TextBox   ;3520 ;4290 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140015;
+                                                   SourceExpr=gebietscode }
+      { 1140012;Label     ;330  ;4290 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Gebietscode }
+      { 1140015;TextBox   ;3520 ;4840 ;1700 ;440  ;ValidateTableRelation=No;
+                                                   InPage=-1;
+                                                   NextControl=1140023;
+                                                   SourceExpr=hersteller;
+                                                   TableRelation=Manufacturer }
+      { 1140016;Label     ;330  ;4840 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Herstellercode }
+      { 1140017;Label     ;330  ;8690 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Berichtssortierung }
+      { 1140018;OptionButton;3520;8690;3740 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Debitornr.;
+                                                   SourceExpr=sort;
+                                                   OptionValue=Nr }
+      { 1140019;OptionButton;3520;9240;5060 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Debitorname;
+                                                   SourceExpr=sort;
+                                                   OptionValue=Name }
+      { 1140013;CheckBox  ;3740 ;7590 ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   CaptionML=DEU=Neue Seite pro Debitor;
+                                                   NextControl=1140002;
+                                                   SourceExpr=NurEinProSeiteDrucken }
+      { 1140014;Label     ;330  ;7590 ;3300 ;440  ;ParentControl=1140013;
+                                                   InPage=-1 }
+      { 1140020;CheckBox  ;3740 ;7040 ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   CaptionML=DEU=Betr„ge in MW anzeigen;
+                                                   NextControl=1140013;
+                                                   SourceExpr=Betr„geDruckInMW }
+      { 1140021;Label     ;330  ;7040 ;3300 ;440  ;ParentControl=1140020;
+                                                   InPage=-1 }
+      { 1140022;Label     ;330  ;5610 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Zug. Lieferdatum }
+      { 1140023;TextBox   ;3520 ;5610 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140025;
+                                                   SourceExpr=zugesagtes_startdatum }
+      { 1140024;Label     ;5500 ;5610 ;660  ;440  ;InPage=-1;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=bis }
+      { 1140025;TextBox   ;6380 ;5610 ;1700 ;440  ;InPage=-1;
+                                                   NextControl=1140002;
+                                                   SourceExpr=zugesagtes_enddatum }
+      { 1140026;Shape     ;220  ;6600 ;9020 ;110  ;InPage=-1;
+                                                   BorderWidth=Hairline;
+                                                   ShapeStyle=HorzLine }
+      { 1140027;Label     ;330  ;1760 ;2970 ;440  ;InPage=-1;
+                                                   CaptionML=DEU=Ohne Archiv }
+      { 1140029;CheckBox  ;3520 ;1760 ;440  ;440  ;InPage=-1;
+                                                   ShowCaption=No;
+                                                   SourceExpr=ohne_archiv }
+    }
+  }
+  CODE
+  {
+    VAR
+      Berichtstabelle@1140000 : Record 50037;
+      Berichtstabelle_temp@1140012 : Record 50037;
+      W„hrungWechKurs@1140022 : Record 330;
+      Wechselkurs@1140025 : Record 330;
+      Auftragkopf@1140019 : Record 36;
+      ArchAuftragkopf@1140037 : Record 5107;
+      SalesHeader@1140002 : Record 36;
+      SalesLine@1140003 : Record 37;
+      ArchSalesHeader@1140029 : Record 5107;
+      ArchSalesLine@1140030 : Record 5108;
+      Quotedaten@1140013 : Record 50014;
+      Startdatum@1140004 : Date;
+      Enddatum@1140005 : Date;
+      zugesagtes_startdatum@1140038 : Date;
+      zugesagtes_enddatum@1140039 : Date;
+      betreuer@1140006 : Code[40];
+      verk„ufer@1140007 : Code[40];
+      teams@1140008 : Code[40];
+      gebietscode@1140009 : Code[40];
+      hersteller@1140011 : Code[40];
+      belegzeilen_vorhanden@1140010 : Boolean;
+      arch_belegzeilen_vorhanden@1140036 : Boolean;
+      Betr„geDruckInMW@1140014 : Boolean;
+      NurEinProSeiteDrucken@1140021 : Boolean;
+      NeuerAuftrag@1140017 : Boolean;
+      ohne_archiv@1140040 : Boolean;
+      RckstandMenge@1140015 : Text[30];
+      summe@1140027 : ARRAY [3] OF Decimal;
+      waehrung@1140028 : Code[10];
+      AuftragBetrag@1140018 : Decimal;
+      AuftragBetrag_EURO@1140026 : Decimal;
+      AuftragBetrag_USD@1140023 : Decimal;
+      AuftragBetrag_JPY@1140024 : Decimal;
+      AuftragBetragMW@1140020 : Decimal;
+      ArchAuftragBetrag@1140031 : Decimal;
+      ArchAuftragBetrag_EURO@1140032 : Decimal;
+      ArchAuftragBetrag_USD@1140033 : Decimal;
+      ArchAuftragBetrag_JPY@1140034 : Decimal;
+      ArchAuftragBetragMW@1140035 : Decimal;
+      sort@1140016 : 'Nr,Name';
+      counter@1140001 : Integer;
+      Gesamt_AU_EK@1140041 : Decimal;
+      artzeile_ek@1140042 : Decimal;
+
+    BEGIN
+    END.
+  }
+}
+
