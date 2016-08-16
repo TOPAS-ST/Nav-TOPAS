@@ -2,8 +2,8 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
 {
   OBJECT-PROPERTIES
   {
-    Date=03.08.16;
-    Time=10:36:21;
+    Date=15.08.16;
+    Time=13:25:50;
     Modified=Yes;
     Version List=TOPAS/CE1.00;
   }
@@ -13,7 +13,18 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
             HideMsg := FALSE;
 
             //Commerzbank Kurse - holt sich die Kurse aus dem Archiv
-            GetCurrencyExchRateCoba();
+            IF HideMsg = FALSE THEN
+              BEGIN
+                selection := STRMENU(Dialog_Datum);
+                CASE selection OF
+                  0 : EXIT;
+                  1 : GetCurrencyExchRateCoba(WORKDATE);
+                  2 : GetCurrencyExchRateCoba(TOPAS_API.CalcNextWorkday(-1,WORKDATE));
+                  3 : GetCurrencyExchRateCoba(TOPAS_API.CalcNextWorkday(-2,WORKDATE));
+                END
+              END
+            ELSE
+              GetCurrencyExchRateCoba(WORKDATE);
 
             //EZB Kurse - die History ist standardm„áig deaktiviert
             //GetCurrencyExchRateXML();
@@ -25,6 +36,7 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
   {
     VAR
       HideMsg@1000000000 : Boolean;
+      selection@1140012 : Integer;
       Excel@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
       Book@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
       Range@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
@@ -55,12 +67,15 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
       Text006@1140011 : TextConst
         'DEU=Es stehen keine Kurse fr das heutige Datum zur Verfgung.';
 
+      Dialog_Datum@1140013 : TextConst
+        'DEU=Heute,Letzter Werktag,Vorletzter Werktag';
+
     PROCEDURE HideMessage@1000000000(InHideMsg@1000000000 : Boolean);
     BEGIN
       HideMsg := InHideMsg;
     END;
 
-    PROCEDURE GetCurrencyExchRateCoba@1140000();
+    PROCEDURE GetCurrencyExchRateCoba@1140000(v_date@1140021 : Date);
     VAR
       Currency@1140019 : Record 4;
       CurrencyExchRate@1140018 : Record 330;
@@ -90,7 +105,7 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
       body[2] := '';
       chr := 10;
       CurrencyURL := ENVIRON('TEMP')+'\coba_rates_DE.xls';
-      NewCurrencyDate := TOPAS_API.CalcNextWorkday(WORKDATE);
+      NewCurrencyDate := TOPAS_API.CalcNextWorkday(+1,v_date);
       //Fr Testzwecke
       //NewCurrencyDate := 030816D;
 
@@ -127,15 +142,16 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
 
       Cell_Text_Tagesdatum := FindRow('Tagesdatum','Cell','A','Z');
 
-      IF FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z') <> '' THEN
+      IF FindRow(FORMAT(TOPAS_API.CalcNextWorkday(-1,NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z') <> '' THEN
         BEGIN
 
           COMPRESSARRAY(_aCurrency);
           FOR i:= 1 TO  CurrCount DO
             BEGIN
 
-              Row_Date := FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z');
-              Column_Date := FindRow(FORMAT(CALCDATE('-1T',NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Column','A','Z');
+              Row_Date := FindRow(FORMAT(TOPAS_API.CalcNextWorkday(-1,NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),'Row','A','Z');
+              Column_Date := FindRow(FORMAT(TOPAS_API.CalcNextWorkday(-1,NewCurrencyDate),0,'<Day,2>.<Month,2>.<Year4>'),
+                            'Column','A','Z');
               Column_Curr := FindRow(_aCurrency[i],'Column','A','Z');
               Row_Curr  := FindRow(_aCurrency[i],'Row','A','Z');
 
@@ -173,7 +189,7 @@ OBJECT Codeunit 50000 Importiere Wechselkurse
            IF NOT HideMsg THEN
              MESSAGE(Text000);
 
-            subject := 'Kurse ' + FORMAT(NewCurrencyDate);
+            subject := 'Kurse ' + FORMAT(NewCurrencyDate,0,'<Day,2>.<Month,2>.<Year4>');
             body[1] := 'Hallo' + FORMAT(chr) +
                        'hier die aktuellen Kurse:' + FORMAT(chr) + FORMAT(chr) +
                        ExchCurrRateText + FORMAT(chr) +
