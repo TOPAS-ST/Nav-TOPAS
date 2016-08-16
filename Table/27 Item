@@ -2,8 +2,8 @@ OBJECT Table 27 Item
 {
   OBJECT-PROPERTIES
   {
-    Date=23.11.15;
-    Time=13:35:26;
+    Date=16.08.16;
+    Time=16:11:09;
     Modified=Yes;
     Version List=NAVW15.00,CTM;
   }
@@ -1239,6 +1239,10 @@ OBJECT Table 27 Item
                                                                     Ekz.MODIFY;
                                                                   UNTIL Ekz.NEXT = 0;
 
+                                                                  Quotedaten.RESET;
+                                                                  Quotedaten.SETRANGE(Quotedaten."Artikelnr.","No. 2");
+                                                                  IF Quotedaten.FINDFIRST THEN
+                                                                    Quotedaten.MODIFYALL(Herstellercode,"Manufacturer Code");
 
                                                                 //  IF Herstellerkurzname <> "Global Dimension 1 Code" THEN
                                                                 //     MESSAGE('Bitte šberprfen Sie die Kostenstelle.');
@@ -2069,6 +2073,7 @@ OBJECT Table 27 Item
       Ekzeile@1140008 : Record 39;
       Ekz@1140007 : Record 39;
       Champs@1140009 : Record 50028;
+      Quotedaten@1140010 : Record 50014;
 
     PROCEDURE AssistEdit@2() : Boolean;
     BEGIN
@@ -2231,6 +2236,45 @@ OBJECT Table 27 Item
         REPEAT
           Sum += ReqLine."Quantity (Base)";
         UNTIL ReqLine.NEXT = 0;
+    END;
+
+    PROCEDURE FindPurchPrice@1140002("Item No"@1140003 : Code[20];"Vendor No"@1140007 : Code[20];Date@1140002 : Date;Unit@1140000 : Code[10]) : Decimal;
+    VAR
+      FindPurchPrice@1140006 : Record 7012;
+      Vendor@1140008 : Record 23;
+      BestPrice@1140005 : Decimal;
+      BestDate@1140004 : Date;
+      Curr@1140001 : Code[10];
+    BEGIN
+      IF Vendor.GET("Vendor No") THEN
+        Curr := Vendor."Currency Code"
+      ELSE
+        Curr := '';
+      WITH FindPurchPrice DO BEGIN
+        SETRANGE("Item No.","Item No");
+        SETFILTER("Ending Date",'%1|>=%2',0D,Date);
+        //SETFILTER("Currency Code",'%1|%2',Curr,'');
+        SETFILTER("Currency Code",'%1',Curr);
+        IF Unit <> '' THEN
+          SETFILTER("Unit of Measure Code",'%1|%2',Unit,'');
+        SETRANGE("Starting Date",0D,Date);
+        SETRANGE("Vendor No.","Vendor No");
+        IF FINDFIRST THEN
+          BEGIN
+            BestPrice := "Direct Unit Cost";
+            BestDate := "Starting Date";
+            REPEAT
+              //IF BestPrice > "Direct Unit Cost" THEN
+              //Nicht mehr der beste, sondern der aktuellste Preis gesucht
+              IF "Starting Date" > BestDate THEN
+                BEGIN
+                  BestPrice := "Direct Unit Cost";
+                  BestDate := "Starting Date";
+                END;
+            UNTIL NEXT = 0;
+          END;
+        EXIT(BestPrice);
+      END;
     END;
 
     BEGIN
