@@ -2,8 +2,8 @@ OBJECT Codeunit 50003 TOPAS Test
 {
   OBJECT-PROPERTIES
   {
-    Date=18.02.15;
-    Time=10:25:09;
+    Date=23.08.16;
+    Time=16:11:02;
     Modified=Yes;
     Version List=;
   }
@@ -24,6 +24,7 @@ OBJECT Codeunit 50003 TOPAS Test
       Compare_Excel@1140012 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
       Compare_Book@1140011 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
       Compare_Sheet@1140010 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      TOPAS_API@1140009 : Codeunit 50001;
       leere_zeilen@1140008 : Integer;
       leerzeilen@1140007 : Integer;
       max_leere_zeilen@1140006 : Integer;
@@ -145,18 +146,40 @@ OBJECT Codeunit 50003 TOPAS Test
         'DEU=20000';
 
       Spalte_User@1140003 : TextConst
-        'DEU=D';
+        'DEU=C';
+      Wartungsvertrag@1140009 : Record 50011;
       Servicepositionen@1140004 : Record 50024;
       excel_enddate@1140000 : Decimal;
       new_enddate@1140002 : Date;
       username@1140005 : Code[40];
 
       Spalte_Enddate@1140006 : TextConst
-        'DEU=I';
+        'DEU=G';
 
       Spalte_Usergroup@1140007 : TextConst
-        'DEU=F';
+        'DEU=E';
       usergroup@1140008 : Text[80];
+
+      Spalte_Fehler@1140010 : TextConst
+        'DEU=L';
+
+      Spalte_NavDatum@1140011 : TextConst
+        'DEU=M';
+
+      Spalte_NavDatum_1T@1140012 : TextConst
+        'DEU=N';
+
+      Spalte_Typo3Datum@1140013 : TextConst
+        'DEU=O';
+
+      Spalte_Status@1140014 : TextConst
+        'DEU=P';
+
+      Spalte_Vertrag@1140016 : TextConst
+        'DEU=Q';
+      XlEdgeBottom@1140019 : Integer;
+      XlContinuous@1140017 : Integer;
+      XlDouble@1140015 : Integer;
     BEGIN
       CLEAR(Quelle_Excel);
       //CLEAR(Compare_Excel);
@@ -165,6 +188,9 @@ OBJECT Codeunit 50003 TOPAS Test
       compare_text := '';
       max_leere_zeilen := 10;
       chr := 10;
+      XlEdgeBottom := 9;
+      XlContinuous := 1;
+      XlDouble := 12;
 
       //********************************************************************************************
       //                               Definiert die Quelldatei
@@ -178,14 +204,22 @@ OBJECT Codeunit 50003 TOPAS Test
       excel_datens„tze := Quelle_Sheet.UsedRange.Rows.Count;
       Quelle_j := '2';
 
-      Quelle_Excel.Range('AZ1').Value := 'frei';
-      Quelle_Excel.Range('BA1').Value := 'Navision';
-      Quelle_Excel.Range('BB1').Value := 'Navision + 1T';
-      Quelle_Excel.Range('BB:BB').Font.Bold := TRUE;
-      Quelle_Excel.Range('BC1').Value := 'Typo3';
-      Quelle_Excel.Range('BD1').Value := 'Status';
-      Quelle_Excel.Range('BD:BD').ColumnWidth := 20;
-      Quelle_Excel.Range('BE1').Value := 'Benutzergruppe';
+      Quelle_Excel.Range(Spalte_Fehler+'1').Value := 'Fehler';
+      Quelle_Excel.Range(Spalte_NavDatum+'1').Value := 'Navision';
+      Quelle_Excel.Range(Spalte_NavDatum_1T+'1').Value := 'Navision + 1T';
+      Quelle_Excel.Range(Spalte_NavDatum_1T+':'+Spalte_NavDatum_1T).Font.Bold := TRUE;
+      Quelle_Excel.Range(Spalte_Typo3Datum +'1').Value := 'Typo3';
+      Quelle_Excel.Range(Spalte_Status+'1').Value := 'Status';
+      Quelle_Excel.Range(Spalte_Vertrag+'1').Value := 'Wartungsvertrag';
+      Quelle_Excel.Range(Spalte_Status+':'+Spalte_Vertrag).ColumnWidth := 20;
+
+      //Einfacher, unterer Rahmen
+      Quelle_Sheet.Range('A1:Q1').Borders.Item(XlEdgeBottom).LineStyle := XlContinuous;
+      Quelle_Sheet.Range('A1:Q1').Font.Bold := TRUE;
+      //fixiert die oberste Zeile
+      Quelle_Excel.ActiveWindow.SplitColumn(0);
+      Quelle_Excel.ActiveWindow.SplitRow(1);
+      Quelle_Excel.ActiveWindow.FreezePanes := TRUE;
 
       REPEAT
 
@@ -222,15 +256,18 @@ OBJECT Codeunit 50003 TOPAS Test
                       //                             Bei Fehler in Protokoll Datei eintragen
                       //*********************************************************************************************
 
-                      Quelle_Excel.Range('BD'+Quelle_j).Value := 'Ablaufdatum falsch';
-                      Quelle_Excel.Range('BD'+Quelle_j).Font.Color := 255;
-                      Quelle_Excel.Range('BC'+Quelle_j).Font.Color := 255;
+                      Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
+                      Quelle_Excel.Range(Spalte_Typo3Datum+Quelle_j).Font.Color := 255;
+                      Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                      FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Ablaufdatum falsch ';
+                      Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
 
                     END;
 
-                 Quelle_Excel.Range('BA'+Quelle_j).Value := Servicepositionen."Ablaufdatum Serviceleistung";
-                 Quelle_Excel.Range('BB'+Quelle_j).Value := CALCDATE('+1T',Servicepositionen."Ablaufdatum Serviceleistung");
-                 IF new_enddate <> 0D THEN Quelle_Excel.Range('BC'+Quelle_j).Value := new_enddate;
+                 Quelle_Excel.Range(Spalte_NavDatum+Quelle_j).Value := Servicepositionen."Ablaufdatum Serviceleistung";
+                 Quelle_Excel.Range(Spalte_NavDatum_1T+Quelle_j).Value := CALCDATE('+1T',
+                                                                          Servicepositionen."Ablaufdatum Serviceleistung");
+                 IF new_enddate <> 0D THEN Quelle_Excel.Range(Spalte_Typo3Datum+Quelle_j).Value := new_enddate;
 
                  IF ((STRPOS(usergroup,'70') = 0) AND (STRPOS(usergroup,'71') = 0))
                  OR ((STRPOS(username,'MP11') <> 0) AND (STRPOS(usergroup,'13') = 0))
@@ -239,42 +276,64 @@ OBJECT Codeunit 50003 TOPAS Test
                  OR ((STRPOS(username,'M800') <> 0) AND (STRPOS(usergroup,'16') = 0))
                  OR ((STRPOS(username,'M2K') <> 0) AND (STRPOS(usergroup,'10') = 0) AND
                  (STRPOS(usergroup,'18') = 0) AND (STRPOS(usergroup,'73') = 0))
-                 OR ((STRPOS(username,'M2600') <> 0) AND (STRPOS(usergroup,'76') = 0))
+                 OR ((STRPOS(username,'M26') <> 0) AND (STRPOS(usergroup,'76') = 0))
                  OR ((STRPOS(username,'M3K') <> 0) AND (STRPOS(usergroup,'74') = 0))
                  OR ((STRPOS(username,'M4K') <> 0) AND (STRPOS(usergroup,'77') = 0)) THEN
                    BEGIN
-                     Quelle_Excel.Range('BE'+Quelle_j).Value := 'Benutzergruppe prfen';
-                     Quelle_Excel.Range('BE'+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                     FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Benutzergruppe prfen ';
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
                    END;
-
 
                  IF ((STRPOS(username,'M1KB') <> 0) AND (Servicepositionen."Artikelnr." <> 'M1KB-CH')
-                 AND (Servicepositionen."Urspr. Buchungsdatum" >= 011011D) AND (STRPOS(usergroup,'11') = 0)) THEN
+                  AND (Servicepositionen."Urspr. Buchungsdatum" >= 011011D) AND (STRPOS(usergroup,'11') = 0)) THEN
                    BEGIN
-                     Quelle_Excel.Range('BE'+Quelle_j).Value := 'Benutzergruppe prfen';
-                     Quelle_Excel.Range('BE'+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                     FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Benutzergruppe prfen ';
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
                    END;
 
-                 IF ((STRPOS(username,'M1K-') <> 0) AND (STRPOS(usergroup,'9') = 0)) THEN
+                 IF ((STRPOS(username,'M1K-') <> 0) AND (STRPOS(usergroup,'9') = 0)
+                 AND (STRPOS(Servicepositionen."Artikelnr.",'MSBG') = 0 )) THEN
                    BEGIN
-                     Quelle_Excel.Range('BE'+Quelle_j).Value := 'Benutzergruppe prfen';
-                     Quelle_Excel.Range('BE'+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                     FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Benutzergruppe prfen ';
+                     Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
                    END;
 
+                 IF ((STRPOS(username,'M1K-') <> 0) AND (STRPOS(usergroup,'11') = 0)
+                 AND (STRPOS(Servicepositionen."Artikelnr.",'MSBG') <> 0 )) THEN
+                   BEGIN
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                     FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Benutzergruppe prfen ';
+                     Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
+                   END;
 
                  IF (STRPOS(usergroup,'70') <> 0) AND (STRPOS(usergroup,'71') <> 0) THEN
                    BEGIN
-                     Quelle_Excel.Range('BE'+Quelle_j).Value := 'Registrierung+Download?';
-                     Quelle_Excel.Range('BE'+Quelle_j).Font.Color := 255;
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                     FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Registrierung+Download? ';
+                     Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
+                     Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
                    END;
+
+                 IF Wartungsvertrag.GET(Servicepositionen."Wartungsvertragsnr.") THEN
+                   Quelle_Excel.Range(Spalte_Vertrag+Quelle_j).Value := TOPAS_API.CreateExcelHyperlinkToNav(Wartungsvertrag.TABLENAME,
+                                                              1,50015,Wartungsvertrag."Wartungsvertragsnr.");
 
                 END
               ELSE
                 BEGIN
                   IF excel_enddate <> 0 THEN
                     BEGIN
-                      Quelle_Excel.Range('BD'+Quelle_j).Value := 'Username unbekannt';
-                      Quelle_Excel.Range('BD'+Quelle_j).Font.Color := 255;
+                      Quelle_Excel.Range(Spalte_Status+Quelle_j).Value :=
+                      FORMAT(Quelle_Excel.Range(Spalte_Status+Quelle_j).Value) + 'Username unbekannt ';
+                      Quelle_Excel.Range(Spalte_Status+Quelle_j).Font.Color := 255;
+                      Quelle_Excel.Range(Spalte_Fehler+Quelle_j).Value := 'X';
                     END;
                 END;
             END;
