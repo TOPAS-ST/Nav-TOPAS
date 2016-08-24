@@ -2186,9 +2186,13 @@ IF Vkliefkopf.FINDLAST THEN
                                                      LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                                  END;
 
-                                               //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
+                                               //Das vorgegebene Ablaufdatum übersteuert d. kalkulierte Verlängerungsablaufddatum
                                                IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                                  LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
+
+                                               LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                        LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                        LizenzTab."Dauer Serviceleistung");
 
                                                IF (KalkulationHolen."Wartungsvertragsnr." = '')
                                                AND ((LizenzTab.Benutzername <> '')
@@ -2381,9 +2385,13 @@ IF Vkliefkopf.FINDLAST THEN
                                               LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
-                                        //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
+                                        //Das vorgegebene Ablaufdatum übersteuert d. kalkulierte Verlängerungsablaufddatum
                                         IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
+
+                                        LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                 LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                 LizenzTab."Dauer Serviceleistung");
 
                                         IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
@@ -2586,9 +2594,13 @@ IF Vkliefkopf.FINDLAST THEN
                                               LizenzTab."Ablaufdatum Serviceleistung" := v_verlaengerung_ablauf;
                                           END;
 
-                                        //Das vorgegebene Ablaufdatum übersteuert d. neu errechnete Verlängerungsablaufddatum
+                                        //Das vorgegebene Ablaufdatum übersteuert d. kalkulierte Verlängerungsablaufddatum
                                         IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
+
+                                        LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                 LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                 LizenzTab."Dauer Serviceleistung");
 
                                         IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
@@ -3044,6 +3056,17 @@ ELSE
     ELSE
       EXIT(AktLfdNr);
   END;
+
+LizenzdatumAngleichen(startdate : Date;enddate : Date;laufzeit : Code[20]) : Date
+IF (laufzeit <> '') AND (STRPOS(laufzeit,'M') <> 0) THEN
+  BEGIN
+    EVALUATE(v_laufzeit,COPYSTR(laufzeit,1,STRPOS(laufzeit,'M')-1));
+    IF (v_laufzeit MOD 12 = 0) AND ((TOPAS_API.CalcDays(startdate,enddate) MOD 365) > 1)
+    AND (startdate > CALCDATE('-' + laufzeit,enddate)) THEN
+      EXIT(CALCDATE('-' + laufzeit,enddate))
+  END;
+
+EXIT(startdate);
 
 WartungsStartErmitteln("SUP Artikelnr" : Code[20];Startdatum : Date;Buchungsdatum : Date;Wartungsnr : Code[20];Laufzeit_ab_Buchungsdatu
 IF ("SUP Artikelnr"= 'CHAMPS-RE_INSTATE#01') OR ("SUP Artikelnr" = 'RE_INSTATEMENT_FEE') THEN
