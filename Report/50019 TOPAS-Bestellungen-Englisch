@@ -3,7 +3,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
   OBJECT-PROPERTIES
   {
     Date=31.08.16;
-    Time=09:52:03;
+    Time=11:18:24;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -376,26 +376,27 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                  quote:= 'Quote: ' + EinkZeile."Quotenr. Hersteller";
                                END;
                            // TOPAS
-                             IF "Purchase Line"."Outstanding Quantity"=0 THEN
-                             TotalDruck:=101;
+
+                           IF "Purchase Line"."Outstanding Quantity"=0 THEN
+                           TotalDruck:=101;
 
                            //2015-02-03 ST Andruck von Quotefeldern fr Info an AudioCodes
                            beschreibung2_neu := '';
-                           IF "Purchase Line"."Manufacturer Code" = '59' THEN
-                             BEGIN
-                               IF Quotedaten.GET("Purchase Line"."Quotenr.") THEN
+                           CASE "Purchase Line"."Manufacturer Code" OF
+                             '59', '85':
                                BEGIN
+                               IF Quotedaten.GET("Purchase Line"."Quotenr.") THEN BEGIN
                                  beschreibung2_neu := 'Qte ' + Quotedaten."Quotenr. Hersteller" + ' ' + Quotedaten.Validationcode;
                                END
-                             ELSE
-                               BEGIN
-                                 artikel.GET("Purchase Line"."No.");
-                                 IF STRPOS(LOWERCASE(artikel.Preisinfo),'schaeffler') <> 0 THEN
-                                   beschreibung2_neu := 'Qte 1022661'
-                                 ELSE
-                                   beschreibung2_neu := '';
+                                 ELSE BEGIN
+                                   artikel.GET("Purchase Line"."No.");
+                                   IF STRPOS(LOWERCASE(artikel.Preisinfo),'schaeffler') <> 0 THEN
+                                     beschreibung2_neu := 'Qte 1022661'
+                                   ELSE
+                                     beschreibung2_neu := '';
+                                 END;
                                END;
-                             END;
+                           END;
                          END;
 
         OnPostDataItem=BEGIN
