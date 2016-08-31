@@ -2,8 +2,8 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
 {
   OBJECT-PROPERTIES
   {
-    Date=16.03.16;
-    Time=11:30:07;
+    Date=31.08.16;
+    Time=09:52:03;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -385,7 +385,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                              BEGIN
                                IF Quotedaten.GET("Purchase Line"."Quotenr.") THEN
                                BEGIN
-                                 beschreibung2_neu := 'Qte ' + Quotedaten."Quotenr. Hersteller" + ' ' + Quotedaten.Genehmigungstext;
+                                 beschreibung2_neu := 'Qte ' + Quotedaten."Quotenr. Hersteller" + ' ' + Quotedaten.Validationcode;
                                END
                              ELSE
                                BEGIN
