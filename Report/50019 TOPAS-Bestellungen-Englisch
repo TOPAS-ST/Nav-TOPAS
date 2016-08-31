@@ -2,8 +2,8 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
 {
   OBJECT-PROPERTIES
   {
-    Date=16.12.14;
-    Time=10:44:12;
+    Date=16.03.16;
+    Time=11:30:07;
     Modified=Yes;
     Version List=Topas Bericht;
   }
@@ -378,6 +378,24 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                            // TOPAS
                              IF "Purchase Line"."Outstanding Quantity"=0 THEN
                              TotalDruck:=101;
+
+                           //2015-02-03 ST Andruck von Quotefeldern fr Info an AudioCodes
+                           beschreibung2_neu := '';
+                           IF "Purchase Line"."Manufacturer Code" = '59' THEN
+                             BEGIN
+                               IF Quotedaten.GET("Purchase Line"."Quotenr.") THEN
+                               BEGIN
+                                 beschreibung2_neu := 'Qte ' + Quotedaten."Quotenr. Hersteller" + ' ' + Quotedaten.Genehmigungstext;
+                               END
+                             ELSE
+                               BEGIN
+                                 artikel.GET("Purchase Line"."No.");
+                                 IF STRPOS(LOWERCASE(artikel.Preisinfo),'schaeffler') <> 0 THEN
+                                   beschreibung2_neu := 'Qte 1022661'
+                                 ELSE
+                                   beschreibung2_neu := '';
+                               END;
+                             END;
                          END;
 
         OnPostDataItem=BEGIN
@@ -518,7 +536,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          FontSize=9;
                                                          CaptionML=DEU=feld1;
                                                          SourceExpr="Purchase Line"."Line No." }
-            { 63  ;TextBox      ;1127 ;78   ;6500 ;423  ;HorzAlign=Left;
+            { 63  ;TextBox      ;1125 ;78   ;6500 ;423  ;HorzAlign=Left;
                                                          FontSize=9;
                                                          SourceExpr="Purchase Line"."Artikelnr. 2" }
             { 64  ;TextBox      ;8900 ;78   ;1700 ;423  ;FontSize=9;
@@ -541,7 +559,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
                                                          SourceExpr="Purchase Line".Amount+"Purchase Line"."Inv. Discount Amount";
                                                          AutoFormatType=1;
                                                          AutoFormatExpr="Purchase Line"."Currency Code" }
-            { 24  ;TextBox      ;5700 ;78   ;3185 ;400  ;HorzAlign=Right;
+            { 24  ;TextBox      ;5700 ;78   ;3185 ;423  ;HorzAlign=Right;
                                                          FontSize=9;
                                                          SourceExpr="Purchase Line".Description }
             { 25  ;Label        ;10800;78   ;1000 ;423  ;FontSize=9;
@@ -563,7 +581,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           }
           CONTROLS
           {
-            { 10  ;Label        ;1148 ;21   ;2800 ;430  ;HorzAlign=Left;
+            { 10  ;Label        ;1125 ;21   ;2800 ;430  ;HorzAlign=Left;
                                                          VertAlign=Top;
                                                          FontSize=9;
                                                          FontBold=Yes;
@@ -580,15 +598,15 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
             SectionWidth=19000;
             SectionHeight=400;
             OnPreSection=BEGIN
-                           CurrReport.SHOWOUTPUT((EinkZeile."Description 2" <> '') AND (EinkZeile."Outstanding Quantity"<>0));
+                           CurrReport.SHOWOUTPUT(((EinkZeile."Description 2" <> '') OR (beschreibung2_neu <> '')) AND (EinkZeile."Outstanding Quantity"<>0));
                          END;
 
           }
           CONTROLS
           {
-            { 4   ;TextBox      ;1149 ;0    ;7937 ;400  ;HorzAlign=Right;
+            { 4   ;TextBox      ;1125 ;0    ;16246;400  ;HorzAlign=Left;
                                                          FontSize=9;
-                                                         SourceExpr="Purchase Line"."Description 2" }
+                                                         SourceExpr="Purchase Line"."Description 2" + ' ' + beschreibung2_neu }
           }
            }
         { PROPERTIES
@@ -603,7 +621,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           }
           CONTROLS
           {
-            { 22  ;TextBox      ;1148 ;0    ;16300;400  ;HorzAlign=Left;
+            { 22  ;TextBox      ;1125 ;0    ;16300;400  ;HorzAlign=Left;
                                                          FontSize=9;
                                                          SourceExpr="Purchase Line".Description }
           }
@@ -622,7 +640,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
           {
             { 6   ;TextBox      ;2948 ;0    ;13800;400  ;FontSize=9;
                                                          SourceExpr=warennummer }
-            { 8   ;Label        ;1148 ;0    ;1700 ;400  ;HorzAlign=Left;
+            { 8   ;Label        ;1125 ;0    ;1700 ;400  ;HorzAlign=Left;
                                                          VertAlign=Top;
                                                          FontSize=9;
                                                          FontBold=Yes;
@@ -1191,6 +1209,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
       VerkEinkPerson@1140005 : Record 13;
       MWSTBetragZeile@1140006 : TEMPORARY Record 290;
       EinkZeile@1140007 : TEMPORARY Record 39;
+      Quotedaten@1140031 : Record 50014;
       EinkDruckZ„hler@1140008 : Codeunit 317;
       FormatAdr@1140009 : Codeunit 365;
       EinkBuchen@1140010 : Codeunit 90;
@@ -1212,6 +1231,7 @@ OBJECT Report 50019 TOPAS-Bestellungen Englisch
       TotalDruck@1140026 : Integer;
       w„hrung@1140027 : Code[10];
       ship_to@1140028 : ARRAY [8] OF Text[50];
+      beschreibung2_neu@1140029 : Text[80];
 
     BEGIN
     {
