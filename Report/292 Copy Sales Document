@@ -2,8 +2,9 @@ OBJECT Report 292 Copy Sales Document
 {
   OBJECT-PROPERTIES
   {
-    Date=13.02.07;
-    Time=12:00:00;
+    Date=09.09.16;
+    Time=09:38:42;
+    Modified=Yes;
     Version List=NAVW15.00,NAVDACH4.00;
   }
   PROPERTIES
@@ -191,6 +192,15 @@ OBJECT Report 292 Copy Sales Document
         FromSalesHeader.INIT;
         DocNoOccurrence := 0;
         DocVersionNo := 0;
+        //TOPAS 09-09-2016 ST
+        CASE DocType OF
+          DocType :: "Arch. Quote", DocType :: "Arch. Order", DocType :: "Arch. Blanket Order" :
+            BEGIN
+              DocNoOccurrence := 1;
+              DocVersionNo := 1;
+            END;
+        END;
+        ///TOPAS Ende
       END ELSE
         IF FromSalesHeader."No." = '' THEN BEGIN
           FromSalesHeader.INIT;
