@@ -2,8 +2,8 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
 {
   OBJECT-PROPERTIES
   {
-    Date=04.11.15;
-    Time=14:27:31;
+    Date=27.09.16;
+    Time=09:23:19;
     Modified=Yes;
     Version List=;
   }
@@ -536,7 +536,7 @@ OBJECT Report 50051 Meeting - akt. & arch. Ang.
                                                          FontSize=8;
                                                          FontBold=No;
                                                          SourceExpr=Arch_Debitor."Feld 13" }
-            { 1140073;TextBox   ;15954;150  ;1455 ;423  ;SourceExpr=Debitor."Feld 19" }
+            { 1140073;TextBox   ;15954;150  ;1455 ;423  ;SourceExpr=Arch_Debitor."Feld 19" }
           }
            }
         { PROPERTIES
