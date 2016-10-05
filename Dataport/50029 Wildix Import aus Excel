@@ -2,8 +2,8 @@ OBJECT Dataport 50029 Wildix Import aus Excel
 {
   OBJECT-PROPERTIES
   {
-    Date=15.07.16;
-    Time=09:54:33;
+    Date=05.10.16;
+    Time=13:53:28;
     Modified=Yes;
     Version List=Fertig + Excel Sheets;
   }
@@ -27,6 +27,7 @@ OBJECT Dataport 50029 Wildix Import aus Excel
 
                     neuer_preis := 0;
                     neuer_artikel := 0;
+                    gesperrte_artikel := 0;
                     sonstige_aenderungen := 0;
                     excel_datens„tze := 0;
 
@@ -37,7 +38,7 @@ OBJECT Dataport 50029 Wildix Import aus Excel
                     IF FORMAT(Quelle_Sheet.Range(Spalte_Part + '1').Value) <> 'Code' THEN ERROR(Text000,Spalte_Part);
                     IF FORMAT(Quelle_Sheet.Range(Spalte_Category + '1').Value) <> 'Category' THEN ERROR(Text000,Spalte_Category);
                     IF FORMAT(Quelle_Sheet.Range(Spalte_Descr + '1').Value) <> 'Description' THEN ERROR(Text000,Spalte_Descr);
-                    IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP + '1').Value) <> 'Enduser price' THEN ERROR(Text000,Spalte_MSRP);
+                    IF FORMAT(Quelle_Sheet.Range(Spalte_MSRP + '1').Value) <> 'Price minimum recommended' THEN ERROR(Text000,Spalte_MSRP);
 
                     //********************************************************************************************
                     //                               Definiert die Protokolldatei
@@ -197,11 +198,25 @@ OBJECT Dataport 50029 Wildix Import aus Excel
 
                     UNTIL (Max_Datens„tze = Quelle_j) OR (leerzeilen = 15);  // Nach 15 Zeilen ohne Artikel ist Schluss
 
+                    //*********************************************************************************************
+                    //         Alle Artikel, die nicht mehr in der Preisliste stehen, werden gesperrt
+                    //*********************************************************************************************
+
+                    Artikel.RESET;
+                    Artikel.SETFILTER("Manufacturer Code",'%1',herstellercode_wil);
+                    Artikel.SETFILTER("Update letzte Preisliste",'%1',FALSE);
+                    Artikel.SETFILTER(Blocked,'%1',FALSE);
+                    IF Artikel.FINDFIRST THEN BEGIN
+                      gesperrte_artikel := Artikel.COUNT;
+                      Artikel.MODIFYALL(Blocked,TRUE,TRUE);
+                    END;
+
                     Quelle_Excel.Visible(TRUE);
                     Protokoll_Excel.Visible(TRUE);
 
-                    MESSAGE('Import der Preisliste abgeschlossen.'+ '\\' + 'Neue Artikel: %1\Neue Preise: %2\Sonstige Žnderungen: %3\\'+
-                            'Excel Datens„tze: %4\',neuer_artikel,neuer_preis,sonstige_aenderungen,excel_datens„tze);
+                    MESSAGE('Import der Preisliste abgeschlossen.'+ '\\' + 'Neue Artikel: %1\Neue Preise: %2\Gesperrte Artikel: %3\\'+
+                            'Sonstige Žnderungen: %4\\Excel Datens„tze: %5\'
+                            ,neuer_artikel,neuer_preis,gesperrte_artikel,sonstige_aenderungen,excel_datens„tze);
                   END;
 
     OnPostDataport=VAR
@@ -303,6 +318,7 @@ OBJECT Dataport 50029 Wildix Import aus Excel
       leerzeilen@1140009 : Integer;
       neuer_preis@1140008 : Integer;
       neuer_artikel@1140011 : Integer;
+      gesperrte_artikel@1140046 : Integer;
       sonstige_aenderungen@1140010 : Integer;
       excel_datens„tze@1140012 : Integer;
       ek_discount@1140013 : Decimal;
@@ -437,6 +453,10 @@ OBJECT Dataport 50029 Wildix Import aus Excel
             BEGIN
               IF (verkaufspreis."Unit Price" <> PL_MSRP) AND (PL_MSRP <> 0) THEN
                 BEGIN
+                  IF PL_MSRP < verkaufspreis."Unit Price" THEN
+                    Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'gnstiger'
+                  ELSE
+                    Protokoll_Sheet.Range('J'+Protokoll_j).Value := 'teurer';
                   verkaufspreis."Unit Price" := PL_MSRP;
                   verkaufspreis.MODIFY(TRUE);
                 END;
