@@ -2,8 +2,8 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
 {
   OBJECT-PROPERTIES
   {
-    Date=16.09.16;
-    Time=12:19:04;
+    Date=19.10.16;
+    Time=17:04:57;
     Modified=Yes;
     Version List=;
   }
@@ -73,12 +73,8 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                Sheet.Range('A'+j+':B'+j).Font.Bold := TRUE;
                                IF zugangsdaten THEN BEGIN
                                  IF excel_layout = excel_layout :: filter THEN BEGIN
-                                   Sheet.Range('P'+j).Value := 'myTOPAS Zugangsdaten';
-                                   Sheet.Range('P'+j).Font.Bold := TRUE;
-                                 END;
-                                 IF excel_layout = excel_layout :: klassisch THEN BEGIN
-                                   Sheet.Range('K'+j).Value := 'myTOPAS Zugangsdaten';
-                                   Sheet.Range('K'+j).Font.Bold := TRUE;
+                                   Sheet.Range('R'+j).Value := 'myTOPAS Zugangsdaten';
+                                   Sheet.Range('R'+j).Font.Bold := TRUE;
                                  END;
                                END;
 
@@ -165,13 +161,15 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                    Sheet.Range('C'+j).Value := 'Startdatum';
                                    Sheet.Range('D'+j).Value := 'Ablaufdatum';
                                    Sheet.Range('E'+j).Value := 'Endkunde';
-                                   Sheet.Range('A'+j+':E'+j).Font.Bold := TRUE;
+                                   Sheet.Range('F'+j).Value := 'Endkunde Ort';
+                                   Sheet.Range('A'+j+':F'+j).Font.Bold := TRUE;
                                    j := INCSTR(j);
                                    Sheet.Range('A'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
                                    Sheet.Range('B'+j).Value := Wartungsvertrag."Auftragsnr. Service";
                                    Sheet.Range('C'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
                                    Sheet.Range('D'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
                                    Sheet.Range('E'+j).Value := Wartungsvertrag.Endkunde;
+                                   Sheet.Range('F'+j).Value := Wartungsvertrag."Endkunde Ort";
                                    j := INCSTR(j);
                                 END;
                              END;
@@ -269,13 +267,14 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                 Sheet.Range('F'+j).Value := 'Board ini';
                                 Sheet.Range('G'+j).Value := 'HW Lieferung';
                                 Sheet.Range('H'+j).Value := 'Position';
-                                Sheet.Range('I'+j).Value := 'Ihre Referenz';
-                                Sheet.Range('J'+j).Value := 'Projektinfos';
+                                Sheet.Range('I'+j).Value := 'HW Lieferdatum';
+                                Sheet.Range('J'+j).Value := 'Ihre Referenz';
+                                Sheet.Range('K'+j).Value := 'Projektinfos';
                                 IF zugangsdaten THEN BEGIN
-                                  Sheet.Range('K'+j).Value := 'Benutzername';
-                                  Sheet.Range('L'+j).Value := 'Passwort';
+                                  Sheet.Range('L'+j).Value := 'Benutzername';
+                                  Sheet.Range('M'+j).Value := 'Passwort';
                                 END;
-                                Sheet.Range('A'+j+':L'+j).Font.Bold := TRUE;
+                                Sheet.Range('A'+j+':M'+j).Font.Bold := TRUE;
                                 j := INCSTR(j);
                               END;
                           END;
@@ -285,33 +284,29 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                            benutzer := '';
                            pw := '';
 
-                           champs_lieferscheinkopf.RESET;
-                           champs_lieferscheinkopf.SETFILTER(champs_lieferscheinkopf."No.",'%1',"Serviceleist. & Leihstellungen"."Nr.");
-                           IF champs_lieferscheinkopf.FINDFIRST THEN
-                             BEGIN
-                               "ext-referenz":=champs_lieferscheinkopf."External Document No.";
-                             END
-                             ELSE
-                             BEGIN
-                               "ext-referenz":='';
-                             END;
+                           Lieferscheinkopf.RESET;
+                           Lieferscheinkopf.SETFILTER("No.",'%1',"Serviceleist. & Leihstellungen"."Nr.");
+                           IF Lieferscheinkopf.FINDFIRST THEN
+                             "ext-referenz" := Lieferscheinkopf."External Document No."
+                           ELSE
+                             "ext-referenz":='';
 
                            lieferscheinzeile.RESET;
                            lieferscheinzeile.SETFILTER(lieferscheinzeile."Document No.",'%1',"Serviceleist. & Leihstellungen"."Nr.");
                            lieferscheinzeile.SETFILTER(lieferscheinzeile."Line No.",'%1',"Serviceleist. & Leihstellungen"."Belegzeilennr.");
                            IF lieferscheinzeile.FINDFIRST THEN
                              BEGIN
-                               artikel2:=lieferscheinzeile."Artikelnr. 2";
+                               artikel2 := lieferscheinzeile."Artikelnr. 2";
                                IF Wartungsvertrag.Endkunde = '' THEN
                                  BEGIN
                                    endkundezeile := lieferscheinzeile."ACS Projektinfos";
                                  END
-                                 ELSE
+                               ELSE
                                  BEGIN
                                    endkundezeile :='';
                                  END;
                              END
-                             ELSE
+                           ELSE
                              BEGIN
                                artikel2:='';
                                endkundezeile:='';
@@ -333,9 +328,10 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                   Sheet.Range('F'+j).Value := SystemPos."Board ini";
                                 Sheet.Range('G'+j).Value := "Serviceleist. & Leihstellungen"."Urspr. Lieferscheinnr.";
                                 Sheet.Range('H'+j).Value := "Serviceleist. & Leihstellungen"."Urspr. Lieferscheinzeilennr.";
-                                Sheet.Range('I'+j).Value := "ext-referenz";
-                                Sheet.Range('J'+j).Value := endkundezeile;
-
+                                IF Lieferscheinkopf.GET("Serviceleist. & Leihstellungen"."Urspr. Lieferscheinnr.") THEN
+                                  Sheet.Range('I'+j).Value := Lieferscheinkopf."Posting Date";
+                                Sheet.Range('J'+j).Value := "ext-referenz";
+                                Sheet.Range('K'+j).Value := endkundezeile;
                                 //Suche nach 1. Basisger„t zum Andruck des Benuters + PW
                                 IF (Basisger„t = TRUE) AND (zugangsdaten = TRUE)  AND ("Zu exportieren" = TRUE) THEN BEGIN
                                   ServicePos.RESET;
@@ -351,18 +347,20 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                 END;
 
                                 IF excel_layout = excel_layout :: klassisch THEN BEGIN
-                                  Sheet.Range('K'+j).Value := benutzer;
-                                  Sheet.Range('L'+j).Value := pw;
+                                  Sheet.Range('L'+j).Value := benutzer;
+                                  Sheet.Range('M'+j).Value := pw;
                                 END;
 
                                 IF excel_layout = excel_layout :: filter THEN BEGIN
-                                  Sheet.Range('K'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
-                                  Sheet.Range('L'+j).Value := Wartungsvertrag."Auftragsnr. Service";
-                                  Sheet.Range('M'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
-                                  Sheet.Range('N'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
-                                  Sheet.Range('O'+j).Value := Wartungsvertrag.Endkunde;
-                                  Sheet.Range('P'+j).Value := benutzer;
-                                  Sheet.Range('Q'+j).Value := pw;
+                                  Sheet.Range('L'+j).Value := Wartungsvertrag."Wartungsvertragsnr.";
+                                  Sheet.Range('M'+j).Value := Wartungsvertrag."Auftragsnr. Service";
+                                  Sheet.Range('N'+j).Value := FORMAT(Wartungsvertrag.Startdatum);
+                                  Sheet.Range('O'+j).Value := FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                                  Sheet.Range('P'+j).Value := Wartungsvertrag.Endkunde;
+                                  Sheet.Range('Q'+j).Value := Wartungsvertrag."Endkunde Ort";
+                                  Sheet.Range('R'+j).Value := benutzer;
+                                  Sheet.Range('S'+j).Value := pw;
+
                                 END;
 
                                 j := INCSTR(j);
@@ -499,8 +497,15 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
   {
     PROPERTIES
     {
-      Width=8800;
+      Width=9038;
       Height=3740;
+      OnOpenForm=BEGIN
+                   IF PrintToExcel = FALSE THEN
+                     RequestOptionsForm.check_zugangsdaten.EDITABLE := FALSE
+                   ELSE
+                     RequestOptionsForm.check_zugangsdaten.EDITABLE := TRUE;
+                 END;
+
     }
     CONTROLS
     {
@@ -508,23 +513,36 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
                                                    CaptionML=DEU=Export nach Excel }
       { 1140001;CheckBox  ;3630 ;220  ;440  ;440  ;InPage=-1;
                                                    ShowCaption=No;
-                                                   SourceExpr=PrintToExcel }
-      { 1140002;CheckBox  ;3630 ;2530 ;440  ;440  ;InPage=-1;
+                                                   SourceExpr=PrintToExcel;
+                                                   OnPush=BEGIN
+                                                            IF PrintToExcel = FALSE THEN
+                                                              RequestOptionsForm.check_zugangsdaten.EDITABLE := FALSE
+                                                            ELSE
+                                                              RequestOptionsForm.check_zugangsdaten.EDITABLE := TRUE;
+                                                          END;
+                                                           }
+      { 1140002;CheckBox  ;3630 ;3080 ;440  ;440  ;InPage=-1;
                                                    ShowCaption=No;
                                                    SourceExpr=show_only_hw_repl }
-      { 1140003;Label     ;220  ;2530 ;3300 ;440  ;InPage=-1;
+      { 1140003;Label     ;220  ;3080 ;3300 ;440  ;InPage=-1;
                                                    CaptionML=DEU=Nur Hardware Replacement }
-      { 1140004;OptionButton;4620;220 ;3740 ;440  ;InPage=-1;
+      { 1140004;OptionButton;4620;220 ;4031 ;440  ;InPage=-1;
                                                    CaptionML=DEU=Filter Ansicht;
                                                    SourceExpr=excel_layout;
                                                    OptionValue=filter }
-      { 1140005;OptionButton;4620;880 ;3740 ;440  ;InPage=-1;
+      { 1140005;OptionButton;4620;880 ;4031 ;440  ;InPage=-1;
                                                    CaptionML=DEU=Klassische Ansicht;
                                                    SourceExpr=excel_layout;
                                                    OptionValue=klassisch }
-      { 1140006;Label     ;220  ;1760 ;3300 ;440  ;CaptionML=DEU=Zugangsdaten }
-      { 1140007;CheckBox  ;3630 ;1760 ;440  ;440  ;ShowCaption=No;
+      { 1140006;Label     ;4665 ;1813 ;4014 ;440  ;InPage=-1;
+                                                   MultiLine=Yes;
+                                                   LeaderDots=No;
+                                                   CaptionML=DEU=Zugangsdaten Export }
+      { 1140007;CheckBox  ;3630 ;1760 ;440  ;440  ;Name=check_zugangsdaten;
+                                                   InPage=-1;
+                                                   ShowCaption=No;
                                                    SourceExpr=zugangsdaten }
+      { 1140008;Shape     ;110  ;2640 ;8603 ;40   ;InPage=-1 }
     }
   }
   CODE
@@ -544,7 +562,7 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
       filter_startdatum@1140004 : Text[30];
       filter_ablaufdatum@1140005 : Text[30];
       filter@1140006 : Text[180];
-      champs_lieferscheinkopf@1140007 : Record 110;
+      Lieferscheinkopf@1140007 : Record 110;
       "ext-referenz"@1140008 : Text[80];
       "show_ext-referenz"@1140009 : Boolean;
       SystemPos@1140010 : Record 50024;
@@ -582,20 +600,22 @@ OBJECT Report 50186 Wartungsvertrag - Debitor
           Sheet.Range('F3').Value := 'Board ini';
           Sheet.Range('G3').Value := 'HW Lieferung';
           Sheet.Range('H3').Value := 'Position';
-          Sheet.Range('I3').Value := 'Ihre Referenz';
-          Sheet.Range('J3').Value := 'Projektinfos';
-          Sheet.Range('K3').Value := 'Vertragsnr.';
-          Sheet.Range('L3').Value := 'Auftragsnr.';
-          Sheet.Range('M3').Value := 'Startdatum';
-          Sheet.Range('N3').Value := 'Ablaufdatum';
-          Sheet.Range('O3').Value := 'Endkunde';
-          Sheet.Range('O:O').ColumnWidth := 30;
+          Sheet.Range('I3').Value := 'HW Lieferdatum';
+          Sheet.Range('J3').Value := 'Ihre Referenz';
+          Sheet.Range('K3').Value := 'Projektinfos';
+          Sheet.Range('L3').Value := 'Vertragsnr.';
+          Sheet.Range('M3').Value := 'Auftragsnr.';
+          Sheet.Range('N3').Value := 'Startdatum';
+          Sheet.Range('O3').Value := 'Ablaufdatum';
+          Sheet.Range('P3').Value := 'Endkunde';
+          Sheet.Range('P:P').ColumnWidth := 30;
+          Sheet.Range('Q3').Value := 'Endkunde Ort';
           IF zugangsdaten THEN BEGIN
-            Sheet.Range('P3').Value := 'Benutzername';
-            Sheet.Range('Q3').Value := 'Passwort';
+            Sheet.Range('R3').Value := 'Benutzername';
+            Sheet.Range('S3').Value := 'Passwort';
           END;
 
-          Sheet.Range('A3:Q3').Font.Bold := TRUE;
+          Sheet.Range('A3:Z3').Font.Bold := TRUE;
         END;
     END;
 
