@@ -1,0 +1,1108 @@
+OBJECT Form 50102 Navision Administrations Tools
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.11.16;
+    Time=09:02:39;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    Width=15290;
+    Height=15180;
+  }
+  CONTROLS
+  {
+    { 1140000;TabControl;220  ;220  ;14960;14080;HorzGlue=Both;
+                                                 VertGlue=Both;
+                                                 PageNamesML=DEU=Allgemein,Kontakte,Service }
+    { 1140002;Label     ;660  ;2420 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=Packdaten neu bertragen (Angabe Auftrags-Nr.) }
+    { 1140003;TextBox   ;8140 ;2420 ;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr="au-nr1" }
+    { 1140010;CommandButton;10450;2310;2200;550 ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          IF "au-nr1" = '' THEN
+                                                            ERROR(Text002);
+
+                                                          Packkontrolle.HolePackDaten("au-nr1");
+                                                        END;
+                                                         }
+    { 1140006;Label     ;660  ;5940 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=Korrigiere Artikel Einheit - Stck }
+    { 1140007;CommandButton;10450;5830;2200;550 ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          Korrigiere_EinheitenStck;
+                                                        END;
+                                                         }
+    { 1140012;Label     ;660  ;5390 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Artikel }
+    { 1140015;Label     ;660  ;1430 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Packkontrolle }
+    { 1140036;CommandButton;10450;3520;2200;550 ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          LabelDatenBuchen;
+                                                        END;
+                                                         }
+    { 1140037;TextBox   ;8140 ;3630 ;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 SourceExpr=lieferscheinnr }
+    { 1140038;Label     ;660  ;3630 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=0;
+                                                 CaptionML=DEU=Laben Daten neu bertragen (Angabe Lieferscheinnr.) }
+    { 1140040;Shape     ;550  ;4730 ;14300;40   ;ParentControl=1140000;
+                                                 InPage=0 }
+    { 1140019;CommandButton;10450;3630;2200;550 ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          Unsubscribes_einspielen(unsub_speicherort);
+                                                        END;
+                                                         }
+    { 1140016;TextBox   ;2640 ;3630 ;5280 ;440  ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 SourceExpr=unsub_speicherort;
+                                                 OnLookup=BEGIN
+                                                            Open_WinApplct(unsub_speicherort);
+                                                          END;
+
+                                                 OnAssistEdit=BEGIN
+                                                                unsub_speicherort := Save_FileDialog;
+                                                              END;
+                                                               }
+    { 1140017;Label     ;660  ;3630 ;1870 ;440  ;ParentControl=1140016;
+                                                 CaptionML=DEU=Datei }
+    { 1140018;Label     ;660  ;3080 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Unsubscribes einspielen }
+    { 1140008;Label     ;660  ;1980 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 CaptionML=DEU=Ausgeschiedene Kontakte korrigieren }
+    { 1140009;CommandButton;10450;1870;2200;550 ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          Korrigiere_AusgeschiedeneKto;
+                                                        END;
+                                                         }
+    { 1140013;Label     ;660  ;1430 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=1;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Kontakte }
+    { 1140014;Label     ;660  ;1430 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 FontBold=Yes;
+                                                 CaptionML=DEU=Service }
+    { 1140004;Label     ;660  ;2420 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Service erneut buchen (Angabe Auftrags-Nr.) }
+    { 1140005;TextBox   ;8140 ;2420 ;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr="au-nr2" }
+    { 1140011;CommandButton;12760;2310;2200;550 ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          IF "au-nr2" = '' THEN
+                                                            ERROR(Text002);
+
+                                                          Service_neu_aufbauen("au-nr2");
+                                                        END;
+                                                         }
+    { 1140020;Label     ;660  ;3850 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Servicepreise neu kalkulieren (Lfd Nr. von ... - bis ...) }
+    { 1140021;TextBox   ;8140 ;3850 ;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=start_lfdnr }
+    { 1140022;TextBox   ;10890;3850 ;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=end_lfdnr }
+    { 1140023;Label     ;10120;3850 ;550  ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 LeaderDots=No;
+                                                 CaptionML=DEU=bis }
+    { 1140024;CommandButton;12760;3740;2200;550 ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          IF (start_lfdnr = '') OR (end_lfdnr = '') THEN
+                                                            ERROR(Text002);
+
+                                                          Service_neu_kalkulieren(start_lfdnr,end_lfdnr);
+                                                        END;
+                                                         }
+    { 1140025;Shape     ;660  ;3300 ;14300;40   ;ParentControl=1140000;
+                                                 InPage=2 }
+    { 1140026;CommandButton;12760;6380;2200;550 ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          ServiceSeriennrUmbuchen(artikelnr,alte_sn,neue_sn,'RMAXXXXX')
+                                                        END;
+                                                         }
+    { 1140027;Label     ;660  ;5170 ;7260 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Seriennr. umbuchen }
+    { 1140028;TextBox   ;4620 ;6490 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=alte_sn }
+    { 1140029;TextBox   ;4620 ;7150 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=neue_sn }
+    { 1140030;TextBox   ;4620 ;5830 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=artikelnr;
+                                                 TableRelation=Item }
+    { 1140031;Label     ;660  ;5830 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Artikelnr. }
+    { 1140032;Label     ;660  ;6490 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Alte Seriennr. }
+    { 1140033;Label     ;660  ;7150 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Neue Seriennr. }
+    { 1140034;Shape     ;660  ;4730 ;14300;40   ;ParentControl=1140000;
+                                                 InPage=2 }
+    { 1140035;TextBox   ;4620 ;10450;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=auftragsnr }
+    { 1140039;TextBox   ;4620 ;11000;1700 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=auftragszeilennr }
+    { 1140041;Label     ;660  ;10450;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Auftragsnr }
+    { 1140042;Label     ;660  ;11000;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Auftragszeilennr }
+    { 1140043;Label     ;660  ;9790 ;3300 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Quelldatei }
+    { 1140044;TextBox   ;4620 ;9790 ;5170 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 SourceExpr=import_sn_datei;
+                                                 OnLookup=BEGIN
+                                                            Open_WinApplct(import_sn_datei);
+                                                          END;
+
+                                                 OnAssistEdit=BEGIN
+                                                                import_sn_datei := Save_FileDialog;
+                                                              END;
+                                                               }
+    { 1140045;CommandButton;12760;9680;2200;550 ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=GO;
+                                                 OnPush=BEGIN
+                                                          ImportSeriennrInBeleg(auftragsnr,auftragszeilennr);
+                                                        END;
+                                                         }
+    { 1140046;Label     ;660  ;8360 ;8910 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Zu importierende Seriennummern in vorhandene Auftrags-Kalkulation }
+    { 1140047;Shape     ;660  ;7920 ;14300;40   ;ParentControl=1140000;
+                                                 InPage=2 }
+    { 1140048;CommandButton;12760;12540;2200;660;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU=Statistiken;
+                                                 OnPush=VAR
+                                                          selection@1140000 : Integer;
+                                                        BEGIN
+                                                          selection := STRMENU(Text200,1);
+                                                          CASE selection OF
+                                                            0: ;
+                                                            1:
+                                                              BEGIN
+                                                                Statistiken.Z„hle_Service_einfach(0,FALSE);
+                                                                Statistiken.Z„hle_Service_einfach(1,FALSE);
+                                                              END;
+                                                            2:
+                                                              BEGIN
+                                                                Statistiken.Z„hle_Service_detailiert(0,FALSE);
+                                                                Statistiken.Z„hle_Service_detailiert(1,FALSE);
+                                                              END;
+                                                          END;
+                                                        END;
+                                                         }
+    { 1140049;Shape     ;660  ;12100;14300;40   ;ParentControl=1140000;
+                                                 InPage=2 }
+    { 1140050;Label     ;660  ;12540;9130 ;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU="Service Statistik (Detailliert = Statistik + Fehler Bereinigung)" }
+    { 1140051;Label     ;660  ;8800 ;11220;440  ;ParentControl=1140000;
+                                                 InPage=2;
+                                                 CaptionML=DEU="Hinweis: Spalte A = Artikelnummer, Spalte B = Seriennummer (šberschrift bernehmen)" }
+    { 1140001;CommandButton;12980;14520;2200;550;HorzGlue=Right;
+                                                 VertGlue=Bottom;
+                                                 PushAction=FormHelp }
+  }
+  CODE
+  {
+    VAR
+      Excel@1140012 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00024500-0000-0000-C000-000000000046}:Unknown Automation Server.Application";
+      Book@1140011 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020819-0000-0000-C000-000000000046}:Unknown Automation Server.Workbook";
+      Range@1140010 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020846-0000-0000-C000-000000000046}:Unknown Automation Server.Range";
+      Sheet@1140009 : Automation "{00020813-0000-0000-C000-000000000046} 1.2:{00020820-0000-0000-C000-000000000046}:Unknown Automation Server.Worksheet";
+      j@1140008 : Text[30];
+      Packkontrolle@1140002 : Record 50038;
+      Statistiken@1140035 : Codeunit 50002;
+      Artikel@1140034 : Record 27;
+      "au-nr1"@1140000 : Code[20];
+      "au-nr2"@1140001 : Code[20];
+      zaehler@1140003 : Integer;
+      zaehler2@1140004 : Integer;
+      unsub_speicherort@1140005 : Text[250];
+
+      Text001@1140006 : TextConst
+        'DEU=Unsubscribes Import #1##########';
+      Window@1140007 : Dialog;
+
+      Text002@1140024 : TextConst
+        'DEU=Die Eingabedaten sind unvollst„ndig.';
+
+      Text003@1140023 : TextConst
+        'DEU=Die Seriennr. Umbuchung ist nicht m”glich, da die Seriennr. %1 noch in %2 verwendet wird.';
+
+      Text004@1140022 : TextConst
+        'DEU=Seriennr. im Servicevertrag umbuchen,Keine Buchung';
+
+      Text005@1140021 : TextConst
+        'DEU=Die Seriennr. wurde von %1 auf %2 abge„ndert und sind dabei einen Ersatz zu generieren. Wenn Sie jetzt best„tigen werden s„mtliche System bzw. Sericevertragspositionen umgebucht und auf die neue Seriennr. korrigiert. Wollen Sie Aktion jetzt durchfhren?';
+
+      Text006@1140020 : TextConst
+        'DEU="Die reklamierte Seriennr. %1 wurde durch Seriennr. %2 ersetzt. Der dazugeh”rige Wartungsvertrag %3 wurde entsprechend umgestellt. Alte Pos. %4 => Inaktiv"';
+
+      Text007@1140019 : TextConst
+        'DEU=Eine bereits durchgefhrte Service Umbuchung konnte aktualisiert werden.Wartungsvertragnr.: %1\Urspr. Seriennr.: %2 (%3)\ALT: %4 (%5)\NEU: %6 (%5)';
+
+      Text008@1140018 : TextConst
+        'DEU=Aktualisierung der urspr. Seriennr. fr %1 (Pos. %2) durchgefhrt.';
+
+      Text009@1140017 : TextConst
+        'DEU=Es konnte eine tempor„re Seriennr. Vorbelegung fr die Kalkulation im Beleg %1, Zeilennr. %2 gefunden werden, diese wurde entsprechend im Servicesystem angepasst.';
+
+      Text010@1140016 : TextConst
+        'DEU=Die tempor„r vorbelegte Seriennr. %1 konnte fr die Kalkulation im Beleg %2, Zeilennr. %3 ge„ndert werden.';
+
+      Text020@1140029 : TextConst
+        'DEU=Das Feld Lieferscheinnr. darf nicht leer sein.';
+
+      Text100@1140013 : TextConst
+        'DEU=Die Datei oder der Pfad %1 konnte nicht gefunden werden.';
+      start_lfdnr@1140014 : Code[20];
+      end_lfdnr@1140015 : Code[20];
+      artikelnr@1140027 : Code[20];
+      alte_sn@1140026 : Code[20];
+      neue_sn@1140025 : Code[20];
+      lieferscheinnr@1140028 : Code[20];
+      import_sn_datei@1140033 : Text[250];
+      auftragsnr@1140032 : Code[20];
+      auftragszeilennr@1140031 : Integer;
+      leerzeilen@1140030 : Integer;
+
+      Text200@1140036 : TextConst
+        'DEU=Einfach,Detailliert';
+
+    PROCEDURE Service_neu_aufbauen@1140002(AUnr@1140000 : Code[20]);
+    VAR
+      LizenzTab@1140001 : Record 50024;
+    BEGIN
+      //******************************************************************************************************************************
+      // 28.02.2013-ST Falls Fehler im Service System vorlagen, alle Pos. l”schen und mit AU Nr. neu laufen lassen -> Neu Aufbau
+      //******************************************************************************************************************************
+
+      LizenzTab.CreateSystemFromSalesHeader(AUnr,FALSE);
+      LizenzTab.CreateServiceFromSalesHeader(AUnr,FALSE);
+    END;
+
+    PROCEDURE Service_neu_kalkulieren@1140007(start_lfdnr@1140003 : Code[20];end_lfdnr@1140004 : Code[20]);
+    VAR
+      Systempositionen@1140000 : Record 50024;
+      neuer_ek@1140001 : Decimal;
+      neuer_msrp@1140002 : Decimal;
+    BEGIN
+      //Umstellung Servicepositionen auf neueste Service Preise
+      Systempositionen.RESET;
+      Systempositionen.SETFILTER(Art,'%1',Systempositionen.Art :: Service);
+      Systempositionen.SETFILTER("Lfd. Nr.",'%1..%2',start_lfdnr,end_lfdnr);
+      IF Systempositionen.FIND('-') THEN
+        REPEAT
+          neuer_ek := Systempositionen.ServicePreiseNeuKalkulieren(Systempositionen."Artikelnr.",Systempositionen."SUP Artikelnr.",
+          Systempositionen."Dauer Serviceleistung",'DC',FALSE,'',Systempositionen."Quotenr.");
+          neuer_msrp := Systempositionen.ServicePreiseNeuKalkulieren(Systempositionen."Artikelnr.",Systempositionen."SUP Artikelnr.",
+          Systempositionen."Dauer Serviceleistung",'MSRP',FALSE,'',Systempositionen."Quotenr.");
+          MESSAGE('Pos %1 Neuer EK fr %2 (SN: %3): %4 (Alt: %5)',
+          Systempositionen."Lfd. Nr.",Systempositionen."Artikelnr.",Systempositionen."Seriennr.",neuer_ek,
+          Systempositionen."Service DC");
+          Systempositionen."Service DC" := neuer_ek;
+          Systempositionen."Service MSRP" := neuer_msrp;
+          Systempositionen."Service W„hrungscode" := '';
+          Systempositionen.MODIFY(TRUE);
+        UNTIL Systempositionen.NEXT = 0;
+    END;
+
+    PROCEDURE Korrigiere_EinheitenStck@1140005();
+    VAR
+      Artikel@1140001 : Record 27;
+      Artikel_einheit@1140002 : Record 5404;
+      zaehler@1140000 : Integer;
+    BEGIN
+      zaehler := 0;
+      Artikel.RESET;
+      Artikel.SETFILTER("No.",'<>%1','');
+      Artikel.SETFILTER("Base Unit of Measure",'%1','STšCK');
+      IF Artikel.FIND('-') THEN
+        REPEAT
+          Artikel_einheit.RESET;
+          Artikel_einheit.SETFILTER(Artikel_einheit."Item No.",'%1',Artikel."No.");
+          IF NOT Artikel_einheit.FINDFIRST THEN
+            BEGIN
+              //MESSAGE('%1 Einheit: %2',Artikel."No.",Artikel."Base Unit of Measure");
+              Artikel_einheit.INIT;
+              Artikel_einheit."Item No.":= Artikel."No.";
+              Artikel_einheit.Code:='STšCK';
+              Artikel_einheit."Qty. per Unit of Measure":=1;
+              Artikel_einheit.INSERT(TRUE);
+              zaehler += 1;
+            END;
+        UNTIL Artikel.NEXT = 0;
+
+      MESSAGE('Korrigierte Artikel Einheiten: %1',zaehler);
+    END;
+
+    PROCEDURE Korrigiere_AusgeschiedeneKto@1140000();
+    VAR
+      Kontakte@1140000 : Record 5050;
+    BEGIN
+      //Bei Kontaktpersonen mit Unternehmen verlassen die Telnr. l”schen, sonst k”nnen diese f„lschlicherweise
+      //von Navigate UC herangezogen werden
+
+      zaehler  := 0;
+      zaehler2 := 0;
+
+      Kontakte.RESET;
+      Kontakte.SETFILTER(Type,'%1',Kontakte.Type :: Person);
+      Kontakte.SETFILTER("Unternehmen verlassen",'%1',TRUE);
+      IF Kontakte.FIND('-') THEN
+        REPEAT
+          zaehler += 1;
+          IF Kontakte."Phone No." <> '' THEN
+            BEGIN
+              Kontakte."Phone No." := '';
+              Kontakte.MODIFY;
+              zaehler2 += 1;
+            END;
+        UNTIL Kontakte.NEXT = 0;
+
+      MESSAGE('Ausgeschiedene Kontakte korrigiert: %1 (von %2)',zaehler2, zaehler);
+    END;
+
+    PROCEDURE Unsubscribes_einspielen@1140004(Speicherort@1140002 : Text[250]);
+    VAR
+      Kontakte@1140003 : Record 5050;
+      Unsub_Verteiler@1140001 : Record 5056;
+      leerzeilen@1140000 : Integer;
+    BEGIN
+      IF Speicherort = '' THEN ERROR(Text002);
+
+      zaehler := 0;
+      zaehler2 := 0;
+
+      // Definiert die zu importierende Datei
+      IF ISCLEAR(Excel) THEN
+        IF CREATE(Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Book := Excel.Workbooks._Open(Speicherort,0,FALSE);
+      Sheet := Book.Worksheets.Item('Unsubscribes');
+      leerzeilen := 0;
+      j := '1';
+      IF (FORMAT(Sheet.Range('C'+j).Value) <> 'Im Navision')
+      OR (FORMAT(Sheet.Range('D'+j).Value) <> 'Kontaktnr') THEN BEGIN
+        Book.Close;
+        ERROR('Spalte "Kontaktnr" (D) oder Spalte "Im Navision" (C) konnte nicht gefunden werden > falsche Syntax.');
+      END ELSE BEGIN
+        j := '2';
+        REPEAT
+          IF FORMAT(Sheet.Range('D'+j).Value) = '' THEN
+            leerzeilen += 1
+          ELSE BEGIN
+            Kontakte.SETRANGE("E-Mail",FORMAT(Sheet.Range('A'+j).Value));
+            IF Kontakte.FINDFIRST THEN BEGIN
+              zaehler += 1;
+
+              Unsub_Verteiler.RESET;
+              Unsub_Verteiler.SETFILTER("Contact No.",'%1',FORMAT(Sheet.Range('D'+j).Value));
+              Unsub_Verteiler.SETFILTER("Mailing Group Code",'%1','UNSUB');
+              IF NOT Unsub_Verteiler.FINDFIRST THEN BEGIN
+                Unsub_Verteiler.INIT;
+                Unsub_Verteiler."Contact No." := FORMAT(Sheet.Range('D'+j).Value);
+                Unsub_Verteiler."Mailing Group Code" := 'UNSUB';
+                Unsub_Verteiler.INSERT(TRUE);
+                Sheet.Range('C'+j).Value := 'x';
+                zaehler2 += 1;
+              END ELSE
+                Sheet.Range('C'+j).Value := 'x';
+            END ELSE
+              Sheet.Range('C'+j).Value := '-';
+            Sheet.Range('F'+j).Value := Kontakte.COUNT;
+          END;
+          j := INCSTR(j);
+        UNTIL leerzeilen = 1;
+        //Book.Save;
+        Book.Close(TRUE);
+      END;
+
+      MESSAGE('Gesamt untersucht: %1, eingetragen ins NAV: %2',zaehler, zaehler2);
+    END;
+
+    PROCEDURE Open_WinApplct@1140003(VAR field@1140002 : Text[180]);
+    VAR
+      WinApplct@1140000 : Automation "{50A7E9B0-70EF-11D1-B75A-00A0C90564FE} 1.0:{13709620-C279-11CE-A49E-444553540000}:'Microsoft Shell Controls And Automation'.Shell";
+      Filename@1140001 : Text[260];
+    BEGIN
+      CREATE(WinApplct);
+      Filename := field;
+      IF NOT EXISTS(Filename) THEN
+        ERROR(Text100,Filename);
+
+      WinApplct.Open(Filename);
+    END;
+
+    PROCEDURE Save_FileDialog@1140001() : Text[250];
+    VAR
+      DialogMgt@1140002 : Codeunit 412;
+      DialogDefaultFileType@1140001 : ' ,Text,Excel,Word,Custom,PDF';
+      DialogAction@1140000 : 'Open,Save';
+      Speicherort@1140003 : Text[250];
+    BEGIN
+      EXIT(
+        DialogMgt.OpenFile(
+         'Dokument ausw„hlen',
+         Speicherort,
+         DialogDefaultFileType::Custom,
+         'Alle Dateien (*.*)|*.*',
+         DialogAction::Save));
+    END;
+
+    PROCEDURE ServiceSeriennrUmbuchen@1140006(Artikelnr@1140000 : Code[20];Alte_SN@1140001 : Code[20];Neue_SN@1140002 : Code[20];RMA_Nr@1140005 : Code[20]);
+    VAR
+      ServicePos@1140003 : Record 50024;
+      ServicePosRekl@1140007 : Record 50024;
+      RMA_pruefung@1140004 : Record 50021;
+      selection@1140006 : Integer;
+    BEGIN
+      IF (Artikelnr = '') OR (Alte_SN = '') OR (Neue_SN = '') THEN
+        ERROR(Text002);
+
+      // SICHERHEITSSPERRE
+      // Wenn fr eine bereits ersetzte Seriennr. die Seriennr. nachtr„glich wieder ge„ndert wird,
+      // muss das System die Žnderung abbrechen, da es sonst zu Inkonsistenzen im System kommt,
+      // die Seriennr. muss manuell in der neuen RMA Pos. auf die neue Seriennr. vorbereitet werden
+      // bevor die alte RMA Pos. ge„ndert werden kann
+
+      RMA_pruefung.RESET;
+      RMA_pruefung.SETFILTER(RMA_pruefung.Belegart,'%1|%2',RMA_pruefung.Belegart :: Rechnung,
+      RMA_pruefung.Belegart :: "vom Kunden");
+      RMA_pruefung.SETFILTER("Artikelnr.",'%1',Artikelnr);
+      RMA_pruefung.SETFILTER("SN-Nr. / DC",'%1',Alte_SN);
+      IF RMA_pruefung.FINDFIRST THEN
+        ERROR(Text003,Alte_SN,RMA_pruefung."RMA-Nr.");
+
+      // Fhrt Umbuchungen der Seriennr. im System durch, wenn diese noch nicht gekennzeichnet sind
+      ServicePos.RESET;
+      ServicePos.SETFILTER(Art,'%1|%2',ServicePos.Art :: System,ServicePos.Art :: Service);
+      ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+      ServicePos.SETFILTER("Seriennr.",'%1',Alte_SN);
+      ServicePos.SETFILTER(Reklamiert,'%1',FALSE);
+      IF ServicePos.FINDFIRST THEN
+        BEGIN
+
+          selection := STRMENU(Text004,1);
+          IF selection = 1 THEN
+          IF CONFIRM(Text005,FALSE,Alte_SN,Neue_SN) THEN
+            REPEAT
+              ServicePos.NewPosFromRMA(ServicePos."Lfd. Nr.",Alte_SN,Neue_SN,RMA_Nr,ServicePos,FALSE,'');
+              MESSAGE(Text006,Alte_SN,Neue_SN,ServicePos."Wartungsvertragsnr.",ServicePos."Lfd. Nr.");
+            UNTIL ServicePos.NEXT = 0
+          ELSE ERROR('Abbruch');
+
+        END
+      ELSE
+        BEGIN
+          // Bereits neue gebuchte Pos. mit neuer SN wird nochmals ge„ndert, z.B. aufgrund von Tippfehler etc.
+          ServicePosRekl.RESET;
+          ServicePosRekl.SETFILTER(Art,'%1|%2',ServicePosRekl.Art :: System,ServicePosRekl.Art :: Service);
+          ServicePosRekl.SETFILTER("Artikelnr.",'%1',Artikelnr);
+          ServicePosRekl.SETFILTER("Seriennr.",'%1',Alte_SN);
+          ServicePosRekl.SETFILTER(Reklamiert,'%1',TRUE);
+          ServicePosRekl.SETFILTER("RMA-Nr.",'%1',RMA_Nr);
+          ServicePosRekl.SETFILTER(Ersatzverfahren,'%1',TRUE);
+          IF ServicePosRekl.FINDFIRST THEN
+            BEGIN
+              ServicePos.RESET;
+              ServicePos.SETFILTER(Art,'%1|%2',ServicePos.Art :: System,ServicePos.Art :: Service);
+              ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+              ServicePos.SETFILTER("Urspr. Seriennr.",'%1',Alte_SN);
+              ServicePos.SETFILTER("Ersatz fr Lfd. Nr.",'%1',ServicePosRekl."Lfd. Nr.");
+              ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
+              IF ServicePos.FINDFIRST THEN
+                BEGIN
+                  IF CONFIRM(Text005,FALSE,Alte_SN,Neue_SN) THEN
+                    REPEAT
+                      ServicePos."Seriennr." := Neue_SN;
+                      ServicePos.MODIFY(TRUE);
+                      MESSAGE(Text007, ServicePos."Wartungsvertragsnr.", ServicePosRekl."Seriennr.",
+                              ServicePosRekl."Lfd. Nr.", Alte_SN, ServicePos."Lfd. Nr.", ServicePos."Seriennr.");
+                    UNTIL ServicePos.NEXT = 0
+                  ELSE ERROR('Abbruch');
+                END;
+            END;
+
+          // Nachlauf - vorherige, bereits ge„nderte Seriennr. hat keinen Vorg„nger in den Servicepositionen
+          // wird immer dann auftreten, wenn die Systemposition ge„ndert wurde durch eine RMA, aber Champs erst danach
+          // abgeschlossen wird
+
+          ServicePos.RESET;
+          ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Service);
+          ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+          ServicePos.SETFILTER("Urspr. Seriennr.",'%1',Alte_SN);
+          ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
+          IF ServicePos.FINDFIRST THEN
+            BEGIN
+              IF CONFIRM(Text005,FALSE,Alte_SN,Neue_SN) THEN
+                REPEAT
+                  ServicePos."Seriennr." := Neue_SN;
+                  ServicePos.MODIFY(TRUE);
+                  MESSAGE(Text007, ServicePos."Wartungsvertragsnr.", 'Kein Vorg„nger (Service)','',
+                                   Alte_SN, ServicePos."Lfd. Nr.", ServicePos."Seriennr.");
+                UNTIL ServicePos.NEXT = 0
+              ELSE ERROR('Abbruch');
+            END;
+
+          // Wenn fr eine bereits ersetzte Seriennr. die Seriennr. nachtr„glich wieder ge„ndert wird, dann muss
+          // die urspr. Seriennr. in der Nachfolge Position aktualisiert werden, auch tempor„re
+
+          ServicePos.RESET;
+          ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+          ServicePos.SETFILTER("Urspr. Seriennr.",'%1',Alte_SN);
+          ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
+          IF ServicePos.FINDFIRST THEN
+            BEGIN
+              REPEAT
+                ServicePos."Urspr. Seriennr." := Neue_SN;
+                ServicePos.MODIFY(TRUE);
+                MESSAGE(Text008,ServicePos."Seriennr.",ServicePos."Lfd. Nr.");
+              UNTIL ServicePos.NEXT = 0;
+            END;
+
+        END;
+
+      // Durchsucht nun auch die Temp Datens„tze
+
+      // Žndert bereits vorhandene temp. Datens„tze, die noch nicht reklamiert bzw. ersetzt wurden
+      // auf die neue Seriennr. und definiert Ersatzverfahren
+      ServicePos.RESET;
+      ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Tempor„r);
+      ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+      ServicePos.SETFILTER("Seriennr.",'%1',Alte_SN);
+      ServicePos.SETFILTER(Ersatzverfahren,'%1',FALSE);
+      IF ServicePos.FINDFIRST THEN
+        BEGIN
+          REPEAT
+            ServicePos."Seriennr." := Neue_SN;
+            ServicePos.Ersatzverfahren := TRUE;
+            ServicePos."Urspr. Seriennr." := Alte_SN;
+            ServicePos.MODIFY(TRUE);
+            MESSAGE(Text009,ServicePos."Auftragsnr.",ServicePos."Auftragszeilennr.");
+          UNTIL ServicePos.NEXT = 0;
+        END
+      ELSE
+        // Bereits ersetzte, tempor„re angelegte Seriennr. wird lediglich aktualisiert
+        BEGIN
+          ServicePosRekl.RESET;
+          ServicePosRekl.SETFILTER(Art,'%1|%2',ServicePosRekl.Art :: System,ServicePosRekl.Art :: Service);
+          ServicePosRekl.SETFILTER("Artikelnr.",'%1',Artikelnr);
+          ServicePosRekl.SETFILTER("Seriennr.",'%1',Alte_SN);
+          ServicePosRekl.SETFILTER("RMA-Nr.",'%1',RMA_Nr);
+          ServicePosRekl.SETFILTER(Ersatzverfahren,'%1',TRUE);
+          IF ServicePosRekl.FINDFIRST THEN
+            BEGIN
+              ServicePos.RESET;
+              ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Tempor„r);
+              ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+              ServicePos.SETFILTER("Seriennr.",'%1',Alte_SN);
+              ServicePos.SETFILTER("Urspr. Seriennr.",'%1',ServicePosRekl."Urspr. Seriennr.");
+              ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
+              IF ServicePos.FINDFIRST THEN
+                REPEAT
+                  ServicePos."Seriennr." := Neue_SN;
+                  ServicePos.MODIFY(TRUE);
+                  MESSAGE(Text009,ServicePos."Auftragsnr.",ServicePos."Auftragszeilennr.");
+                UNTIL ServicePos.NEXT = 0;
+            END;
+        END;
+
+      ServicePos.RESET;
+      ServicePos.SETFILTER(Art,'%1',ServicePos.Art :: Tempor„r);
+      ServicePos.SETFILTER("Artikelnr.",'%1',Artikelnr);
+      ServicePos.SETFILTER("Seriennr.",'%1',Alte_SN);
+      ServicePos.SETFILTER(Ersatzverfahren,'%1',TRUE);
+      ServicePos.SETFILTER("Urspr. Seriennr.",'<>%1','');
+      IF ServicePos.FINDFIRST THEN
+        REPEAT
+          ServicePos."Seriennr." := Neue_SN;
+          ServicePos."Urspr. Seriennr." := Alte_SN;
+          ServicePos.MODIFY(TRUE);
+          MESSAGE(Text010,Alte_SN,ServicePos."Auftragsnr.",ServicePos."Auftragszeilennr.");
+        UNTIL ServicePos.NEXT = 0;
+    END;
+
+    PROCEDURE LabelDatenBuchen@1140008();
+    BEGIN
+      IF lieferscheinnr = '' THEN ERROR(Text020);
+      Packkontrolle.Label_Daten_start(lieferscheinnr,0);
+    END;
+
+    PROCEDURE ImportSeriennrInBeleg@1140009("au-nr"@1140002 : Code[20];"au-zeilennr"@1140003 : Integer);
+    VAR
+      ServiceBelegZuordnung@1140000 : Record 50027;
+      TempSystemposition@1140001 : Record 50024;
+    BEGIN
+      IF ("au-nr" = '') OR ("au-zeilennr" = 0) OR (import_sn_datei = '') THEN
+        ERROR(Text002);
+
+      // Definiert die zu importierende Datei
+      IF ISCLEAR(Excel) THEN
+        IF CREATE(Excel,FALSE) THEN BEGIN END ELSE ERROR('Cannot start Excel Application.');
+      Book := Excel.Workbooks._Open(import_sn_datei,0,FALSE);
+      Sheet := Book.Worksheets.Item(1);
+      leerzeilen := 0;
+      j := '1';
+      IF (FORMAT(Sheet.Range('A'+j).Value) <> 'Artikelnummer') OR
+      (FORMAT(Sheet.Range('B'+j).Value) <> 'Seriennummer') THEN
+        BEGIN
+          Book.Close;
+          ERROR('Spalte Artikelnummer (A) oder Spalte Seriennummer (B) konnte nicht gefunden werden > falsche Syntax.');
+        END
+      ELSE
+        BEGIN
+          j := '2';
+          ServiceBelegZuordnung.RESET;
+          ServiceBelegZuordnung.SETRANGE(Art,ServiceBelegZuordnung.Art :: "SUP-AU");
+          ServiceBelegZuordnung.SETRANGE("Nr.","au-nr");
+          ServiceBelegZuordnung.SETRANGE("Zeilennr.","au-zeilennr");
+          ServiceBelegZuordnung.SETRANGE(Fremderwerb,TRUE);
+          IF ServiceBelegZuordnung.FINDFIRST THEN
+            BEGIN
+              REPEAT
+                IF FORMAT(Sheet.Range('A'+j).Value) = '' THEN
+                  leerzeilen += 1
+                ELSE
+                  BEGIN
+                    zaehler += 1;
+                    IF FORMAT(Sheet.Range('B'+j).Value) <> '' THEN
+                      BEGIN
+                        TempSystemposition.INIT;
+                        TempSystemposition.Art := TempSystemposition.Art :: Tempor„r;
+                        TempSystemposition."Nr." := ServiceBelegZuordnung."Belegnr.";
+                        TempSystemposition."Belegzeilennr." := ServiceBelegZuordnung."Belegzeilennr.";
+                        TempSystemposition.INSERT(TRUE);
+                        TempSystemposition."Debitornr." := ServiceBelegZuordnung."Debitornr.";
+                        TempSystemposition.VALIDATE("Artikelnr.",ServiceBelegZuordnung."Ger„te Artikelnr.");
+                        TempSystemposition.Serviceleistung := 'WARTUNGSVERTRAG';
+                        IF Artikel."Item Tracking Code" = 'KEINE' THEN
+                          TempSystemposition.Menge := ServiceBelegZuordnung."Menge kalk."
+                        ELSE
+                          TempSystemposition.Menge := 1;
+                        Artikel.GET(ServiceBelegZuordnung."Ger„te Artikelnr.");
+                        TempSystemposition.Ursprungsland := Artikel."Country/Region of Origin Code";
+                        TempSystemposition."Auftragsnr." := ServiceBelegZuordnung."Nr.";
+                        TempSystemposition."Auftragszeilennr." := ServiceBelegZuordnung."Zeilennr.";
+                        TempSystemposition."Urspr. Auftragsnr." := 'AU_' + DELCHR(ServiceBelegZuordnung."Belegnr.",'<','LS_');
+                        TempSystemposition."Urspr. Auftragszeilennr." := ServiceBelegZuordnung."Belegzeilennr.";
+                        TempSystemposition.Basisger„t := ServiceBelegZuordnung.Basisger„t;
+                        TempSystemposition.VALIDATE("Seriennr.",FORMAT(Sheet.Range('B'+j).Value));
+                        TempSystemposition.Fremderwerb := TRUE;
+                        TempSystemposition.Verl„ngerung := TempSystemposition.PrfeWartungvorhanden(
+                                                           ServiceBelegZuordnung."SUP Artikelnr.",ServiceBelegZuordnung."Belegnr.",
+                                                           ServiceBelegZuordnung."Belegzeilennr.",TempSystemposition."Seriennr.",
+                                                           ServiceBelegZuordnung."Debitornr.");
+                        TempSystemposition.VALIDATE(Vormerkung,TRUE);
+                        TempSystemposition.MODIFY;
+                        Sheet.Range('E'+j).Value := 'x';
+                        j := INCSTR(j);
+                        zaehler2 += 1;
+                      END;
+                  END;
+              UNTIL leerzeilen = 1;
+            END;
+          Book.Close(TRUE);
+        END;
+
+      MESSAGE('Gesamt untersucht: %1, eingetragen ins NAV: %2',zaehler, zaehler2);
+    END;
+
+    EVENT Sheet@1140009::SelectionChange@1543(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::BeforeDoubleClick@1537(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::BeforeRightClick@1534(Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::Calculate@279();
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::Change@1545(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::FollowHyperlink@1470(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableUpdate@2156(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableAfterValueChange@2886(TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableBeforeAllocateChange@2889(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableBeforeCommitChanges@2892(TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableBeforeDiscardChanges@2893(TargetPivotTable@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140001 : Integer;ValueChangeEnd@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Sheet@1140009::PivotTableChangeSync@2894(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::Open@1923();
+    BEGIN
+    END;
+
+    EVENT Book@1140011::Activate@304();
+    BEGIN
+    END;
+
+    EVENT Book@1140011::Deactivate@1530();
+    BEGIN
+    END;
+
+    EVENT Book@1140011::BeforeClose@1546(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::BeforeSave@1547(SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::BeforePrint@1549(VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::NewSheet@1550(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::AddinInstall@1552();
+    BEGIN
+    END;
+
+    EVENT Book@1140011::AddinUninstall@1553();
+    BEGIN
+    END;
+
+    EVENT Book@1140011::WindowResize@1554(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::WindowActivate@1556(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::WindowDeactivate@1557(Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::PivotTableCloseConnection@2158(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::PivotTableOpenConnection@2159(Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::Sync@2266(SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::BeforeXmlImport@2283(Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::AfterXmlImport@2285(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::BeforeXmlExport@2287(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140001 : Text[1024];VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::AfterXmlExport@2288(Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140001 : Text[1024];Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::RowsetComplete@2610(Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableAfterValueChang@2895(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableBeforeAllocateC@2896(Sh@1140004 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableBeforeCommitCha@2897(Sh@1140004 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableBeforeDiscardCh@2898(Sh@1140003 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140001 : Integer;ValueChangeEnd@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::SheetPivotTableChangeSync@2899(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Book@1140011::AfterSave@2900(Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Book@1140011::NewChart@2901(Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::NewWorkbook@1565(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetSelectionChange@1558(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetBeforeDoubleClick@1559(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetBeforeRightClick@1560(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetActivate@1561(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetDeactivate@1562(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetCalculate@1563(Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetChange@1564(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookOpen@1567(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookActivate@1568(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookDeactivate@1569(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookBeforeClose@1570(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookBeforeSave@1571(Wb@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SaveAsUI@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookBeforePrint@1572(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookNewSheet@1573(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Sh@1140000 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookAddinInstall@1574(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookAddinUninstall@1575(Wb@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WindowResize@1554(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WindowActivate@1556(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WindowDeactivate@1557(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Wn@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020893-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Window");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetFollowHyperlink@1854(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00024431-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Hyperlink");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetPivotTableUpdate@2157(Sh@1140001 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookPivotTableCloseConnect@2160(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Target@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookSync@2289(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";SyncEventType@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookBeforeXmlImport@2290(Wb@1140004 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";Url@1140002 : Text[1024];IsRefresh@1140001 : Boolean;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookAfterXmlImport@2291(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Map@1140002 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{0002447B-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.XmlMap";IsRefresh@1140001 : Boolean;Result@1140000 : Integer);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookRowsetComplete@2611(Wb@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Description@1140002 : Text[1024];Sheet@1140001 : Text[1024];Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::AfterCalculate@2612();
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetPivotTableAfterValueChang@2895(Sh@1140002 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";TargetRange@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020846-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Range");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::SheetPivotTableBeforeAllocateC@2896(Sh@1140004 : Automation ":{00020400-0000-0000-C000-000000000046}:''.IDISPATCH";TargetPivotTable@1140003 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020872-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.PivotTable";ValueChangeStart@1140002 : Integer;ValueChangeEnd@1140001 : Integer;VAR Cancel@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::ProtectedViewWindowOpen@2903(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::ProtectedViewWindowResize@2908(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::ProtectedViewWindowActivate@2909(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::ProtectedViewWindowDeactivate@2910(Pvw@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{000244CD-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.ProtectedViewWindow");
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookAfterSave@2911(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Success@1140000 : Boolean);
+    BEGIN
+    END;
+
+    EVENT Excel@1140012::WorkbookNewChart@2912(Wb@1140001 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020819-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Workbook";Ch@1140000 : Automation "{00020813-0000-0000-C000-000000000046} 1.7:{00020821-0000-0000-C000-000000000046}:'Microsoft Excel 14.0 Object Library'.Chart");
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
