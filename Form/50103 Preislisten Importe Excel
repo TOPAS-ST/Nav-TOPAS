@@ -2,8 +2,8 @@ OBJECT Form 50103 Preislisten Importe Excel
 {
   OBJECT-PROPERTIES
   {
-    Date=16.06.16;
-    Time=14:18:06;
+    Date=23.06.16;
+    Time=12:44:24;
     Modified=Yes;
     Version List=;
   }
@@ -1778,9 +1778,6 @@ OBJECT Form 50103 Preislisten Importe Excel
       Max_Datens„tze@1140003 : TextConst
         'DEU=1000';
 
-      Kreditornr_ric@1140002 : TextConst
-        'DEU=880009';
-
       Text001@1140000 : TextConst
         'DEU=&Chips,&Evalboards';
       PL_2reel@1140008 : Decimal;
@@ -1885,7 +1882,6 @@ OBJECT Form 50103 Preislisten Importe Excel
       REPEAT
 
          Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Part+Quelle_j).Value);
-         //PL_msl := FORMAT(Quelle_Sheet.Range(Spalte_MSL+Quelle_j).Value);
          PL_DISTI_TEXT := FORMAT(Quelle_Sheet.Range(Spalte_DC+Quelle_j).Value);
          IF FORMAT(Quelle_Sheet.Range(Spalte_2reel+Quelle_j).Value) <> '' THEN
            EVALUATE(PL_2reel,FORMAT(Quelle_Sheet.Range(Spalte_2reel+Quelle_j).Value))
@@ -1992,7 +1988,7 @@ OBJECT Form 50103 Preislisten Importe Excel
                    BEGIN
                      einkaufspreis.RESET;
                      einkaufspreis.SETFILTER(einkaufspreis."Item No.",'%1',Artikel."No.");
-                     einkaufspreis.SETFILTER(einkaufspreis."Vendor No.",'%1',Kreditornr_ric);
+                     //einkaufspreis.SETFILTER(einkaufspreis."Vendor No.",'%1',Artikel."Vendor No.");
                      IF einkaufspreis.FINDFIRST THEN
                        BEGIN
                          IF (einkaufspreis."Direct Unit Cost" <> PL_DC) AND (PL_DC <> 0) AND (kein_preis_update = FALSE) THEN
@@ -2695,4 +2691,3 @@ OBJECT Form 50103 Preislisten Importe Excel
     END.
   }
 }
-
