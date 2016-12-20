@@ -50,7 +50,7 @@ IF excel_datensätze > 0 THEN
       IF ek_system_währung = 'USD' THEN
         Kred := '880072';
 
-      Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
+      Artikelname := RemoveSpecialChars(FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value));
       IF Artikelname <> '' THEN
         BEGIN
           IF COPYSTR(Artikelname,STRLEN(Artikelname)) =  '.' THEN
@@ -94,14 +94,14 @@ IF excel_datensätze > 0 THEN
             END;
         END;
 
-      cell_services := FindRow('Service',Spalte_PL_PGroup);
+      cell_services := FindRow('Service',Spalte_PL_ProductGroup);
       cell_part := FindRow(Artikelname,Spalte_PL_Part);
       cell_training := FindRow('Technical Training',Spalte_Product);
 
       //ACHTUNG!!! Artikel wird neu eingelesen, da Schaeffler Artikel und anders lautend mit Punkt am Ende
       IF sonderartikel_schaeffler THEN
         BEGIN
-          Artikelname := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value);
+          Artikelname := RemoveSpecialChars(FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value));
           Kred := '880045';
           ek_system_währung := '';
         END;
@@ -148,8 +148,10 @@ IF excel_datensätze > 0 THEN
 
           dc := ROUND(dc,0.01);
 
-          short_descr := PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value;
-          long_descr := PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value;
+          pl_short_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value);
+          pl_long_descr := RemoveSpecialChars(PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value);
+          pl_product_group := PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ProductGroup)).Value;
+
         END;
 
       IF (Artikelname = '') OR (STRLEN(Artikelname) > 40) OR (cell_part = '') THEN
@@ -211,7 +213,10 @@ IF excel_datensätze > 0 THEN
                     ELSE
                       BEGIN
                         IF (klassifizierung = 'SYSTEM FLAT') THEN
-                          Artikel.Artikelgruppe := 'TELEFONE';
+                          IF LOWERCASE(pl_product_group) = 'ip phones' THEN
+                            Artikel.Artikelgruppe := 'TELEFONE'
+                          ELSE
+                            Artikel.Artikelgruppe := 'ANALOGE SYSTEME';
                         IF (klassifizierung = 'SYSTEM CHAMPS') THEN
                           Artikel.Artikelgruppe := 'SYSTEME';
                         IF (klassifizierung = 'MODUL') THEN
@@ -224,26 +229,30 @@ IF excel_datensätze > 0 THEN
               IF sonderartikel_schaeffler THEN Artikel.Preisinfo := Artikel.Preisinfo + ' für Schaeffler';
 
               //Beschreibung und Textbaustein füllen
-              IF STRLEN(short_descr) < 30 THEN
+              IF STRLEN(pl_short_descr) < 30 THEN
                 BEGIN
-                  Artikel.Description := short_descr;
+                  Artikel.Description := pl_short_descr;
                 END
               ELSE
                 BEGIN
-                  Artikel.Description := Trim_ShortDescr(short_descr,30);
-                  Artikel."Description 2" := Trim_ShortDescr(COPYSTR(short_descr,STRLEN(Artikel.Description)+1),30);
+                  Artikel.Description := Trim_ShortDescr(pl_short_descr,30);
+                  Artikel."Description 2" := Trim_ShortDescr(COPYSTR(pl_short_descr,STRLEN(Artikel.Description)+1),30);
                 END;
 
-              IF STRLEN(long_descr) > 1 THEN
+              IF STRLEN(pl_long_descr) > 1 THEN
                 BEGIN
                   Artikel."Automatic Ext. Texts" := TRUE;
-                  LongDescrToExtendedText(Artikel."No.",long_descr,50);
+                  LongDescrToExtendedText(Artikel."No.",pl_long_descr,50);
                 END;
 
-              IF sonderartikel_schaeffler THEN
-                Artikel."Handlingskosten %":=2
+              IF Artikel.Artikelgruppe = 'DIENSTLEISTUNG' THEN
+                Artikel.VALIDATE("Handlingskosten %",0)
               ELSE
-                Artikel."Handlingskosten %":=5;
+                IF sonderartikel_schaeffler THEN
+                  Artikel.VALIDATE("Handlingskosten %",2)
+                ELSE
+                  Artikel.VALIDATE("Handlingskosten %",5);
+
               Artikel.VALIDATE("Handlingskosten %");
               Artikel.UStG_13b_frei := TRUE;
               Artikel."Country/Region of Origin Code" := 'IL';
@@ -256,6 +265,13 @@ IF excel_datensätze > 0 THEN
               Artikel.Mindestbestellmenge := 1;
               Artikel.Serviceklassifizierung := klassifizierung;
               Artikel."Allow Invoice Disc." := FALSE;
+
+              //IP Phones werden nun über Westcon eingekauft
+              IF LOWERCASE(pl_product_group) = 'ip phones' THEN BEGIN
+                Artikel.Preisinfo := 'MSRP -36.5% Westcon';
+                Artikel."Vendor No." := '600095';
+                Artikel.VALIDATE("Handlingskosten %",2);
+              END;
 
               Artikel."Update letzte Preisliste" := TRUE;
               Artikel.MODIFY(TRUE);
@@ -292,6 +308,9 @@ IF excel_datensätze > 0 THEN
                   Artikel.MODIFY(TRUE);
                 END;
 
+              IF FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value) = Artikel."No. 2" THEN
+                Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value := TOPAS_API.CreateExcelHyperlinkToNav
+                (Artikel.TABLENAME,1,30,FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value));
               Quelle_Sheet.Range('F'+Quelle_j).Value := 'OK';
               IF training_artikel = TRUE THEN
                 Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.9'
@@ -303,6 +322,7 @@ IF excel_datensätze > 0 THEN
                     Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.5'
                   ELSE
                     Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
+
               Quelle_Sheet.Range('H'+Quelle_j).Value := FORMAT(dc);
               //Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
               Quelle_Sheet.Range('I'+Quelle_j).Value := FORMAT(excel_msrp);
@@ -410,11 +430,15 @@ IF excel_datensätze > 0 THEN
 
   END;
 
-Quelle_Book.Save;
-Quelle_Book.Close;
 
-//CLEAR(Quelle_Sheet);
+
+//Quelle_Book.Save;
+Quelle_Book.Close(TRUE);
+Quelle_Book := Quelle_Excel.Workbooks._Open(CurrDataport.FILENAME,0,TRUE);
+Quelle_Excel.Visible(TRUE);
+
 //CLEAR(Quelle_Book);
+//CLEAR(Quelle_Sheet);
 //CLEAR(Quelle_Excel);
 
 //REPEAT
@@ -525,15 +549,8 @@ WITH ExtendHead DO
     MODIFY(TRUE);
 
     rest_string := string;
-    // Tab, LF und CR aus Text löschen
-    cr := 13;
-    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
-    cr := 10;
-    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
-    cr := 9;
-    rest_string := DELCHR(rest_string,'=',FORMAT(cr));
-
     line := 10000;
+
     REPEAT
       temp_string := Trim_LongDescr(rest_string,length);
       rest_string := COPYSTR(rest_string,STRLEN(temp_string)+1);
@@ -548,3 +565,13 @@ WITH ExtendHead DO
       line += 10000;
     UNTIL STRLEN(rest_string) <= 1;
   END;
+
+RemoveSpecialChars(string : Text[1024]) : Text[1024]
+// Tab, LF und CR aus Text löschen
+cr := 13;
+string := DELCHR(string,'=',FORMAT(cr));
+cr := 10;
+string := DELCHR(string,'=',FORMAT(cr));
+cr := 9;
+string := DELCHR(string,'=',FORMAT(cr));
+EXIT(string);
