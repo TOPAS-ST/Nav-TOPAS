@@ -2,10 +2,10 @@ OBJECT Form 50103 Preislisten Importe Excel
 {
   OBJECT-PROPERTIES
   {
-    Date=25.11.16;
-    Time=12:04:31;
+    Date=03.01.17;
+    Time=15:25:00;
     Modified=Yes;
-    Version List=;
+    Version List=TOPAS;
   }
   PROPERTIES
   {
@@ -121,6 +121,7 @@ OBJECT Form 50103 Preislisten Importe Excel
       PL_MSRP@1140007 : Decimal;
       PL_DC@1140018 : Decimal;
       PL_Class@1140034 : Text[50];
+      PL_Status@1140038 : Text[50];
       PL_DISTI_TEXT@1140016 : Text[120];
       hilfs_PL_DISTI_TEXT@1140015 : Text[120];
       a@1140014 : Integer;
@@ -172,6 +173,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       „nderung@1140013 : Boolean;
       k@1140000 : Integer;
     BEGIN
+      //GSI Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -345,6 +348,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                              Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                              Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                              Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                             IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                             IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                              Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                              Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                              Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -547,10 +554,10 @@ OBJECT Form 50103 Preislisten Importe Excel
         'DEU=B';
 
       Spalte_DC@1140011 : TextConst
-        'DEU=F';
+        'DEU=E';
 
       Spalte_MSRP@1140004 : TextConst
-        'DEU=G';
+        'DEU=F';
 
       Max_Datens„tze@1140002 : TextConst
         'DEU=5000';
@@ -558,6 +565,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       Text000@1140001 : TextConst
         'DEU=Fehler in der Syntax der Quelldatei.\Spalte: %1';
     BEGIN
+      //Ferrari Preislisten Ablgeich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -682,12 +691,13 @@ OBJECT Form 50103 Preislisten Importe Excel
 
                       EVALUATE(PL_DC,PL_DISTI_TEXT);
                       PL_DC := ROUND(PL_DC,0.01);
+
+                      EVALUATE(PL_MSRP,FORMAT(Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value));
+                      PL_MSRP := ROUND(PL_MSRP,0.01);
+
                    END
                  ELSE
                    PL_DC := 0;
-
-                 PL_MSRP := Quelle_Sheet.Range(Spalte_MSRP+Quelle_j).Value;
-                 PL_MSRP := ROUND(PL_MSRP,0.01);
 
                  aenderung := FALSE;
 
@@ -706,6 +716,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                          Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                          Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                          Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                         IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                         IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                          Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                          Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                          Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -823,6 +837,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       k@1140000 : Integer;
       i@1140004 : Integer;
     BEGIN
+      //ICP Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -1013,6 +1029,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                              Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                              Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                              Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                             IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                             IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                              Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                              Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                              Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -1120,6 +1140,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       k@1140000 : Integer;
       i@1140004 : Integer;
     BEGIN
+      //LSI Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -1277,6 +1299,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                          Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                          Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                          Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                         IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                         IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                          Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                          Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                          Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -1387,6 +1413,9 @@ OBJECT Form 50103 Preislisten Importe Excel
       Spalte_Class_Chips@1140007 : TextConst
         'DEU=H';
 
+      Spalte_Status_Chips@1140015 : TextConst
+        'DEU=M';
+
       Spalte_Part_FullEval@1140006 : TextConst
         'DEU=C';
 
@@ -1409,6 +1438,8 @@ OBJECT Form 50103 Preislisten Importe Excel
         'DEU=&Chips,&Evalboards';
       PL@1140013 : 'Chips,FullEval,MiniEval';
     BEGIN
+      //Cirrus Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -1455,8 +1486,12 @@ OBJECT Form 50103 Preislisten Importe Excel
       Protokoll_Sheet.Range('L'+'1').Value:= 'VPE';
       Protokoll_Sheet.Range('M'+'1').Value:= 'LF Status';
       Protokoll_Sheet.Range('N'+'1').Value:= 'Reg Status';
-      Protokoll_Sheet.Range('A1:N1').Interior.ColorIndex := 15;
-      Protokoll_Sheet.Range('A1:N1').Font.Bold := TRUE;
+      Protokoll_Sheet.Range('O'+'1').Value:= 'Lifetime Status';
+      Protokoll_Sheet.Range('O:O').ColumnWidth := 15;
+      Protokoll_Sheet.Range('P'+'1').Value:= 'NAV Beschreibung 2';
+      Protokoll_Sheet.Range('P:P').ColumnWidth := 30;
+      Protokoll_Sheet.Range('A1:P1').Interior.ColorIndex := 15;
+      Protokoll_Sheet.Range('A1:P1').Font.Bold := TRUE;
 
 
       //********************************************************************************************
@@ -1499,6 +1534,9 @@ OBJECT Form 50103 Preislisten Importe Excel
         ERROR(Text000,Spalte_Mult_Chips);
       IF FORMAT(Quelle_Sheet.Range(Spalte_DC_Chips + '1').Value) <> 'DBC' THEN
         ERROR(Text000,Spalte_DC_Chips);
+      IF FORMAT(Quelle_Sheet.Range(Spalte_Status_Chips + '1').Value) <> 'Part Status' THEN
+        ERROR(Text000,Spalte_Status_Chips);
+
 
       REPEAT
 
@@ -1509,6 +1547,9 @@ OBJECT Form 50103 Preislisten Importe Excel
          PL_LF := FORMAT(Quelle_Sheet.Range(Spalte_LF_Chips+Quelle_j).Value);
          PL_REG := FORMAT(Quelle_Sheet.Range(Spalte_Reg_Chips+Quelle_j).Value);
          PL_Class := FORMAT(Quelle_Sheet.Range(Spalte_Class_Chips+Quelle_j).Value);
+         PL_Status := FORMAT(Quelle_Sheet.Range(Spalte_Status_Chips+Quelle_j).Value);
+         IF UPPERCASE(PL_Status) = 'OBSOLETE SELLABLE' THEN
+           PL_Status := 'EOL SELLABLE';
          IF (FORMAT(Quelle_Sheet.Range(Spalte_Mult_Chips+Quelle_j).Value) <> '') AND
          (FORMAT(Quelle_Sheet.Range(Spalte_Mult_Chips+Quelle_j).Value) <> 'TBA') THEN
            EVALUATE(PL_VPE,FORMAT(Quelle_Sheet.Range(Spalte_Mult_Chips+Quelle_j).Value))
@@ -1597,6 +1638,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                          Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                          Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                          Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                         IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                         IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                           Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                          Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                          Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                          Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -1708,6 +1753,27 @@ OBJECT Form 50103 Preislisten Importe Excel
                      Protokoll_Sheet.Range('N'+Protokoll_j).Value := 'X';
                    END;
 
+
+                 //*********************************************************************************************
+                 //                         Lifetime Status Flag bzw. Part Status berprfen
+                 //*********************************************************************************************
+
+                 CASE PL_Status OF
+                   'EOL SELLABLE', 'NRND', 'EOL' : BEGIN
+                     IF Artikel."Lifetime Status Flag" <> PL_Status THEN BEGIN
+                       IF testlauf = FALSE THEN BEGIN
+                         Artikel."Lifetime Status Flag" := PL_Status;
+                         Artikel.MODIFY(TRUE);
+                       END;
+                       sonstige_aenderungen += 1;
+                       aenderung := TRUE;
+                       Protokoll_Sheet.Range('A'+Protokoll_j).Value := Artikelname;
+                       Protokoll_Sheet.Range('O'+Protokoll_j).Value := 'X - ' + PL_Status;
+                       Protokoll_Sheet.Range('P'+Protokoll_j).Value := Artikel."Description 2";
+                     END;
+                   END;
+                 END;
+
                  //*********************************************************************************************
                  //                                    Update letzte Preisliste
                  //*********************************************************************************************
@@ -1793,6 +1859,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       artikel_gefunden@1140012 : Boolean;
       kein_preis_update@1140001 : Boolean;
     BEGIN
+      //Ricoh Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -2003,6 +2071,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                              Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                              Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                              Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                             IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                             IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                               Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                              Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                              Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                              Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
@@ -2173,6 +2245,8 @@ OBJECT Form 50103 Preislisten Importe Excel
       Text001@1140000 : TextConst
         'DEU=&Chips,&Evalboards/Kits';
     BEGIN
+      //XMOS Preislisten Abgleich
+
       CLEAR(Quelle_Excel);
       CLEAR(Quelle_Sheet);
       CLEAR(Quelle_Book);
@@ -2332,6 +2406,10 @@ OBJECT Form 50103 Preislisten Importe Excel
                 Protokoll_Sheet.Range('B'+Protokoll_j).Value := FORMAT(einkaufspreis."Direct Unit Cost");
                 Protokoll_Sheet.Range('C'+Protokoll_j).Value := FORMAT(PL_DC);
                 Protokoll_Sheet.Range('D'+Protokoll_j).Value := FORMAT(PL_DC-einkaufspreis."Direct Unit Cost");
+                IF einkaufspreis."Direct Unit Cost" > PL_DC THEN
+                  Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-11489280'; //grn
+                IF einkaufspreis."Direct Unit Cost" < PL_DC THEN
+                  Protokoll_Sheet.Range('D'+Protokoll_j).Font.Color := '-16776961'; //rot
                 Artikel.CALCFIELDS(Inventory,Artikel."Qty. on Purch. Order",Artikel."Qty. on Sales Order",
                 Artikel."Menge in Angebot",Artikel."Menge im Rahmen");
                 Protokoll_Sheet.Range('E'+Protokoll_j).Value := FORMAT(Artikel.Inventory);
