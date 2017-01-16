@@ -259,6 +259,10 @@ PrüfeServiceQuote("SUP Artikelnr.",Laufzeit,"Quotenr.");
 
 Quotenr. - OnLookup()
 
+Beachte Startdatum - OnValidate()
+
+Beachte Startdatum - OnLookup()
+
 Gruppierung - OnValidate()
 
 Gruppierung - OnLookup()
@@ -326,24 +330,32 @@ ELSE
 EXIT(Teil_string_a + Teil_string_b);
 
 UpdateLaufzeitabBuchungsdatum(VAR FromServiceRelaDoc : Record "Service Beleg Zuordnung") : Boolean
-IF (FromServiceRelaDoc.HASFILTER) AND (FromServiceRelaDoc."Laufzeit ab Buchungsdatum" = TRUE) THEN
-  BEGIN
-    IF CONFIRM(Text010,TRUE) = TRUE THEN
-      BEGIN
-        UpdateServiceRelaDoc.RESET;
-        UpdateServiceRelaDoc.SETRANGE(Art,FromServiceRelaDoc.Art);
-        UpdateServiceRelaDoc.SETRANGE("Nr.",FromServiceRelaDoc."Nr.");
-        UpdateServiceRelaDoc.SETRANGE("Zeilennr.",FromServiceRelaDoc."Zeilennr.");
-        IF UpdateServiceRelaDoc.FIND('-') THEN
-          BEGIN
-            REPEAT
-              UpdateServiceRelaDoc."Laufzeit ab Buchungsdatum" := TRUE;
-              UpdateServiceRelaDoc.MODIFY;
-            UNTIL UpdateServiceRelaDoc.NEXT = 0;
-            EXIT(TRUE);
-          END;
-      END;
+IF (FromServiceRelaDoc.HASFILTER) AND (FromServiceRelaDoc."Laufzeit ab Buchungsdatum" = TRUE) THEN BEGIN
+  IF CONFIRM(Text010,TRUE) = TRUE THEN BEGIN
+    UpdateServiceRelaDoc.RESET;
+    UpdateServiceRelaDoc.SETRANGE(Art,FromServiceRelaDoc.Art);
+    UpdateServiceRelaDoc.SETRANGE("Nr.",FromServiceRelaDoc."Nr.");
+    UpdateServiceRelaDoc.SETRANGE("Zeilennr.",FromServiceRelaDoc."Zeilennr.");
+    IF UpdateServiceRelaDoc.FIND('-') THEN BEGIN
+      UpdateServiceRelaDoc.MODIFYALL("Laufzeit ab Buchungsdatum",TRUE);
+      EXIT(TRUE);
+    END;
   END;
+END;
+
+UpdateBeachteStartdatum(VAR FromServiceRelaDoc : Record "Service Beleg Zuordnung") : Boolean
+IF (FromServiceRelaDoc.HASFILTER) AND (FromServiceRelaDoc."Beachte Startdatum" = TRUE) THEN BEGIN
+  IF CONFIRM(Text010,TRUE) = TRUE THEN BEGIN
+    UpdateServiceRelaDoc.RESET;
+    UpdateServiceRelaDoc.SETRANGE(Art,FromServiceRelaDoc.Art);
+    UpdateServiceRelaDoc.SETRANGE("Nr.",FromServiceRelaDoc."Nr.");
+    UpdateServiceRelaDoc.SETRANGE("Zeilennr.",FromServiceRelaDoc."Zeilennr.");
+    IF UpdateServiceRelaDoc.FIND('-') THEN BEGIN
+      UpdateServiceRelaDoc.MODIFYALL("Beachte Startdatum",TRUE);
+      EXIT(TRUE);
+    END;
+  END;
+END;
 
 Ablaufdatum_generieren(SUPArtikelnr : Code[20];Wartungsnr : Code[20]) : Date
 Ermittle_Servicegruppe.RESET;
