@@ -403,7 +403,7 @@ ELSE
   BEGIN
     IF Lizenzdatum = 0D THEN
       ERROR(Text002,FIELDCAPTION(Lizenzdatum));
-    "Ablaufdatum Serviceleistung" := CALCDATE("Dauer Serviceleistung",Lizenzdatum);
+    "Ablaufdatum Serviceleistung" := CALCDATE("Dauer Serviceleistung",Lizenzdatum) - 1;
   END;
 
 Dauer Serviceleistung - OnLookup()
@@ -2050,8 +2050,6 @@ IF Vkliefkopf.FINDLAST THEN
                        HoleLiefZeile.SETFILTER(Type,'%1',HoleLiefZeile.Type :: Item);
                        HoleLiefZeile.SETFILTER("Document No.",'%1',Vkliefzeile."Document No.");
                        HoleLiefZeile.SETFILTER("Line No.",'%1',KalkulationHolen."Belegzeilennr.");
-                       HoleLiefZeile.SETFILTER("SUP Belegnr.",'%1','');
-                       HoleLiefZeile.SETFILTER("SUP Belegzeilennr.",'%1',0);
                        HoleLiefZeile.SETFILTER(Quantity,'>%1',0);
                        IF HoleLiefZeile.FINDFIRST THEN
                          REPEAT
@@ -2190,9 +2188,13 @@ IF Vkliefkopf.FINDLAST THEN
                                                IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                                  LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                               LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
-                                                                        LizenzTab."Ablaufdatum Serviceleistung", 
-                                                                        LizenzTab."Dauer Serviceleistung");
+                                               IF (KalkulationHolen."Beachte Startdatum" = TRUE) 
+                                               AND (KalkulationHolen.Startdatum <> 0D) THEN
+                                                 LizenzTab.Lizenzdatum := KalkulationHolen.Startdatum
+                                               ELSE
+                                                 LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                          LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                          LizenzTab."Dauer Serviceleistung");
 
                                                IF (KalkulationHolen."Wartungsvertragsnr." = '')
                                                AND ((LizenzTab.Benutzername <> '')
@@ -2210,6 +2212,7 @@ IF Vkliefkopf.FINDLAST THEN
                                                    Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                                    Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
                                                    Wartung."LS Zeilennr. Service" := Vkliefzeile."Line No.";
+                                                   Wartung.Belegdatum := Vkliefkopf."Posting Date";
                                                    IF Wartung.Vertragsablaufdatum = 0D THEN
                                                      Wartung.Startdatum := LizenzTab.Lizenzdatum;
                                                    IF Wartung.Vertragsablaufdatum < LizenzTab."Ablaufdatum Serviceleistung" THEN
@@ -2389,9 +2392,13 @@ IF Vkliefkopf.FINDLAST THEN
                                         IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                        LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
-                                                                 LizenzTab."Ablaufdatum Serviceleistung", 
-                                                                 LizenzTab."Dauer Serviceleistung");
+                                        IF (KalkulationHolen."Beachte Startdatum" = TRUE) 
+                                        AND (KalkulationHolen.Startdatum <> 0D) THEN
+                                          LizenzTab.Lizenzdatum := KalkulationHolen.Startdatum
+                                        ELSE
+                                          LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                   LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                   LizenzTab."Dauer Serviceleistung");
 
                                         IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
@@ -2408,6 +2415,7 @@ IF Vkliefkopf.FINDLAST THEN
                                             Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                             Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
                                             Wartung."LS Zeilennr. Service" := Vkliefzeile."Line No.";
+                                            Wartung.Belegdatum := Vkliefkopf."Posting Date";
                                             IF Wartung.Vertragsablaufdatum = 0D THEN
                                               Wartung.Startdatum := LizenzTab.Lizenzdatum;
                                             IF Wartung.Vertragsablaufdatum < LizenzTab."Ablaufdatum Serviceleistung" THEN
@@ -2598,9 +2606,13 @@ IF Vkliefkopf.FINDLAST THEN
                                         IF KalkulationHolen.Ablaufdatum <> 0D THEN
                                           LizenzTab."Ablaufdatum Serviceleistung" := KalkulationHolen.Ablaufdatum;
 
-                                        LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
-                                                                 LizenzTab."Ablaufdatum Serviceleistung", 
-                                                                 LizenzTab."Dauer Serviceleistung");
+                                        IF (KalkulationHolen."Beachte Startdatum" = TRUE) 
+                                        AND (KalkulationHolen.Startdatum <> 0D) THEN
+                                          LizenzTab.Lizenzdatum := KalkulationHolen.Startdatum
+                                        ELSE
+                                          LizenzTab.Lizenzdatum := LizenzdatumAngleichen(LizenzTab.Lizenzdatum,
+                                                                   LizenzTab."Ablaufdatum Serviceleistung", 
+                                                                   LizenzTab."Dauer Serviceleistung");
 
                                         IF (KalkulationHolen."Wartungsvertragsnr." = '') AND ((LizenzTab.Benutzername <> '')
                                         OR (LizenzTab."SUP Artikelnr." = 'CHAMPS-SUPP-8X5/YR')
@@ -2617,6 +2629,7 @@ IF Vkliefkopf.FINDLAST THEN
                                             Wartung."Auftragszeilennr. Service" := Vkliefzeile."Order Line No.";
                                             Wartung."Lieferscheinnr. Service" := Vkliefzeile."Document No.";
                                             Wartung."LS Zeilennr. Service" := Vkliefzeile."Line No.";
+                                            Wartung.Belegdatum := Vkliefkopf."Posting Date";
                                             IF Wartung.Vertragsablaufdatum = 0D THEN
                                               Wartung.Startdatum := LizenzTab.Lizenzdatum;
                                             IF Wartung.Vertragsablaufdatum < LizenzTab."Ablaufdatum Serviceleistung" THEN
@@ -3063,7 +3076,7 @@ IF (laufzeit <> '') AND (STRPOS(laufzeit,'M') <> 0) THEN
     EVALUATE(v_laufzeit,COPYSTR(laufzeit,1,STRPOS(laufzeit,'M')-1));
     IF (v_laufzeit MOD 12 = 0) AND ((TOPAS_API.CalcDays(startdate,enddate) MOD 365) > 1)
     AND (startdate > CALCDATE('-' + laufzeit,enddate)) THEN
-      EXIT(CALCDATE('-' + laufzeit,enddate))
+      EXIT(CALCDATE('-' + laufzeit,enddate) + 1);
   END;
 
 EXIT(startdate);
