@@ -803,7 +803,7 @@ ELSE
       ELSE
         Benutzername := DELCHR(COPYSTR(Artikelnr,1,4),'=','- ') + '-' + Seriennr;
 
-Artikel.GET("Artikelnr.");
+Artikel.GET ("Artikelnr.");
 IF ((Seriennr = '') OR ((Seriennr = 'NA') OR (Seriennr = 'N/A'))) AND (Artikel.Serviceklassifizierung = 'SYSTEM CHAMPS') THEN
   BEGIN
      PrüfeLizenzTab.RESET;
@@ -812,6 +812,7 @@ IF ((Seriennr = '') OR ((Seriennr = 'NA') OR (Seriennr = 'N/A'))) AND (Artikel.S
      PrüfeLizenzTab.SETRANGE("Seriennr.",Seriennr);
      PrüfeLizenzTab.SETRANGE("Urspr. Lieferscheinnr.",Belegnr);
      PrüfeLizenzTab.SETRANGE("Urspr. Lieferscheinzeilennr.",Zeilennr);
+     PrüfeLizenzTab.SETFILTER(Benutzername,'<>%1','');
      IF NOT PrüfeLizenzTab.FINDLAST THEN
        BEGIN
          ok := EVALUATE(eingabe,'TOPAS-USER');
@@ -821,16 +822,7 @@ IF ((Seriennr = '') OR ((Seriennr = 'NA') OR (Seriennr = 'N/A'))) AND (Artikel.S
          Benutzername := Benutzername + Seriennr;
        END
      ELSE
-       IF PrüfeLizenzTab.Benutzername <> '' THEN
-         Benutzername := PrüfeLizenzTab.Benutzername
-       ELSE
-         BEGIN
-           ok := EVALUATE(eingabe,'TOPAS-USER');
-           laufende_nummer:='';
-           NoSeriesMgt.InitSeries(eingabe,eingabe,TODAY,laufende_nummer,eingabe);
-           Seriennr := laufende_nummer;
-           Benutzername := Benutzername + Seriennr;
-         END;
+       Benutzername := PrüfeLizenzTab.Benutzername;
   END;
 
 EXIT(Benutzername);
