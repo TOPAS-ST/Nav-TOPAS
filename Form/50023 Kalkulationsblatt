@@ -2,8 +2,8 @@ OBJECT Form 50023 Kalkulationsblatt
 {
   OBJECT-PROPERTIES
   {
-    Date=08.08.16;
-    Time=13:55:23;
+    Date=18.01.17;
+    Time=09:09:03;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -24,6 +24,7 @@ OBJECT Form 50023 Kalkulationsblatt
 
     OnAfterGetRecord=BEGIN
                        diff := TOPAS_API.CalculateTimeDiff('M',Startdatum,Ablaufdatum);
+                       laufzeit_text := TOPAS_API.RuntimeText_output(Startdatum,Ablaufdatum);
                      END;
 
     OnAfterGetCurrRecord=BEGIN
@@ -151,7 +152,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                              }
     { 1140008;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140007;
                                                  InColumnHeading=Yes }
-    { 1140009;TextBox   ;0    ;0    ;1700 ;0    ;ParentControl=1140000;
+    { 1140009;TextBox   ;0    ;0    ;1693 ;0    ;ParentControl=1140000;
                                                  InColumn=Yes;
                                                  SourceExpr="Belegzeilennr.";
                                                  OnValidate=BEGIN
@@ -161,7 +162,7 @@ OBJECT Form 50023 Kalkulationsblatt
                                                              }
     { 1140010;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140009;
                                                  InColumnHeading=Yes }
-    { 1140069;CheckBox  ;24448;5280 ;1839 ;440  ;ParentControl=1140000;
+    { 1140069;CheckBox  ;24448;5280 ;1800 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
                                                  ShowCaption=No;
                                                  SourceExpr="Laufzeit ab Buchungsdatum";
@@ -175,6 +176,20 @@ OBJECT Form 50023 Kalkulationsblatt
                                                                   }
     { 1140070;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140069;
                                                  InColumnHeading=Yes }
+    { 1140077;CheckBox  ;26591;6270 ;1800 ;440  ;ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 ShowCaption=No;
+                                                 SourceExpr="Beachte Startdatum";
+                                                 OnAfterValidate=BEGIN
+                                                                   CurrForm.SAVERECORD;
+                                                                   IF UpdateBeachteStartdatum(Rec) = TRUE THEN
+                                                                     BEGIN
+                                                                       CurrForm.UPDATE(TRUE);
+                                                                     END;
+                                                                 END;
+                                                                  }
+    { 1140078;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140077;
+                                                 InColumnHeading=Yes }
     { 1140030;TextBox   ;1056 ;2200 ;1500 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
                                                  SourceExpr=Laufzeit;
@@ -184,6 +199,13 @@ OBJECT Form 50023 Kalkulationsblatt
                                                             END;
                                                              }
     { 1140031;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140030;
+                                                 InColumnHeading=Yes }
+    { 1140075;TextBox   ;27676;5610 ;2000 ;440  ;Editable=No;
+                                                 ParentControl=1140000;
+                                                 InColumn=Yes;
+                                                 CaptionML=DEU=Laufzeit Text;
+                                                 SourceExpr=laufzeit_text }
+    { 1140076;Label     ;0    ;0    ;0    ;0    ;ParentControl=1140075;
                                                  InColumnHeading=Yes }
     { 1140018;TextBox   ;14813;2200 ;1700 ;440  ;ParentControl=1140000;
                                                  InColumn=Yes;
@@ -534,8 +556,8 @@ OBJECT Form 50023 Kalkulationsblatt
 
       Text018@1140031 : TextConst
         'DEU=Die %1 Marge sollte ber 50 Prozent liegen.';
-      v_ablaufdatum@1140035 : Date;
       diff@1140032 : Integer;
+      v_ablaufdatum@1140035 : Date;
 
       Text019@1140034 : TextConst
         'DEU=Sie k”nnen nicht einzelne Module verl„ngern.Žndern Sie die Kalkulation dahingehend, dass Sie Basisger„t und all seine Komponenten gleichzeitg verl„ngern.';
@@ -552,6 +574,7 @@ OBJECT Form 50023 Kalkulationsblatt
 
       Text023@1140040 : TextConst
         'DEU=Der %1 Rabatt darf nur den Wert %2 oder 0 annehmen.';
+      laufzeit_text@1140041 : Text[30];
 
     PROCEDURE HoleArtikelPos@1140007();
     VAR
@@ -585,7 +608,7 @@ OBJECT Form 50023 Kalkulationsblatt
                   "AU-Zeile".SETFILTER("Manufacturer Code",'%1','59');
                   IF "AU-Zeile".FINDFIRST THEN
 
-                    ////CHAMPS bezieht sich auf Auftrag
+                    ////Service bezieht sich auf Auftrag
                     BEGIN
                       REPEAT
                         Artikel.GET("AU-Zeile"."No.");
@@ -628,7 +651,7 @@ OBJECT Form 50023 Kalkulationsblatt
                 END
               ELSE
                 BEGIN
-                  ////CHAMPS bezieht sich auf Lieferschein
+                  ////Service bezieht sich auf Lieferschein
                   IF (lieferscheinnr <> '') AND (lieferscheinnr <> GETFILTER("Nr.")) THEN
                     BEGIN
                       "Lief-Zeile".RESET;
@@ -681,7 +704,7 @@ OBJECT Form 50023 Kalkulationsblatt
                     END
                   ELSE
                     BEGIN
-                      ////CHAMPS bezieht sich auf einen Wartungsvertrag
+                      ////Service bezieht sich auf einen Wartungsvertrag
                       IF (wartungsnr <> '') THEN
                         BEGIN
                           ServicePos.RESET;
@@ -692,57 +715,66 @@ OBJECT Form 50023 Kalkulationsblatt
                           IF ServicePos.FINDFIRST THEN
                             BEGIN
                               REPEAT
-                                TempChampRelaDoc.RESET;
-                                TempChampRelaDoc.SETFILTER(Art,'%1',TempChampRelaDoc.Art::"SUP-AU");
-                                TempChampRelaDoc.SETFILTER("Nr.",'%1',GETFILTER("Nr."));
-                                TempChampRelaDoc.SETFILTER("Zeilennr.",'%1',v_zeilennr);
-                                TempChampRelaDoc.SETFILTER("Belegnr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
-                                TempChampRelaDoc.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
-                                IF NOT TempChampRelaDoc.FINDFIRST THEN
+                                VergleichSystemPos.RESET;
+                                VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
+                                VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
+                                VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                IF VergleichSystemPos.FINDFIRST THEN
                                   BEGIN
-                                    ChampRelaDoc.INIT;
-                                    ChampRelaDoc.Art := Art :: "SUP-AU";
-                                    ChampRelaDoc."Nr." := "AU-Zeile_Champ"."Document No.";
-                                    ChampRelaDoc."Zeilennr." := v_zeilennr;
-                                    ChampRelaDoc."Belegnr." := ServicePos."Urspr. Lieferscheinnr.";
-                                    ChampRelaDoc."Belegzeilennr." := ServicePos."Urspr. Lieferscheinzeilennr.";
-                                    ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
-                                    ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
-                                    ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
-                                    ChampRelaDoc."Menge kalk." := ServicePos.Menge;
-                                    ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
-                                    ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
-                                    ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
-                                    //Laufzeit vorbelegen
-                                    Opt.RESET;
-                                    Opt.SETFILTER("Tabellen ID",'%1',50024);
-                                    Opt.SETFILTER("Feld ID",'%1',44);
-                                    Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
-                                    IF Opt.FINDFIRST THEN
-                                      ChampRelaDoc.Laufzeit := Opt.Code;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
-                                    ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
-                                    ChampRelaDoc.Basisger„t);
-                                    ChampRelaDoc.INSERT(TRUE);
-                                  END
-                                ELSE
-                                  BEGIN
-                                    VergleichSystemPos.RESET;
-                                    VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
-                                    VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
-                                    VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
-                                    VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
-                                    VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
-                                    IF VergleichSystemPos.FINDFIRST THEN
+                                    TempChampRelaDoc.RESET;
+                                    TempChampRelaDoc.SETFILTER(Art,'%1',TempChampRelaDoc.Art::"SUP-AU");
+                                    TempChampRelaDoc.SETFILTER("Nr.",'%1',GETFILTER("Nr."));
+                                    TempChampRelaDoc.SETFILTER("Zeilennr.",'%1',v_zeilennr);
+                                    TempChampRelaDoc.SETFILTER("Belegnr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                    TempChampRelaDoc.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                    IF NOT TempChampRelaDoc.FINDFIRST THEN
                                       BEGIN
-                                        menge_gesamt := 0;
-                                        REPEAT
-                                          menge_gesamt := menge_gesamt + VergleichSystemPos.Menge;
-                                        UNTIL VergleichSystemPos.NEXT = 0;
-                                        IF TempChampRelaDoc."Menge kalk." < menge_gesamt THEN
+                                        ChampRelaDoc.INIT;
+                                        ChampRelaDoc.Art := Art :: "SUP-AU";
+                                        ChampRelaDoc."Nr." := "AU-Zeile_Champ"."Document No.";
+                                        ChampRelaDoc."Zeilennr." := v_zeilennr;
+                                        ChampRelaDoc."Belegnr." := ServicePos."Urspr. Lieferscheinnr.";
+                                        ChampRelaDoc."Belegzeilennr." := ServicePos."Urspr. Lieferscheinzeilennr.";
+                                        ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
+                                        ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
+                                        ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
+                                        ChampRelaDoc."Menge kalk." := ServicePos.Menge;
+                                        ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
+                                        ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
+                                        ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
+                                        //Laufzeit vorbelegen
+                                        Opt.RESET;
+                                        Opt.SETFILTER("Tabellen ID",'%1',50024);
+                                        Opt.SETFILTER("Feld ID",'%1',44);
+                                        Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
+                                        IF Opt.FINDFIRST THEN
+                                          ChampRelaDoc.Laufzeit := Opt.Code;
+                                        ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
+                                        ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
+                                        ChampRelaDoc.Basisger„t);
+                                        ChampRelaDoc.INSERT(TRUE);
+                                      END
+                                    ELSE
+                                      BEGIN
+                                        VergleichSystemPos.RESET;
+                                        VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
+                                        VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                        VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
+                                        VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                        VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                        IF VergleichSystemPos.FINDFIRST THEN
                                           BEGIN
-                                            TempChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk." + ServicePos.Menge;
-                                            TempChampRelaDoc.MODIFY;
+                                            menge_gesamt := 0;
+                                            REPEAT
+                                              menge_gesamt := menge_gesamt + VergleichSystemPos.Menge;
+                                            UNTIL VergleichSystemPos.NEXT = 0;
+                                            IF TempChampRelaDoc."Menge kalk." < menge_gesamt THEN
+                                              BEGIN
+                                                TempChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk." + ServicePos.Menge;
+                                                TempChampRelaDoc.MODIFY;
+                                              END;
                                           END;
                                       END;
                                   END;
@@ -796,7 +828,7 @@ OBJECT Form 50023 Kalkulationsblatt
                   "AU-Zeile".SETFILTER("Manufacturer Code",'%1','59');
                   IF "AU-Zeile".FINDFIRST THEN
 
-                    ////CHAMPS bezieht sich auf Auftrag
+                    ////Service bezieht sich auf Auftrag
                     BEGIN
                       REPEAT
                         Artikel.GET("AU-Zeile"."No.");
@@ -839,7 +871,7 @@ OBJECT Form 50023 Kalkulationsblatt
                 END
               ELSE
                 BEGIN
-                  ////CHAMPS bezieht sich auf Lieferschein
+                  ////Service bezieht sich auf Lieferschein
                   IF (lieferscheinnr <> '') AND (lieferscheinnr <> GETFILTER("Nr.")) THEN
                     BEGIN
                       "Lief-Zeile".RESET;
@@ -892,7 +924,7 @@ OBJECT Form 50023 Kalkulationsblatt
                     END
                   ELSE
                     BEGIN
-                      ////CHAMPS bezieht sich auf einen Wartungsvertrag
+                      ////Service bezieht sich auf einen Wartungsvertrag
                       IF (wartungsnr <> '') THEN
                         BEGIN
                           ServicePos.RESET;
@@ -903,58 +935,67 @@ OBJECT Form 50023 Kalkulationsblatt
                           IF ServicePos.FINDFIRST THEN
                             BEGIN
                               REPEAT
-                                TempChampRelaDoc.RESET;
-                                TempChampRelaDoc.SETFILTER(Art,'%1',TempChampRelaDoc.Art::"SUP-AU");
-                                TempChampRelaDoc.SETFILTER("Nr.",'%1',GETFILTER("Nr."));
-                                TempChampRelaDoc.SETFILTER("Zeilennr.",'%1',v_zeilennr);
-                                TempChampRelaDoc.SETFILTER("Belegnr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
-                                TempChampRelaDoc.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
-                                IF NOT TempChampRelaDoc.FINDFIRST THEN
+                                VergleichSystemPos.RESET;
+                                VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
+                                VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
+                                VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                IF VergleichSystemPos.FINDFIRST THEN
                                   BEGIN
-                                    ChampRelaDoc.INIT;
-                                    ChampRelaDoc.Art := Art :: "SUP-AU";
-                                    ChampRelaDoc."Nr." := "AU-Zeile_Champ"."Document No.";
-                                    ChampRelaDoc."Zeilennr." := v_zeilennr;
-                                    ChampRelaDoc."Belegnr." := ServicePos."Urspr. Lieferscheinnr.";
-                                    ChampRelaDoc."Belegzeilennr." := ServicePos."Urspr. Lieferscheinzeilennr.";
-                                    ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
-                                    ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
-                                    ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
-                                    ChampRelaDoc.VALIDATE("Menge kalk.",ServicePos.Menge);
-                                    CurrForm."Menge kalk.".UPDATE;
-                                    ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
-                                    ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
-                                    ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
-                                    //Laufzeit vorbelegen
-                                    Opt.RESET;
-                                    Opt.SETFILTER("Tabellen ID",'%1',50024);
-                                    Opt.SETFILTER("Feld ID",'%1',44);
-                                    Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
-                                    IF Opt.FINDFIRST THEN
-                                      ChampRelaDoc.Laufzeit := Opt.Code;
-                                    ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
-                                    ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
-                                    ChampRelaDoc.Basisger„t);
-                                    ChampRelaDoc.INSERT(TRUE);
-                                  END
-                                ELSE
-                                  BEGIN
-                                    VergleichSystemPos.RESET;
-                                    VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
-                                    VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
-                                    VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
-                                    VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
-                                    VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
-                                    IF VergleichSystemPos.FINDFIRST THEN
+                                    TempChampRelaDoc.RESET;
+                                    TempChampRelaDoc.SETFILTER(Art,'%1',TempChampRelaDoc.Art::"SUP-AU");
+                                    TempChampRelaDoc.SETFILTER("Nr.",'%1',GETFILTER("Nr."));
+                                    TempChampRelaDoc.SETFILTER("Zeilennr.",'%1',v_zeilennr);
+                                    TempChampRelaDoc.SETFILTER("Belegnr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                    TempChampRelaDoc.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                    IF NOT TempChampRelaDoc.FINDFIRST THEN
                                       BEGIN
-                                        menge_gesamt := 0;
-                                        REPEAT
-                                          menge_gesamt := menge_gesamt + VergleichSystemPos.Menge;
-                                        UNTIL VergleichSystemPos.NEXT = 0;
-                                        IF TempChampRelaDoc."Menge kalk." < menge_gesamt THEN
+                                        ChampRelaDoc.INIT;
+                                        ChampRelaDoc.Art := Art :: "SUP-AU";
+                                        ChampRelaDoc."Nr." := "AU-Zeile_Champ"."Document No.";
+                                        ChampRelaDoc."Zeilennr." := v_zeilennr;
+                                        ChampRelaDoc."Belegnr." := ServicePos."Urspr. Lieferscheinnr.";
+                                        ChampRelaDoc."Belegzeilennr." := ServicePos."Urspr. Lieferscheinzeilennr.";
+                                        ChampRelaDoc."Debitornr." := "AU-Zeile_Champ"."Sell-to Customer No.";
+                                        ChampRelaDoc."SUP Artikelnr." := "AU-Zeile_Champ"."No.";
+                                        ChampRelaDoc.VALIDATE("Ger„te Artikelnr.",ServicePos."Artikelnr.");
+                                        ChampRelaDoc.VALIDATE("Menge kalk.",ServicePos.Menge);
+                                        CurrForm."Menge kalk.".UPDATE;
+                                        ChampRelaDoc."Vertragsnr. bernommen" := wartungsnr;
+                                        ChampRelaDoc."Nachtr„gliche Service Order" := TRUE;
+                                        ChampRelaDoc.Fremderwerb := ServicePos.Fremderwerb;
+                                        //Laufzeit vorbelegen
+                                        Opt.RESET;
+                                        Opt.SETFILTER("Tabellen ID",'%1',50024);
+                                        Opt.SETFILTER("Feld ID",'%1',44);
+                                        Opt.SETFILTER("Nr.",'%1',ChampRelaDoc."SUP Artikelnr.");
+                                        IF Opt.FINDFIRST THEN
+                                          ChampRelaDoc.Laufzeit := Opt.Code;
+                                        ChampRelaDoc.VALIDATE("Quotenr.",quotenr);
+                                        ChampRelaDoc.Gruppierung := Gruppieren(ChampRelaDoc."Belegnr.",ChampRelaDoc."Belegzeilennr.",
+                                        ChampRelaDoc.Basisger„t);
+                                        ChampRelaDoc.INSERT(TRUE);
+                                      END
+                                    ELSE
+                                      BEGIN
+                                        VergleichSystemPos.RESET;
+                                        VergleichSystemPos.SETFILTER(Art,'%1',VergleichSystemPos.Art :: System);
+                                        VergleichSystemPos.SETFILTER(Inaktiv,'%1',FALSE);
+                                        VergleichSystemPos.SETFILTER("Wartungsvertragsnr.",'%1',wartungsnr);
+                                        VergleichSystemPos.SETFILTER("Nr.",'%1',ServicePos."Urspr. Lieferscheinnr.");
+                                        VergleichSystemPos.SETFILTER("Belegzeilennr.",'%1',ServicePos."Urspr. Lieferscheinzeilennr.");
+                                        IF VergleichSystemPos.FINDFIRST THEN
                                           BEGIN
-                                            TempChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk." + ServicePos.Menge;
-                                            TempChampRelaDoc.MODIFY;
+                                            menge_gesamt := 0;
+                                            REPEAT
+                                              menge_gesamt := menge_gesamt + VergleichSystemPos.Menge;
+                                            UNTIL VergleichSystemPos.NEXT = 0;
+                                            IF TempChampRelaDoc."Menge kalk." < menge_gesamt THEN
+                                              BEGIN
+                                                TempChampRelaDoc."Menge kalk." := TempChampRelaDoc."Menge kalk." + ServicePos.Menge;
+                                                TempChampRelaDoc.MODIFY;
+                                              END;
                                           END;
                                       END;
                                   END;
@@ -1027,7 +1068,7 @@ OBJECT Form 50023 Kalkulationsblatt
               "AU-Zeile".SETFILTER("Line No.",'%1..%2',zeilennr_champ,"AU-Zeile_Champ"."Line No.");
               "AU-Zeile".SETFILTER("Manufacturer Code",'%1','59');
               IF "AU-Zeile".FINDFIRST THEN
-                ////CHAMPS bezieht sich auf Auftrag
+                ////Service bezieht sich auf Auftrag
                 BEGIN
                   REPEAT
                     Artikel.GET("AU-Zeile"."No.");
@@ -1273,7 +1314,7 @@ OBJECT Form 50023 Kalkulationsblatt
                   "AU-Zeile".SETFILTER("AU-Zeile"."Outstanding Quantity",'>%1',0);
                   "AU-Zeile".SETFILTER("Manufacturer Code",'%1','59');
                   IF "AU-Zeile".FINDFIRST THEN
-                    //CHAMPS bezieht sich auf Auftrag
+                    //Service bezieht sich auf Auftrag
                     BEGIN
                       EVALUATE(v_laufzeit,COPYSTR(ChampRelaDoc.Laufzeit,1,STRPOS(ChampRelaDoc.Laufzeit,'M')-1));
                       champ_price_einzeln := "AU-Zeile".Gen_Service_VK(ChampRelaDoc."SUP Artikelnr.",
@@ -1294,7 +1335,7 @@ OBJECT Form 50023 Kalkulationsblatt
                       ChampRelaDoc.MODIFY;
                     END
                   ELSE
-                    //CHAMPS bezieht sich auf Lieferschein
+                    //Service bezieht sich auf Lieferschein
                     BEGIN
                       "Lief-Zeile".RESET;
                       "Lief-Zeile".SETFILTER("Document No.",'%1',ChampRelaDoc."Belegnr.");
@@ -1326,7 +1367,7 @@ OBJECT Form 50023 Kalkulationsblatt
                     END;
                 END
               ELSE
-                //CHAMPS bezieht sich auf Pseudo Positionen
+                //Service bezieht sich auf Pseudo Positionen
                 BEGIN
                   EVALUATE(v_laufzeit,COPYSTR(ChampRelaDoc.Laufzeit,1,STRPOS(ChampRelaDoc.Laufzeit,'M')-1));
                   champ_price_einzeln := "AU-Zeile".Gen_Service_VK(ChampRelaDoc."SUP Artikelnr.",
@@ -1790,7 +1831,7 @@ OBJECT Form 50023 Kalkulationsblatt
           //Feste Werte
           Sheet.Range('A1').Value := 'Serviceverl„ngerung fr folgendes System:';
           Sheet.Range('A2').Value := 'Lieferscheinnr.: ';
-          Sheet.Range('A3').Value := 'Ende der Vertragslaufzeit: ';
+          Sheet.Range('A3').Value := 'Ende der Vertragslaufzeit:';
 
           REPEAT
 
@@ -1845,7 +1886,8 @@ OBJECT Form 50023 Kalkulationsblatt
                BEGIN
                  Wartungsvertrag.GET(v_wartungsnr);
                  text_array[2] := Sheet.Range('A3').Value;
-                 text_array[2] := text_array[2] + FORMAT(Wartungsvertrag.Vertragsablaufdatum);
+                 IF STRPOS(text_array[2], FORMAT(Wartungsvertrag.Vertragsablaufdatum)) = 0 THEN
+                   text_array[2] := text_array[2] + ' ' + FORMAT(Wartungsvertrag.Vertragsablaufdatum);
                  Sheet.Range('A3').Value := text_array[2];
                  Sheet.Range('A4').Value := 'Vertragsnr.: ' + Wartungsvertrag."Wartungsvertragsnr.";
                  IF Wartungsvertrag.Endkunde <> '' THEN
