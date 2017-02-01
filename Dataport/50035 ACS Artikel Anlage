@@ -62,12 +62,24 @@ IF excel_datensätze > 0 THEN
               Artikelname := COPYSTR(Artikelname,1,STRLEN(Artikelname)-1);
               PL_Version_Systeme := PL_Version_Schaeffler;
               startdatum := 220415D;
+              v_Spalte_PL_Part := Spalte_PL_Part_SCHAEFF;
+              v_Spalte_PL_MSRP := Spalte_PL_MSRP_SCHAEFF;
+              v_Spalte_PL_LongDescr := Spalte_PL_LongDescr_SCHAEFF;
+              v_Spalte_PL_ShortDescr := Spalte_PL_ShortDescr_SCHAEFF;
+              v_pricebook_sheetname_EURO := 'CHAMPS_EUR_PRICEBOOK';
+              v_pricebook_sheetname_USD := 'CHAMPS_USD_PRICEBOOK';
             END
           ELSE
             BEGIN
               v_PL_EURO_Pfad := PL_EURO_Pfad;
               v_PL_USD_Pfad :=  PL_USD_Pfad;
               PL_Version_Systeme := FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Version+Quelle_j).Value);
+              v_Spalte_PL_Part := Spalte_PL_Part;
+              v_Spalte_PL_MSRP := Spalte_PL_MSRP;
+              v_Spalte_PL_LongDescr := Spalte_PL_LongDescr;
+              v_Spalte_PL_ShortDescr := Spalte_PL_ShortDescr;
+              v_pricebook_sheetname_EURO := 'Uploadable Flat Price Book';
+              v_pricebook_sheetname_USD := 'Uploadable Flat Price Book';
             END;
         END;
 
@@ -79,23 +91,23 @@ IF excel_datensätze > 0 THEN
       IF ek_system_währung = 'USD' THEN
         BEGIN
           PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
-          PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
-          IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
-            ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
+          PL_Sheet := PL_Book.Worksheets.Item(v_pricebook_sheetname_USD);
+          IF FORMAT(PL_Sheet.Range(v_Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
+            ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + v_Spalte_PL_MSRP + ' muss MSRP USD lauten.');
         END
       ELSE
         BEGIN
           IF ek_system_währung = '' THEN
             BEGIN
               PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
-              PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
-              IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
-                ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
+              PL_Sheet := PL_Book.Worksheets.Item(v_pricebook_sheetname_EURO);
+              IF FORMAT(PL_Sheet.Range(v_Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
+                ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + v_Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
             END;
         END;
 
       cell_services := FindRow('Service',Spalte_PL_ProductGroup);
-      cell_part := FindRow(Artikelname,Spalte_PL_Part);
+      cell_part := FindRow(Artikelname,v_Spalte_PL_Part);
       cell_training := FindRow('Technical Training',Spalte_Product);
 
       //ACHTUNG!!! Artikel wird neu eingelesen, da Schaeffler Artikel und anders lautend mit Punkt am Ende
@@ -108,7 +120,7 @@ IF excel_datensätze > 0 THEN
 
       IF cell_part <> '' THEN
         BEGIN
-          cell_part := CONVERTSTR(cell_part,Spalte_PL_Part,Spalte_PL_MSRP);
+          cell_part := CONVERTSTR(cell_part,v_Spalte_PL_Part,v_Spalte_PL_MSRP);
           IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
           AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
           AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge')
@@ -121,7 +133,7 @@ IF excel_datensätze > 0 THEN
           row_part := TOPAS_API.ConvertStrToNum(cell_part);
           row_services := TOPAS_API.ConvertStrToNum(cell_services);
           row_training := TOPAS_API.ConvertStrToNum(cell_training);
-          PL_DiscLevel := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_DiscLevel)).Value);
+          PL_DiscLevel := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,v_Spalte_PL_MSRP,Spalte_PL_DiscLevel)).Value);
 
           services_artikel := FALSE;
           training_artikel := FALSE;
@@ -184,9 +196,11 @@ IF excel_datensätze > 0 THEN
 
           dc := ROUND(dc,0.01);
 
-          pl_short_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value);
-          pl_long_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value);
-          pl_product_group := PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ProductGroup)).Value;
+          pl_short_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,v_Spalte_PL_MSRP,
+                                               v_Spalte_PL_ShortDescr)).Value);
+          pl_long_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,v_Spalte_PL_MSRP,
+                                              v_Spalte_PL_LongDescr)).Value);
+          pl_product_group := PL_Sheet.Range(CONVERTSTR(cell_part,v_Spalte_PL_MSRP,Spalte_PL_ProductGroup)).Value;
 
         END;
 
@@ -346,7 +360,7 @@ IF excel_datensätze > 0 THEN
 
               IF FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value) = Artikel."No. 2" THEN
                 Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value := TOPAS_API.CreateExcelHyperlinkToNav
-                (Artikel.TABLENAME,1,30,FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value));
+                (Artikel.TABLENAME,1,30,Artikel."No.");
               Quelle_Sheet.Range('F'+Quelle_j).Value := 'OK';
 
               {
@@ -394,8 +408,8 @@ IF excel_datensätze > 0 THEN
                     BEGIN
                       //PL_Book.Close;
                       PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
-                      PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
-                      IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
+                      PL_Sheet := PL_Book.Worksheets.Item(v_pricebook_sheetname_EURO);
+                      IF FORMAT(PL_Sheet.Range(v_Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                         ERROR(Text002);
                     END;
 
@@ -403,16 +417,15 @@ IF excel_datensätze > 0 THEN
                     BEGIN
                       //PL_Book.Close;
                       PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
-                      PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
-                      IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
+                      PL_Sheet := PL_Book.Worksheets.Item(v_pricebook_sheetname_USD);
+                      IF FORMAT(PL_Sheet.Range(v_Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
                         ERROR(Text003);
-
                     END;
 
                   cell_services := FindRow('Service',Spalte_PL_PGroup);
                   cell_training := FindRow('Technical Training',Spalte_Product);
-                  cell_part := FindRow(Artikelname,Spalte_PL_Part);
-                  cell_part := CONVERTSTR(cell_part,Spalte_PL_Part,Spalte_PL_MSRP);
+                  cell_part := FindRow(Artikelname,v_Spalte_PL_Part);
+                  cell_part := CONVERTSTR(cell_part,v_Spalte_PL_Part,v_Spalte_PL_MSRP);
 
                   excel_msrp := 0;
                   IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
@@ -508,7 +521,7 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
     Cell := Range1.Address;
     // Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
     IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = Spalte_PL_ProductGroup))
-    OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = Spalte_PL_Part)) THEN
+    OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = v_Spalte_PL_Part)) THEN
       BEGIN
         REPEAT
           Range1 := PL_Sheet.Rows.FindNext(Range1);
@@ -517,7 +530,7 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
         UNTIL (STRPOS(Cell,Spalte) = 2) OR (i > 100);
       END
     ELSE
-      IF Spalte = Spalte_PL_Part THEN
+      IF Spalte = v_Spalte_PL_Part THEN
         BEGIN
           // mehr als ein Parameter gibt Probleme bei der Find Methode > HRESULT Fehler, vermutlich
           // liegt es an einer fehlenden Instanz im 2. Parameter, deshalb wird solange gesucht,
