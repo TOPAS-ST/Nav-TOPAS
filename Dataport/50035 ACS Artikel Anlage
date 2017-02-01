@@ -79,7 +79,7 @@ IF excel_datensätze > 0 THEN
       IF ek_system_währung = 'USD' THEN
         BEGIN
           PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
-          PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
+          PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
           IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
             ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP USD lauten.');
         END
@@ -88,7 +88,7 @@ IF excel_datensätze > 0 THEN
           IF ek_system_währung = '' THEN
             BEGIN
               PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
-              PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
+              PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
               IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                 ERROR('Fehlerhafte Syntax in der System Preisliste > Spalte ' + Spalte_PL_MSRP + ' muss MSRP EUR lauten.');
             END;
@@ -108,7 +108,7 @@ IF excel_datensätze > 0 THEN
 
       IF cell_part <> '' THEN
         BEGIN
-          cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
+          cell_part := CONVERTSTR(cell_part,Spalte_PL_Part,Spalte_PL_MSRP);
           IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
           AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'EOL')
           AND (FORMAT(PL_Sheet.Range(cell_part).Value) <> 'No Charge')
@@ -121,36 +121,72 @@ IF excel_datensätze > 0 THEN
           row_part := TOPAS_API.ConvertStrToNum(cell_part);
           row_services := TOPAS_API.ConvertStrToNum(cell_services);
           row_training := TOPAS_API.ConvertStrToNum(cell_training);
+          PL_DiscLevel := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_DiscLevel)).Value);
 
           services_artikel := FALSE;
           training_artikel := FALSE;
 
-          IF row_training < row_part THEN
-            BEGIN
-              dc := excel_msrp * 0.9;
-              training_artikel := TRUE
-            END
-          ELSE
-            BEGIN
-              IF row_services < row_part THEN
-                BEGIN
-                  dc := excel_msrp * 0.8;
-                  services_artikel := TRUE;
-                END
-              ELSE
-                BEGIN
-                  IF sonderartikel_schaeffler THEN
-                    dc := excel_msrp * 0.5
-                  ELSE
-                    dc := excel_msrp * 0.6;
-                END;
+          CASE PL_DiscLevel OF
+            'A' : BEGIN
+              EVALUATE(discount,DiscLevel_A);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_A) + '%';
             END;
+            'G' : BEGIN
+              EVALUATE(discount,DiscLevel_G);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_G) + '%';
+            END;
+            'H' : BEGIN
+              EVALUATE(discount,DiscLevel_H);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_H) + '%';
+            END;
+            'J' : BEGIN
+              EVALUATE(discount,DiscLevel_J);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_J) + '%';
+            END;
+            'K' : BEGIN
+              EVALUATE(discount,DiscLevel_K);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_K) + '%';
+            END;
+            'N' : BEGIN
+              EVALUATE(discount,DiscLevel_N);
+              discount := 1 - discount / 100;
+              dc := excel_msrp * discount;
+              preisinfo := 'MSRP -' + FORMAT(DiscLevel_N) + '%';
+            END;
+          END;
+
+          IF row_training < row_part THEN BEGIN
+            //dc := excel_msrp * 0.9;
+            training_artikel := TRUE
+          END ELSE BEGIN
+            IF row_services < row_part THEN BEGIN
+              //dc := excel_msrp * 0.8;
+              services_artikel := TRUE;
+            END ELSE BEGIN
+              IF sonderartikel_schaeffler THEN
+                dc := excel_msrp * 0.5
+              ELSE BEGIN
+                //dc := excel_msrp * 0.6;
+                //preisinfo := 'MSRP -40%'
+              END;
+            END;
+          END;
 
           dc := ROUND(dc,0.01);
 
           pl_short_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ShortDescr)).Value);
-          pl_long_descr := RemoveSpecialChars(PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value);
-          pl_product_group := PL_Sheet.Range( CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ProductGroup)).Value;
+          pl_long_descr := RemoveSpecialChars(PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_LongDescr)).Value);
+          pl_product_group := PL_Sheet.Range(CONVERTSTR(cell_part,Spalte_PL_MSRP,Spalte_PL_ProductGroup)).Value;
 
         END;
 
@@ -179,7 +215,7 @@ IF excel_datensätze > 0 THEN
 
               IF training_artikel = TRUE THEN
                 BEGIN
-                  Artikel.Preisinfo := 'MSRP -10%';
+                  Artikel.Preisinfo := preisinfo;
                   Artikel."Item Tracking Code" := 'KEINE';
                   Artikel.Serviceklassifizierung := 'KEINE';
                   Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
@@ -189,7 +225,7 @@ IF excel_datensätze > 0 THEN
               ELSE
                 IF services_artikel = TRUE THEN
                   BEGIN
-                    Artikel.Preisinfo := 'MSRP -20%';
+                    Artikel.Preisinfo := preisinfo;
                     Artikel."Item Tracking Code" := 'KEINE';
                     Artikel.Serviceklassifizierung := 'KEINE';
                     Artikel.Artikelgruppe := 'DIENSTLEISTUNG';
@@ -198,7 +234,7 @@ IF excel_datensätze > 0 THEN
                   END
                 ELSE
                   BEGIN
-                    Artikel.Preisinfo := 'MSRP -40%';
+                    Artikel.Preisinfo := preisinfo;
                     IF sonderartikel_schaeffler THEN Artikel.Preisinfo := 'MSRP -50%';
                     IF (klassifizierung = 'KEINE') OR (klassifizierung = 'SOFTWARE') THEN
                       BEGIN
@@ -312,6 +348,8 @@ IF excel_datensätze > 0 THEN
                 Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value := TOPAS_API.CreateExcelHyperlinkToNav
                 (Artikel.TABLENAME,1,30,FORMAT(Quelle_Sheet.Range(Spalte_Quelle_Part+Quelle_j).Value));
               Quelle_Sheet.Range('F'+Quelle_j).Value := 'OK';
+
+              {
               IF training_artikel = TRUE THEN
                 Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.9'
               ELSE
@@ -322,6 +360,13 @@ IF excel_datensätze > 0 THEN
                     Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.5'
                   ELSE
                     Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.6';
+              }
+
+
+              IF sonderartikel_schaeffler = FALSE THEN
+                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * ' + FORMAT(discount)
+              ELSE
+                Quelle_Sheet.Range('G'+Quelle_j).Value := 'MSRP * 0.5';
 
               Quelle_Sheet.Range('H'+Quelle_j).Value := FORMAT(dc);
               //Quelle_Sheet.Range('H'+Quelle_j).NumberFormat := 0.00;
@@ -330,6 +375,7 @@ IF excel_datensätze > 0 THEN
               Quelle_Sheet.Range('K'+Quelle_j).Value := 'A: ' + FORMAT(row_part);
               Quelle_Sheet.Range('L'+Quelle_j).Value := 'S: ' + FORMAT(row_services);
               Quelle_Sheet.Range('M'+Quelle_j).Value := 'T: ' + FORMAT(row_training);
+              Quelle_Sheet.Range('N'+Quelle_j).Value := 'Disc_Level: ' + PL_DiscLevel;
 
               //*********************************************************************************************
               //                              VK-Preise EURO bzw. USD einspielen
@@ -348,7 +394,7 @@ IF excel_datensätze > 0 THEN
                     BEGIN
                       //PL_Book.Close;
                       PL_Book := PL_Excel.Workbooks._Open(v_PL_EURO_Pfad,0,TRUE);
-                      PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_EUR_PRICEBOOK');
+                      PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
                       IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP EUR' THEN
                         ERROR(Text002);
                     END;
@@ -357,7 +403,7 @@ IF excel_datensätze > 0 THEN
                     BEGIN
                       //PL_Book.Close;
                       PL_Book := PL_Excel.Workbooks._Open(v_PL_USD_Pfad,0,TRUE);
-                      PL_Sheet := PL_Book.Worksheets.Item('CHAMPS_USD_PRICEBOOK');
+                      PL_Sheet := PL_Book.Worksheets.Item('Uploadable Flat Price Book');
                       IF FORMAT(PL_Sheet.Range(Spalte_PL_MSRP+'1').Value) <> 'MSRP USD' THEN
                         ERROR(Text003);
 
@@ -366,7 +412,7 @@ IF excel_datensätze > 0 THEN
                   cell_services := FindRow('Service',Spalte_PL_PGroup);
                   cell_training := FindRow('Technical Training',Spalte_Product);
                   cell_part := FindRow(Artikelname,Spalte_PL_Part);
-                  cell_part := CONVERTSTR(cell_part,'F',Spalte_PL_MSRP);
+                  cell_part := CONVERTSTR(cell_part,Spalte_PL_Part,Spalte_PL_MSRP);
 
                   excel_msrp := 0;
                   IF (FORMAT(PL_Sheet.Range(cell_part).Value) <> '')
@@ -461,8 +507,8 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
     IF ISCLEAR(Range1) THEN EXIT('');
     Cell := Range1.Address;
     // Schleife notwendig, da die Übergabe der Range nicht richtig funktioniert
-    IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'A'))
-    OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = 'F')) THEN
+    IF ((STRPOS(Cell,Spalte) = 0) AND (Spalte = Spalte_PL_ProductGroup))
+    OR ((STRPOS(Cell,Spalte) = 0) AND (Spalte = Spalte_PL_Part)) THEN
       BEGIN
         REPEAT
           Range1 := PL_Sheet.Rows.FindNext(Range1);
@@ -471,7 +517,7 @@ WITH PL_Sheet.Range(Spalte+':'+Spalte) DO
         UNTIL (STRPOS(Cell,Spalte) = 2) OR (i > 100);
       END
     ELSE
-      IF Spalte = 'F' THEN
+      IF Spalte = Spalte_PL_Part THEN
         BEGIN
           // mehr als ein Parameter gibt Probleme bei der Find Methode > HRESULT Fehler, vermutlich
           // liegt es an einer fehlenden Instanz im 2. Parameter, deshalb wird solange gesucht,
