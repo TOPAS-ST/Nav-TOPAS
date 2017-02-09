@@ -2,10 +2,10 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
 {
   OBJECT-PROPERTIES
   {
-    Date=28.11.16;
-    Time=16:22:40;
+    Date=09.02.17;
+    Time=11:53:21;
     Modified=Yes;
-    Version List=;
+    Version List=TOPAS;
   }
   PROPERTIES
   {
@@ -166,6 +166,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       IF AU_Best_Druck THEN BEGIN
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Order Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
         Sales_Header.SETFILTER(Sales_Header."AB via EMail",'%1',FALSE);
@@ -180,6 +181,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       IF Žnd_Best_Druck THEN BEGIN
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Document Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Posting Date",'<>%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
@@ -197,6 +199,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
         IF interne_AB_nicht_drucken = FALSE THEN BEGIN
           Sales_Header.RESET;
           Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+          Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
           Sales_Header.SETFILTER(Sales_Header."Order Date",'%1',Tagesdatum);
           Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
           Sales_Header.SETFILTER(Sales_Header."AB via EMail",'%1',TRUE);
@@ -208,6 +211,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
         // Druck als PDF
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Order Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
         Sales_Header.SETFILTER(Sales_Header."AB via EMail",'%1',TRUE);
@@ -245,6 +249,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
         IF interne_AB_nicht_drucken = FALSE THEN BEGIN
           Sales_Header.RESET;
           Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+          Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
           Sales_Header.SETFILTER(Sales_Header."Document Date",'%1',Tagesdatum);
           Sales_Header.SETFILTER(Sales_Header."Posting Date",'<>%1',Tagesdatum);
           Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
@@ -257,6 +262,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
         // Druck als PDF
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Document Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Posting Date",'<>%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
@@ -341,6 +347,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       IF AU_Best_PDF THEN BEGIN
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Order Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
         Sales_Header.SETFILTER(Sales_Header."AB via EMail",'%1',TRUE);
@@ -388,6 +395,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       IF Žnd_Best_PDF THEN BEGIN
         Sales_Header.RESET;
         Sales_Header.SETFILTER(Sales_Header."Document Type",'%1',Sales_Header."Document Type"::Order);
+        Sales_Header.SETFILTER(Sales_Header."Sell-to Customer No.",'<>%1','');
         Sales_Header.SETFILTER(Sales_Header."Document Date",'%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Posting Date",'<>%1',Tagesdatum);
         Sales_Header.SETFILTER(Sales_Header."Location Code",'%1|%2','ZENT','KONSI');
