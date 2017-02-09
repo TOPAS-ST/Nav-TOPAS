@@ -2,8 +2,8 @@ OBJECT Codeunit 50005 Bullzip PDF
 {
   OBJECT-PROPERTIES
   {
-    Date=06.01.17;
-    Time=08:56:39;
+    Date=09.02.17;
+    Time=12:07:57;
     Modified=Yes;
     Version List=PDF10.25.0.2552;
   }
@@ -88,89 +88,93 @@ OBJECT Codeunit 50005 Bullzip PDF
 
         REPEAT
 
-          DocNo := SalesHeader."No.";
-          Window.UPDATE(1, DocNo);
-          Window.UPDATE(2, counter);
+          IF SalesHeader."Sell-to Customer No." <> '' THEN BEGIN
 
-          // Set file name for output file.
-          pdfFileName := baseFolder + '\' + SalesHeader."No." + '.pdf';
+            DocNo := SalesHeader."No.";
+            Window.UPDATE(1, DocNo);
+            Window.UPDATE(2, counter);
 
-          // Delete old output file if it already exist.
-          //IF EXISTS(pdfFileName) THEN ERASE(pdfFileName);
+            // Set file name for output file.
+            pdfFileName := baseFolder + '\' + SalesHeader."No." + '.pdf';
 
-          // Multiple PDF printers could be installed.
-          // Let the automation know which one to control.
-          pdfSettings.printerName := pdfUtil.DefaultPrinterName;
+            // Delete old output file if it already exist.
+            //IF EXISTS(pdfFileName) THEN ERASE(pdfFileName);
 
-          // Set output file name
-          pdfSettings.SetValue('Output', pdfFileName);
+            // Multiple PDF printers could be installed.
+            // Let the automation know which one to control.
+            pdfSettings.printerName := pdfUtil.DefaultPrinterName;
 
-          // Make sure no dialogs are shown during conversion.
-          pdfSettings.SetValue('ShowSaveAs', 'never');
-          pdfSettings.SetValue('ShowSettings', 'never');
-          pdfSettings.SetValue('ShowPDF', 'no');
-          pdfSettings.SetValue('ShowProgress', 'no');
-          pdfSettings.SetValue('ShowProgressFinished', 'no');
-          pdfSettings.SetValue('ConfirmOverwrite', 'no');
+            // Set output file name
+            pdfSettings.SetValue('Output', pdfFileName);
 
-          // Set file name of status file to wait for.
-          pdfSettings.SetValue('StatusFile', statusFileName);
+            // Make sure no dialogs are shown during conversion.
+            pdfSettings.SetValue('ShowSaveAs', 'never');
+            pdfSettings.SetValue('ShowSettings', 'never');
+            pdfSettings.SetValue('ShowPDF', 'no');
+            pdfSettings.SetValue('ShowProgress', 'no');
+            pdfSettings.SetValue('ShowProgressFinished', 'no');
+            pdfSettings.SetValue('ConfirmOverwrite', 'no');
 
-          // Add a text watermark.
-          //pdfSettings.SetValue('WatermarkText', 'PDF EXAMPLE - order ' +  SalesHeader."No.");
-          //pdfSettings.SetValue('WatermarkColor', '#FF0000');
-          //pdfSettings.SetValue('WatermarkVerticalPosition', 'top');
-          //pdfSettings.SetValue('WatermarkHorizontalPosition', 'right');
-          //pdfSettings.SetValue('WatermarkRotation', '90');
-          //pdfSettings.SetValue('WatermarkOutlineWidth', '0.5');
-          //pdfSettings.SetValue('WatermarkFontSize', '20');
-          //pdfSettings.SetValue('WatermarkVerticalAdjustment', '5');
-          //pdfSettings.SetValue('WatermarkHorizontalAdjustment', '1');
+            // Set file name of status file to wait for.
+            pdfSettings.SetValue('StatusFile', statusFileName);
 
-          // Add a background.
-          // If a professional or expert license is installed the quality of the
-          // background will improve.
-          //pdfSettings.SetValue('Superimpose', backgroundFileName);
-          //pdfSettings.SetValue('SuperimposeLayer', 'bottom');
+            // Add a text watermark.
+            //pdfSettings.SetValue('WatermarkText', 'PDF EXAMPLE - order ' +  SalesHeader."No.");
+            //pdfSettings.SetValue('WatermarkColor', '#FF0000');
+            //pdfSettings.SetValue('WatermarkVerticalPosition', 'top');
+            //pdfSettings.SetValue('WatermarkHorizontalPosition', 'right');
+            //pdfSettings.SetValue('WatermarkRotation', '90');
+            //pdfSettings.SetValue('WatermarkOutlineWidth', '0.5');
+            //pdfSettings.SetValue('WatermarkFontSize', '20');
+            //pdfSettings.SetValue('WatermarkVerticalAdjustment', '5');
+            //pdfSettings.SetValue('WatermarkHorizontalAdjustment', '1');
 
-          // Merge with other PDF files.
-          //pdfSettings.SetValue('MergeFile', mergeBeforeFileName + '|.|' + mergeAfterFileName);
+            // Add a background.
+            // If a professional or expert license is installed the quality of the
+            // background will improve.
+            //pdfSettings.SetValue('Superimpose', backgroundFileName);
+            //pdfSettings.SetValue('SuperimposeLayer', 'bottom');
 
-          // Sign with a digital certificate.
-          //pdfSettings.SetValue('SignCertificate', certificateFileName);
-          //pdfSettings.SetValue('SignPassword', certificatePassword);
-          //pdfSettings.SetValue('ShowSignature', 'yes');
+            // Merge with other PDF files.
+            //pdfSettings.SetValue('MergeFile', mergeBeforeFileName + '|.|' + mergeAfterFileName);
 
-          // Do not show errors in PDF user interface.
-          pdfSettings.SetValue('SuppressErrors', 'yes');
+            // Sign with a digital certificate.
+            //pdfSettings.SetValue('SignCertificate', certificateFileName);
+            //pdfSettings.SetValue('SignPassword', certificatePassword);
+            //pdfSettings.SetValue('ShowSignature', 'yes');
 
-          // You can see more features and settings at
-          // http://www.biopdf.com/guide/settings.php
+            // Do not show errors in PDF user interface.
+            pdfSettings.SetValue('SuppressErrors', 'yes');
 
-          // Write settings to printer.
-          // This writes a file name runonce.ini. It is a configuration that is used
-          // for the next print job. The printer will delete the runonce.ini after it
-          // is read.
-          pdfSettings.WriteSettings(TRUE);
+            // You can see more features and settings at
+            // http://www.biopdf.com/guide/settings.php
 
-          IF EXISTS(statusFileName) THEN ERASE(statusFileName);
+            // Write settings to printer.
+            // This writes a file name runonce.ini. It is a configuration that is used
+            // for the next print job. The printer will delete the runonce.ini after it
+            // is read.
+            pdfSettings.WriteSettings(TRUE);
 
-          SalesHeader2.COPY(SalesHeader);
-          SalesHeader2.SETRECFILTER;
-          REPORT.RUNMODAL(ReportID, FALSE, FALSE, SalesHeader2);
+            IF EXISTS(statusFileName) THEN ERASE(statusFileName);
 
-          IF pdfUtil.WaitForFile(statusFileName, 20000)  THEN BEGIN
-            // Check status file for errors.
-            IF pdfUtil.ReadIniString(statusFileName, 'Status', 'Errors', '') <> '0' THEN BEGIN
-              ERROR('Error creating PDF. ' + pdfUtil.ReadIniString(statusFileName, 'Status', 'MessageText', ''));
+            SalesHeader2.COPY(SalesHeader);
+            SalesHeader2.SETRECFILTER;
+            REPORT.RUNMODAL(ReportID, FALSE, FALSE, SalesHeader2);
+
+            IF pdfUtil.WaitForFile(statusFileName, 20000)  THEN BEGIN
+              // Check status file for errors.
+              IF pdfUtil.ReadIniString(statusFileName, 'Status', 'Errors', '') <> '0' THEN BEGIN
+                ERROR('Error creating PDF. ' + pdfUtil.ReadIniString(statusFileName, 'Status', 'MessageText', ''));
+              END;
+            END ELSE BEGIN
+              // The timeout elapsed. Something is wrong.
+              ERROR('Error creating ' + pdfFileName)
             END;
-          END ELSE BEGIN
-            // The timeout elapsed. Something is wrong.
-            ERROR('Error creating ' + pdfFileName)
-          END;
 
-          counter += 1;
-          Window.UPDATE(2,counter);
+            counter += 1;
+            Window.UPDATE(2,counter);
+
+          END;
 
         UNTIL (SalesHeader.NEXT=0);
       END;
