@@ -1,9 +1,9 @@
-OBJECT Form 50104 Batch-Auftragsbest„tigungen
+OBJECT Form 50104 Belegausgabe per Batch
 {
   OBJECT-PROPERTIES
   {
-    Date=09.02.17;
-    Time=11:53:21;
+    Date=01.03.17;
+    Time=12:38:30;
     Modified=Yes;
     Version List=TOPAS;
   }
@@ -157,8 +157,12 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       Text000@1140026 : TextConst
         'DEU=Sie k”nnen nicht mehrere Jobs gleichzeitig laufen lassen!';
       selected@1140027 : Integer;
-      wartungsnr_save@1140030 : ARRAY [2] OF Text[1024];
+      wartungsnr_save@1140030 : ARRAY [5] OF Text[1024];
       vertrag_gedruckt@1140029 : Boolean;
+      au_wartungsnr@1140033 : ARRAY [5] OF Text[1024];
+      i@1140034 : Integer;
+      k@1140035 : Integer;
+      t@1140036 : Integer;
 
     PROCEDURE Run_Batch@1140010();
     BEGIN
@@ -329,7 +333,7 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
         Ship_Header.RESET;
         Ship_Header.SETFILTER("Posting Date",'%1',Tagesdatum);
         IF Ship_Header.FINDFIRST THEN
-          Bullzip_PDF.BullzipPDF_ServiceContract(Ship_Header,AttachmentPath,50178)
+          Bullzip_PDF.BullzipPDF_ServiceContract(Ship_Header,AttachmentPath,50178);
       END;
 
 
@@ -527,6 +531,10 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
       // Mail-Job fr Servicevertr„ge
       wartungsnr_save[1] := '';
       wartungsnr_save[2] := '';
+      wartungsnr_save[3] := '';
+      wartungsnr_save[4] := '';
+      wartungsnr_save[5] := '';
+      t := 1;
       IF Servicevertr„ge_PDF = TRUE THEN
         BEGIN
           Ship_Header.RESET;
@@ -534,6 +542,12 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
           IF Ship_Header.FINDFIRST THEN
             REPEAT
               vertrag_gedruckt := FALSE;
+              au_wartungsnr[1] := '';
+              au_wartungsnr[2] := '';
+              au_wartungsnr[3] := '';
+              au_wartungsnr[4] := '';
+              au_wartungsnr[5] := '';
+              i := 1;
               Customer.GET(Ship_Header."Sell-to Customer No.");
               IF Customer."Service via EMail" = TRUE THEN
                 BEGIN
@@ -544,10 +558,11 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
                   IF Servicepositionen.FINDFIRST THEN
                     BEGIN
                       REPEAT
-
-                        body := '';
                         IF (STRPOS(wartungsnr_save[1],Servicepositionen."Wartungsvertragsnr.") = 0)
-                        AND (STRPOS(wartungsnr_save[2],Servicepositionen."Wartungsvertragsnr.") = 0) THEN
+                        AND (STRPOS(wartungsnr_save[2],Servicepositionen."Wartungsvertragsnr.") = 0)
+                        AND (STRPOS(wartungsnr_save[3],Servicepositionen."Wartungsvertragsnr.") = 0)
+                        AND (STRPOS(wartungsnr_save[4],Servicepositionen."Wartungsvertragsnr.") = 0)
+                        AND (STRPOS(wartungsnr_save[5],Servicepositionen."Wartungsvertragsnr.") = 0) THEN
                           vertrag_gedruckt := FALSE;
                         IF vertrag_gedruckt = FALSE THEN
                           BEGIN
@@ -557,29 +572,49 @@ OBJECT Form 50104 Batch-Auftragsbest„tigungen
                                                       Wartungsvertrag.Status :: "Champs Partner");
                             IF Wartungsvertrag.FINDFIRST THEN
                               BEGIN
-                                IF Ship_Header."Language Code" <> 'ENU' THEN
-                                  BEGIN
-                                    body := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
-                                            'anbei erhalten Sie Ihren Servicevertrag.' + FORMAT(chr);
-                                    subject := 'Ihre Referenz: ';
-                                  END
-                                ELSE
-                                  BEGIN
-                                    body := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
-                                            'attached you will find your service contract.' + FORMAT(chr);
-                                    subject := 'Your reference: ';
-                                  END;
-                                TOPAS_API.NewMail(Ship_Header."Service EMail-Adresse",'','',subject+
-                                Ship_Header."External Document No.",body,AttachmentPath,
-                                Wartungsvertrag."Wartungsvertragsnr."+'.pdf');
                                 vertrag_gedruckt := TRUE;
-                                IF STRLEN(wartungsnr_save[1] + Servicepositionen."Wartungsvertragsnr.") <= 1024 THEN
-                                  wartungsnr_save[1] := wartungsnr_save[1] + Servicepositionen."Wartungsvertragsnr."
+                                IF STRLEN(wartungsnr_save[t] + Servicepositionen."Wartungsvertragsnr.") > 1024 THEN
+                                  t += 1;
+                                wartungsnr_save[t] := wartungsnr_save[t] + Servicepositionen."Wartungsvertragsnr.";
+
+                                IF STRLEN(au_wartungsnr[i] + ',' + Wartungsvertrag."Wartungsvertragsnr."+'.pdf')  > 1024 THEN
+                                  i += 1;
+                                IF au_wartungsnr[i] = '' THEN
+                                  au_wartungsnr[i] := Wartungsvertrag."Wartungsvertragsnr."+'.pdf'
                                 ELSE
-                                  wartungsnr_save[2] := wartungsnr_save[2] + Servicepositionen."Wartungsvertragsnr.";
+                                  au_wartungsnr[i] := au_wartungsnr[i] + ',' + Wartungsvertrag."Wartungsvertragsnr."+'.pdf';
                               END;
                           END;
                       UNTIL Servicepositionen.NEXT = 0;
+
+                      FOR k := 1 TO i DO BEGIN
+                        IF au_wartungsnr[k] <> '' THEN
+                          BEGIN
+                            body := '';
+                            IF Ship_Header."Language Code" <> 'ENU' THEN
+                              BEGIN
+                                IF STRPOS(au_wartungsnr[k],',') = 0 THEN
+                                  body := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                        'anbei erhalten Sie Ihren Servicevertrag.' + FORMAT(chr)
+                                ELSE
+                                  body := 'Sehr geehrte Damen und Herren,' + FORMAT(chr) + FORMAT(chr) +
+                                        'anbei erhalten Sie Ihre Servicevertr„ge.' + FORMAT(chr);
+                                subject := 'Ihre Referenz: ';
+                              END
+                            ELSE
+                              BEGIN
+                                IF STRPOS(au_wartungsnr[k],',') = 0 THEN
+                                  body := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                          'attached you will find your service contract.' + FORMAT(chr)
+                                ELSE
+                                  body := 'Dear Sir or Madam,' + FORMAT(chr) + FORMAT(chr) +
+                                          'attached you will find your service contracts.' + FORMAT(chr);
+                                subject := 'Your reference: ';
+                              END;
+                            TOPAS_API.NewMail(Ship_Header."Service EMail-Adresse",'','',subject+
+                            Ship_Header."External Document No.",body,AttachmentPath,au_wartungsnr[k]);
+                        END;
+                      END;
                     END;
                 END;
             UNTIL Ship_Header.NEXT = 0;
