@@ -66,8 +66,8 @@ IF excel_datensätze > 0 THEN
               v_Spalte_PL_MSRP := Spalte_PL_MSRP_SCHAEFF;
               v_Spalte_PL_LongDescr := Spalte_PL_LongDescr_SCHAEFF;
               v_Spalte_PL_ShortDescr := Spalte_PL_ShortDescr_SCHAEFF;
-              v_pricebook_sheetname_EURO := 'CHAMPS_EUR_PRICEBOOK';
-              v_pricebook_sheetname_USD := 'CHAMPS_USD_PRICEBOOK';
+              v_pricebook_sheetname_EURO := 'ACTS_EUR_PRICEBOOK';
+              v_pricebook_sheetname_USD := 'ACTS_USD_PRICEBOOK';
             END
           ELSE
             BEGIN
@@ -504,9 +504,6 @@ Quelle_Excel.Visible(TRUE);
 //UNTIL ISCLEAR(Quelle_Excel) AND ISCLEAR(Quelle_Book) AND ISCLEAR(Quelle_Sheet);
 
 Dataport - OnPostDataport()
-//MESSAGE('Import der CHAMP Artikel abgeschlossen.'+ '\' + 'Neue bzw. geänderte Datensätze: %1\\'+
-//        'Excel Datensätze: %2\Obsolete Bezeichnungen: %3',geänderte_einträge,excel_datensätze,obsolete_einträge);
-
 //Quelle_Excel.Visible(TRUE);
 
 FindRow(What : Code[40];Spalte : Code[10]) : Text[30]
